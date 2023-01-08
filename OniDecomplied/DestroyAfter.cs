@@ -1,0 +1,32 @@
+﻿// Decompiled with JetBrains decompiler
+// Type: DestroyAfter
+// Assembly: Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+// MVID: D13CBB0B-55A9-4EF0-9BB5-5C2436A6B8EE
+// Assembly location: D:\dev\OniMod\Assembly-CSharp.dll
+
+using UnityEngine;
+
+[AddComponentMenu("KMonoBehaviour/scripts/DestroyAfter")]
+public class DestroyAfter : KMonoBehaviour
+{
+  private ParticleSystem[] particleSystems;
+
+  protected virtual void OnSpawn() => this.particleSystems = ((Component) this).gameObject.GetComponentsInChildren<ParticleSystem>(true);
+
+  private bool IsAlive()
+  {
+    for (int index = 0; index < this.particleSystems.Length; ++index)
+    {
+      if (this.particleSystems[index].IsAlive(false))
+        return true;
+    }
+    return false;
+  }
+
+  private void Update()
+  {
+    if (this.particleSystems == null || this.IsAlive())
+      return;
+    TracesExtesions.DeleteObject((Component) this);
+  }
+}

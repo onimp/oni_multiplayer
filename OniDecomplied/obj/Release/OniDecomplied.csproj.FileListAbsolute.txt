@@ -1,0 +1,2 @@
+D:\dev\OniMod\OniDecomplied\obj\Release\OniDecomplied.csproj.AssemblyReference.cache
+D:\dev\OniMod\OniDecomplied\obj\Release\OniDecomplied.csproj.CoreCompileInputs.cache
