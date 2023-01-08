@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+    <PropertyGroup>
+        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+        <ProjectGuid>{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}</ProjectGuid>
+        <OutputType>Library</OutputType>
+        <AppDesignerFolder>Properties</AppDesignerFolder>
+        <RootNamespace>MultiplayerMod</RootNamespace>
+        <AssemblyName>MultiplayerMod</AssemblyName>
+        <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+        <FileAlignment>512</FileAlignment>
+        <Deterministic>true</Deterministic>
+        <TargetFrameworkProfile />
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>full</DebugType>
+        <Optimize>false</Optimize>
+        <OutputPath>bin\Debug\</OutputPath>
+        <DefineConstants>DEBUG;TRACE</DefineConstants>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+        <Prefer32Bit>false</Prefer32Bit>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+        <PlatformTarget>x64</PlatformTarget>
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <OutputPath>bin\Release\</OutputPath>
+        <DefineConstants>TRACE</DefineConstants>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+        <Prefer32Bit>false</Prefer32Bit>
+    </PropertyGroup>
+    <ItemGroup>
+        <Reference Include="0Harmony">
+          <HintPath>..\lib\0Harmony.dll</HintPath>
+        </Reference>
+        <Reference Include="Assembly-CSharp">
+          <HintPath>..\lib\Assembly-CSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="Assembly-CSharp-firstpass">
+          <HintPath>..\lib\Assembly-CSharp-firstpass.dll</HintPath>
+        </Reference>
+        <Reference Include="Steamworks.NET">
+          <HintPath>..\lib\Steamworks.NET.dll</HintPath>
+        </Reference>
+        <Reference Include="System" />
+        <Reference Include="System.Core" />
+        <Reference Include="System.Xml.Linq" />
+        <Reference Include="System.Data.DataSetExtensions" />
+        <Reference Include="System.Data" />
+        <Reference Include="Unity.TextMeshPro">
+          <HintPath>lib\Unity.TextMeshPro.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine">
+          <HintPath>lib\UnityEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+          <HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ImageConversionModule">
+          <HintPath>lib\UnityEngine.ImageConversionModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.UI">
+          <HintPath>lib\UnityEngine.UI.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Include="Multiplayer.cs" />
+        <Compile Include="Patches.cs" />
+        <Compile Include="patch\CursorPatch.cs" />
+        <Compile Include="patch\PinnedResourcesPanelPatch.cs" />
+        <Compile Include="patch\SpawnPatch.cs" />
+        <Compile Include="patch\MainMenuPatch.cs" />
+        <Compile Include="PlayerListUi.cs" />
+        <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="SteamStuff.cs" />
+        <Compile Include="steam\Client.cs" />
+        <Compile Include="steam\Server.cs" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="mod.yaml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Include="mod_info.yaml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    <ItemGroup>
+      <Content Include="C:\Users\zuev9\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
+        <Link>Player.log</Link>
+      </Content>
+    </ItemGroup>
+    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+    <Target Name="CopyModToOnyFolder" AfterTargets="Build">
+        <Message Text="Executing CopyModToOnyFolder task" Importance="High" />
+        <Copy SourceFiles="$(TargetDir)$(ProjectName).dll;$(TargetDir)mod.yaml;$(TargetDir)mod_info.yaml;$(TargetDir)Steamworks.NET.dll" DestinationFolder="$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\$(ProjectName)" />
+    </Target>
+
+</Project>
