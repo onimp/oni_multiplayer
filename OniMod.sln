@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiplayerMod", "MultiplayerMod\MultiplayerMod.csproj", "{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OniDecomplied", "OniDecomplied\OniDecomplied.csproj", "{3D71E741-18F9-4627-9AC9-2E423802082A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D71E741-18F9-4627-9AC9-2E423802082A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D71E741-18F9-4627-9AC9-2E423802082A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D71E741-18F9-4627-9AC9-2E423802082A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B532045A-7A46-4262-AE5F-F663106A26E5}
+	EndGlobalSection
+EndGlobal

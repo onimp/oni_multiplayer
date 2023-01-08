@@ -15,7 +15,7 @@ namespace MultiplayerMod.steam
 
         public CSteamID SteamId => SteamGameServer.GetSteamID();
 
-        private bool _hostServerAfterLoad;
+        private static bool _hostServerAfterLoad;
 
         private bool isServerStarted;
 
@@ -71,7 +71,7 @@ namespace MultiplayerMod.steam
             Callback<SteamNetConnectionStatusChangedCallback_t>.CreateGameServer(Steam_HandleIncomingConnection);
         }
 
-        public void HostServerAfterInit()
+        public static void HostServerAfterInit()
         {
             Debug.Log("Will host server after world is ready.");
             _hostServerAfterLoad = true;
@@ -122,6 +122,7 @@ namespace MultiplayerMod.steam
 
         void OnDestroy()
         {
+            Debug.Log("Server.OnDestroy");
             GameServer.Shutdown();
             isServerStarted = false;
         }
