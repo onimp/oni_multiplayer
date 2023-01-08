@@ -6,6 +6,8 @@ namespace MultiplayerMod.steam
 {
     public class Client : MonoBehaviour
     {
+        private HSteamNetConnection? conn;
+
         void Start()
         {
             SteamAPI.Init();
@@ -80,7 +82,7 @@ namespace MultiplayerMod.steam
 
         void Update()
         {
-            if (!SteamManager.Initialized)
+            if (!SteamManager.Initialized || conn == null)
                 return;
             // Run Steam client callbacks
             SteamAPI.RunCallbacks();
@@ -89,6 +91,7 @@ namespace MultiplayerMod.steam
 
         void OnDestroy()
         {
+            Debug.Log("OnDestroy");
             SteamAPI.Shutdown();
         }
 
@@ -97,13 +100,13 @@ namespace MultiplayerMod.steam
             SteamNetworkingIdentity identity = new SteamNetworkingIdentity();
             identity.SetSteamID(serverId);
 
-            SteamNetworkingSockets.ConnectP2P(ref identity, 0, 0, null);
+            conn = SteamNetworkingSockets.ConnectP2P(ref identity, 0, 0, null);
 
             Debug.Log($"+connect {serverId}");
             SteamFriends.SetRichPresence("connect", $"+connect {serverId}");
         }
 
-        public void JoinToFriend()
+        public static void JoinToFriend()
         {
             SteamFriends.ActivateGameOverlay("friends");
         }

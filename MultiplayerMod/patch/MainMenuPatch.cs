@@ -2,7 +2,6 @@
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.steam;
-using UnityEngine;
 
 namespace MultiplayerMod.patch
 {
@@ -12,10 +11,6 @@ namespace MultiplayerMod.patch
     {
         public static void Prefix(MainMenu __instance)
         {
-            var multiplayerGameObject = new GameObject();
-            multiplayerGameObject.AddComponent<Client>();
-            multiplayerGameObject.AddComponent<Server>();
-
             __instance.AddButton("Load MultiPlayer", true,
                 () =>
                 {
@@ -27,7 +22,8 @@ namespace MultiplayerMod.patch
                         return;
                     }
 
-                    multiplayerGameObject.GetComponent<Server>().HostServerAfterInit();
+
+                    Server.HostServerAfterInit();
 
                     methodInfo.Invoke(__instance, new object[] { });
                 });
@@ -42,12 +38,11 @@ namespace MultiplayerMod.patch
                         return;
                     }
 
-                    multiplayerGameObject.GetComponent<Server>().HostServerAfterInit();
+                    Server.HostServerAfterInit();
 
                     methodInfo.Invoke(__instance, new object[] { });
                 });
-            __instance.AddButton("Join MultiPlayer", false,
-                () => { multiplayerGameObject.GetComponent<Client>().JoinToFriend(); });
+            __instance.AddButton("Join MultiPlayer", false, Client.JoinToFriend);
         }
     }
 
