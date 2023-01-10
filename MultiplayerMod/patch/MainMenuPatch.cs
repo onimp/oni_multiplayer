@@ -2,6 +2,8 @@
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.steam;
+using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.patch
 {
@@ -11,6 +13,10 @@ namespace MultiplayerMod.patch
     {
         public static void Prefix(MainMenu __instance)
         {
+            var multiplayerGameObject = new GameObject();
+            multiplayerGameObject.AddComponent<Server>();
+            multiplayerGameObject.AddComponent<Client>();
+            Object.DontDestroyOnLoad(multiplayerGameObject);
             __instance.AddButton("Load MultiPlayer", true,
                 () =>
                 {
@@ -42,7 +48,7 @@ namespace MultiplayerMod.patch
 
                     methodInfo.Invoke(__instance, new object[] { });
                 });
-            __instance.AddButton("Join MultiPlayer", false, Client.JoinToFriend);
+            __instance.AddButton("Join MultiPlayer", false, Client.ShowJoinToFriend);
         }
     }
 
