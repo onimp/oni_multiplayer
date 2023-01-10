@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Text;
 using Steamworks;
 using UnityEngine;
@@ -19,14 +20,16 @@ namespace MultiplayerMod.steam
 
         private bool isServerStarted;
 
-        void Start()
+        void OnEnable()
         {
             Debug.Log("Multiplayer.RestartAppIfNecessary");
 
-            // SteamAPI.RestartAppIfNecessary(new AppId_t(457140));
+            SteamAPI.RestartAppIfNecessary(new AppId_t(457140));
             Debug.Log("Multiplayer.Server.Init");
             SteamAPI.Init();
             Debug.Log("Multiplayer.Server.Done");
+
+            SteamNetworkingUtils.InitRelayNetworkAccess();
 
             if (!SteamManager.Initialized)
             {
@@ -118,6 +121,7 @@ namespace MultiplayerMod.steam
             // Run Steam client callbacks
             GameServer.RunCallbacks();
             SteamGameServerNetworkingSockets.RunCallbacks();
+            ReceiveNetworkData();
         }
 
         void OnDestroy()
@@ -212,6 +216,26 @@ namespace MultiplayerMod.steam
                     //     break;
                     // }
                 }
+            }
+        }
+
+        private void ReceiveNetworkData()
+        {
+            var msgs = new IntPtr[128];
+            int numMessages =
+                SteamGameServerNetworkingSockets.ReceiveMessagesOnPollGroup(m_hNetPollGroup, msgs, 128);
+            for (int idxMsg = 0; idxMsg < numMessages; idxMsg++)
+            {
+                var message = (SteamNetworkingMessage_t)((GCHandle)msgs[idxMsg]).Target;
+                var steamIDRemote = message.m_identityPeer.GetSteamID();
+                var connection = message.m_conn;
+
+                Debug.Log($"Received message from {steamIDRemote}");
+
+                // TODO handle 
+                // message.m_pData
+
+                message.Release();
             }
         }
     }

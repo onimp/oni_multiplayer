@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using System.Linq;
+using HarmonyLib;
 using MultiplayerMod.steam;
 using UnityEngine;
 
@@ -9,17 +10,13 @@ namespace MultiplayerMod.patch
     {
         public static void Postfix()
         {
-            var multiplayerGameObject = new GameObject();
-            multiplayerGameObject.AddComponent<Client>();
-            multiplayerGameObject.AddComponent<Server>();
-
-            var server = multiplayerGameObject.GetComponent<Server>();
+            var server = Object.FindObjectsOfType<Server>().FirstOrDefault();
             if (server == null)
             {
                 Debug.Log("Server is null");
                 return;
             }
-            
+
             Debug.Log("World is spawned. Starting server if needed.");
             server.HostServerIfNeeded();
         }
