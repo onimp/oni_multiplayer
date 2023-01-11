@@ -7,7 +7,9 @@ namespace MultiplayerMod.steam
 {
     public class Client : MonoBehaviour
     {
-        private HSteamNetConnection? conn = null;
+        private HSteamNetConnection? _conn;
+
+        public Action<ServerToClientEnvelope.ServerToClientMessage> OnCommandReceived;
 
         void OnEnable()
         {
@@ -17,14 +19,6 @@ namespace MultiplayerMod.steam
                 throw new Exception("Steam manager is not initialized");
 
             SteamNetworkingUtils.InitRelayNetworkAccess();
-
-
-            var server = GetComponent<Server>();
-            server.ConnectedToSteam += delegate
-            {
-                ConnectToServer(server.SteamId);
-                SteamFriends.ActivateGameOverlayToUser("friends", SteamUser.GetSteamID());
-            };
 
             Callback<LobbyGameCreated_t>.Create(LogObject);
             Callback<GameRichPresenceJoinRequested_t>.Create(delegate(GameRichPresenceJoinRequested_t t)
@@ -57,7 +51,7 @@ namespace MultiplayerMod.steam
             SteamAPI.RunCallbacks();
             SteamNetworkingSockets.RunCallbacks();
 
-            if (conn != null)
+            if (_conn != null)
                 ReceiveNetworkData();
         }
 
@@ -86,12 +80,12 @@ namespace MultiplayerMod.steam
             Debug.Log("Unknown command line.");
         }
 
-        private void ConnectToServer(CSteamID serverId)
+        public void ConnectToServer(CSteamID serverId)
         {
             var identity = new SteamNetworkingIdentity();
             identity.SetSteamID(serverId);
 
-            conn = SteamNetworkingSockets.ConnectP2P(ref identity, 0, 0, null);
+            _conn = SteamNetworkingSockets.ConnectP2P(ref identity, 0, 0, null);
 
             Debug.Log($"+connect {serverId}");
             // TODO make sure that other client can handle it and connect
@@ -101,19 +95,20 @@ namespace MultiplayerMod.steam
 
         private void ReceiveNetworkData()
         {
-            var msgs = new IntPtr[128];
+            var messages = new IntPtr[128];
             int numMessages =
-                SteamNetworkingSockets.ReceiveMessagesOnConnection(conn!.Value, msgs, 128);
+                SteamNetworkingSockets.ReceiveMessagesOnConnection(_conn!.Value, messages, 128);
             for (int idxMsg = 0; idxMsg < numMessages; idxMsg++)
             {
-                var message = (SteamNetworkingMessage_t)((GCHandle)msgs[idxMsg]).Target;
+                var message = (SteamNetworkingMessage_t)((GCHandle)messages[idxMsg]).Target;
                 var steamIDRemote = message.m_identityPeer.GetSteamID();
                 var connection = message.m_conn;
 
                 Debug.Log($"Received message from {steamIDRemote}");
 
-                // TODO handle 
-                // message.m_pData
+                var msg = ServerToClientEnvelope.ServerToClientMessage.ToServerToClientMessage(message.m_pData); 
+
+                OnCommandReceived?.Invoke(msg);
 
                 message.Release();
             }
