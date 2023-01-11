@@ -71,7 +71,8 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="Multiplayer.cs" />
+        <Compile Include="multiplayer\ClientActions.cs" />
+        <Compile Include="multiplayer\ServerActions.cs" />
         <Compile Include="Patches.cs" />
         <Compile Include="patch\CursorPatch.cs" />
         <Compile Include="patch\PinnedResourcesPanelPatch.cs" />
@@ -81,6 +82,8 @@
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="SteamStuff.cs" />
         <Compile Include="steam\Client.cs" />
+        <Compile Include="steam\ServerToClientCommands.cs" />
+        <Compile Include="steam\ServerToClientEnvelope.cs" />
         <Compile Include="steam\Server.cs" />
     </ItemGroup>
     <ItemGroup>

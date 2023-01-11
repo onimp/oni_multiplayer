@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Reflection;
 using HarmonyLib;
+using MultiplayerMod.multiplayer;
 using MultiplayerMod.steam;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.patch
 {
-    [HarmonyPatch(typeof(MainMenu))]
-    [HarmonyPatch("OnPrefabInit")]
+    [HarmonyPatch(typeof(MainMenu), "OnPrefabInit")]
     public class MainMenuPatch
     {
         public static void Prefix(MainMenu __instance)
@@ -16,6 +16,8 @@ namespace MultiplayerMod.patch
             var multiplayerGameObject = new GameObject();
             multiplayerGameObject.AddComponent<Server>();
             multiplayerGameObject.AddComponent<Client>();
+            multiplayerGameObject.AddComponent<ClientActions>();
+            multiplayerGameObject.AddComponent<ServerActions>();
             Object.DontDestroyOnLoad(multiplayerGameObject);
             __instance.AddButton("Load MultiPlayer", true,
                 () =>

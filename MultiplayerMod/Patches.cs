@@ -8,16 +8,7 @@ namespace MultiplayerMod
 {
     public class Patches
     {
-   /*     [HarmonyPatch(typeof(Workable))]
-        [HarmonyPatch("OnPrefabInit")]
-        public class WorkablePatch
-        {
-            public static void Postfix()
-            {
-                Debug.Log("Workable OnPrefabInit after");
-            }
-        }
-
+   /*   
         [HarmonyPatch(typeof(InterfaceTool), nameof(InterfaceTool.OnLeftClickUp))]
         public class InterfaceToolOnLeftClickUpPatch
         {

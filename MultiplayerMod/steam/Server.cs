@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using MultiplayerMod.multiplayer;
 using Steamworks;
 using UnityEngine;
 
@@ -8,17 +10,16 @@ namespace MultiplayerMod.steam
 {
     public class Server : MonoBehaviour
     {
-        private HSteamNetPollGroup m_hNetPollGroup;
+        private HSteamNetPollGroup _hNetPollGroup;
+        public event System.Action ServerCreated;
+        public event Action<CSteamID> ClientJoined;
 
-        public delegate void SimpleEvent();
-
-        public event SimpleEvent ConnectedToSteam;
-
-        public CSteamID SteamId => SteamGameServer.GetSteamID();
+        private readonly Dictionary<CSteamID, HSteamNetConnection> _clients =
+            new Dictionary<CSteamID, HSteamNetConnection>();
 
         private static bool _hostServerAfterLoad;
-
-        private bool isServerStarted;
+        private bool _isServerStarted;
+        public CSteamID SteamId => SteamGameServer.GetSteamID();
 
         void OnEnable()
         {
@@ -40,7 +41,7 @@ namespace MultiplayerMod.steam
             {
                 Debug.Log($"Steam warning. {severity} {text}.");
             });
-            Callback<SteamServersConnected_t>.CreateGameServer(delegate(SteamServersConnected_t t)
+            Callback<SteamServersConnected_t>.CreateGameServer(delegate
             {
                 Debug.Log("Game server created");
                 SteamGameServer.SetMaxPlayerCount(4);
@@ -48,7 +49,7 @@ namespace MultiplayerMod.steam
                 SteamGameServer.SetServerName($"{SteamFriends.GetPersonaName()}'s game");
                 SteamGameServer.SetBotPlayerCount(0); // optional, defaults to zero
                 SteamGameServer.SetMapName("MilkyWay");
-                ConnectedToSteam?.Invoke();
+                ServerCreated?.Invoke();
             });
             Callback<SteamServerConnectFailure_t>.CreateGameServer(delegate(SteamServerConnectFailure_t t)
             {
@@ -60,7 +61,7 @@ namespace MultiplayerMod.steam
                 Debug.Log("SteamServersDisconnected_t");
                 Debug.Log(t);
             });
-            Callback<GSPolicyResponse_t>.CreateGameServer(delegate(GSPolicyResponse_t t)
+            Callback<GSPolicyResponse_t>.CreateGameServer(delegate
             {
                 Debug.Log(SteamGameServer.BSecure()
                     ? "ONI Multiplayer is VAC Secure!"
@@ -88,7 +89,29 @@ namespace MultiplayerMod.steam
             StartServer();
         }
 
-        public void StartServer()
+        public void BroadcastCommand(Command command, object payload = null)
+        {
+            BroadcastCommand(null, command, payload);
+        }
+
+        public void BroadcastCommand(CSteamID? initiatorId, Command command, object payload = null)
+        {
+            foreach (var (cSteamID, hSteamNetConnection) in _clients)
+            {
+                if (cSteamID == initiatorId) continue;
+
+                using var message = new ServerToClientEnvelope(new ServerToClientEnvelope.ServerToClientMessage(command, payload));
+                SteamGameServerNetworkingSockets.SendMessageToConnection(hSteamNetConnection,
+                    message.IntPtr, message.Size,
+                    Steamworks.Constants.k_nSteamNetworkingSend_Reliable, out var messageOut);
+                if (messageOut == 0)
+                {
+                    Debug.Log($"Failed to send message {initiatorId}. Message out is {messageOut}.");
+                }
+            }
+        }
+
+        private void StartServer()
         {
             Debug.Log("Multiplayer server startup");
             Debug.Log(SteamFriends.GetPersonaName());
@@ -110,13 +133,13 @@ namespace MultiplayerMod.steam
             SteamGameServer.SetAdvertiseServerActive(true);
 
             SteamGameServerNetworkingSockets.CreateListenSocketP2P(0, 0, null);
-            m_hNetPollGroup = SteamGameServerNetworkingSockets.CreatePollGroup();
-            isServerStarted = true;
+            _hNetPollGroup = SteamGameServerNetworkingSockets.CreatePollGroup();
+            _isServerStarted = true;
         }
 
         void Update()
         {
-            if (!isServerStarted)
+            if (!_isServerStarted)
                 return;
             // Run Steam client callbacks
             GameServer.RunCallbacks();
@@ -128,7 +151,7 @@ namespace MultiplayerMod.steam
         {
             Debug.Log("Server.OnDestroy");
             GameServer.Shutdown();
-            isServerStarted = false;
+            _isServerStarted = false;
         }
 
         private void Steam_HandleIncomingConnection(SteamNetConnectionStatusChangedCallback_t pCallback)
@@ -141,21 +164,13 @@ namespace MultiplayerMod.steam
 
             // Previous state.  (Current state is in m_info.m_eState)
             var eOldState = pCallback.m_eOldState;
-
-            // Parse information to know what was changed
+            var steamID = pCallback.m_info.m_identityRemote.GetSteamID();
 
             // Check if a client has connected
             if (info.m_hListenSocket != HSteamListenSocket.Invalid &&
                 eOldState == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_None &&
                 info.m_eState == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connecting)
             {
-                // Connection from a new client
-                // Search for an available slot
-                //  for (var i = 0; i < 32; i++)
-                //  {
-                // if (!m_rgClientData[i].m_bActive && !m_rgPendingClientData[i].m_hConn)
-                //   {
-                // Found one.  "Accept" the connection.
                 EResult res = SteamGameServerNetworkingSockets.AcceptConnection(hConn);
                 if (res != EResult.k_EResultOK)
                 {
@@ -167,33 +182,12 @@ namespace MultiplayerMod.steam
                     return;
                 }
 
-                SteamGameServerNetworkingSockets.SetConnectionPollGroup(hConn, m_hNetPollGroup);
+                SteamGameServerNetworkingSockets.SetConnectionPollGroup(hConn, _hNetPollGroup);
 
-                Debug.Log($"Connection accepted from {pCallback.m_info.m_identityRemote.GetSteamID()}");
-
-                // m_rgPendingClientData[i].m_hConn = hConn;
-
-                // add the user to the poll group
-                //  SteamGameServerNetworkingSockets.SetConnectionPollGroup(hConn, m_hNetPollGroup);
-
-                // Send them the server info as a reliable message
-                /*  MsgServerSendInfo_t msg;
-                  msg.SetSteamIDServer(SteamGameServer.GetSteamID().ConvertToUint64());
-                  msg.SetServerName(m_sServerName.c_str());
-                  SteamGameServerNetworkingSockets.SendMessageToConnection(hConn, &msg,
-                      sizeof(MsgServerSendInfo_t), k_nSteamNetworkingSend_Reliable, nullptr);*/
-
-                return;
-                //  }
-                //  }
-
-                // No empty slots.  Server full!
-                // Debug.Log("Rejecting connection; server full");
-                // SteamGameServerNetworkingSockets.CloseConnection(hConn,
-                //     (int)ESteamNetConnectionEnd.k_ESteamNetConnectionEnd_AppException_Generic, "Server full!",
-                //     false);
+                _clients.Add(steamID, hConn);
+                Debug.Log($"Connection accepted from {steamID}");
+                ClientJoined?.Invoke(steamID);
             }
-            // Check if a client has disconnected
             else if ((eOldState ==
                       ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connecting ||
                       eOldState == ESteamNetworkingConnectionState
@@ -202,31 +196,19 @@ namespace MultiplayerMod.steam
                          .k_ESteamNetworkingConnectionState_ClosedByPeer)
             {
                 // Handle disconnecting a client
-                for (var i = 0; i < 32; ++i)
-                {
-                    // // If there is no ship, skip
-                    // if (!m_rgClientData[i].m_bActive)
-                    //     continue;
-                    //
-                    // if (m_rgClientData[i].m_SteamIDUser ==
-                    //     info.m_identityRemote.GetSteamID()) //pCallback->m_steamIDRemote)
-                    // {
-                    //     OutputDebugString("Disconnected dropped user\n");
-                    //     RemovePlayerFromServer(i, k_EDRClientDisconnect);
-                    //     break;
-                    // }
-                }
+                _clients.Remove(steamID);
+                Debug.Log($"Connection closed from {steamID}");
             }
         }
 
         private void ReceiveNetworkData()
         {
-            var msgs = new IntPtr[128];
-            int numMessages =
-                SteamGameServerNetworkingSockets.ReceiveMessagesOnPollGroup(m_hNetPollGroup, msgs, 128);
-            for (int idxMsg = 0; idxMsg < numMessages; idxMsg++)
+            var messages = new IntPtr[128];
+            var numMessages =
+                SteamGameServerNetworkingSockets.ReceiveMessagesOnPollGroup(_hNetPollGroup, messages, 128);
+            for (var idxMsg = 0; idxMsg < numMessages; idxMsg++)
             {
-                var message = (SteamNetworkingMessage_t)((GCHandle)msgs[idxMsg]).Target;
+                var message = (SteamNetworkingMessage_t)((GCHandle)messages[idxMsg]).Target;
                 var steamIDRemote = message.m_identityPeer.GetSteamID();
                 var connection = message.m_conn;
 
