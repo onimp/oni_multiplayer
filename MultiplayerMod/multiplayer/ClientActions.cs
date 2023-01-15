@@ -36,7 +36,7 @@ namespace MultiplayerMod.multiplayer
                 ? SaveLoader.GetLatestSaveForCurrentDLC()
                 : GenericGameSettings.instance.performanceCapture.saveGame;
 
-            // TODO Check wether it is an actual path
+            // TODO Check whether it is an actual path
             return File.ReadAllBytes(path);
         }
 
@@ -54,6 +54,7 @@ namespace MultiplayerMod.multiplayer
 
         public void LoadWorld(object saveFile)
         {
+            Debug.Log("ClientActions.LoadWorld");
             var tempFilePath = Path.GetTempFileName();
             File.WriteAllBytes(tempFilePath, (byte[])saveFile);
 

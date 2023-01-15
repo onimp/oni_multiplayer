@@ -96,21 +96,22 @@ namespace MultiplayerMod.steam
         private void ReceiveNetworkData()
         {
             var messages = new IntPtr[128];
-            int numMessages =
+            var numMessages =
                 SteamNetworkingSockets.ReceiveMessagesOnConnection(_conn!.Value, messages, 128);
-            for (int idxMsg = 0; idxMsg < numMessages; idxMsg++)
+            for (var idxMsg = 0; idxMsg < numMessages; idxMsg++)
             {
-                var message = (SteamNetworkingMessage_t)((GCHandle)messages[idxMsg]).Target;
-                var steamIDRemote = message.m_identityPeer.GetSteamID();
-                var connection = message.m_conn;
+                var message =
+                    (SteamNetworkingMessage_t)Marshal.PtrToStructure(messages[idxMsg],
+                        typeof(SteamNetworkingMessage_t));
+               // var steamIDRemote = message.m_identityPeer.GetSteamID();
+                //  var connection = message.m_conn;
 
-                Debug.Log($"Received message from {steamIDRemote}");
-
-                var msg = ServerToClientEnvelope.ServerToClientMessage.ToServerToClientMessage(message.m_pData); 
+                var msg = ServerToClientEnvelope.ServerToClientMessage.ToServerToClientMessage(message.m_pData,
+                    message.m_cbSize);
 
                 OnCommandReceived?.Invoke(msg);
 
-                message.Release();
+                SteamNetworkingMessage_t.Release(messages[idxMsg]);
             }
         }
     }

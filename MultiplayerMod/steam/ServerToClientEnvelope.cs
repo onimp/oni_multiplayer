@@ -7,28 +7,27 @@ namespace MultiplayerMod.steam
 {
     public class ServerToClientEnvelope : IDisposable
     {
-        private GCHandle _handle;
-
-        public IntPtr IntPtr => (IntPtr)_handle;
+        public readonly IntPtr IntPtr;
         public uint Size { get; }
 
         public ServerToClientEnvelope(ServerToClientMessage serverToClientMessage)
         {
-            BinaryFormatter bf = new BinaryFormatter();
+            var bf = new BinaryFormatter();
             using var ms = new MemoryStream();
             bf.Serialize(ms, serverToClientMessage);
             var array = ms.ToArray();
-            _handle = GCHandle.Alloc(array, GCHandleType.Pinned);
             Size = (uint)array.Length;
+            IntPtr = Marshal.AllocHGlobal(array.Length);
+            Marshal.Copy(array, 0, IntPtr, array.Length);
         }
 
         public void Dispose()
         {
-            _handle.Free();
+            Marshal.FreeHGlobal(IntPtr);
         }
 
         [Serializable]
-        public class ServerToClientMessage
+        public struct ServerToClientMessage
         {
             public Command Command { get; set; }
             public object Payload { get; set; }
@@ -39,9 +38,14 @@ namespace MultiplayerMod.steam
                 Payload = payload;
             }
 
-            public static ServerToClientMessage ToServerToClientMessage(IntPtr handle)
+            public static ServerToClientMessage ToServerToClientMessage(IntPtr handle, int size)
             {
-                return (ServerToClientMessage)Marshal.PtrToStructure(handle, typeof(ServerToClientMessage));
+                unsafe
+                {
+                    var memoryStream = new UnmanagedMemoryStream((byte*)handle.ToPointer(), size);
+                    var binaryFormatter = new BinaryFormatter();
+                    return (ServerToClientMessage)binaryFormatter.Deserialize(memoryStream);
+                }
             }
         }
     }
