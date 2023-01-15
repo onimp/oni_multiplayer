@@ -36,8 +36,26 @@ namespace MultiplayerMod.multiplayer
             if (steamID == SteamUser.GetSteamID()) return;
 
             _server.BroadcastCommand(Command.Pause);
-            _server.BroadcastCommand(Command.LoadWorld, _clientActions.SaveWorld());
+            var saveWorld = _clientActions.SaveWorld();
+            SendWorldByChunks(saveWorld);
+
             _server.BroadcastCommand(Command.Unpause);
+        }
+
+        private void SendWorldByChunks(byte[] saveWorld)
+        {
+            const int maxMsgSize = 100 * 1024; // 100 kb
+            var chunksCount = (saveWorld.Length - 1) / maxMsgSize + 1;
+            for (var i = 0; i < chunksCount; i++)
+            {
+                _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld,
+                    new WorldSaveChunk
+                    {
+                        chunkIndex = i,
+                        totalChunks = chunksCount,
+                        chunkData = saveWorld.Skip(i * maxMsgSize).Take(maxMsgSize).ToArray()
+                    });
+            }
         }
     }
 }

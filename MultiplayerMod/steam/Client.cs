@@ -85,7 +85,8 @@ namespace MultiplayerMod.steam
             var identity = new SteamNetworkingIdentity();
             identity.SetSteamID(serverId);
 
-            _conn = SteamNetworkingSockets.ConnectP2P(ref identity, 0, 0, null);
+            _conn = SteamNetworkingSockets.ConnectP2P(ref identity, 0, 1,
+                new[] { Server.BufferSizeConfig });
 
             Debug.Log($"+connect {serverId}");
             // TODO make sure that other client can handle it and connect
@@ -103,7 +104,7 @@ namespace MultiplayerMod.steam
                 var message =
                     (SteamNetworkingMessage_t)Marshal.PtrToStructure(messages[idxMsg],
                         typeof(SteamNetworkingMessage_t));
-               // var steamIDRemote = message.m_identityPeer.GetSteamID();
+                // var steamIDRemote = message.m_identityPeer.GetSteamID();
                 //  var connection = message.m_conn;
 
                 var msg = ServerToClientEnvelope.ServerToClientMessage.ToServerToClientMessage(message.m_pData,
