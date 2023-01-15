@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
-using MultiplayerMod.multiplayer;
 using Steamworks;
 using UnityEngine;
 
@@ -20,6 +19,16 @@ namespace MultiplayerMod.steam
         private static bool _hostServerAfterLoad;
         private bool _isServerStarted;
         public CSteamID SteamId => SteamGameServer.GetSteamID();
+
+        public static readonly SteamNetworkingConfigValue_t BufferSizeConfig = new SteamNetworkingConfigValue_t
+        {
+            m_eValue = ESteamNetworkingConfigValue.k_ESteamNetworkingConfig_SendBufferSize,
+            m_eDataType = ESteamNetworkingConfigDataType.k_ESteamNetworkingConfig_Int32,
+            m_val = new SteamNetworkingConfigValue_t.OptionValue()
+            {
+                m_int32 = 10 * 1024 * 1024
+            }
+        };
 
         void OnEnable()
         {
@@ -100,13 +109,14 @@ namespace MultiplayerMod.steam
             {
                 if (cSteamID == initiatorId) continue;
 
-                using var message = new ServerToClientEnvelope(new ServerToClientEnvelope.ServerToClientMessage(command, payload));
-                SteamGameServerNetworkingSockets.SendMessageToConnection(hSteamNetConnection,
+                using var message =
+                    new ServerToClientEnvelope(new ServerToClientEnvelope.ServerToClientMessage(command, payload));
+                var result = SteamGameServerNetworkingSockets.SendMessageToConnection(hSteamNetConnection,
                     message.IntPtr, message.Size,
                     Steamworks.Constants.k_nSteamNetworkingSend_Reliable, out var messageOut);
-                if (messageOut == 0)
+                if (result != EResult.k_EResultOK && messageOut == 0)
                 {
-                    Debug.Log($"Failed to send message {initiatorId}. Message out is {messageOut}.");
+                    Debug.Log($"Failed ({result}) to send message {initiatorId}. Message out is {messageOut}.");
                 }
             }
         }
@@ -132,7 +142,10 @@ namespace MultiplayerMod.steam
             SteamNetworkingUtils.InitRelayNetworkAccess();
             SteamGameServer.SetAdvertiseServerActive(true);
 
-            SteamGameServerNetworkingSockets.CreateListenSocketP2P(0, 0, null);
+            SteamGameServerNetworkingSockets.CreateListenSocketP2P(0, 1, new[]
+            {
+                BufferSizeConfig
+            });
             _hNetPollGroup = SteamGameServerNetworkingSockets.CreatePollGroup();
             _isServerStarted = true;
         }

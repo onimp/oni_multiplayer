@@ -13,7 +13,7 @@ namespace MultiplayerModTests
         [Test]
         public void TestSerialization()
         {
-            var message = new ServerToClientEnvelope.ServerToClientMessage(Command.Pause, "test");
+            var message = new ServerToClientEnvelope.ServerToClientMessage(Command.Pause, new byte[] {123, 45, 12} );
             var envelope = new ServerToClientEnvelope(message);
             var managedArray = new byte[envelope.Size];
             Marshal.Copy(envelope.IntPtr, managedArray, 0, (int)envelope.Size);

@@ -74,6 +74,7 @@
     <ItemGroup>
         <Compile Include="multiplayer\ClientActions.cs" />
         <Compile Include="multiplayer\ServerActions.cs" />
+        <Compile Include="multiplayer\WorldSaveChunk.cs" />
         <Compile Include="Patches.cs" />
         <Compile Include="patch\CursorPatch.cs" />
         <Compile Include="patch\PinnedResourcesPanelPatch.cs" />
