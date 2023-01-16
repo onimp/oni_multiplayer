@@ -12,6 +12,7 @@ Working functionality:
 - Buttons in UI (Join/Load/Create MP game)
 - Ability to join/invite friends via Steam overlay UI
 - Loading game save to all new joiners
+- Showing cursor of all active players
 
 That is it. Nothing else is working yet. No any actions will be synchronized yet. It is just a proof of concept.
 

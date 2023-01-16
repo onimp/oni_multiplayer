@@ -23,7 +23,7 @@ namespace MultiplayerMod.multiplayer
         private System.DateTime _lastUpdateTime;
 
         // 33 ms is 30 hz
-        private const int REFRESH_DELAY_MS = 33;
+        private const int RefreshDelayMS = 33;
 
         void OnEnable()
         {
@@ -42,7 +42,7 @@ namespace MultiplayerMod.multiplayer
 
         private void Update()
         {
-            if ((System.DateTime.Now - _lastUpdateTime).TotalMilliseconds < REFRESH_DELAY_MS)
+            if ((System.DateTime.Now - _lastUpdateTime).TotalMilliseconds < RefreshDelayMS)
                 return;
             _lastUpdateTime = System.DateTime.Now;
             _server.BroadcastCommand(Command.PlayersState, _playersState);
