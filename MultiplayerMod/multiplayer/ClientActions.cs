@@ -17,6 +17,9 @@ namespace MultiplayerMod.multiplayer
     public class ClientActions : MonoBehaviour
     {
         private Client _client;
+        private System.DateTime _lastUpdateSent;
+        // 33 ms is 30 hz
+        private const int RefreshDelayMS = 33;
 
         void OnEnable()
         {
@@ -35,6 +38,9 @@ namespace MultiplayerMod.multiplayer
 
         private void OnMouseMoved(Pair<float, float> newMousePosition)
         {
+            if ((System.DateTime.Now - _lastUpdateSent).TotalMilliseconds < RefreshDelayMS)
+                return;
+            _lastUpdateSent = System.DateTime.Now;
             _client.SendToServer(new UserAction
             {
                 userActionType = UserAction.UserActionTypeEnum.MouseMove,

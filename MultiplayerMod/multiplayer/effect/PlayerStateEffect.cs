@@ -1,5 +1,5 @@
-using System.Linq;
 using MultiplayerMod.multiplayer.message;
+using Steamworks;
 using UnityEngine;
 
 namespace MultiplayerMod.multiplayer.effect
@@ -19,11 +19,15 @@ namespace MultiplayerMod.multiplayer.effect
         private void OnGUI()
         {
             if (PlayerState == null) return;
-            foreach (var mousePos in PlayerState.PlayerStates.Select(playerState => playerState.Value.MousePosition))
+            foreach (var playerState in PlayerState.PlayerStates)
             {
-                // TODO add transformation from world pos to screen pos.
-                Graphics.DrawTexture(new Rect(mousePos.first, mousePos.second, _texture.width, _texture.height),
-                    _texture);
+                // Skip current user.
+                if (playerState.Key == SteamUser.GetSteamID()) continue;
+                var mousePos = playerState.Value.MousePosition;
+                var worldPos = new Vector3(mousePos.first, mousePos.second, -1);
+                var screenPoint = Camera.main.WorldToScreenPoint(worldPos);
+                Graphics.DrawTexture(
+                    new Rect(screenPoint.x, Screen.height - screenPoint.y, _texture.width, _texture.height), _texture);
             }
         }
     }
