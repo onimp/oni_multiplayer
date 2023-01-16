@@ -51,25 +51,32 @@ TODO
 
 # Long TODO List
 
-- Handle game user actions
-  - Handle UI hotkeys first (dig/mop/build/disinfect/etc) 
-  - Handle building settings
-  - Handle colonies settings (food/priorities/etc)
-- Measuring amount of out-dated objects
-  - Crucial for decision about soft/hard syncs approach
-- Add build releases to GitHub
-- Correctly handling DLC vs Vanilla game versions
-- Correct handling of UI buttons (creating after joined, joining a second time, etc)
-- In game Lobby browser
-- Launching game straight away
-  - Right now it shows a warning about wrong url format
-- InGame Players information
-  - Who is in the game
-  - Where they are
-  - Their ping
-  - Ability to kick/vote for kick
-- Game loading indicator
-- Performance assessment
-- Better issue categories :)
-- Build and code cleanup
-- Better README
+- Basic features
+  - Handle game user actions
+    - Handle UI hotkeys first (dig/mop/build/disinfect/etc) 
+    - Handle building settings
+    - Handle colonies settings (food/priorities/etc)
+  - Every game day hard syncs
+  - Measuring amount of out-dated objects
+    - Crucial for decision about soft/hard syncs approach
+  - Performance assessment (network/memory/cpu)
+- Improvements
+  - Correctly handling DLC vs Vanilla game versions
+  - Game loading indicator
+  - InGame Players information
+    - Who is in the game
+    - Where they are
+    - Their ping
+    - Ability to kick/vote for kick
+  - Launching game straight away
+    - Right now it shows a warning about wrong url format
+  - In game Lobby browser
+  - Translation support
+- Bux fixes
+  - Correct handling of UI buttons (creating after joined, joining a second time, etc)
+  - Cursor draw method is error prone (double phantom cursors, inverted, etc)
+- GitHub
+  - Add build releases to GitHub
+  - Better issue categories :)
+  - Build and code cleanup
+  - Better README
