@@ -73,19 +73,21 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="multiplayer\ClientActions.cs" />
+        <Compile Include="multiplayer\effect\PlayerStateEffect.cs" />
+        <Compile Include="multiplayer\effect\WorldLoader.cs" />
+        <Compile Include="multiplayer\effect\WorldSaver.cs" />
+        <Compile Include="multiplayer\effect\WorldTimeManager.cs" />
+        <Compile Include="multiplayer\message\PlayersState.cs" />
+        <Compile Include="multiplayer\message\UserAction.cs" />
+        <Compile Include="multiplayer\message\WorldSaveChunk.cs" />
         <Compile Include="multiplayer\ServerActions.cs" />
-        <Compile Include="multiplayer\WorldSaveChunk.cs" />
-        <Compile Include="Patches.cs" />
-        <Compile Include="patch\CursorPatch.cs" />
-        <Compile Include="patch\PinnedResourcesPanelPatch.cs" />
+        <Compile Include="patch\InterfaceToolOnMouseMovePatch.cs" />
         <Compile Include="patch\SpawnPatch.cs" />
         <Compile Include="patch\MainMenuPatch.cs" />
-        <Compile Include="PlayerListUi.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="SteamStuff.cs" />
         <Compile Include="steam\Client.cs" />
-        <Compile Include="steam\ServerToClientCommands.cs" />
-        <Compile Include="steam\ServerToClientEnvelope.cs" />
+        <Compile Include="steam\Command.cs" />
+        <Compile Include="steam\SerializedMessage.cs" />
         <Compile Include="steam\Server.cs" />
     </ItemGroup>
     <ItemGroup>

@@ -7,9 +7,10 @@ namespace MultiplayerMod.steam
 {
     public class Client : MonoBehaviour
     {
-        private HSteamNetConnection? _conn;
+        private HSteamNetConnection _conn;
+        private bool _connected;
 
-        public Action<ServerToClientEnvelope.ServerToClientMessage> OnCommandReceived;
+        public event Action<SerializedMessage.TypedMessage> OnCommandReceived;
 
         void OnEnable()
         {
@@ -20,7 +21,6 @@ namespace MultiplayerMod.steam
 
             SteamNetworkingUtils.InitRelayNetworkAccess();
 
-            Callback<LobbyGameCreated_t>.Create(LogObject);
             Callback<GameRichPresenceJoinRequested_t>.Create(delegate(GameRichPresenceJoinRequested_t t)
             {
                 JoinByCommandLine(t.m_rgchConnect);
@@ -30,17 +30,6 @@ namespace MultiplayerMod.steam
                 SteamApps.GetLaunchCommandLine(out var cmd, 1024);
                 JoinByCommandLine(cmd);
             });
-            Callback<SteamServersConnected_t>.Create(LogObject);
-            Callback<SteamServersDisconnected_t>.Create(LogObject);
-            Callback<SteamServerConnectFailure_t>.Create(LogObject);
-            Callback<ItemInstalled_t>.Create(LogObject);
-            Callback<DurationControl_t>.Create(LogObject);
-            Callback<GameOverlayActivated_t>.Create(LogObject);
-        }
-
-        private void LogObject<T>(T t)
-        {
-            Debug.Log(t);
         }
 
         void Update()
@@ -51,7 +40,7 @@ namespace MultiplayerMod.steam
             SteamAPI.RunCallbacks();
             SteamNetworkingSockets.RunCallbacks();
 
-            if (_conn != null)
+            if (_connected)
                 ReceiveNetworkData();
         }
 
@@ -64,6 +53,20 @@ namespace MultiplayerMod.steam
         public static void ShowJoinToFriend()
         {
             SteamFriends.ActivateGameOverlay("friends");
+        }
+
+        public void SendToServer(object payload = null)
+        {
+            if (!_connected) return;
+            using var message =
+                new SerializedMessage(Command.UserAction, payload);
+            var result = SteamNetworkingSockets.SendMessageToConnection(_conn,
+                message.IntPtr, message.Size,
+                Steamworks.Constants.k_nSteamNetworkingSend_Reliable, out var messageOut);
+            if (result != EResult.k_EResultOK && messageOut == 0)
+            {
+                Debug.Log($"Failed ({result}) to send message. Message out is {messageOut}.");
+            }
         }
 
         private void JoinByCommandLine(String cmd)
@@ -92,22 +95,21 @@ namespace MultiplayerMod.steam
             // TODO make sure that other client can handle it and connect
             // TODO Make sure that there is no game startup warning
             SteamFriends.SetRichPresence("connect", $"+connect {serverId}");
+            _connected = true;
         }
 
         private void ReceiveNetworkData()
         {
             var messages = new IntPtr[128];
             var numMessages =
-                SteamNetworkingSockets.ReceiveMessagesOnConnection(_conn!.Value, messages, 128);
+                SteamNetworkingSockets.ReceiveMessagesOnConnection(_conn, messages, 128);
             for (var idxMsg = 0; idxMsg < numMessages; idxMsg++)
             {
                 var message =
                     (SteamNetworkingMessage_t)Marshal.PtrToStructure(messages[idxMsg],
                         typeof(SteamNetworkingMessage_t));
-                // var steamIDRemote = message.m_identityPeer.GetSteamID();
-                //  var connection = message.m_conn;
 
-                var msg = ServerToClientEnvelope.ServerToClientMessage.ToServerToClientMessage(message.m_pData,
+                var msg = SerializedMessage.TypedMessage.DeserializeMessage(message.m_pData,
                     message.m_cbSize);
 
                 OnCommandReceived?.Invoke(msg);

@@ -1,6 +1,6 @@
 using System;
 
-namespace MultiplayerMod.multiplayer
+namespace MultiplayerMod.multiplayer.message
 {
     [Serializable]
     public struct WorldSaveChunk
