@@ -35,48 +35,50 @@ small world syncs for smaller areas of different layers (e.g. sync gasses within
 
 ## How to install
 
-TODO
+To install locally copy release content (with folder) to %USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local (if
+some folders are missing, please create them).
 
 ## How to use
 
 ### Host:
+
 - Host a game either via 'New multiplayer game' or via 'Load multiplayer game'
 - Invite friends via Steam overlay
 
 ### Player/Friend:
+
 - Run the game first
 - Join invite (from already opened game) or join via Steam overlay
 - Wait until game is loaded
 
-
 # Long TODO List
 
 - Basic features
-  - Handle game user actions
-    - Handle UI hotkeys first (dig/mop/build/disinfect/etc) 
-    - Handle building settings
-    - Handle colonies settings (food/priorities/etc)
-  - Every game day hard syncs
-  - Measuring amount of out-dated objects
-    - Crucial for decision about soft/hard syncs approach
-  - Performance assessment (network/memory/cpu)
+    - Handle game user actions
+        - Handle UI hotkeys first (dig/mop/build/disinfect/etc)
+        - Handle building settings
+        - Handle colonies settings (food/priorities/etc)
+    - Every game day hard syncs
+    - Measuring amount of out-dated objects
+        - Crucial for decision about soft/hard syncs approach
+    - Performance assessment (network/memory/cpu)
 - Improvements
-  - Correctly handling DLC vs Vanilla game versions
-  - Game loading indicator
-  - InGame Players information
-    - Who is in the game
-    - Where they are
-    - Their ping
-    - Ability to kick/vote for kick
-  - Launching game straight away
-    - Right now it shows a warning about wrong url format
-  - In game Lobby browser
-  - Translation support
+    - Correctly handling DLC vs Vanilla game versions
+    - Game loading indicator
+    - InGame Players information
+        - Who is in the game
+        - Where they are
+        - Their ping
+        - Ability to kick/vote for kick
+    - Launching game straight away
+        - Right now it shows a warning about wrong url format
+    - In game Lobby browser
+    - Translation support
 - Bux fixes
-  - Correct handling of UI buttons (creating after joined, joining a second time, etc)
-  - Cursor draw method is error prone (double phantom cursors, inverted, etc)
+    - Correct handling of UI buttons (creating after joined, joining a second time, etc)
+    - Cursor draw method is error prone (double phantom cursors, inverted, etc)
 - GitHub
-  - Add build releases to GitHub
-  - Better issue categories :)
-  - Build and code cleanup
-  - Better README
+    - Add build releases to GitHub
+    - Better issue categories :)
+    - Build and code cleanup
+    - Better README
