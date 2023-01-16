@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using HarmonyLib;
+using MultiplayerMod.multiplayer;
 using MultiplayerMod.steam;
 using UnityEngine;
 
@@ -19,6 +20,7 @@ namespace MultiplayerMod.patch
 
             Debug.Log("World is spawned. Starting server if needed.");
             server.HostServerIfNeeded();
+            Object.FindObjectsOfType<ClientActions>().FirstOrDefault()?.OnSpawn();
         }
     }
 }

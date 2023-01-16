@@ -12,6 +12,7 @@ namespace MultiplayerMod.steam
         private HSteamNetPollGroup _hNetPollGroup;
         public event System.Action ServerCreated;
         public event Action<CSteamID> ClientJoined;
+        public event Action<CSteamID, SerializedMessage.TypedMessage> OnCommandReceived;
 
         private readonly Dictionary<CSteamID, HSteamNetConnection> _clients =
             new Dictionary<CSteamID, HSteamNetConnection>();
@@ -60,27 +61,6 @@ namespace MultiplayerMod.steam
                 SteamGameServer.SetMapName("MilkyWay");
                 ServerCreated?.Invoke();
             });
-            Callback<SteamServerConnectFailure_t>.CreateGameServer(delegate(SteamServerConnectFailure_t t)
-            {
-                Debug.Log("SteamServerConnectFailure_t");
-                Debug.Log(t);
-            });
-            Callback<SteamServersDisconnected_t>.CreateGameServer(delegate(SteamServersDisconnected_t t)
-            {
-                Debug.Log("SteamServersDisconnected_t");
-                Debug.Log(t);
-            });
-            Callback<GSPolicyResponse_t>.CreateGameServer(delegate
-            {
-                Debug.Log(SteamGameServer.BSecure()
-                    ? "ONI Multiplayer is VAC Secure!"
-                    : "ONI Multiplayer is not VAC Secure!");
-            });
-            Callback<ValidateAuthTicketResponse_t>.CreateGameServer(delegate(ValidateAuthTicketResponse_t t)
-            {
-                Debug.Log("ValidateAuthTicketResponse_t");
-                Debug.Log(t);
-            });
             Callback<SteamNetConnectionStatusChangedCallback_t>.CreateGameServer(Steam_HandleIncomingConnection);
         }
 
@@ -109,8 +89,7 @@ namespace MultiplayerMod.steam
             {
                 if (cSteamID == initiatorId) continue;
 
-                using var message =
-                    new ServerToClientEnvelope(new ServerToClientEnvelope.ServerToClientMessage(command, payload));
+                using var message = new SerializedMessage(command, payload);
                 var result = SteamGameServerNetworkingSockets.SendMessageToConnection(hSteamNetConnection,
                     message.IntPtr, message.Size,
                     Steamworks.Constants.k_nSteamNetworkingSend_Reliable, out var messageOut);
@@ -221,16 +200,17 @@ namespace MultiplayerMod.steam
                 SteamGameServerNetworkingSockets.ReceiveMessagesOnPollGroup(_hNetPollGroup, messages, 128);
             for (var idxMsg = 0; idxMsg < numMessages; idxMsg++)
             {
-                var message = (SteamNetworkingMessage_t)((GCHandle)messages[idxMsg]).Target;
-                var steamIDRemote = message.m_identityPeer.GetSteamID();
-                var connection = message.m_conn;
+                var message =
+                    (SteamNetworkingMessage_t)Marshal.PtrToStructure(messages[idxMsg],
+                        typeof(SteamNetworkingMessage_t));
 
-                Debug.Log($"Received message from {steamIDRemote}");
+                var msg = SerializedMessage.TypedMessage.DeserializeMessage(message.m_pData,
+                    message.m_cbSize);
 
-                // TODO handle 
-                // message.m_pData
 
-                message.Release();
+                OnCommandReceived?.Invoke(message.m_identityPeer.GetSteamID(), msg);
+
+                SteamNetworkingMessage_t.Release(messages[idxMsg]);
             }
         }
     }

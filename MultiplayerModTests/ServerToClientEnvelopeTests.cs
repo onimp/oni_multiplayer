@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using MultiplayerMod.steam;
@@ -13,8 +12,8 @@ namespace MultiplayerModTests
         [Test]
         public void TestSerialization()
         {
-            var message = new ServerToClientEnvelope.ServerToClientMessage(Command.Pause, new byte[] {123, 45, 12} );
-            var envelope = new ServerToClientEnvelope(message);
+            var message = new SerializedMessage.TypedMessage(Command.Pause, new byte[] {123, 45, 12} );
+            var envelope = new SerializedMessage(message);
             var managedArray = new byte[envelope.Size];
             Marshal.Copy(envelope.IntPtr, managedArray, 0, (int)envelope.Size);
 
@@ -26,10 +25,10 @@ namespace MultiplayerModTests
         [Test]
         public void TestBackAndForth()
         {
-            var message = new ServerToClientEnvelope.ServerToClientMessage(Command.Pause, "test");
-            var envelope = new ServerToClientEnvelope(message);
+            var message = new SerializedMessage.TypedMessage(Command.Pause, "test");
+            var envelope = new SerializedMessage(message);
 
-            var message2 = ServerToClientEnvelope.ServerToClientMessage.ToServerToClientMessage(envelope.IntPtr, (int)envelope.Size);
+            var message2 = SerializedMessage.TypedMessage.DeserializeMessage(envelope.IntPtr, (int)envelope.Size);
 
             Assert.AreEqual(message, message2);
         }
