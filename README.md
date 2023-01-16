@@ -13,6 +13,8 @@ Working functionality:
 - Ability to join/invite friends via Steam overlay UI
 - Loading game save to all new joiners
 
+That is it. Nothing else is working yet. No any actions will be synchronized yet. It is just a proof of concept.
+
 ## Game mechanics
 
 All players play all together and shares controls over single colony. Order given by a player might be over ruled by
@@ -68,4 +70,5 @@ TODO
 - Game loading indicator
 - Performance assessment
 - Better issue categories :)
+- Build and code cleanup
 - Better README
