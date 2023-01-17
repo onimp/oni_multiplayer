@@ -12,7 +12,7 @@ namespace MultiplayerModTests
         [Test]
         public void TestSerialization()
         {
-            var message = new SerializedMessage.TypedMessage(Command.Pause, new byte[] {123, 45, 12} );
+            var message = new SerializedMessage.TypedMessage(Command.PlayersState, new byte[] {123, 45, 12} );
             var envelope = new SerializedMessage(message);
             var managedArray = new byte[envelope.Size];
             Marshal.Copy(envelope.IntPtr, managedArray, 0, (int)envelope.Size);
@@ -25,7 +25,7 @@ namespace MultiplayerModTests
         [Test]
         public void TestBackAndForth()
         {
-            var message = new SerializedMessage.TypedMessage(Command.Pause, "test");
+            var message = new SerializedMessage.TypedMessage(Command.PlayersState, "test");
             var envelope = new SerializedMessage(message);
 
             var message2 = SerializedMessage.TypedMessage.DeserializeMessage(envelope.IntPtr, (int)envelope.Size);
@@ -36,11 +36,9 @@ namespace MultiplayerModTests
         private static byte[] ObjectToByteArray(object obj)
         {
             var bf = new BinaryFormatter();
-            using (var ms = new MemoryStream())
-            {
-                bf.Serialize(ms, obj);
-                return ms.ToArray();
-            }
+            using var ms = new MemoryStream();
+            bf.Serialize(ms, obj);
+            return ms.ToArray();
         }
     }
 }

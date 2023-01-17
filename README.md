@@ -13,7 +13,8 @@ Working functionality:
 - Ability to join/invite friends via Steam overlay UI
 - Loading game save to all new joiners
 - Showing cursor of all active players
-- Syncing mouse tool actions (dig/build/mop/harvest/etc see tasks list below for more info)
+- Syncing tool actions (dig/build/mop/harvest/etc)
+- Syncing time settings (pause/warp speed)
 
 ## Game mechanics
 
@@ -55,20 +56,11 @@ some folders are missing, please create them).
 
 - Basic features
     - Handle game user actions
-        - Implement effects (apply user action to the game) for following actions
-          - Cancel
-          - Demolish
-          - Priority
-          - Disinfect
-          - Attack
-          - Capture
-          - Empty pipe
-          - Mop
-          - Harvest
-          - Move debris
-        - Handle building settings
-        - Handle colonies settings (food/priorities/etc)
-    - Every game day hard syncs
+      - Handle building
+      - Handle buildings settings (side dialog actions)
+      - Handle colonies settings (food/priorities/etc)
+    - Ensure that simulations are running the same on different machines
+    - Every mornings  hard syncs
     - Measuring amount of out-dated objects
         - Crucial for decision about soft/hard syncs approach
     - Performance assessment (network/memory/cpu)

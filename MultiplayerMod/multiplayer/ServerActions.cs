@@ -60,11 +60,17 @@ namespace MultiplayerMod.multiplayer
             // if it is resulted from ourself - skip
             if (steamID == SteamUser.GetSteamID()) return;
 
-            _server.BroadcastCommand(Command.Pause);
+            _server.BroadcastCommand(Command.UserAction, new UserAction
+            {
+                userActionType = UserAction.UserActionTypeEnum.Pause
+            });
             var saveWorld = WorldSaver.SaveWorld();
             SendWorldByChunks(saveWorld);
 
-            _server.BroadcastCommand(Command.Unpause);
+            _server.BroadcastCommand(Command.UserAction, new UserAction
+            {
+                userActionType = UserAction.UserActionTypeEnum.Unpause
+            });
         }
 
         private void SendWorldByChunks(byte[] saveWorld)

@@ -19,6 +19,7 @@ namespace MultiplayerMod.multiplayer
         private Client _client;
 
         private System.DateTime _lastUpdateSent;
+        private bool _worldSpawned;
 
         // 33 ms is 30 hz
         private const int RefreshDelayMS = 33;
@@ -31,6 +32,13 @@ namespace MultiplayerMod.multiplayer
 
             _client.OnCommandReceived += OnCommandReceived;
             InterfaceToolOnMouseMovePatch.OnMouseMove += OnMouseMoved;
+
+            SpeedControlScreenPatches.SetSpeedPatch.OnSetSpeed +=
+                (speed) => SendToServer(UserAction.UserActionTypeEnum.SetSpeed, speed);
+            SpeedControlScreenPatches.TogglePausePatch.OnPause +=
+                () => SendToServer(UserAction.UserActionTypeEnum.Pause);
+            SpeedControlScreenPatches.TogglePausePatch.OnUnpause +=
+                () => SendToServer(UserAction.UserActionTypeEnum.Unpause);
 
             DragToolPatches.AttackToolPatch.OnDragComplete += (payload) =>
                 SendToServer(UserAction.UserActionTypeEnum.Attack, payload);
@@ -69,9 +77,10 @@ namespace MultiplayerMod.multiplayer
         public void OnSpawn()
         {
             new GameObject().AddComponent<PlayerStateEffect>();
+            _worldSpawned = true;
         }
 
-        private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload)
+        private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload = null)
         {
             _client.SendUserActionToServer(new UserAction
             {
@@ -103,12 +112,6 @@ namespace MultiplayerMod.multiplayer
         {
             switch (typedMessage.Command)
             {
-                case Command.Pause:
-                    WorldTimeManager.PauseWorld();
-                    break;
-                case Command.Unpause:
-                    WorldTimeManager.UnPauseWorld();
-                    break;
                 case Command.LoadWorld:
                     WorldLoader.LoadWorld(typedMessage.Payload);
                     break;
@@ -125,53 +128,63 @@ namespace MultiplayerMod.multiplayer
 
         private void HandleUserAction(UserAction userAction)
         {
+            if (!_worldSpawned) return;
             switch (userAction.userActionType)
             {
+                case UserAction.UserActionTypeEnum.Pause:
+                    WorldTimeManager.PauseWorld();
+                    break;
+                case UserAction.UserActionTypeEnum.Unpause:
+                    WorldTimeManager.UnPauseWorld();
+                    break;
+                case UserAction.UserActionTypeEnum.SetSpeed:
+                    WorldTimeManager.SetSpeed((int)userAction.Payload);
+                    break;
+
                 case UserAction.UserActionTypeEnum.Dig:
-                    var array = (int[])userAction.Payload;
-                    DigEffect.Dig(array[0], array[1], array[2]);
+                    DragToolEffect.OnDragTool(DigTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Attack:
-                    // TODO Implement me
+                    DragToolEffect.OnDragComplete(new AttackTool(), userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Build:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(BuildTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Cancel:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(CancelTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Capture:
-                    // TODO Implement me
+                    DragToolEffect.OnDragComplete(new CaptureTool(), userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Clear:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(ClearTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.CopySettings:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(CopySettingsTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Debug:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(DebugTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Deconstruct:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(DeconstructTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Disinfect:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(DisinfectTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.EmptyPipe:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(EmptyPipeTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Harvest:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(HarvestTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Mop:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(MopTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Place:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(PlaceTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Priority:
-                    // TODO Implement me
+                    DragToolEffect.OnDragTool(PrioritizeTool.Instance, userAction.Payload);
                     break;
                 default:
                     Debug.LogWarning($"Unknown user action received {userAction.userActionType}");
