@@ -10,6 +10,7 @@ namespace MultiplayerMod.steam
         Unpause = 2,
         LoadWorld = 3,
         PlayersState = 4,
-        UserAction = 5
+        UserAction = 5,
+        MouseMove = 6
     }
 }

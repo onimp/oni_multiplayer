@@ -73,6 +73,8 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="multiplayer\ClientActions.cs" />
+        <Compile Include="multiplayer\effect\DigEffect.cs" />
+        <Compile Include="multiplayer\effect\DragToolEffect.cs" />
         <Compile Include="multiplayer\effect\PlayerStateEffect.cs" />
         <Compile Include="multiplayer\effect\WorldLoader.cs" />
         <Compile Include="multiplayer\effect\WorldSaver.cs" />
@@ -81,6 +83,7 @@
         <Compile Include="multiplayer\message\UserAction.cs" />
         <Compile Include="multiplayer\message\WorldSaveChunk.cs" />
         <Compile Include="multiplayer\ServerActions.cs" />
+        <Compile Include="patch\DragToolPatches.cs" />
         <Compile Include="patch\InterfaceToolOnMouseMovePatch.cs" />
         <Compile Include="patch\SpawnPatch.cs" />
         <Compile Include="patch\MainMenuPatch.cs" />

@@ -5,13 +5,27 @@ namespace MultiplayerMod.multiplayer.message
     [Serializable]
     public struct UserAction
     {
-
         public UserActionTypeEnum userActionType;
         public object Payload;
-        
+
         public enum UserActionTypeEnum
         {
-            MouseMove
+            // UI Bottom right part buttons
+            Attack,
+            Build,
+            Cancel,
+            Capture,
+            Clear,
+            CopySettings,
+            Debug,
+            Deconstruct,
+            Dig,
+            Disinfect,
+            EmptyPipe,
+            Harvest,
+            Mop,
+            Place,
+            Priority,
         }
     }
 }

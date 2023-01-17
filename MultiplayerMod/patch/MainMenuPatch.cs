@@ -79,7 +79,7 @@ namespace MultiplayerMod.patch
                         22,
                         type.GetField(topStyle ? "topButtonStyle" : "normalButtonStyle",
                                 BindingFlags.NonPublic | BindingFlags.Instance)
-                            .GetValue(mainMenu))
+                            ?.GetValue(mainMenu))
                 });
         }
     }
