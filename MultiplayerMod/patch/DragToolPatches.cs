@@ -6,6 +6,8 @@ namespace MultiplayerMod.patch
 {
     public static class DragToolPatches
     {
+        public static bool DisablePatch;
+
         [HarmonyPatch(typeof(AttackTool), "OnDragComplete")]
         public static class AttackToolPatch
         {
@@ -13,7 +15,12 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(Vector3 downPos, Vector3 upPos)
             {
-                OnDragComplete?.Invoke(new Pair<Vector3, Vector3>(downPos, upPos));
+                if (DisablePatch) return;
+                OnDragComplete?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
+                    downPos.x, downPos.y, downPos.z, upPos.x, upPos.y, upPos.z
+                });
             }
         }
 
@@ -24,7 +31,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -35,7 +46,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -46,7 +61,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -57,7 +76,12 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(Vector3 downPos, Vector3 upPos)
             {
-                OnDragComplete?.Invoke(new Pair<Vector3, Vector3>(downPos, upPos));
+                if (DisablePatch) return;
+                OnDragComplete?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
+                    downPos.x, downPos.y, downPos.z, upPos.x, upPos.y, upPos.z
+                });
             }
         }
 
@@ -68,7 +92,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -79,7 +107,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -90,7 +122,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -101,7 +137,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -112,6 +152,7 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
+                if (DisablePatch) return;
                 OnDragTool?.Invoke(new[]
                 {
                     ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
@@ -126,7 +167,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -137,7 +182,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -148,7 +197,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -159,7 +212,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -170,7 +227,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
 
@@ -181,7 +242,11 @@ namespace MultiplayerMod.patch
 
             public static void Prefix(int cell, int distFromOrigin)
             {
-                OnDragTool?.Invoke(new Pair<int, int>(cell, distFromOrigin));
+                if (DisablePatch) return;
+                OnDragTool?.Invoke(new[]
+                {
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                });
             }
         }
     }

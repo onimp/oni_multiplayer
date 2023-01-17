@@ -10,6 +10,11 @@ namespace MultiplayerMod.multiplayer.message
 
         public enum UserActionTypeEnum
         {
+            // Speed control actions
+            Pause,
+            Unpause,
+            SetSpeed,
+
             // UI Bottom right part buttons
             Attack,
             Build,
