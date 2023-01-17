@@ -55,11 +55,16 @@ namespace MultiplayerMod.steam
             SteamFriends.ActivateGameOverlay("friends");
         }
 
-        public void SendToServer(object payload = null)
+        public void SendUserActionToServer(object payload = null)
+        {
+            SendCommandToServer(Command.UserAction, payload);
+        }
+
+        public void SendCommandToServer(Command command, object payload = null)
         {
             if (!_connected) return;
             using var message =
-                new SerializedMessage(Command.UserAction, payload);
+                new SerializedMessage(command, payload);
             var result = SteamNetworkingSockets.SendMessageToConnection(_conn,
                 message.IntPtr, message.Size,
                 Steamworks.Constants.k_nSteamNetworkingSend_Reliable, out var messageOut);

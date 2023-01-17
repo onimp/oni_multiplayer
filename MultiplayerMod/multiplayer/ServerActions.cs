@@ -83,24 +83,15 @@ namespace MultiplayerMod.multiplayer
             }
         }
 
-        private void HandleUserAction(CSteamID userId, UserAction userAction)
-        {
-            switch (userAction.userActionType)
-            {
-                case UserAction.UserActionTypeEnum.MouseMove:
-                    _playersState.UpdateMousePos(userId, (Pair<float, float>)userAction.Payload);
-                    break;
-                default:
-                    throw new InvalidEnumArgumentException($"Unknown user action received {userAction.userActionType}");
-            }
-        }
-
         private void OnCommandReceived(CSteamID userId, SerializedMessage.TypedMessage typedMessage)
         {
             switch (typedMessage.Command)
             {
                 case Command.UserAction:
-                    HandleUserAction(userId, (UserAction)typedMessage.Payload);
+                    _server.BroadcastCommand(userId, Command.UserAction, typedMessage.Payload);
+                    break;
+                case Command.MouseMove:
+                    _playersState.UpdateMousePos(userId, (Pair<float, float>)typedMessage.Payload);
                     break;
                 default:
                     throw new InvalidEnumArgumentException($"Unknown command received {typedMessage.Command}");
