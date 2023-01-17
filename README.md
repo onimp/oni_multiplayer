@@ -1,6 +1,6 @@
-# ONI multiplayer mod (WORN IN PROGRESS / PROTOTYPE)
+# ONI multiplayer mod (WORK IN PROGRESS / PROTOTYPE)
 
-This is is a mod which adds multiplayer support to Oxygen not included game.
+This is a mod which adds multiplayer support to Oxygen not included game.
 
 ## Current stage and status
 
@@ -14,13 +14,13 @@ Working functionality:
 - Loading game save to all new joiners
 - Showing cursor of all active players
 
-That is it. Nothing else is working yet. No any actions will be synchronized yet. It is just a proof of concept.
+That is it. Nothing else is working yet. No actions will be synchronised yet. It is just a proof of concept.
 
 ## Game mechanics
 
-All players play all together and shares controls over single colony. Order given by a player might be over ruled by
+All players play all together and share controls over a single colony. Order given by a player might be overruled by
 another.
-There is no difference between different player, all players are equal.
+There is no difference between different players, all players are equal.
 It is possible to look and control different asteroids at the same time as well.
 
 ## Underhood mechanics idea
@@ -31,7 +31,7 @@ So if user input will be the same on different machines - then their separate si
 To avoid accumulated errors (if any) it is proposed to do periodic (one per game day) hard syncs by loading game save
 files.
 [Optional] To make smoother experience or if simulations will be running too different it is feasible to do periodic
-small world syncs for smaller areas of different layers (e.g. sync gasses within area 16x16 every 30 seconds).
+small world syncs for smaller areas of different layers (e.g. sync gases within an area 16x16 every 30 seconds).
 
 ## How to install
 
@@ -43,6 +43,7 @@ some folders are missing, please create them).
 ### Host:
 
 - Host a game either via 'New multiplayer game' or via 'Load multiplayer game'
+- Wait until the game is loaded and overlay is opened automatically
 - Invite friends via Steam overlay
 
 ### Player/Friend:
