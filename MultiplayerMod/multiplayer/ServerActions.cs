@@ -64,29 +64,14 @@ namespace MultiplayerMod.multiplayer
             {
                 userActionType = UserAction.UserActionTypeEnum.Pause
             });
-            var saveWorld = WorldSaver.SaveWorld();
-            SendWorldByChunks(saveWorld);
+            var saveWorldChunks = WorldSaver.SaveWorld();
+            saveWorldChunks.ForEach(chunk =>
+                _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk));
 
             _server.BroadcastCommand(Command.UserAction, new UserAction
             {
                 userActionType = UserAction.UserActionTypeEnum.Unpause
             });
-        }
-
-        private void SendWorldByChunks(byte[] saveWorld)
-        {
-            const int maxMsgSize = 100 * 1024; // 100 kb
-            var chunksCount = (saveWorld.Length - 1) / maxMsgSize + 1;
-            for (var i = 0; i < chunksCount; i++)
-            {
-                _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld,
-                    new WorldSaveChunk
-                    {
-                        chunkIndex = i,
-                        totalChunks = chunksCount,
-                        chunkData = saveWorld.Skip(i * maxMsgSize).Take(maxMsgSize).ToArray()
-                    });
-            }
         }
 
         private void OnCommandReceived(CSteamID userId, SerializedMessage.TypedMessage typedMessage)

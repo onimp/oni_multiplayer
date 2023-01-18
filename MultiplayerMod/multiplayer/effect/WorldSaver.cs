@@ -1,23 +1,38 @@
+using System.Collections.Generic;
 using System.IO;
-using Klei;
+using System.Linq;
+using MultiplayerMod.multiplayer.message;
 
 namespace MultiplayerMod.multiplayer.effect
 {
     public static class WorldSaver
     {
-        public static byte[] SaveWorld()
+        public static List<WorldSaveChunk> SaveWorld()
         {
-            Debug.Log("Save World call");
-            var path = string.IsNullOrEmpty(GenericGameSettings.instance.performanceCapture.saveGame)
-                ? SaveLoader.GetLatestSaveForCurrentDLC()
-                : GenericGameSettings.instance.performanceCapture.saveGame;
-            Debug.Log(path);
+            var tempFilePath = Path.GetTempFileName();
+            SaveLoader.Instance.Save(tempFilePath);
 
-            // TODO Check whether it is an actual path
-            // Otherwise trigger world saving.
-            var result = File.ReadAllBytes(path);
-            Debug.Log(result.Length);
-            return result;
+            var result = File.ReadAllBytes(tempFilePath);
+            return SplitToChunks(result);
+        }
+
+
+        private static List<WorldSaveChunk> SplitToChunks(byte[] saveWorld)
+        {
+            const int maxMsgSize = 100 * 1024; // 100 kb
+            var chunksCount = (saveWorld.Length - 1) / maxMsgSize + 1;
+            var chunks = new List<WorldSaveChunk>();
+            for (var i = 0; i < chunksCount; i++)
+            {
+                chunks.Add(new WorldSaveChunk
+                {
+                    chunkIndex = i,
+                    totalChunks = chunksCount,
+                    chunkData = saveWorld.Skip(i * maxMsgSize).Take(maxMsgSize).ToArray()
+                });
+            }
+
+            return chunks;
         }
     }
 }
