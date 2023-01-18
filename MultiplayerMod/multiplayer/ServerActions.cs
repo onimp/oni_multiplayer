@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using MultiplayerMod.multiplayer.effect;
 using MultiplayerMod.multiplayer.message;
 using MultiplayerMod.steam;
@@ -59,6 +60,8 @@ namespace MultiplayerMod.multiplayer
         {
             // if it is resulted from ourself - skip
             if (steamID == SteamUser.GetSteamID()) return;
+            // TODO remove me
+            WorldDebugDiffer.CalculateWorldSummary();
 
             _server.BroadcastCommand(Command.UserAction, new UserAction
             {
@@ -68,10 +71,9 @@ namespace MultiplayerMod.multiplayer
             saveWorldChunks.ForEach(chunk =>
                 _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk));
 
-            _server.BroadcastCommand(Command.UserAction, new UserAction
-            {
-                userActionType = UserAction.UserActionTypeEnum.Unpause
-            });
+            // TODO remove me
+            WorldDebugDiffer.CalculateWorldSummary();
+            Task.Delay(1000).ContinueWith((_) => WorldDebugDiffer.CalculateWorldSummary());
         }
 
         private void OnCommandReceived(CSteamID userId, SerializedMessage.TypedMessage typedMessage)

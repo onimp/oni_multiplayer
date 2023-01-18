@@ -6,6 +6,7 @@ namespace MultiplayerMod.multiplayer.effect
     {
         public static void PauseWorld()
         {
+            if (SpeedControlScreen.Instance.IsPaused) return;
             SpeedControlScreenPatches.DisablePatch = true;
             SpeedControlScreen.Instance.Pause();
             SpeedControlScreenPatches.DisablePatch = false;
@@ -13,6 +14,8 @@ namespace MultiplayerMod.multiplayer.effect
 
         public static void UnPauseWorld()
         {
+            if (!SpeedControlScreen.Instance.IsPaused) return;
+
             SpeedControlScreenPatches.DisablePatch = true;
             SpeedControlScreen.Instance.Unpause();
             SpeedControlScreenPatches.DisablePatch = false;
@@ -20,6 +23,8 @@ namespace MultiplayerMod.multiplayer.effect
 
         public static void SetSpeed(int speed)
         {
+            if (SpeedControlScreen.Instance.GetSpeed() == speed) return;
+
             SpeedControlScreenPatches.DisablePatch = true;
             SpeedControlScreen.Instance.SetSpeed(speed);
             SpeedControlScreenPatches.DisablePatch = false;
