@@ -176,6 +176,7 @@ namespace MultiplayerMod.steam
 
                 SteamGameServerNetworkingSockets.SetConnectionPollGroup(hConn, _hNetPollGroup);
 
+                if (_clients.ContainsKey(steamID)) _clients.Remove(steamID); 
                 _clients.Add(steamID, hConn);
                 Debug.Log($"Connection accepted from {steamID}");
                 ClientJoined?.Invoke(steamID);
