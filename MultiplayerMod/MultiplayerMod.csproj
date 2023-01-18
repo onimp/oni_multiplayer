@@ -77,6 +77,7 @@
         <Compile Include="multiplayer\effect\PlayerStateEffect.cs" />
         <Compile Include="multiplayer\effect\WorldLoader.cs" />
         <Compile Include="multiplayer\effect\WorldSaver.cs" />
+        <Compile Include="multiplayer\effect\WorldDebugDiffer.cs" />
         <Compile Include="multiplayer\effect\WorldTimeManager.cs" />
         <Compile Include="multiplayer\message\PlayersState.cs" />
         <Compile Include="multiplayer\message\UserAction.cs" />

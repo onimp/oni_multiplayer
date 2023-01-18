@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using MultiplayerMod.multiplayer.effect;
 using MultiplayerMod.multiplayer.message;
 using MultiplayerMod.patch;
@@ -78,6 +79,9 @@ namespace MultiplayerMod.multiplayer
         {
             new GameObject().AddComponent<PlayerStateEffect>();
             _worldSpawned = true;
+            // TODO remove me
+            WorldDebugDiffer.CalculateWorldSummary();
+            Task.Delay(1000).ContinueWith((_) => WorldDebugDiffer.CalculateWorldSummary());
         }
 
         private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload = null)

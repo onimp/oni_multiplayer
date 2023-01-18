@@ -1,5 +1,6 @@
 using System;
 using HarmonyLib;
+using MultiplayerMod.multiplayer.effect;
 
 namespace MultiplayerMod.patch
 {
@@ -29,7 +30,11 @@ namespace MultiplayerMod.patch
             {
                 if (DisablePatch) return;
                 if (SpeedControlScreen.Instance.IsPaused)
+                {
                     OnUnpause?.Invoke();
+                    // TODO remove me
+                    WorldDebugDiffer.CalculateWorldSummary();
+                }
                 else
                     OnPause?.Invoke();
             }
