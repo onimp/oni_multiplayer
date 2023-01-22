@@ -22,33 +22,15 @@ namespace MultiplayerMod.patch
             __instance.AddButton("Load MultiPlayer", true,
                 () =>
                 {
-                    var methodInfo =
-                        typeof(MainMenu).GetMethod("LoadGame", BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (methodInfo == null)
-                    {
-                        Debug.Log("methodInfo not found");
-                        return;
-                    }
-
-
                     Server.HostServerAfterInit();
-
-                    methodInfo.Invoke(__instance, new object[] { });
+                    __instance.InvokePrivate("LoadGame");
                 });
             __instance.AddButton("Start MultiPlayer", false,
                 () =>
                 {
-                    var methodInfo =
-                        typeof(MainMenu).GetMethod("NewGame", BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (methodInfo == null)
-                    {
-                        Debug.Log("methodInfo not found");
-                        return;
-                    }
-
                     Server.HostServerAfterInit();
 
-                    methodInfo.Invoke(__instance, new object[] { });
+                    __instance.InvokePrivate("NewGame");
                 });
             __instance.AddButton("Join MultiPlayer", false, Client.ShowJoinToFriend);
         }
@@ -59,28 +41,17 @@ namespace MultiplayerMod.patch
         public static void AddButton(this MainMenu mainMenu, string text, bool topStyle, System.Action action)
         {
             var type = typeof(MainMenu);
-            var makeButtonMethodInfo = type.GetMethod("MakeButton", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (makeButtonMethodInfo == null)
-            {
-                Debug.Log("Button not found");
-                return;
-            }
 
             var buttonInfoType = type.GetNestedType("ButtonInfo", BindingFlags.NonPublic | BindingFlags.Instance);
 
-            makeButtonMethodInfo.Invoke(
-                mainMenu,
-                new[]
-                {
-                    Activator.CreateInstance(
-                        buttonInfoType,
-                        new LocString(text),
-                        action,
-                        22,
-                        type.GetField(topStyle ? "topButtonStyle" : "normalButtonStyle",
-                                BindingFlags.NonPublic | BindingFlags.Instance)
-                            ?.GetValue(mainMenu))
-                });
+            mainMenu.InvokePrivate("MakeButton",
+                Activator.CreateInstance(
+                    buttonInfoType,
+                    new LocString(text),
+                    action,
+                    22,
+                    mainMenu.GetPrivateField<ColorStyleSetting>(topStyle ? "topButtonStyle" : "normalButtonStyle"))
+            );
         }
     }
 }

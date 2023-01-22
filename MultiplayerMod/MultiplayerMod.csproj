@@ -93,6 +93,7 @@
         <Compile Include="steam\Command.cs" />
         <Compile Include="steam\SerializedMessage.cs" />
         <Compile Include="steam\Server.cs" />
+        <Compile Include="Utils.cs" />
     </ItemGroup>
     <ItemGroup>
         <None Include="mod.yaml">
