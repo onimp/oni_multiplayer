@@ -1,4 +1,4 @@
-using System.Reflection;
+using System.Collections.Generic;
 using MultiplayerMod.patch;
 using UnityEngine;
 
@@ -8,20 +8,49 @@ namespace MultiplayerMod.multiplayer.effect
     {
         public static void OnDragTool(DragTool dragTool, object payload)
         {
-            var array = (int[])payload;
-            var priority = array[0];
-            var cell = array[1];
-            var distFromOrigin = array[2];
+            var array = (object[])payload;
+            var priority = (int)array[0];
+            var cell = (int)array[1];
+            var distFromOrigin = (int)array[2];
+            var isBuildTool = array.Length > 3;
+            if (isBuildTool)
+            {
+                PlanScreen.Instance.ProductInfoScreen.Awake();
+                PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.InvokePrivate("OnPrefabInit");
+                var additionalObject = (object[])array[3];
+                var def = Assets.GetBuildingDef((string)additionalObject[0]);
+                var facadeId = (string)additionalObject[1];
+                var selectedElements = (IList<Tag>)additionalObject[2];
+                if (def.isKAnimTile && def.isUtility)
+                {
+                    (def.BuildingComplete.GetComponent<Wire>() != null
+                        ? WireBuildTool.Instance
+                        : (BaseUtilityBuildTool)UtilityBuildTool.Instance).Activate(def, selectedElements);
+                }
+                else
+                    BuildTool.Instance.Activate(def, selectedElements, facadeId);
+            }
 
             DragToolPatches.DisablePatch = true;
 
             var currentPriority = ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority();
-            ToolMenu.Instance.PriorityScreen.SetScreenPriority(
-                new PrioritySetting(PriorityScreen.PriorityClass.basic, priority));
+            var newPriority = new PrioritySetting(PriorityScreen.PriorityClass.basic, priority);
+            ToolMenu.Instance.PriorityScreen.SetScreenPriority(newPriority);
+            if (isBuildTool)
+            {
+                PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.PriorityScreen.SetScreenPriority(
+                    newPriority);
+            }
 
-            var method = dragTool.GetType().GetMethod("OnDragTool", BindingFlags.NonPublic | BindingFlags.Instance);
-            method?.Invoke(dragTool, new object[] { cell, distFromOrigin });
+            dragTool.InvokePrivate("OnDragTool", cell, distFromOrigin);
+
             ToolMenu.Instance.PriorityScreen.SetScreenPriority(currentPriority);
+            if (isBuildTool)
+            {
+                BuildTool.Instance.Deactivate();
+                PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.PriorityScreen.SetScreenPriority(
+                    currentPriority);
+            }
 
             DragToolPatches.DisablePatch = false;
         }
@@ -39,8 +68,7 @@ namespace MultiplayerMod.multiplayer.effect
             ToolMenu.Instance.PriorityScreen.SetScreenPriority(
                 new PrioritySetting(PriorityScreen.PriorityClass.basic, priority));
 
-            var method = dragTool.GetType().GetMethod("OnDragComplete", BindingFlags.NonPublic | BindingFlags.Instance);
-            method?.Invoke(dragTool, new object[] { downPos, upPos });
+            dragTool.InvokePrivate("OnDragComplete", downPos, upPos);
             ToolMenu.Instance.PriorityScreen.SetScreenPriority(currentPriority);
 
             DragToolPatches.DisablePatch = false;

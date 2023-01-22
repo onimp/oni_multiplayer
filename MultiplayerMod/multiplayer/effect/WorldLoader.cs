@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using MultiplayerMod.multiplayer.message;
 
 namespace MultiplayerMod.multiplayer.effect
@@ -35,17 +34,7 @@ namespace MultiplayerMod.multiplayer.effect
 
             SaveChunks.Clear();
 
-            var methodInfo = typeof(LoadScreen).GetMethod("DoLoad",
-                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null,
-                CallingConventions.Any,
-                new[] { typeof(string) }, null);
-            if (methodInfo == null)
-            {
-                Debug.Log("Didn't find DoLoad method");
-                return;
-            }
-
-            methodInfo.Invoke(null, new object[] { tempFilePath });
+            typeof(LoadScreen).InvokePrivateStatic("DoLoad", new[] { typeof(string) }, tempFilePath);
         }
     }
 }
