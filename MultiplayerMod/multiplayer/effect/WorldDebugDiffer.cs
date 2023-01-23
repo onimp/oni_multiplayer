@@ -11,21 +11,21 @@ namespace MultiplayerMod.multiplayer.effect
         private const int CheckEveryFrame = 400;
         public static WorldDebugInfo? LastServerInfo { private get; set; }
 
+        public static int ErrorsCount { get; private set; }
+
         public void RenderEveryTick(float dt)
         {
-            if (GameClock.Instance.GetFrame() % CheckEveryFrame == 0)
-            {
-                CompareIfApplicable();
-                _currentInfo = WorldDebugInfo.CurrentDebugInfo();
-                OnDebugInfoAvailable?.Invoke(_currentInfo!.Value);
-                CompareIfApplicable();
-            }
+            if (GameClock.Instance.GetFrame() % CheckEveryFrame != 0) return;
+            CompareIfApplicable();
+            _currentInfo = WorldDebugInfo.CurrentDebugInfo();
+            OnDebugInfoAvailable?.Invoke(_currentInfo!.Value);
+            CompareIfApplicable();
         }
 
         private void CompareIfApplicable()
         {
             if (LastServerInfo == null || LastServerInfo?.worldFrame != _currentInfo?.worldFrame) return;
-            _currentInfo?.Compare(LastServerInfo!.Value);
+            ErrorsCount = _currentInfo?.Compare(LastServerInfo!.Value) ?? 0;
             LastServerInfo = null;
         }
     }

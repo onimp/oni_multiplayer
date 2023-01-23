@@ -23,6 +23,8 @@ namespace MultiplayerMod.multiplayer.message
         public int[] choreProvidersHashes;
         public Dictionary<int, int[]>[] ChoreProvidersChoresHashes;
 
+        private const int MaxBatchesCount = 128;
+
         public static unsafe WorldDebugInfo CurrentDebugInfo()
         {
             var objects = Object.FindObjectsOfType<ChoreProvider>();
@@ -48,24 +50,35 @@ namespace MultiplayerMod.multiplayer.message
             };
         }
 
-        public void Compare(WorldDebugInfo other)
+        public int Compare(WorldDebugInfo other)
         {
             Debug.Log("Comparing world debug infos.");
-            CompareValues(nameof(worldFrame), worldFrame, other.worldFrame);
-            CompareValues(nameof(cellsCount), cellsCount, other.cellsCount);
-            CompareValues(nameof(elementIdxHashes), elementIdxHashes, other.elementIdxHashes);
-            CompareValues(nameof(temperatureHashes), temperatureHashes, other.temperatureHashes);
-            CompareValues(nameof(radiationHashes), radiationHashes, other.radiationHashes);
-            CompareValues(nameof(massHashes), massHashes, other.massHashes);
-            CompareValues(nameof(propertiesHashes), propertiesHashes, other.propertiesHashes);
-            CompareValues(nameof(strengthInfoHashes), strengthInfoHashes, other.strengthInfoHashes);
-            CompareValues(nameof(insulationHashes), insulationHashes, other.insulationHashes);
-            CompareValues(nameof(diseaseIdxHashes), diseaseIdxHashes, other.diseaseIdxHashes);
-            CompareValues(nameof(diseaseCountHashes), diseaseCountHashes, other.diseaseCountHashes);
-            CompareValues(nameof(accumulatedFlowValuesHashes), accumulatedFlowValuesHashes,
+            var errorsCount = 0;
+            errorsCount += CompareValues(nameof(worldFrame), worldFrame, other.worldFrame);
+            errorsCount += cellsCount * CompareValues(nameof(cellsCount), cellsCount, other.cellsCount);
+            errorsCount += cellsCount *
+                           CompareValues(nameof(elementIdxHashes), elementIdxHashes, other.elementIdxHashes);
+            errorsCount += cellsCount *
+                           CompareValues(nameof(temperatureHashes), temperatureHashes, other.temperatureHashes);
+            errorsCount += cellsCount * CompareValues(nameof(radiationHashes), radiationHashes, other.radiationHashes);
+            errorsCount += cellsCount * CompareValues(nameof(massHashes), massHashes, other.massHashes);
+            errorsCount += cellsCount *
+                           CompareValues(nameof(propertiesHashes), propertiesHashes, other.propertiesHashes);
+            errorsCount += cellsCount *
+                           CompareValues(nameof(strengthInfoHashes), strengthInfoHashes, other.strengthInfoHashes);
+            errorsCount += cellsCount *
+                           CompareValues(nameof(insulationHashes), insulationHashes, other.insulationHashes);
+            errorsCount += cellsCount *
+                           CompareValues(nameof(diseaseIdxHashes), diseaseIdxHashes, other.diseaseIdxHashes);
+            errorsCount += cellsCount *
+                           CompareValues(nameof(diseaseCountHashes), diseaseCountHashes, other.diseaseCountHashes);
+            errorsCount += cellsCount * CompareValues(nameof(accumulatedFlowValuesHashes), accumulatedFlowValuesHashes,
                 other.accumulatedFlowValuesHashes);
-            CompareValues(nameof(choreProvidersHashes), choreProvidersHashes, other.choreProvidersHashes);
-            CompareArrayOfDictionaries(ChoreProvidersChoresHashes, other.ChoreProvidersChoresHashes);
+            errorsCount += CompareValues(nameof(choreProvidersHashes), choreProvidersHashes,
+                other.choreProvidersHashes);
+            errorsCount += CompareArrayOfDictionaries(ChoreProvidersChoresHashes, other.ChoreProvidersChoresHashes);
+            Debug.Log($"Errors count is {errorsCount}");
+            return errorsCount;
         }
 
         private static int Hash(Chore chore)
@@ -90,8 +103,8 @@ namespace MultiplayerMod.multiplayer.message
                 arr[i] = objects[i];
             }
 
-            var batchesCount = 16;
-            if (arr.Length < batchesCount) batchesCount = arr.Length;
+            var batchesCount = MaxBatchesCount;
+            if (arr.Length < MaxBatchesCount) batchesCount = arr.Length;
             var res = new List<int>();
             for (var i = 0; i < batchesCount; i++)
             {
@@ -108,40 +121,45 @@ namespace MultiplayerMod.multiplayer.message
             return ((h1 << 5) + h1) ^ h2;
         }
 
-        private void CompareValues<T>(string name, T a, T b)
+        private int CompareValues<T>(string name, T a, T b)
         {
             if (a.Equals(b))
             {
-                return;
+                return 0;
             }
 
             Debug.Log($"{name} {a} != {b}");
+            return 1;
         }
 
-        private void CompareValues<T>(string name, T[] a, T[] b)
+        private int CompareValues<T>(string name, T[] a, T[] b)
         {
-            if (a.SequenceEqual(b))
+            var failures = Enumerable.Range(0, Math.Max(a.Length, b.Length)).Where(i =>
+                a.Length <= i || b.Length <= i || !a[i].Equals(b[i])
+            ).ToArray();
+
+            if (failures.Length != 0)
             {
-                return;
+                Debug.Log(
+                    $"{name} Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures)}");
             }
 
-            var failures = Enumerable.Range(0, a.Length).Where(i => !a[i].Equals(b[i])).ToArray();
-
-            Debug.Log(
-                $"{name} Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures)}");
+            return failures.Length;
         }
 
-        private void CompareArrayOfDictionaries(Dictionary<int, int[]>[] a, Dictionary<int, int[]>[] b)
+        private int CompareArrayOfDictionaries(Dictionary<int, int[]>[] a, Dictionary<int, int[]>[] b)
         {
-            var failures = Enumerable.Range(0, a.Length).Where(i => !CompareDictionaries(a[i], b[i])).ToArray();
+            var failures = Enumerable.Range(0, Math.Max(a.Length, b.Length)).Where(i =>
+                a.Length <= i || b.Length <= i || !CompareDictionaries(a[i], b[i])
+            ).ToArray();
 
-            if (failures.Length == 0)
+            if (failures.Length != 0)
             {
-                return;
+                Debug.Log(
+                    $"Chore dicts Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures.ToArray())}");
             }
 
-            Debug.Log(
-                $"Chore dicts Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures.ToArray())}");
+            return failures.Length;
         }
 
         private static bool CompareDictionaries(Dictionary<int, int[]> mapA, Dictionary<int, int[]> mapB)

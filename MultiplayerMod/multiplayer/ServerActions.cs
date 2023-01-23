@@ -14,7 +14,7 @@ namespace MultiplayerMod.multiplayer
     /// Server here is a Multiplayer itself. Game is not considered as a part of the server (it is one of clients).
     /// Based on the event either broadcast a message or change server state accordingly .
     /// </summary>
-    public class ServerActions : MonoBehaviour
+    public class ServerActions : KMonoBehaviour
     {
         private ClientActions _clientActions;
         private Server _server;
@@ -29,18 +29,13 @@ namespace MultiplayerMod.multiplayer
         {
             _server = FindObjectsOfType<Server>().FirstOrDefault();
             _clientActions = FindObjectsOfType<ClientActions>().FirstOrDefault();
-            if (_server == null)
-            {
-                Debug.Log("Server is null");
-                return;
-            }
 
-            _server.ServerCreated += OnServerCreated;
-            _server.ClientJoined += HardSyncClients;
-            _server.OnCommandReceived += OnCommandReceived;
+            _server!.ServerCreated += OnServerCreated;
+            _server!.ClientJoined += HardSyncClients;
+            _server!.OnCommandReceived += OnCommandReceived;
         }
 
-        public void OnSpawn()
+        protected override void OnSpawn()
         {
             var go = new GameObject();
             // To send server infos as their become available

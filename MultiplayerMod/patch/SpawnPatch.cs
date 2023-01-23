@@ -9,19 +9,14 @@ namespace MultiplayerMod.patch
     [HarmonyPatch(typeof(WorldGenSpawner), "OnSpawn")]
     public class SpawnPatch
     {
+        public static bool HostServerAfterStart { get; set; }
         public static void Postfix()
         {
-            var server = Object.FindObjectsOfType<Server>().FirstOrDefault();
-            if (server == null)
-            {
-                Debug.Log("Server is null");
-                return;
-            }
-
-            Debug.Log("World is spawned. Starting server if needed.");
-            server.HostServerIfNeeded();
-            Object.FindObjectsOfType<ClientActions>().FirstOrDefault()?.OnSpawn();
-            Object.FindObjectsOfType<ServerActions>().FirstOrDefault()?.OnSpawn();
+            if (!HostServerAfterStart) return;
+            HostServerAfterStart = false;
+            var multiplayerGameObject = new GameObject();
+            multiplayerGameObject.AddComponent<Server>();
+            multiplayerGameObject.AddComponent<ServerActions>();
         }
     }
 }
