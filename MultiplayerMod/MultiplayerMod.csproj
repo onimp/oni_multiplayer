@@ -81,6 +81,7 @@
         <Compile Include="multiplayer\effect\WorldTimeManager.cs" />
         <Compile Include="multiplayer\message\PlayersState.cs" />
         <Compile Include="multiplayer\message\UserAction.cs" />
+        <Compile Include="multiplayer\message\WorldDebugInfo.cs" />
         <Compile Include="multiplayer\message\WorldSaveChunk.cs" />
         <Compile Include="multiplayer\ServerActions.cs" />
         <Compile Include="patch\DragToolPatches.cs" />
