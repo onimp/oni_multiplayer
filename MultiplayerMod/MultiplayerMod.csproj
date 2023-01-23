@@ -84,11 +84,15 @@
         <Compile Include="multiplayer\message\WorldDebugInfo.cs" />
         <Compile Include="multiplayer\message\WorldSaveChunk.cs" />
         <Compile Include="multiplayer\ServerActions.cs" />
+        <Compile Include="oni\MultiplayerColonyDiagnostic.cs" />
+        <Compile Include="oni\MultiplayerErrorsTracker.cs" />
+        <Compile Include="patch\ColonyDiagnosticUtilityPatch.cs" />
         <Compile Include="patch\DragToolPatches.cs" />
         <Compile Include="patch\InterfaceToolOnMouseMovePatch.cs" />
         <Compile Include="patch\SpawnPatch.cs" />
         <Compile Include="patch\MainMenuPatch.cs" />
         <Compile Include="patch\SpeedControlScreenPatch.cs" />
+        <Compile Include="patch\TrackerToolPatch.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="steam\Client.cs" />
         <Compile Include="steam\Command.cs" />

@@ -50,11 +50,6 @@ namespace MultiplayerMod.steam
             SteamAPI.Shutdown();
         }
 
-        public static void ShowJoinToFriend()
-        {
-            SteamFriends.ActivateGameOverlay("friends");
-        }
-
         public void SendUserActionToServer(object payload = null)
         {
             SendCommandToServer(Command.UserAction, payload);

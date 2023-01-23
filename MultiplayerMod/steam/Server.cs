@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using Steamworks;
-using UnityEngine;
 
 namespace MultiplayerMod.steam
 {
-    public class Server : MonoBehaviour
+    public class Server : KMonoBehaviour
     {
         private HSteamNetPollGroup _hNetPollGroup;
         public event System.Action ServerCreated;
@@ -17,7 +16,6 @@ namespace MultiplayerMod.steam
         private readonly Dictionary<CSteamID, HSteamNetConnection> _clients =
             new Dictionary<CSteamID, HSteamNetConnection>();
 
-        private static bool _hostServerAfterLoad;
         private bool _isServerStarted;
         public CSteamID SteamId => SteamGameServer.GetSteamID();
 
@@ -64,20 +62,6 @@ namespace MultiplayerMod.steam
             Callback<SteamNetConnectionStatusChangedCallback_t>.CreateGameServer(Steam_HandleIncomingConnection);
         }
 
-        public static void HostServerAfterInit()
-        {
-            Debug.Log("Will host server after world is ready.");
-            _hostServerAfterLoad = true;
-        }
-
-        public void HostServerIfNeeded()
-        {
-            if (!_hostServerAfterLoad) return;
-            // Avoid multiplayer in follow up game loads.
-            _hostServerAfterLoad = false;
-            StartServer();
-        }
-
         public void BroadcastCommand(Command command, object payload = null)
         {
             BroadcastCommand(null, command, payload);
@@ -100,7 +84,7 @@ namespace MultiplayerMod.steam
             }
         }
 
-        private void StartServer()
+        protected override void OnSpawn()
         {
             Debug.Log("Multiplayer server startup");
             Debug.Log(SteamFriends.GetPersonaName());
@@ -139,7 +123,7 @@ namespace MultiplayerMod.steam
             ReceiveNetworkData();
         }
 
-        void OnDestroy()
+        protected override void OnCleanUp()
         {
             Debug.Log("Server.OnDestroy");
             GameServer.Shutdown();
@@ -176,7 +160,7 @@ namespace MultiplayerMod.steam
 
                 SteamGameServerNetworkingSockets.SetConnectionPollGroup(hConn, _hNetPollGroup);
 
-                if (_clients.ContainsKey(steamID)) _clients.Remove(steamID); 
+                if (_clients.ContainsKey(steamID)) _clients.Remove(steamID);
                 _clients.Add(steamID, hConn);
                 Debug.Log($"Connection accepted from {steamID}");
                 ClientJoined?.Invoke(steamID);

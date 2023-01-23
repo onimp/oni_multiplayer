@@ -14,7 +14,7 @@ namespace MultiplayerMod.multiplayer
     /// Contains and handles user events.
     /// Based on the event either send it to the server or change game via `Effect` class.
     /// </summary>
-    public class ClientActions : MonoBehaviour
+    public class ClientActions : KMonoBehaviour
     {
         private Client _client;
 
@@ -74,13 +74,12 @@ namespace MultiplayerMod.multiplayer
                 (payload) => SendToServer(UserAction.UserActionTypeEnum.Priority, payload);
         }
 
-        public void OnSpawn()
+        protected override void OnSpawn()
         {
             var go = new GameObject();
             go.AddComponent<PlayerStateEffect>();
             // To handle incoming server debug infos
             go.AddComponent<WorldDebugDiffer>();
-            _worldSpawned = true;
         }
 
         private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload = null)
@@ -119,7 +118,7 @@ namespace MultiplayerMod.multiplayer
                     WorldDebugDiffer.LastServerInfo = (WorldDebugInfo)typedMessage.Payload;
                     break;
                 case Command.LoadWorld:
-                    WorldLoader.LoadWorld(typedMessage.Payload);
+                    _worldSpawned = WorldLoader.LoadWorld(typedMessage.Payload);
                     break;
                 case Command.PlayersState:
                     OnPlayerStateChanged((PlayersState)typedMessage.Payload);

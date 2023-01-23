@@ -11,6 +11,13 @@ namespace MultiplayerMod
             method?.Invoke(instance, args);
         }
 
+        public static void InvokePrivate<T>(this object instance, string methodName, params object[] args)
+        {
+            var method = instance.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+            method = method?.MakeGenericMethod(typeof(T));
+            method?.Invoke(instance, args);
+        }
+
         public static void InvokePrivateStatic(this Type type, string methodName, Type[] types, params object[] args)
         {
             var method = type.GetMethod(methodName,

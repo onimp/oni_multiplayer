@@ -3,6 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.multiplayer;
 using MultiplayerMod.steam;
+using Steamworks;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -14,25 +15,24 @@ namespace MultiplayerMod.patch
         public static void Prefix(MainMenu __instance)
         {
             var multiplayerGameObject = new GameObject();
-            multiplayerGameObject.AddComponent<Server>();
             multiplayerGameObject.AddComponent<Client>();
             multiplayerGameObject.AddComponent<ClientActions>();
-            multiplayerGameObject.AddComponent<ServerActions>();
+            // TODO destroy if game is stopped/exit to main menu
             Object.DontDestroyOnLoad(multiplayerGameObject);
             __instance.AddButton("Load MultiPlayer", true,
                 () =>
                 {
-                    Server.HostServerAfterInit();
+                    SpawnPatch.HostServerAfterStart = true;
                     __instance.InvokePrivate("LoadGame");
                 });
             __instance.AddButton("Start MultiPlayer", false,
                 () =>
                 {
-                    Server.HostServerAfterInit();
-
+                    SpawnPatch.HostServerAfterStart = true;
                     __instance.InvokePrivate("NewGame");
                 });
-            __instance.AddButton("Join MultiPlayer", false, Client.ShowJoinToFriend);
+            __instance.AddButton("Join MultiPlayer", false,
+                () => SteamFriends.ActivateGameOverlay("friends"));
         }
     }
 
