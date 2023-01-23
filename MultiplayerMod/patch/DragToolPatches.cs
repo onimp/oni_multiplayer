@@ -50,7 +50,8 @@ namespace MultiplayerMod.patch
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
                 {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
+                    PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.PriorityScreen
+                        .GetLastSelectedPriority().priority_value,
                     cell,
                     distFromOrigin,
                     new object[]

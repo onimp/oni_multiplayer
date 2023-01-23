@@ -21,6 +21,7 @@ namespace MultiplayerMod.patch
             Debug.Log("World is spawned. Starting server if needed.");
             server.HostServerIfNeeded();
             Object.FindObjectsOfType<ClientActions>().FirstOrDefault()?.OnSpawn();
+            Object.FindObjectsOfType<ServerActions>().FirstOrDefault()?.OnSpawn();
         }
     }
 }

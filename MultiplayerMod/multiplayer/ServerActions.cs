@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 using MultiplayerMod.multiplayer.effect;
 using MultiplayerMod.multiplayer.message;
 using MultiplayerMod.steam;
@@ -41,6 +40,14 @@ namespace MultiplayerMod.multiplayer
             _server.OnCommandReceived += OnCommandReceived;
         }
 
+        public void OnSpawn()
+        {
+            var go = new GameObject();
+            // To send server infos as their become available
+            var worldDiffer = go.AddComponent<WorldDebugDiffer>();
+            worldDiffer.OnDebugInfoAvailable += info => _server.BroadcastCommand(Command.WorldDebugDiff, info);
+        }
+
         private void Update()
         {
             if ((System.DateTime.Now - _lastUpdateTime).TotalMilliseconds < RefreshDelayMS)
@@ -60,8 +67,6 @@ namespace MultiplayerMod.multiplayer
         {
             // if it is resulted from ourself - skip
             if (steamID == SteamUser.GetSteamID()) return;
-            // TODO remove me
-            WorldDebugDiffer.CalculateWorldSummary();
 
             _server.BroadcastCommand(Command.UserAction, new UserAction
             {
@@ -70,10 +75,6 @@ namespace MultiplayerMod.multiplayer
             var saveWorldChunks = WorldSaver.SaveWorld();
             saveWorldChunks.ForEach(chunk =>
                 _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk));
-
-            // TODO remove me
-            WorldDebugDiffer.CalculateWorldSummary();
-            Task.Delay(1000).ContinueWith((_) => WorldDebugDiffer.CalculateWorldSummary());
         }
 
         private void OnCommandReceived(CSteamID userId, SerializedMessage.TypedMessage typedMessage)
