@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using MultiplayerMod.multiplayer.message;
 
 namespace MultiplayerMod.multiplayer.effect
@@ -7,11 +8,30 @@ namespace MultiplayerMod.multiplayer.effect
     public static class WorldLoader
     {
         private static readonly Dictionary<int, WorldSaveChunk> SaveChunks = new Dictionary<int, WorldSaveChunk>();
+        private static readonly Mutex LoadMutex = new Mutex();
 
-        public static void LoadWorld(object obj)
+        public static void StartLoading()
         {
+            LoadMutex.WaitOne();
+
+            LoadingOverlay.Load(() =>
+            {
+                LoadMutex.WaitOne();
+                LoadMutex.ReleaseMutex();
+            });
+        }
+
+        public static void LoadWorldChunk(object obj)
+        {
+            if (LoadMutex.WaitOne(1))
+            {
+                LoadingOverlay.Load(() =>
+                {
+                    LoadMutex.WaitOne();
+                    LoadMutex.ReleaseMutex();
+                });
+            }
             var chunk = (WorldSaveChunk)obj;
-            Debug.Log($"ClientActions.LoadWorld chunk {chunk.chunkIndex + 1}/{chunk.totalChunks}");
             SaveChunks[chunk.chunkIndex] = chunk;
             if (chunk.chunkIndex + 1 != chunk.totalChunks)
                 return;
@@ -35,6 +55,7 @@ namespace MultiplayerMod.multiplayer.effect
             SaveChunks.Clear();
 
             typeof(LoadScreen).InvokePrivateStatic("DoLoad", new[] { typeof(string) }, tempFilePath);
+            LoadMutex.ReleaseMutex();
         }
     }
 }

@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using MultiplayerMod.multiplayer.effect;
 using MultiplayerMod.multiplayer.message;
+using MultiplayerMod.patch;
 using MultiplayerMod.steam;
 using Steamworks;
 using UnityEngine;
@@ -31,8 +33,10 @@ namespace MultiplayerMod.multiplayer
             _clientActions = FindObjectsOfType<ClientActions>().FirstOrDefault();
 
             _server!.ServerCreated += OnServerCreated;
-            _server!.ClientJoined += HardSyncClients;
+            _server!.ClientJoined += OnClientJoined;
             _server!.OnCommandReceived += OnCommandReceived;
+
+            SaveLoaderPatch.OnWorldSaved += SaveLoaderPatchOnOnWorldSaved;
         }
 
         protected override void OnSpawn()
@@ -58,16 +62,25 @@ namespace MultiplayerMod.multiplayer
             SteamFriends.ActivateGameOverlayToUser("friends", SteamUser.GetSteamID());
         }
 
-        private void HardSyncClients(CSteamID steamID)
+        private void SaveLoaderPatchOnOnWorldSaved(string saveFileName)
+        {
+            HardSyncClients(WorldSaver.ReadWorldSave(saveFileName));
+        }
+
+        private void OnClientJoined(CSteamID steamID)
         {
             // if it is resulted from ourself - skip
             if (steamID == SteamUser.GetSteamID()) return;
 
+            HardSyncClients(WorldSaver.SaveWorld());
+        }
+
+        private void HardSyncClients(List<WorldSaveChunk> saveWorldChunks)
+        {
             _server.BroadcastCommand(Command.UserAction, new UserAction
             {
                 userActionType = UserAction.UserActionTypeEnum.Pause
             });
-            var saveWorldChunks = WorldSaver.SaveWorld();
             saveWorldChunks.ForEach(chunk =>
                 _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk));
         }

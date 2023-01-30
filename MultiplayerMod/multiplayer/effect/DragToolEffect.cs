@@ -18,9 +18,12 @@ namespace MultiplayerMod.multiplayer.effect
                 PlanScreen.Instance.ProductInfoScreen.Awake();
                 PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.InvokePrivate("OnPrefabInit");
                 var additionalObject = (object[])array[3];
+
                 var def = Assets.GetBuildingDef((string)additionalObject[0]);
                 var facadeId = (string)additionalObject[1];
                 var selectedElements = (IList<Tag>)additionalObject[2];
+                var orientation = (Orientation)additionalObject[3];
+                var buildTool = ((BuildTool)dragTool);
                 if (def.isKAnimTile && def.isUtility)
                 {
                     (def.BuildingComplete.GetComponent<Wire>() != null
@@ -28,7 +31,11 @@ namespace MultiplayerMod.multiplayer.effect
                         : (BaseUtilityBuildTool)UtilityBuildTool.Instance).Activate(def, selectedElements);
                 }
                 else
-                    BuildTool.Instance.Activate(def, selectedElements, facadeId);
+                {
+                    buildTool.Activate(def, selectedElements, facadeId);
+                    buildTool.SetToolOrientation(orientation);
+                    buildTool.InvokePrivate("UpdateVis", Grid.CellToPosCCC(cell, Grid.SceneLayer.Building));
+                }
             }
 
             DragToolPatches.DisablePatch = true;

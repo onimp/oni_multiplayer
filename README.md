@@ -9,12 +9,18 @@ Stage: Early WIP and proof of concept
 
 Working functionality:
 
-- Buttons in UI (Join/Load/Create MP game)
+- Currently tested in Vanilla only (NO DLC)
+- Basic main menu UI
+  - Join/Load/Create MP game
 - Ability to join/invite friends via Steam overlay UI
-- Loading game save to all new joiners
 - Showing cursor of all active players
-- Syncing tool actions (dig/build/mop/harvest/etc)
-- Syncing time settings (pause/warp speed)
+- Syncing user actions (dig/build/mop/harvest/etc and other from bottom toolbar)
+- Syncing warp settings and pause
+- Additional diagnostic showing amount of synchronization error
+  - Always 0 on the server side
+  - Huge on any client :)
+- Every mornings hard syncs to avoid accumulated errors
+- Hard sync on any server save
 
 That is it. Nothing else is working yet. No actions will be synchronised yet. It is just a proof of concept.
 
@@ -22,17 +28,20 @@ That is it. Nothing else is working yet. No actions will be synchronised yet. It
 
 All players play all together and share controls over a single colony. Order given by a player might be overruled by
 another.
-There is no difference between different players, all players are equal.
+<p>There is no difference between different players, all players are equal.
 It is possible to look and control different asteroids at the same time as well.
 
-## Underhood mechanics idea
+## Under the hood mechanics idea
 
-Idea is based on the assumption that the game engine will run the same without any user input even on different
+Idea is based on the assumption that the game engine will run ~~the same~~ **similar** without any user input even on
+different
 machines.
-So if user input will be the same on different machines - then their separate simulations should run the same.
-To avoid accumulated errors (if any) it is proposed to do periodic (one per game day) hard syncs by loading game save
+<p>So if user input will be the same on different machines - then their separate simulations should run the same.
+<p>To avoid accumulated errors (if any) it is proposed to do periodic (one per game day) hard syncs by loading game save
 files.
-[Optional] To make smoother experience or if simulations will be running too different it is feasible to do periodic
+<p>Additional support is required for minions since their logic is separate from the world state their behavior is differnt on different machines.
+
+<p>[Optional] To make smoother experience or if simulations will be running too different it is feasible to do periodic
 small world syncs for smaller areas of different layers (e.g. sync gases within an area 16x16 every 30 seconds).
 
 ## How to install
@@ -57,32 +66,37 @@ some folders are missing, please create them).
 # Long TODO List
 
 - Basic features
-    - Handle game user actions
-      - Handle building
-      - Handle buildings settings (side dialog actions)
-      - Handle colonies settings (food/priorities/etc)
-    - Ensure that simulations are running the same on different machines
-    - Every mornings  hard syncs
-    - Measuring amount of out-dated objects
-        - Crucial for decision about soft/hard syncs approach
-    - Performance assessment (network/memory/cpu)
+    - [MAJOR] Handle game user actions
+        - Handle building
+            - Most of the builds are synced
+            - Pipes, wires, vents are NOT synced at all
+        - Handle buildings settings (side dialog actions)
+        - Handle colonies settings (food/priorities/etc)
+    - [MAJOR] Printer is not synced
+    - [MAJOR] Minions behaviour is totally different on different clients
+    - [MINOR] Performance assessment (network/memory/cpu)
 - Improvements
-    - Correctly handling DLC vs Vanilla game versions
-    - Game loading indicator
-    - InGame Players information
+    - [MAJOR] Measuring amount of out-dated objects in more graceful way
+        - Currently it shows absolute diff to the frame. But some amount of difference is fine (e.g. progress of
+          building diff less then X percent, or temperature difference less then Y degrees)
+    - [MEDIUM] Correctly handling DLC vs Vanilla game versions
+    - [MEDIUM] Launching game straight away
+        - Right now it shows a warning about wrong url format
+    - [MINOR] InGame Players information
         - Who is in the game
         - Where they are
         - Their ping
         - Ability to kick/vote for kick
-    - Launching game straight away
-        - Right now it shows a warning about wrong url format
-    - In game Lobby browser
-    - Translation support
+    - [MINOR] In game Lobby browser
+    - [MINOR] Translation support
 - Bux fixes
-    - Correct handling of UI buttons (creating after joined, joining a second time, etc)
-    - Cursor draw method is error prone (double phantom cursors, inverted, etc)
+    - [MAJOR] Every synced build action clutters another player side
+    - [MEDIUM] Some actions (as Build action) overrides user selected building plan/material/priorirt
+    - [MEDIUM] Cursor draw method is error prone (double phantom cursors, inverted, etc)
+    - [MINOR] Correct handling of UI buttons (e.g. clicking create -> cancel -> join causes client to join but with
+      additional
+      server :) )
 - GitHub
-    - Add build releases to GitHub
-    - Better issue categories :)
-    - Build and code cleanup
-    - Better README
+    - [MAJOR] Better README
+    - [MEDIUM] Better issue categories :)
+    - [MINOR] Build and code cleanup

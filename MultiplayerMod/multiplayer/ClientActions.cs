@@ -18,7 +18,7 @@ namespace MultiplayerMod.multiplayer
     {
         private Client _client;
 
-        private System.DateTime _lastUpdateSent; 
+        private System.DateTime _lastUpdateSent;
         private bool _worldSpawned;
 
         // 33 ms is 30 hz
@@ -43,6 +43,7 @@ namespace MultiplayerMod.multiplayer
             if (_client == null)
                 throw new Exception("Client object is missing.");
 
+            _client.OnConnectedToServer += OnConnectedToServer;
             _client.OnCommandReceived += OnCommandReceived;
             InterfaceToolOnMouseMovePatch.OnMouseMove += OnMouseMoved;
 
@@ -104,11 +105,16 @@ namespace MultiplayerMod.multiplayer
             _client.SendCommandToServer(Command.MouseMove, new Pair<float, float>(x, y));
         }
 
-        public void ConnectToServer(CSteamID serverId)
+        private void OnConnectedToServer(bool isLocal)
         {
-            _client.ConnectToServer(serverId);
+            if (isLocal) return;
+            WorldLoader.StartLoading();
         }
 
+        public void ConnectToServer(CSteamID serverId)
+        {
+            _client.ConnectToServer(serverId, true);
+        }
 
         private void OnCommandReceived(SerializedMessage.TypedMessage typedMessage)
         {
@@ -118,7 +124,7 @@ namespace MultiplayerMod.multiplayer
                     WorldDebugDiffer.LastServerInfo = (WorldDebugInfo)typedMessage.Payload;
                     break;
                 case Command.LoadWorld:
-                    WorldLoader.LoadWorld(typedMessage.Payload);
+                    WorldLoader.LoadWorldChunk(typedMessage.Payload);
                     break;
                 case Command.PlayersState:
                     PlayerStateEffect.PlayerState = (PlayersState)typedMessage.Payload;

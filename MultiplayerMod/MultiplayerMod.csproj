@@ -89,6 +89,7 @@
         <Compile Include="patch\ColonyDiagnosticUtilityPatch.cs" />
         <Compile Include="patch\DragToolPatches.cs" />
         <Compile Include="patch\InterfaceToolOnMouseMovePatch.cs" />
+        <Compile Include="patch\SaveLoaderPatch.cs" />
         <Compile Include="patch\SpawnPatch.cs" />
         <Compile Include="patch\MainMenuPatch.cs" />
         <Compile Include="patch\SpeedControlScreenPatch.cs" />
