@@ -10,6 +10,7 @@ namespace MultiplayerMod.steam
         private HSteamNetConnection _conn;
         private bool _connected;
 
+        public event Action<bool> OnConnectedToServer;
         public event Action<SerializedMessage.TypedMessage> OnCommandReceived;
 
         void OnEnable()
@@ -76,14 +77,14 @@ namespace MultiplayerMod.steam
             {
                 var steamIdString = cmd.Split(new[] { ' ' })[1];
                 Debug.Log($"Trying to connect to {steamIdString}");
-                ConnectToServer(new CSteamID(ulong.Parse(steamIdString)));
+                ConnectToServer(new CSteamID(ulong.Parse(steamIdString)), false);
                 return;
             }
 
             Debug.Log("Unknown command line.");
         }
 
-        public void ConnectToServer(CSteamID serverId)
+        public void ConnectToServer(CSteamID serverId, bool isLocal)
         {
             var identity = new SteamNetworkingIdentity();
             identity.SetSteamID(serverId);
@@ -96,6 +97,7 @@ namespace MultiplayerMod.steam
             // TODO Make sure that there is no game startup warning
             SteamFriends.SetRichPresence("connect", $"+connect {serverId}");
             _connected = true;
+            OnConnectedToServer?.Invoke(isLocal);
         }
 
         private void ReceiveNetworkData()

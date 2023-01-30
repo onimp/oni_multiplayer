@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MultiplayerMod.multiplayer.message;
+using MultiplayerMod.patch;
 
 namespace MultiplayerMod.multiplayer.effect
 {
@@ -9,13 +10,18 @@ namespace MultiplayerMod.multiplayer.effect
     {
         public static List<WorldSaveChunk> SaveWorld()
         {
-            var tempFilePath = Path.GetTempFileName();
+            var tempFilePath = SaveLoader.GetAutosaveFilePath();
+            SaveLoaderPatch.DisablePatch = true;
             SaveLoader.Instance.Save(tempFilePath);
-
-            var result = File.ReadAllBytes(tempFilePath);
-            return SplitToChunks(result);
+            SaveLoaderPatch.DisablePatch = false;
+            return ReadWorldSave(tempFilePath);
         }
 
+        public static List<WorldSaveChunk> ReadWorldSave(string saveFileName)
+        {
+            var result = File.ReadAllBytes(saveFileName);
+            return SplitToChunks(result);
+        }
 
         private static List<WorldSaveChunk> SplitToChunks(byte[] saveWorld)
         {

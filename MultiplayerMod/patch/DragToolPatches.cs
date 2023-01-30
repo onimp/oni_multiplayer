@@ -58,7 +58,8 @@ namespace MultiplayerMod.patch
                     {
                         __instance.GetPrivateField<BuildingDef>("def").PrefabID,
                         __instance.GetPrivateField<string>("facadeID"),
-                        __instance.GetPrivateField<IList<Tag>>("selectedElements")
+                        __instance.GetPrivateField<IList<Tag>>("selectedElements"),
+                        __instance.GetPrivateField<Orientation>("buildingOrientation")
                     }
                 });
             }
