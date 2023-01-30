@@ -25,7 +25,7 @@ namespace MultiplayerMod.multiplayer.effect
         private void CompareIfApplicable()
         {
             if (LastServerInfo == null || LastServerInfo?.worldFrame != _currentInfo?.worldFrame) return;
-            ErrorsCount = _currentInfo?.Compare(LastServerInfo!.Value) ?? 0;
+            ErrorsCount = _currentInfo?.Compare(LastServerInfo!.Value, false) ?? 0;
             LastServerInfo = null;
         }
     }

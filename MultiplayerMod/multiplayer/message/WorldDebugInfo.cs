@@ -50,34 +50,45 @@ namespace MultiplayerMod.multiplayer.message
             };
         }
 
-        public int Compare(WorldDebugInfo other)
+        public int Compare(WorldDebugInfo other, bool printDebug)
         {
-            Debug.Log("Comparing world debug infos.");
+            if (printDebug)
+                Debug.Log("Comparing world debug infos.");
             var errorsCount = 0;
-            errorsCount += CompareValues(nameof(worldFrame), worldFrame, other.worldFrame);
-            errorsCount += cellsCount * CompareValues(nameof(cellsCount), cellsCount, other.cellsCount);
+            errorsCount += CompareValues(nameof(worldFrame), worldFrame, other.worldFrame, printDebug);
+            errorsCount += cellsCount * CompareValues(nameof(cellsCount), cellsCount, other.cellsCount, printDebug);
             errorsCount += cellsCount *
-                           CompareValues(nameof(elementIdxHashes), elementIdxHashes, other.elementIdxHashes);
+                           CompareValues(nameof(elementIdxHashes), elementIdxHashes, other.elementIdxHashes,
+                               printDebug);
             errorsCount += cellsCount *
-                           CompareValues(nameof(temperatureHashes), temperatureHashes, other.temperatureHashes);
-            errorsCount += cellsCount * CompareValues(nameof(radiationHashes), radiationHashes, other.radiationHashes);
-            errorsCount += cellsCount * CompareValues(nameof(massHashes), massHashes, other.massHashes);
+                           CompareValues(nameof(temperatureHashes), temperatureHashes, other.temperatureHashes,
+                               printDebug);
+            errorsCount += cellsCount * CompareValues(nameof(radiationHashes), radiationHashes, other.radiationHashes,
+                printDebug);
+            errorsCount += cellsCount * CompareValues(nameof(massHashes), massHashes, other.massHashes, printDebug);
             errorsCount += cellsCount *
-                           CompareValues(nameof(propertiesHashes), propertiesHashes, other.propertiesHashes);
+                           CompareValues(nameof(propertiesHashes), propertiesHashes, other.propertiesHashes,
+                               printDebug);
             errorsCount += cellsCount *
-                           CompareValues(nameof(strengthInfoHashes), strengthInfoHashes, other.strengthInfoHashes);
+                           CompareValues(nameof(strengthInfoHashes), strengthInfoHashes, other.strengthInfoHashes,
+                               printDebug);
             errorsCount += cellsCount *
-                           CompareValues(nameof(insulationHashes), insulationHashes, other.insulationHashes);
+                           CompareValues(nameof(insulationHashes), insulationHashes, other.insulationHashes,
+                               printDebug);
             errorsCount += cellsCount *
-                           CompareValues(nameof(diseaseIdxHashes), diseaseIdxHashes, other.diseaseIdxHashes);
+                           CompareValues(nameof(diseaseIdxHashes), diseaseIdxHashes, other.diseaseIdxHashes,
+                               printDebug);
             errorsCount += cellsCount *
-                           CompareValues(nameof(diseaseCountHashes), diseaseCountHashes, other.diseaseCountHashes);
+                           CompareValues(nameof(diseaseCountHashes), diseaseCountHashes, other.diseaseCountHashes,
+                               printDebug);
             errorsCount += cellsCount * CompareValues(nameof(accumulatedFlowValuesHashes), accumulatedFlowValuesHashes,
-                other.accumulatedFlowValuesHashes);
+                other.accumulatedFlowValuesHashes, printDebug);
             errorsCount += CompareValues(nameof(choreProvidersHashes), choreProvidersHashes,
-                other.choreProvidersHashes);
-            errorsCount += CompareArrayOfDictionaries(ChoreProvidersChoresHashes, other.ChoreProvidersChoresHashes);
-            Debug.Log($"Errors count is {errorsCount}");
+                other.choreProvidersHashes, printDebug);
+            errorsCount += CompareArrayOfDictionaries(ChoreProvidersChoresHashes, other.ChoreProvidersChoresHashes,
+                printDebug);
+            if (printDebug)
+                Debug.Log($"Errors count is {errorsCount}");
             return errorsCount;
         }
 
@@ -121,24 +132,25 @@ namespace MultiplayerMod.multiplayer.message
             return ((h1 << 5) + h1) ^ h2;
         }
 
-        private int CompareValues<T>(string name, T a, T b)
+        private int CompareValues<T>(string name, T a, T b, bool printDebug)
         {
             if (a.Equals(b))
             {
                 return 0;
             }
 
-            Debug.Log($"{name} {a} != {b}");
+            if (printDebug)
+                Debug.Log($"{name} {a} != {b}");
             return 1;
         }
 
-        private int CompareValues<T>(string name, T[] a, T[] b)
+        private int CompareValues<T>(string name, T[] a, T[] b, bool printDebug)
         {
             var failures = Enumerable.Range(0, Math.Max(a.Length, b.Length)).Where(i =>
                 a.Length <= i || b.Length <= i || !a[i].Equals(b[i])
             ).ToArray();
 
-            if (failures.Length != 0)
+            if (failures.Length != 0 && printDebug)
             {
                 Debug.Log(
                     $"{name} Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures)}");
@@ -147,13 +159,13 @@ namespace MultiplayerMod.multiplayer.message
             return failures.Length;
         }
 
-        private int CompareArrayOfDictionaries(Dictionary<int, int[]>[] a, Dictionary<int, int[]>[] b)
+        private int CompareArrayOfDictionaries(Dictionary<int, int[]>[] a, Dictionary<int, int[]>[] b, bool printDebug)
         {
             var failures = Enumerable.Range(0, Math.Max(a.Length, b.Length)).Where(i =>
                 a.Length <= i || b.Length <= i || !CompareDictionaries(a[i], b[i])
             ).ToArray();
 
-            if (failures.Length != 0)
+            if (failures.Length != 0 && printDebug)
             {
                 Debug.Log(
                     $"Chore dicts Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures.ToArray())}");

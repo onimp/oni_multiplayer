@@ -18,11 +18,24 @@ namespace MultiplayerMod.multiplayer
     {
         private Client _client;
 
-        private System.DateTime _lastUpdateSent;
+        private System.DateTime _lastUpdateSent; 
+        private bool _worldSpawned;
 
         // 33 ms is 30 hz
         private const int RefreshDelayMS = 33;
-        public bool WorldSpawned { get; set; }
+
+        public bool WorldSpawned
+        {
+            get => _worldSpawned;
+            set
+            {
+                _worldSpawned = value;
+                if (!_worldSpawned) return;
+                var go = new GameObject();
+                go.AddComponent<PlayerStateEffect>();
+                go.AddComponent<WorldDebugDiffer>();
+            }
+        }
 
         void OnEnable()
         {
@@ -74,14 +87,6 @@ namespace MultiplayerMod.multiplayer
                 (payload) => SendToServer(UserAction.UserActionTypeEnum.Priority, payload);
         }
 
-        protected override void OnSpawn()
-        {
-            var go = new GameObject();
-            go.AddComponent<PlayerStateEffect>();
-            // To handle incoming server debug infos
-            go.AddComponent<WorldDebugDiffer>();
-        }
-
         private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload = null)
         {
             _client.SendUserActionToServer(new UserAction
@@ -105,11 +110,6 @@ namespace MultiplayerMod.multiplayer
         }
 
 
-        public void OnPlayerStateChanged(PlayersState playersState)
-        {
-            PlayerStateEffect.PlayerState = playersState;
-        }
-
         private void OnCommandReceived(SerializedMessage.TypedMessage typedMessage)
         {
             switch (typedMessage.Command)
@@ -121,7 +121,7 @@ namespace MultiplayerMod.multiplayer
                     WorldLoader.LoadWorld(typedMessage.Payload);
                     break;
                 case Command.PlayersState:
-                    OnPlayerStateChanged((PlayersState)typedMessage.Payload);
+                    PlayerStateEffect.PlayerState = (PlayersState)typedMessage.Payload;
                     break;
                 case Command.UserAction:
                     HandleUserAction((UserAction)typedMessage.Payload);
