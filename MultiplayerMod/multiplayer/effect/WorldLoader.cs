@@ -8,19 +8,19 @@ namespace MultiplayerMod.multiplayer.effect
     {
         private static readonly Dictionary<int, WorldSaveChunk> SaveChunks = new Dictionary<int, WorldSaveChunk>();
 
-        public static bool LoadWorld(object obj)
+        public static void LoadWorld(object obj)
         {
             var chunk = (WorldSaveChunk)obj;
             Debug.Log($"ClientActions.LoadWorld chunk {chunk.chunkIndex + 1}/{chunk.totalChunks}");
             SaveChunks[chunk.chunkIndex] = chunk;
             if (chunk.chunkIndex + 1 != chunk.totalChunks)
-                return false;
+                return;
 
             if (SaveChunks.Count != chunk.totalChunks)
             {
                 Debug.Log("Some load chunks have been lost.");
                 SaveChunks.Clear();
-                return false;
+                return;
             }
 
             var tempFilePath = Path.GetTempFileName();
@@ -35,7 +35,6 @@ namespace MultiplayerMod.multiplayer.effect
             SaveChunks.Clear();
 
             typeof(LoadScreen).InvokePrivateStatic("DoLoad", new[] { typeof(string) }, tempFilePath);
-            return true;
         }
     }
 }

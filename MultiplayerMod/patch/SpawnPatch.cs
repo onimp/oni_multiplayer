@@ -7,11 +7,12 @@ using UnityEngine;
 namespace MultiplayerMod.patch
 {
     [HarmonyPatch(typeof(WorldGenSpawner), "OnSpawn")]
-    public class SpawnPatch
+    public static class SpawnPatch
     {
         public static bool HostServerAfterStart { get; set; }
         public static void Postfix()
         {
+            Object.FindObjectsOfType<ClientActions>().FirstOrDefault()!.WorldSpawned = true;
             if (!HostServerAfterStart) return;
             HostServerAfterStart = false;
             var multiplayerGameObject = new GameObject();
