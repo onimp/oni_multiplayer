@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.multiplayer;
@@ -14,11 +15,17 @@ namespace MultiplayerMod.patch
     {
         public static void Prefix(MainMenu __instance)
         {
-            var multiplayerGameObject = new GameObject();
-            multiplayerGameObject.AddComponent<Client>();
-            multiplayerGameObject.AddComponent<ClientActions>();
-            // TODO destroy if game is stopped/exit to main menu
-            Object.DontDestroyOnLoad(multiplayerGameObject);
+            if (Object.FindObjectOfType<Client>() == null)
+            {
+                var multiplayerGameObject = new GameObject();
+                multiplayerGameObject.AddComponent<Client>();
+                multiplayerGameObject.AddComponent<ClientActions>();
+                Object.DontDestroyOnLoad(multiplayerGameObject);
+            }
+            else
+            {
+                Object.FindObjectsOfType<ClientActions>().FirstOrDefault()!.WorldSpawned = false;
+            }
             __instance.AddButton("Load MultiPlayer", true,
                 () =>
                 {

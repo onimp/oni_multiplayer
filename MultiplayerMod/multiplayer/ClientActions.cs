@@ -19,10 +19,10 @@ namespace MultiplayerMod.multiplayer
         private Client _client;
 
         private System.DateTime _lastUpdateSent;
-        private bool _worldSpawned;
 
         // 33 ms is 30 hz
         private const int RefreshDelayMS = 33;
+        public bool WorldSpawned { get; set; }
 
         void OnEnable()
         {
@@ -118,7 +118,7 @@ namespace MultiplayerMod.multiplayer
                     WorldDebugDiffer.LastServerInfo = (WorldDebugInfo)typedMessage.Payload;
                     break;
                 case Command.LoadWorld:
-                    _worldSpawned = WorldLoader.LoadWorld(typedMessage.Payload);
+                    WorldLoader.LoadWorld(typedMessage.Payload);
                     break;
                 case Command.PlayersState:
                     OnPlayerStateChanged((PlayersState)typedMessage.Payload);
@@ -133,7 +133,7 @@ namespace MultiplayerMod.multiplayer
 
         private void HandleUserAction(UserAction userAction)
         {
-            if (!_worldSpawned) return;
+            if (!WorldSpawned) return;
             switch (userAction.userActionType)
             {
                 case UserAction.UserActionTypeEnum.Pause:
