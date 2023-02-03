@@ -18,6 +18,8 @@ namespace MultiplayerMod.multiplayer.message
             // UI Bottom right part buttons
             Attack,
             Build,
+            UtilityBuild,
+            WireBuild,
             Cancel,
             Capture,
             Clear,

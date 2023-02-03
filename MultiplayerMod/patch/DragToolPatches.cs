@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
@@ -14,7 +15,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragComplete;
 
-            public static void Prefix(Vector3 downPos, Vector3 upPos)
+            public static void Postfix(Vector3 downPos, Vector3 upPos)
             {
                 if (DisablePatch) return;
                 OnDragComplete?.Invoke(new object[]
@@ -25,18 +26,41 @@ namespace MultiplayerMod.patch
             }
         }
 
-        [HarmonyPatch(typeof(BaseUtilityBuildTool), "OnDragTool")]
+        [HarmonyPatch(typeof(BaseUtilityBuildTool), "OnLeftClickUp")]
         public static class BaseUtilityBuildToolPatch
         {
-            public static event Action<object> OnDragTool;
+            public static event Action<object> OnWireTool;
+            public static event Action<object> OnUtilityTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Prefix(BaseUtilityBuildTool __instance, Vector3 cursor_pos)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
+
+                (__instance is UtilityBuildTool ? OnUtilityTool : OnWireTool)?.Invoke(new object[]
                 {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
+                    Grid.PosToCell(cursor_pos),
+                    0,
+                    new object[]
+                    {
+                        __instance.GetPrivateField<BaseUtilityBuildTool, BuildingDef>("def").PrefabID,
+                        __instance.GetPrivateField<BaseUtilityBuildTool, IList<Tag>>("selectedElements")!,
+                        GetPath(__instance)
+                    }
                 });
+            }
+
+            private static List<int> GetPath(BaseUtilityBuildTool buildTool)
+            {
+                var path = buildTool.GetPrivateField<object>("path");
+                var intPath = new List<int>();
+                for (var index = 0; index < path.GetProperty<int>("Count"); index++)
+                {
+                    var node = path.Invoke("get_Item", index);
+                    intPath.Add(node.GetField<int>("cell"));
+                }
+
+                return intPath;
             }
         }
 
@@ -70,7 +94,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -85,7 +109,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragComplete;
 
-            public static void Prefix(Vector3 downPos, Vector3 upPos)
+            public static void Postfix(Vector3 downPos, Vector3 upPos)
             {
                 if (DisablePatch) return;
                 OnDragComplete?.Invoke(new object[]
@@ -101,7 +125,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -116,7 +140,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -131,7 +155,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -146,7 +170,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -161,7 +185,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -176,7 +200,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -191,7 +215,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -206,7 +230,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -221,7 +245,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -236,7 +260,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
@@ -251,7 +275,7 @@ namespace MultiplayerMod.patch
         {
             public static event Action<object> OnDragTool;
 
-            public static void Prefix(int cell, int distFromOrigin)
+            public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
                 OnDragTool?.Invoke(new object[]
