@@ -56,8 +56,10 @@ namespace MultiplayerMod.multiplayer
 
             DragToolPatches.AttackToolPatch.OnDragComplete += (payload) =>
                 SendToServer(UserAction.UserActionTypeEnum.Attack, payload);
-            DragToolPatches.BaseUtilityBuildToolPatch.OnDragTool += (payload) =>
-                SendToServer(UserAction.UserActionTypeEnum.Priority, payload);
+            DragToolPatches.BaseUtilityBuildToolPatch.OnUtilityTool += (payload) =>
+                SendToServer(UserAction.UserActionTypeEnum.UtilityBuild, payload);
+            DragToolPatches.BaseUtilityBuildToolPatch.OnWireTool += (payload) =>
+                SendToServer(UserAction.UserActionTypeEnum.WireBuild, payload);
             DragToolPatches.BuildToolPatch.OnDragTool +=
                 (payload) => SendToServer(UserAction.UserActionTypeEnum.Build, payload);
             DragToolPatches.CancelToolPatch.OnDragTool +=
@@ -160,6 +162,12 @@ namespace MultiplayerMod.multiplayer
                     break;
                 case UserAction.UserActionTypeEnum.Build:
                     DragToolEffect.OnDragTool(BuildTool.Instance, userAction.Payload);
+                    break;
+                case UserAction.UserActionTypeEnum.UtilityBuild:
+                    DragToolEffect.OnDragTool(UtilityBuildTool.Instance, userAction.Payload);
+                    break;
+                case UserAction.UserActionTypeEnum.WireBuild:
+                    DragToolEffect.OnDragTool(WireBuildTool.Instance, userAction.Payload);
                     break;
                 case UserAction.UserActionTypeEnum.Cancel:
                     DragToolEffect.OnDragTool(CancelTool.Instance, userAction.Payload);

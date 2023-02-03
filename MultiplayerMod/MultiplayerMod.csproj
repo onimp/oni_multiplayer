@@ -39,36 +39,37 @@
     </PropertyGroup>
     <ItemGroup>
         <Reference Include="0Harmony">
-          <HintPath>..\lib\0Harmony.dll</HintPath>
+            <HintPath>..\lib\0Harmony.dll</HintPath>
         </Reference>
         <Reference Include="Assembly-CSharp">
-          <HintPath>..\lib\Assembly-CSharp.dll</HintPath>
+            <HintPath>..\lib\Assembly-CSharp.dll</HintPath>
         </Reference>
         <Reference Include="Assembly-CSharp-firstpass">
-          <HintPath>..\lib\Assembly-CSharp-firstpass.dll</HintPath>
+            <HintPath>..\lib\Assembly-CSharp-firstpass.dll</HintPath>
         </Reference>
         <Reference Include="com.rlabrecque.steamworks.net">
-          <HintPath>..\lib\com.rlabrecque.steamworks.net.dll</HintPath>
+            <HintPath>..\lib\com.rlabrecque.steamworks.net.dll</HintPath>
         </Reference>
+        <Reference Include="Microsoft.CSharp" />
         <Reference Include="System" />
         <Reference Include="System.Core" />
         <Reference Include="System.Xml.Linq" />
         <Reference Include="System.Data.DataSetExtensions" />
         <Reference Include="System.Data" />
         <Reference Include="Unity.TextMeshPro">
-          <HintPath>..\lib\Unity.TextMeshPro.dll</HintPath>
+            <HintPath>..\lib\Unity.TextMeshPro.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine">
-          <HintPath>..\lib\UnityEngine.dll</HintPath>
+            <HintPath>..\lib\UnityEngine.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.CoreModule">
-          <HintPath>..\lib\UnityEngine.CoreModule.dll</HintPath>
+            <HintPath>..\lib\UnityEngine.CoreModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.ImageConversionModule">
-          <HintPath>..\lib\UnityEngine.ImageConversionModule.dll</HintPath>
+            <HintPath>..\lib\UnityEngine.ImageConversionModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.UI">
-          <HintPath>..\lib\UnityEngine.UI.dll</HintPath>
+            <HintPath>..\lib\UnityEngine.UI.dll</HintPath>
         </Reference>
     </ItemGroup>
     <ItemGroup>
@@ -110,12 +111,12 @@
         </None>
     </ItemGroup>
     <ItemGroup>
-      <Content Include="..\README.md">
-        <Link>README.md</Link>
-      </Content>
-      <Content Include="C:\Users\zuev9\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
-        <Link>Player.log</Link>
-      </Content>
+        <Content Include="..\README.md">
+            <Link>README.md</Link>
+        </Content>
+        <Content Include="C:\Users\zuev9\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
+            <Link>Player.log</Link>
+        </Content>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <Target Name="CopyModToOnyFolder" AfterTargets="Build">

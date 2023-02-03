@@ -1,12 +1,9 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
+﻿using System.Linq;
 using HarmonyLib;
 using MultiplayerMod.multiplayer;
 using MultiplayerMod.steam;
 using Steamworks;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.patch
 {
@@ -26,6 +23,7 @@ namespace MultiplayerMod.patch
             {
                 Object.FindObjectsOfType<ClientActions>().FirstOrDefault()!.WorldSpawned = false;
             }
+
             __instance.AddButton("Load MultiPlayer", true,
                 () =>
                 {
@@ -47,18 +45,12 @@ namespace MultiplayerMod.patch
     {
         public static void AddButton(this MainMenu mainMenu, string text, bool topStyle, System.Action action)
         {
-            var type = typeof(MainMenu);
-
-            var buttonInfoType = type.GetNestedType("ButtonInfo", BindingFlags.NonPublic | BindingFlags.Instance);
-
-            mainMenu.InvokePrivate("MakeButton",
-                Activator.CreateInstance(
-                    buttonInfoType,
-                    new LocString(text),
-                    action,
-                    22,
-                    mainMenu.GetPrivateField<ColorStyleSetting>(topStyle ? "topButtonStyle" : "normalButtonStyle"))
-            );
+            var buttonInfo = typeof(MainMenu).CreateNestedTypeInstance<object>("ButtonInfo",
+                new LocString(text),
+                action,
+                22,
+                mainMenu.GetPrivateField<ColorStyleSetting>(topStyle ? "topButtonStyle" : "normalButtonStyle"));
+            mainMenu.InvokePrivate("MakeButton", buttonInfo);
         }
     }
 }

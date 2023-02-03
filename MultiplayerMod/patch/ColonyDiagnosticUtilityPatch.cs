@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using MultiplayerMod.oni;
@@ -25,7 +26,9 @@ namespace MultiplayerMod.patch
     {
         public static void Prefix(ColonyDiagnosticScreen __instance, int world)
         {
-            __instance.InvokePrivate<MultiplayerColonyDiagnostic>("AddDiagnostic", world, __instance.contentContainer,
+            __instance.InvokePrivate("AddDiagnostic", new Type[] { typeof(MultiplayerColonyDiagnostic) },
+                world,
+                __instance.contentContainer,
                 __instance.GetPrivateField<object>("diagnosticRows"));
         }
     }
