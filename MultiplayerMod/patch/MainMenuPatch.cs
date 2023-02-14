@@ -12,6 +12,8 @@ namespace MultiplayerMod.patch
     {
         public static void Prefix(MainMenu __instance)
         {
+            MultiplayerState.MainMenu();
+            
             if (Object.FindObjectOfType<Client>() == null)
             {
                 var multiplayerGameObject = new GameObject();
@@ -19,25 +21,24 @@ namespace MultiplayerMod.patch
                 multiplayerGameObject.AddComponent<ClientActions>();
                 Object.DontDestroyOnLoad(multiplayerGameObject);
             }
-            else
-            {
-                Object.FindObjectsOfType<ClientActions>().FirstOrDefault()!.WorldSpawned = false;
-            }
 
             __instance.AddButton("Load MultiPlayer", true,
                 () =>
                 {
-                    SpawnPatch.HostServerAfterStart = true;
+                    MultiplayerState.SetRoleToHost();
                     __instance.InvokePrivate("LoadGame");
                 });
             __instance.AddButton("Start MultiPlayer", false,
                 () =>
                 {
-                    SpawnPatch.HostServerAfterStart = true;
+                    MultiplayerState.SetRoleToHost();
                     __instance.InvokePrivate("NewGame");
                 });
             __instance.AddButton("Join MultiPlayer", false,
-                () => SteamFriends.ActivateGameOverlay("friends"));
+                () =>
+                {
+                    SteamFriends.ActivateGameOverlay("friends");
+                });
         }
     }
 

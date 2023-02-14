@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
+using MultiplayerMod.multiplayer;
 using MultiplayerMod.oni;
 
 namespace MultiplayerMod.patch
@@ -10,6 +11,7 @@ namespace MultiplayerMod.patch
     {
         public static void Postfix(ColonyDiagnosticUtility __instance, int worldID)
         {
+            if (!MultiplayerState.IsConnected) return;
             var colonyDiagnostic = new MultiplayerColonyDiagnostic(worldID);
             __instance.GetPrivateField<Dictionary<int, List<ColonyDiagnostic>>>("worldDiagnostics")[worldID]
                 .Add(colonyDiagnostic);
@@ -26,6 +28,7 @@ namespace MultiplayerMod.patch
     {
         public static void Prefix(ColonyDiagnosticScreen __instance, int world)
         {
+            if (!MultiplayerState.IsConnected) return;
             __instance.InvokePrivate("AddDiagnostic", new Type[] { typeof(MultiplayerColonyDiagnostic) },
                 world,
                 __instance.contentContainer,

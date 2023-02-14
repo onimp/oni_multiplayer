@@ -13,13 +13,12 @@ namespace MultiplayerMod.steam
         public event Action<CSteamID> ClientJoined;
         public event Action<CSteamID, SerializedMessage.TypedMessage> OnCommandReceived;
 
-        private readonly Dictionary<CSteamID, HSteamNetConnection> _clients =
-            new Dictionary<CSteamID, HSteamNetConnection>();
+        private readonly Dictionary<CSteamID, HSteamNetConnection> _clients = new();
 
         private bool _isServerStarted;
         public CSteamID SteamId => SteamGameServer.GetSteamID();
 
-        public static readonly SteamNetworkingConfigValue_t BufferSizeConfig = new SteamNetworkingConfigValue_t
+        public static readonly SteamNetworkingConfigValue_t BufferSizeConfig = new()
         {
             m_eValue = ESteamNetworkingConfigValue.k_ESteamNetworkingConfig_SendBufferSize,
             m_eDataType = ESteamNetworkingConfigDataType.k_ESteamNetworkingConfig_Int32,

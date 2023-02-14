@@ -13,7 +13,7 @@
         <FileAlignment>512</FileAlignment>
         <Deterministic>true</Deterministic>
         <TargetFrameworkProfile />
-        <LangVersion>8</LangVersion>
+        <LangVersion>9</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -85,8 +85,11 @@
         <Compile Include="multiplayer\message\WorldDebugInfo.cs" />
         <Compile Include="multiplayer\message\WorldSaveChunk.cs" />
         <Compile Include="multiplayer\ServerActions.cs" />
+        <Compile Include="multiplayer\MultiplayerState.cs" />
         <Compile Include="oni\MultiplayerColonyDiagnostic.cs" />
         <Compile Include="oni\MultiplayerErrorsTracker.cs" />
+        <Compile Include="patch\ChoreConsumerPatch.cs" />
+        <Compile Include="patch\ChoreDriverPatch.cs" />
         <Compile Include="patch\ColonyDiagnosticUtilityPatch.cs" />
         <Compile Include="patch\DragToolPatches.cs" />
         <Compile Include="patch\InterfaceToolOnMouseMovePatch.cs" />

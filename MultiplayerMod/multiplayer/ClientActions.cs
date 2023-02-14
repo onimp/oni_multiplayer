@@ -19,23 +19,9 @@ namespace MultiplayerMod.multiplayer
         private Client _client;
 
         private System.DateTime _lastUpdateSent;
-        private bool _worldSpawned;
 
         // 33 ms is 30 hz
         private const int RefreshDelayMS = 33;
-
-        public bool WorldSpawned
-        {
-            get => _worldSpawned;
-            set
-            {
-                _worldSpawned = value;
-                if (!_worldSpawned) return;
-                var go = new GameObject();
-                go.AddComponent<PlayerStateEffect>();
-                go.AddComponent<WorldDebugDiffer>();
-            }
-        }
 
         void OnEnable()
         {
@@ -134,6 +120,10 @@ namespace MultiplayerMod.multiplayer
                 case Command.UserAction:
                     HandleUserAction((UserAction)typedMessage.Payload);
                     break;
+                case Command.ChoreSet:
+                    // TODO parse payload and call add server chore.
+                    //ChoreConsumerPatch.AddServerChore();
+                    break;
                 default:
                     throw new InvalidEnumArgumentException($"Unknown command received {typedMessage.Command}");
             }
@@ -141,7 +131,7 @@ namespace MultiplayerMod.multiplayer
 
         private void HandleUserAction(UserAction userAction)
         {
-            if (!WorldSpawned) return;
+            if (!MultiplayerState.IsSpawned) return;
             switch (userAction.userActionType)
             {
                 case UserAction.UserActionTypeEnum.Pause:

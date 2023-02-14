@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using MultiplayerMod.multiplayer;
 using Steamworks;
 using UnityEngine;
 
@@ -8,7 +9,6 @@ namespace MultiplayerMod.steam
     public class Client : MonoBehaviour
     {
         private HSteamNetConnection _conn;
-        private bool _connected;
 
         public event Action<bool> OnConnectedToServer;
         public event Action<SerializedMessage.TypedMessage> OnCommandReceived;
@@ -41,7 +41,7 @@ namespace MultiplayerMod.steam
             SteamAPI.RunCallbacks();
             SteamNetworkingSockets.RunCallbacks();
 
-            if (_connected)
+            if (MultiplayerState.IsConnected)
                 ReceiveNetworkData();
         }
 
@@ -58,7 +58,7 @@ namespace MultiplayerMod.steam
 
         public void SendCommandToServer(Command command, object payload = null)
         {
-            if (!_connected) return;
+            if (!MultiplayerState.IsConnected) return;
             using var message =
                 new SerializedMessage(command, payload);
             var result = SteamNetworkingSockets.SendMessageToConnection(_conn,
@@ -96,7 +96,7 @@ namespace MultiplayerMod.steam
             // TODO make sure that other client can handle it and connect
             // TODO Make sure that there is no game startup warning
             SteamFriends.SetRichPresence("connect", $"+connect {serverId}");
-            _connected = true;
+            MultiplayerState.ConnectToServer();
             OnConnectedToServer?.Invoke(isLocal);
         }
 

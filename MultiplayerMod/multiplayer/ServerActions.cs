@@ -37,6 +37,7 @@ namespace MultiplayerMod.multiplayer
             _server!.OnCommandReceived += OnCommandReceived;
 
             SaveLoaderPatch.OnWorldSaved += SaveLoaderPatchOnOnWorldSaved;
+            ChoreDriverPatch.OnChoreSet += ChoreDriverPatchOnOnChoreSet;
         }
 
         protected override void OnSpawn()
@@ -65,6 +66,12 @@ namespace MultiplayerMod.multiplayer
         private void SaveLoaderPatchOnOnWorldSaved(string saveFileName)
         {
             HardSyncClients(WorldSaver.ReadWorldSave(saveFileName));
+        }
+
+        private void ChoreDriverPatchOnOnChoreSet(Chore.Precondition.Context context)
+        {
+            // TODO Sent required info to the client
+            _server.BroadcastCommand(SteamUser.GetSteamID(), Command.ChoreSet, 123L);
         }
 
         private void OnClientJoined(CSteamID steamID)
