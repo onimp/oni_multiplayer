@@ -117,13 +117,16 @@
         <Content Include="..\README.md">
             <Link>README.md</Link>
         </Content>
-        <Content Include="C:\Users\zuev9\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
-            <Link>Player.log</Link>
+        <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
+            <Link>logs/Player.log</Link>
+        </Content>
+        <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\VM\Player.log">
+            <Link>logs/VM Player.log</Link>
         </Content>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-    <Target Name="CopyModToOnyFolder" AfterTargets="Build">
-        <Message Text="Executing CopyModToOnyFolder task" Importance="High" />
+    <Target Name="CopyFilesToOniModsDirectory" AfterTargets="Build">
+        <Message Text="Copy files to ONI mods directory" Importance="High" />
         <Copy SourceFiles="$(TargetDir)$(ProjectName).dll;$(TargetDir)mod.yaml;$(TargetDir)mod_info.yaml" DestinationFolder="$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\$(ProjectName)" />
     </Target>
 
