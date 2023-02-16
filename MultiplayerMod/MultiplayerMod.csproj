@@ -114,7 +114,7 @@
         <Content Include="..\README.md">
             <Link>README.md</Link>
         </Content>
-        <Content Include="C:\Users\zuev9\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
+        <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
             <Link>Player.log</Link>
         </Content>
     </ItemGroup>
