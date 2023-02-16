@@ -115,7 +115,10 @@
             <Link>README.md</Link>
         </Content>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
-            <Link>Player.log</Link>
+            <Link>logs/Player.log</Link>
+        </Content>
+        <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\VM\Player.log">
+            <Link>logs/VM Player.log</Link>
         </Content>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
