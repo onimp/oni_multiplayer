@@ -1,15 +1,24 @@
 namespace MultiplayerMod.multiplayer
 {
+
     /// <summary>
-    /// A singleton showing current multiplayer game.
-    ///
-    /// Created after multiple places requiring to be executed only if in multiplayer game (or in MP and being a client/host).
+    ///     A singleton showing current multiplayer game.
+    ///     Created after multiple places requiring to be executed only if in multiplayer game (or in MP and being a
+    ///     client/host).
     /// </summary>
     public static class MultiplayerState
     {
-        public static bool IsConnected => CurrentState is State.Connecting or State.Spawned;
 
-        public static bool IsSpawned => CurrentState is State.Spawned;
+        public enum Role
+        {
+            None,
+            Server,
+            Client
+        }
+
+        public static bool IsConnected => CurrentState is State.Connected;
+
+        public static bool IsSpawned { get; private set; }
 
         private static State CurrentState { get; set; }
 
@@ -19,6 +28,7 @@ namespace MultiplayerMod.multiplayer
         {
             CurrentState = State.NotConnected;
             MultiplayerRole = Role.None;
+            IsSpawned = false;
         }
 
         public static void SetRoleToHost()
@@ -26,14 +36,14 @@ namespace MultiplayerMod.multiplayer
             MultiplayerRole = Role.Server;
         }
 
-        public static void SetRoleToClient()
+        public static void Connected()
         {
-            MultiplayerRole = Role.Client;
+            CurrentState = State.Connected;
         }
-        
+
         public static void WorldLoaded()
         {
-            CurrentState = State.Spawned;
+            IsSpawned = true;
         }
 
         public static void ConnectToServer()
@@ -46,14 +56,8 @@ namespace MultiplayerMod.multiplayer
         {
             NotConnected,
             Connecting,
-            Spawned
-        }
-
-        public enum Role
-        {
-            None,
-            Server,
-            Client
+            Connected
         }
     }
+
 }

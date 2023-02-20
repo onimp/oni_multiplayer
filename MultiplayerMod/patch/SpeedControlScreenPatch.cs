@@ -3,7 +3,8 @@ using HarmonyLib;
 
 namespace MultiplayerMod.patch
 {
-    static class SpeedControlScreenPatches
+
+    internal static class SpeedControlScreenPatches
     {
         public static bool DisablePatch;
 
@@ -15,6 +16,7 @@ namespace MultiplayerMod.patch
             public static void Postfix(int Speed)
             {
                 if (DisablePatch) return;
+
                 OnSetSpeed?.Invoke(Speed);
             }
         }
@@ -28,13 +30,13 @@ namespace MultiplayerMod.patch
             public static void Prefix()
             {
                 if (DisablePatch) return;
+
                 if (SpeedControlScreen.Instance.IsPaused)
-                {
                     OnUnpause?.Invoke();
-                }
                 else
                     OnPause?.Invoke();
             }
         }
     }
+
 }

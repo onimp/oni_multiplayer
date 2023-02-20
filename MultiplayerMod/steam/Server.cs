@@ -1,34 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 using Steamworks;
 
 namespace MultiplayerMod.steam
 {
+
     public class Server : KMonoBehaviour
     {
-        private HSteamNetPollGroup _hNetPollGroup;
-        public event System.Action ServerCreated;
-        public event Action<CSteamID> ClientJoined;
-        public event Action<CSteamID, SerializedMessage.TypedMessage> OnCommandReceived;
-
-        private readonly Dictionary<CSteamID, HSteamNetConnection> _clients = new();
-
-        private bool _isServerStarted;
-        public CSteamID SteamId => SteamGameServer.GetSteamID();
 
         public static readonly SteamNetworkingConfigValue_t BufferSizeConfig = new()
         {
             m_eValue = ESteamNetworkingConfigValue.k_ESteamNetworkingConfig_SendBufferSize,
             m_eDataType = ESteamNetworkingConfigDataType.k_ESteamNetworkingConfig_Int32,
-            m_val = new SteamNetworkingConfigValue_t.OptionValue()
+            m_val = new SteamNetworkingConfigValue_t.OptionValue
             {
                 m_int32 = 10 * 1024 * 1024
             }
         };
 
-        void OnEnable()
+        private readonly Dictionary<CSteamID, HSteamNetConnection> _clients = new();
+        private HSteamNetPollGroup _hNetPollGroup;
+
+        private bool _isServerStarted;
+        public CSteamID SteamId => SteamGameServer.GetSteamID();
+
+        private void Update()
+        {
+            if (!_isServerStarted)
+                return;
+
+            // Run Steam client callbacks
+            GameServer.RunCallbacks();
+            SteamGameServerNetworkingSockets.RunCallbacks();
+            ReceiveNetworkData();
+        }
+
+        private void OnEnable()
         {
             Debug.Log("Multiplayer.RestartAppIfNecessary");
 
@@ -39,27 +47,26 @@ namespace MultiplayerMod.steam
 
             SteamNetworkingUtils.InitRelayNetworkAccess();
 
-            if (!SteamManager.Initialized)
-            {
-                throw new Exception("Steam manager is not initialized");
-            }
+            if (!SteamManager.Initialized) throw new Exception("Steam manager is not initialized");
 
-            SteamClient.SetWarningMessageHook(delegate(int severity, StringBuilder text)
-            {
-                Debug.Log($"Steam warning. {severity} {text}.");
-            });
-            Callback<SteamServersConnected_t>.CreateGameServer(delegate
-            {
-                Debug.Log("Game server created");
-                SteamGameServer.SetMaxPlayerCount(4);
-                SteamGameServer.SetPasswordProtected(false);
-                SteamGameServer.SetServerName($"{SteamFriends.GetPersonaName()}'s game");
-                SteamGameServer.SetBotPlayerCount(0); // optional, defaults to zero
-                SteamGameServer.SetMapName("MilkyWay");
-                ServerCreated?.Invoke();
-            });
+            Callback<SteamServersConnected_t>.CreateGameServer(
+                _ =>
+                {
+                    Debug.Log("Game server created");
+                    SteamGameServer.SetMaxPlayerCount(4);
+                    SteamGameServer.SetPasswordProtected(false);
+                    SteamGameServer.SetServerName($"{SteamFriends.GetPersonaName()}'s game");
+                    SteamGameServer.SetBotPlayerCount(0); // optional, defaults to zero
+                    SteamGameServer.SetMapName("MilkyWay");
+                    ServerCreated?.Invoke();
+                }
+            );
             Callback<SteamNetConnectionStatusChangedCallback_t>.CreateGameServer(Steam_HandleIncomingConnection);
         }
+
+        public event System.Action ServerCreated;
+        public event Action<CSteamID> ClientJoined;
+        public event Action<CSteamID, SerializedMessage.TypedMessage> OnCommandReceived;
 
         public void BroadcastCommand(Command command, object payload = null)
         {
@@ -73,12 +80,19 @@ namespace MultiplayerMod.steam
                 if (cSteamID == initiatorId) continue;
 
                 using var message = new SerializedMessage(command, payload);
-                var result = SteamGameServerNetworkingSockets.SendMessageToConnection(hSteamNetConnection,
-                    message.IntPtr, message.Size,
-                    Steamworks.Constants.k_nSteamNetworkingSend_Reliable, out var messageOut);
+                var result = SteamGameServerNetworkingSockets.SendMessageToConnection(
+                    hSteamNetConnection,
+                    message.IntPtr,
+                    message.Size,
+                    Steamworks.Constants.k_nSteamNetworkingSend_Reliable,
+                    out var messageOut
+                );
                 if (result != EResult.k_EResultOK && messageOut == 0)
                 {
                     Debug.Log($"Failed ({result}) to send message {initiatorId}. Message out is {messageOut}.");
+                    Debug.Log(
+                        $"Args are {hSteamNetConnection} {message.IntPtr} {message.Size} {Steamworks.Constants.k_nSteamNetworkingSend_Reliable}"
+                    );
                 }
             }
         }
@@ -99,27 +113,20 @@ namespace MultiplayerMod.steam
             SteamGameServer.SetProduct("OxygenNotIncluded Multiplayer");
             SteamGameServer.SetGameDescription("OxygenNotIncluded Multiplayer");
 
-
             SteamGameServer.LogOnAnonymous();
             SteamNetworkingUtils.InitRelayNetworkAccess();
             SteamGameServer.SetAdvertiseServerActive(true);
 
-            SteamGameServerNetworkingSockets.CreateListenSocketP2P(0, 1, new[]
-            {
-                BufferSizeConfig
-            });
+            SteamGameServerNetworkingSockets.CreateListenSocketP2P(
+                0,
+                1,
+                new[]
+                {
+                    BufferSizeConfig
+                }
+            );
             _hNetPollGroup = SteamGameServerNetworkingSockets.CreatePollGroup();
             _isServerStarted = true;
-        }
-
-        void Update()
-        {
-            if (!_isServerStarted)
-                return;
-            // Run Steam client callbacks
-            GameServer.RunCallbacks();
-            SteamGameServerNetworkingSockets.RunCallbacks();
-            ReceiveNetworkData();
         }
 
         protected override void OnCleanUp()
@@ -146,14 +153,16 @@ namespace MultiplayerMod.steam
                 eOldState == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_None &&
                 info.m_eState == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connecting)
             {
-                EResult res = SteamGameServerNetworkingSockets.AcceptConnection(hConn);
+                var res = SteamGameServerNetworkingSockets.AcceptConnection(hConn);
                 if (res != EResult.k_EResultOK)
                 {
                     Debug.Log($"AcceptConnection returned {res}");
-                    SteamGameServerNetworkingSockets.CloseConnection(hConn,
+                    SteamGameServerNetworkingSockets.CloseConnection(
+                        hConn,
                         (int)ESteamNetConnectionEnd.k_ESteamNetConnectionEnd_AppException_Generic,
                         "Failed to accept connection",
-                        false);
+                        false
+                    );
                     return;
                 }
 
@@ -163,13 +172,12 @@ namespace MultiplayerMod.steam
                 _clients.Add(steamID, hConn);
                 Debug.Log($"Connection accepted from {steamID}");
                 ClientJoined?.Invoke(steamID);
-            }
-            else if ((eOldState ==
-                      ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connecting ||
-                      eOldState == ESteamNetworkingConnectionState
-                          .k_ESteamNetworkingConnectionState_Connected) &&
-                     info.m_eState == ESteamNetworkingConnectionState
-                         .k_ESteamNetworkingConnectionState_ClosedByPeer)
+            } else if ((eOldState ==
+                        ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connecting ||
+                        eOldState == ESteamNetworkingConnectionState
+                            .k_ESteamNetworkingConnectionState_Connected) &&
+                       info.m_eState == ESteamNetworkingConnectionState
+                           .k_ESteamNetworkingConnectionState_ClosedByPeer)
             {
                 // Handle disconnecting a client
                 _clients.Remove(steamID);
@@ -185,12 +193,15 @@ namespace MultiplayerMod.steam
             for (var idxMsg = 0; idxMsg < numMessages; idxMsg++)
             {
                 var message =
-                    (SteamNetworkingMessage_t)Marshal.PtrToStructure(messages[idxMsg],
-                        typeof(SteamNetworkingMessage_t));
+                    (SteamNetworkingMessage_t)Marshal.PtrToStructure(
+                        messages[idxMsg],
+                        typeof(SteamNetworkingMessage_t)
+                    );
 
-                var msg = SerializedMessage.TypedMessage.DeserializeMessage(message.m_pData,
-                    message.m_cbSize);
-
+                var msg = SerializedMessage.TypedMessage.DeserializeMessage(
+                    message.m_pData,
+                    message.m_cbSize
+                );
 
                 OnCommandReceived?.Invoke(message.m_identityPeer.GetSteamID(), msg);
 
@@ -198,4 +209,5 @@ namespace MultiplayerMod.steam
             }
         }
     }
+
 }

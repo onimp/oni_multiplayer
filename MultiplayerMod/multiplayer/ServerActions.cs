@@ -10,24 +10,33 @@ using UnityEngine;
 
 namespace MultiplayerMod.multiplayer
 {
+
     /// <summary>
-    /// Handles server side events.
-    ///
-    /// Server here is a Multiplayer itself. Game is not considered as a part of the server (it is one of clients).
-    /// Based on the event either broadcast a message or change server state accordingly .
+    ///     Handles server side events.
+    ///     Server here is a Multiplayer itself. Game is not considered as a part of the server (it is one of clients).
+    ///     Based on the event either broadcast a message or change server state accordingly .
     /// </summary>
     public class ServerActions : KMonoBehaviour
     {
-        private ClientActions _clientActions;
-        private Server _server;
-        private PlayersState _playersState;
-
-        private System.DateTime _lastUpdateTime;
 
         // 33 ms is 30 hz
         private const int RefreshDelayMS = 33;
+        private ClientActions _clientActions;
 
-        void OnEnable()
+        private System.DateTime _lastUpdateTime;
+        private PlayersState _playersState;
+        private Server _server;
+
+        private void Update()
+        {
+            if ((System.DateTime.Now - _lastUpdateTime).TotalMilliseconds < RefreshDelayMS)
+                return;
+
+            _lastUpdateTime = System.DateTime.Now;
+            _server.BroadcastCommand(Command.PlayersState, _playersState);
+        }
+
+        private void OnEnable()
         {
             _server = FindObjectsOfType<Server>().FirstOrDefault();
             _clientActions = FindObjectsOfType<ClientActions>().FirstOrDefault();
@@ -37,6 +46,7 @@ namespace MultiplayerMod.multiplayer
             _server!.OnCommandReceived += OnCommandReceived;
 
             SaveLoaderPatch.OnWorldSaved += SaveLoaderPatchOnOnWorldSaved;
+            StateMachinePatch.OnGoToState += StateMachinePatchOnOnGoToState;
             ChoreDriverPatch.OnChoreSet += ChoreDriverPatchOnOnChoreSet;
         }
 
@@ -46,14 +56,6 @@ namespace MultiplayerMod.multiplayer
             // To send server infos as their become available
             var worldDiffer = go.AddComponent<WorldDebugDiffer>();
             worldDiffer.OnDebugInfoAvailable += info => _server.BroadcastCommand(Command.WorldDebugDiff, info);
-        }
-
-        private void Update()
-        {
-            if ((System.DateTime.Now - _lastUpdateTime).TotalMilliseconds < RefreshDelayMS)
-                return;
-            _lastUpdateTime = System.DateTime.Now;
-            _server.BroadcastCommand(Command.PlayersState, _playersState);
         }
 
         private void OnServerCreated()
@@ -68,10 +70,18 @@ namespace MultiplayerMod.multiplayer
             HardSyncClients(WorldSaver.ReadWorldSave(saveFileName));
         }
 
-        private void ChoreDriverPatchOnOnChoreSet(Chore.Precondition.Context context)
+        private void ChoreDriverPatchOnOnChoreSet(object[] payload)
         {
-            // TODO Sent required info to the client
-            _server.BroadcastCommand(SteamUser.GetSteamID(), Command.ChoreSet, 123L);
+            _server.BroadcastCommand(SteamUser.GetSteamID(), Command.ChoreSet, payload);
+        }
+
+        private void StateMachinePatchOnOnGoToState(object[] payload)
+        {
+            _server.BroadcastCommand(
+                SteamUser.GetSteamID(),
+                Command.GoToState,
+                payload
+            );
         }
 
         private void OnClientJoined(CSteamID steamID)
@@ -84,12 +94,17 @@ namespace MultiplayerMod.multiplayer
 
         private void HardSyncClients(List<WorldSaveChunk> saveWorldChunks)
         {
-            _server.BroadcastCommand(Command.UserAction, new UserAction
-            {
-                userActionType = UserAction.UserActionTypeEnum.Pause
-            });
-            saveWorldChunks.ForEach(chunk =>
-                _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk));
+            _server.BroadcastCommand(
+                Command.UserAction,
+                new UserAction
+                {
+                    userActionType = UserAction.UserActionTypeEnum.Pause
+                }
+            );
+            saveWorldChunks.ForEach(
+                chunk =>
+                    _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk)
+            );
         }
 
         private void OnCommandReceived(CSteamID userId, SerializedMessage.TypedMessage typedMessage)
@@ -107,4 +122,5 @@ namespace MultiplayerMod.multiplayer
             }
         }
     }
+
 }

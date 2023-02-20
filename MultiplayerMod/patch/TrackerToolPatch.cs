@@ -4,7 +4,8 @@ using MultiplayerMod.oni;
 
 namespace MultiplayerMod.patch
 {
-    public class TrackerToolPatch
+
+    public static class TrackerToolPatch
     {
         [HarmonyPatch(typeof(TrackerTool), "AddNewWorldTrackers")]
         public static class ColonyDiagnosticUtilityPatch
@@ -16,4 +17,5 @@ namespace MultiplayerMod.patch
             }
         }
     }
+
 }
