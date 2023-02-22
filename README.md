@@ -61,40 +61,11 @@ some folders are missing, please create them).
 - Join invite (from already opened game) or join via Steam overlay
 - Wait until game is loaded
 
-# Long TODO List
+# What is next
+We are trying to keep planned work and known bugs in github issues
+https://github.com/zuev93/oni_multiplayer/milestones
+<p>
+And also we're using a GitHub project for task management
 
-- Basic features
-    - [MAJOR] Handle game user actions
-        - Handle building
-            - Most of the builds are synced
-            - Pipes, wires, vents are NOT synced at all
-        - Handle buildings settings (side dialog actions)
-        - Handle colonies settings (food/priorities/etc)
-    - [MAJOR] Printer is not synced
-    - [MAJOR] Minions behaviour is totally different on different clients
-    - [MINOR] Performance assessment (network/memory/cpu)
-- Improvements
-    - [MAJOR] Measuring amount of out-dated objects in more graceful way
-        - Currently it shows absolute diff to the frame. But some amount of difference is fine (e.g. progress of
-          building diff less then X percent, or temperature difference less then Y degrees)
-    - [MEDIUM] Correctly handling DLC vs Vanilla game versions
-    - [MEDIUM] Launching game straight away
-        - Right now it shows a warning about wrong url format
-    - [MINOR] InGame Players information
-        - Who is in the game
-        - Where they are
-        - Their ping
-        - Ability to kick/vote for kick
-    - [MINOR] In game Lobby browser
-    - [MINOR] Translation support
-- Bux fixes
-    - [MAJOR] Every synced build action clutters another player side
-    - [MEDIUM] Some actions (as Build action) overrides user selected building plan/material/priorirt
-    - [MEDIUM] Cursor draw method is error prone (double phantom cursors, inverted, etc)
-    - [MINOR] Correct handling of UI buttons (e.g. clicking create -> cancel -> join causes client to join but with
-      additional
-      server :) )
-- GitHub
-    - [MAJOR] Better README
-    - [MEDIUM] Better issue categories :)
-    - [MINOR] Build and code cleanup
+https://github.com/users/zuev93/projects/1
+
