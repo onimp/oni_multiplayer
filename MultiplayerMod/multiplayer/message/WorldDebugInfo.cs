@@ -5,6 +5,11 @@ using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.multiplayer.message
 {
+    static class Extensions
+    {
+        public static IEnumerator<T> GetEnumerator<T>(this IEnumerator<T> enumerator) => enumerator;
+    }
+
     [Serializable]
     public struct WorldDebugInfo
     {
@@ -20,14 +25,25 @@ namespace MultiplayerMod.multiplayer.message
         public int[] diseaseIdxHashes;
         public int[] diseaseCountHashes;
         public int[] accumulatedFlowValuesHashes;
-        public int[] choreProvidersHashes;
-        public Dictionary<int, int[]>[] ChoreProvidersChoresHashes;
+        public Dictionary<string, List<string>> StateMachineStates;
 
         private const int MaxBatchesCount = 128;
 
         public static unsafe WorldDebugInfo CurrentDebugInfo()
         {
-            var objects = Object.FindObjectsOfType<ChoreProvider>();
+            var stateMachines = Object.FindObjectsOfType<StateMachineController>();
+            var stateMachineStates = stateMachines.ToDictionary(
+                stateMachine => stateMachine + stateMachine.GetHashCode().ToString(),
+                stateMachine =>
+                {
+                    var states = new List<string>();
+                    foreach (var instance in stateMachine.GetEnumerator())
+                    {
+                        states.Add(instance.ToString());
+                    }
+
+                    return states;
+                });
 
             return new WorldDebugInfo
             {
@@ -43,10 +59,7 @@ namespace MultiplayerMod.multiplayer.message
                 diseaseIdxHashes = HashBatches(Grid.diseaseIdx),
                 diseaseCountHashes = HashBatches(Grid.diseaseCount),
                 accumulatedFlowValuesHashes = HashBatches(Grid.AccumulatedFlowValues),
-                choreProvidersHashes = objects.Select(choreProvider => choreProvider.Name.GetHashCode()).ToArray(),
-                ChoreProvidersChoresHashes = objects.Select(choreProvider =>
-                    choreProvider.choreWorldMap.ToDictionary(pair => pair.Key,
-                        pair => pair.Value.Select(Hash).ToArray())).ToArray()
+                StateMachineStates = stateMachineStates
             };
         }
 
@@ -83,10 +96,11 @@ namespace MultiplayerMod.multiplayer.message
                                printDebug);
             errorsCount += cellsCount * CompareValues(nameof(accumulatedFlowValuesHashes), accumulatedFlowValuesHashes,
                 other.accumulatedFlowValuesHashes, printDebug);
-            errorsCount += CompareValues(nameof(choreProvidersHashes), choreProvidersHashes,
-                other.choreProvidersHashes, printDebug);
-            errorsCount += CompareArrayOfDictionaries(ChoreProvidersChoresHashes, other.ChoreProvidersChoresHashes,
-                printDebug);
+            // TODO do something with it
+            // errorsCount += CompareValues(nameof(choreProvidersHashes), choreProvidersHashes,
+            //     other.choreProvidersHashes, printDebug);
+            // errorsCount += CompareArrayOfDictionaries(ChoreProvidersChoresHashes, other.ChoreProvidersChoresHashes,
+            //     printDebug);
             if (printDebug)
                 Debug.Log($"Errors count is {errorsCount}");
             return errorsCount;

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
 namespace MultiplayerMod.patch
 {
+
     public static class DragToolPatches
     {
         public static bool DisablePatch;
@@ -18,11 +18,14 @@ namespace MultiplayerMod.patch
             public static void Postfix(Vector3 downPos, Vector3 upPos)
             {
                 if (DisablePatch) return;
-                OnDragComplete?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
-                    downPos.x, downPos.y, downPos.z, upPos.x, upPos.y, upPos.z
-                });
+
+                OnDragComplete?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
+                        downPos.x, downPos.y, downPos.z, upPos.x, upPos.y, upPos.z
+                    }
+                );
             }
         }
 
@@ -36,18 +39,20 @@ namespace MultiplayerMod.patch
             {
                 if (DisablePatch) return;
 
-                (__instance is UtilityBuildTool ? OnUtilityTool : OnWireTool)?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
-                    Grid.PosToCell(cursor_pos),
-                    0,
+                (__instance is UtilityBuildTool ? OnUtilityTool : OnWireTool)?.Invoke(
                     new object[]
                     {
-                        __instance.GetPrivateField<BaseUtilityBuildTool, BuildingDef>("def").PrefabID,
-                        __instance.GetPrivateField<BaseUtilityBuildTool, IList<Tag>>("selectedElements")!,
-                        GetPath(__instance)
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
+                        Grid.PosToCell(cursor_pos),
+                        0,
+                        new object[]
+                        {
+                            __instance.GetPrivateField<BaseUtilityBuildTool, BuildingDef>("def").PrefabID,
+                            __instance.GetPrivateField<BaseUtilityBuildTool, IList<Tag>>("selectedElements")!,
+                            GetPath(__instance)
+                        }
                     }
-                });
+                );
             }
 
             private static List<int> GetPath(BaseUtilityBuildTool buildTool)
@@ -72,20 +77,23 @@ namespace MultiplayerMod.patch
             public static void Prefix(BuildTool __instance, int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.PriorityScreen
-                        .GetLastSelectedPriority().priority_value,
-                    cell,
-                    distFromOrigin,
+
+                OnDragTool?.Invoke(
                     new object[]
                     {
-                        __instance.GetPrivateField<BuildingDef>("def").PrefabID,
-                        __instance.GetPrivateField<string>("facadeID"),
-                        __instance.GetPrivateField<IList<Tag>>("selectedElements"),
-                        __instance.GetPrivateField<Orientation>("buildingOrientation")
+                        PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.PriorityScreen
+                            .GetLastSelectedPriority().priority_value,
+                        cell,
+                        distFromOrigin,
+                        new object[]
+                        {
+                            __instance.GetPrivateField<BuildingDef>("def").PrefabID,
+                            __instance.GetPrivateField<string>("facadeID"),
+                            __instance.GetPrivateField<IList<Tag>>("selectedElements"),
+                            __instance.GetPrivateField<Orientation>("buildingOrientation")
+                        }
                     }
-                });
+                );
             }
         }
 
@@ -97,10 +105,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -112,11 +123,14 @@ namespace MultiplayerMod.patch
             public static void Postfix(Vector3 downPos, Vector3 upPos)
             {
                 if (DisablePatch) return;
-                OnDragComplete?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
-                    downPos.x, downPos.y, downPos.z, upPos.x, upPos.y, upPos.z
-                });
+
+                OnDragComplete?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
+                        downPos.x, downPos.y, downPos.z, upPos.x, upPos.y, upPos.z
+                    }
+                );
             }
         }
 
@@ -128,10 +142,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -143,10 +160,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -158,10 +178,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -173,10 +196,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -188,10 +214,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -203,10 +232,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -218,10 +250,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -233,10 +268,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -248,10 +286,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -263,10 +304,13 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
 
@@ -278,11 +322,15 @@ namespace MultiplayerMod.patch
             public static void Postfix(int cell, int distFromOrigin)
             {
                 if (DisablePatch) return;
-                OnDragTool?.Invoke(new object[]
-                {
-                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                });
+
+                OnDragTool?.Invoke(
+                    new object[]
+                    {
+                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
+                    }
+                );
             }
         }
     }
+
 }
