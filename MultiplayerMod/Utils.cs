@@ -144,6 +144,12 @@ namespace MultiplayerMod
             )!.GetValue(instance);
         }
 
+        public static void SetProperty<T>(this T instance, string fieldName, object value)
+        {
+            typeof(T).GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance).GetSetMethod(true)
+                .Invoke(instance, new[] { value });
+        }
+
         public static Type GetNestedType(this Type parentType, string subTypeName)
         {
             return parentType.GetNestedType(

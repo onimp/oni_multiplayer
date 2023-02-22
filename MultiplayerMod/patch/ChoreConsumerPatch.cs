@@ -49,7 +49,14 @@ namespace MultiplayerMod.patch
             var choreId = out_context.chore.id;
 
             OnFindNextChore?.Invoke(
-                new object[] { instanceId, choreId, out_context.chore.GetType().ToString(), Grid.PosToCell(out_context.chore.gameObject.transform.position) }
+                new object[]
+                {
+                    __instance.ToString(),
+                    instanceId,
+                    choreId,
+                    out_context.chore.GetType().ToString(),
+                    Grid.PosToCell(out_context.chore.gameObject.transform.position)
+                }
             );
         }
     }
