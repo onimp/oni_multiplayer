@@ -6,7 +6,7 @@ using MultiplayerMod.multiplayer.effect;
 namespace MultiplayerMod.patch
 {
 
-    [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
+    // [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
     public static class ChoreConsumerPatch
     {
         public static event Action<object[]> OnFindNextChore;
