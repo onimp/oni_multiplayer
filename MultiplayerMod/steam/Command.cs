@@ -14,8 +14,7 @@ namespace MultiplayerMod.steam
         PlayersState = 2,
         UserAction = 3,
         MouseMove = 4,
-        GoToState = 5,
-        ChoreSet = 6
+        ChoreSet = 5
     }
 
 }

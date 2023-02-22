@@ -1,102 +1,56 @@
-using System.Collections.Generic;
-using System.Linq;
+using System;
+using HarmonyLib;
 using MultiplayerMod.multiplayer;
-using UnityEngine;
+using MultiplayerMod.multiplayer.effect;
 
 namespace MultiplayerMod.patch
 {
 
-    // [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
+    [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
     public static class ChoreConsumerPatch
     {
-        private static readonly Dictionary<int, Chore.Precondition.Context?> ServerInstanceChoreDictionary = new();
+        public static event Action<object[]> OnFindNextChore;
 
-        public static void Postfix(
+        public static bool Prefix(
             ChoreConsumer __instance,
             ref Chore.Precondition.Context out_context,
             ref bool __result
         )
         {
-            if (MultiplayerState.MultiplayerRole != MultiplayerState.Role.Client) return;
+            if (MultiplayerState.MultiplayerRole != MultiplayerState.Role.Client) return true;
 
             var instanceId = __instance.gameObject.GetComponent<KPrefabID>().InstanceID;
-            if (!ServerInstanceChoreDictionary.ContainsKey(instanceId))
+
+            var choreContext = FindNextChoreEffect.ServerInstanceChoreDictionary.GetValueSafe(instanceId);
+
+            if (choreContext == null || choreContext.Value.chore?.id == out_context.chore?.id)
             {
-                ServerInstanceChoreDictionary[instanceId] = out_context;
-                return;
+                return true;
             }
 
-            var choreContext = ServerInstanceChoreDictionary[instanceId];
-            __result = choreContext != null;
-            out_context = choreContext ?? out_context;
+            __result = true;
+            out_context = choreContext.Value;
 
-            ServerInstanceChoreDictionary[instanceId] = null;
+            return false;
         }
 
-        public static void AddServerChore(object[] payload)
-        {
-            var instanceId = (int)payload[0];
-            var choreId = (int)payload[1];
-            var serverChoreName = (string)payload[2];
-            var serverChoreNames = (string)payload[3];
-
-            var prefabID = Object.FindObjectsOfType<KPrefabID>().FirstOrDefault(a => a.InstanceID == instanceId);
-            if (prefabID == null)
-            {
-                Debug.LogWarning($"Multiplayer: KPrefabID not found {instanceId}");
-                return;
-            }
-
-            var clientChoreNames = ChoreDriverPatch.GetAllChoreNames(prefabID);
-
-            if (serverChoreNames != clientChoreNames)
-            {
-                Debug.LogWarning("Client chores != Server Chores");
-                Debug.LogWarning(clientChoreNames);
-                Debug.LogWarning(serverChoreNames);
-            }
-
-            var consumer = prefabID.GetComponent<ChoreConsumer>();
-            if (consumer == null)
-            {
-                Debug.LogWarning($"Multiplayer: consumer not found {prefabID}");
-                return;
-            }
-
-            ServerInstanceChoreDictionary[instanceId] = FindContext(consumer, choreId, serverChoreName);
-        }
-
-        private static Chore.Precondition.Context? FindContext(
+        public static void Postfix(
             ChoreConsumer __instance,
-            int choreId,
-            string serverChoreType
+            Chore.Precondition.Context out_context,
+            ref bool __result
         )
         {
-            var chores = __instance.GetProviders()
-                .SelectMany(provider => provider.choreWorldMap.Values.SelectMany(x => x)).ToArray();
+            if (MultiplayerState.MultiplayerRole != MultiplayerState.Role.Server) return;
+            if (!__result) return;
 
-            foreach (var chore in chores.Where(chore => chore.id == choreId))
-            {
-                if (chore.GetType().ToString() != serverChoreType)
-                {
-                    Debug.LogWarning(
-                        $"Chore type is not equal client: {chore.GetType()} != server {serverChoreType}"
-                    );
-                    continue;
-                }
+            var kPrefabID = __instance.gameObject.GetComponent<KPrefabID>();
 
-                return new Chore.Precondition.Context(chore, __instance.consumerState, true);
-            }
+            var instanceId = kPrefabID.InstanceID;
+            var choreId = out_context.chore.id;
 
-            var choreByType = chores.Where(chore => chore.GetType().ToString() == serverChoreType).ToArray();
-            if (choreByType.Count() == 1)
-            {
-                Debug.Log("Not found chore by id but found by type");
-                return new Chore.Precondition.Context(choreByType.First(), __instance.consumerState, true);
-            }
-
-            Debug.LogWarning($"Multiplayer: Chore not found {choreId} {serverChoreType}");
-            return null;
+            OnFindNextChore?.Invoke(
+                new object[] { instanceId, choreId, out_context.chore.GetType().ToString(), Grid.PosToCell(out_context.chore.gameObject.transform.position) }
+            );
         }
     }
 

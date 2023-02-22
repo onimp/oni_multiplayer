@@ -31,13 +31,6 @@ namespace MultiplayerMod.steam
             if (!SteamManager.Initialized)
                 throw new Exception("Steam manager is not initialized");
 
-            for (var i = 0; i < SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagAll); i++)
-            {
-                var id = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagAll);
-                Debug.Log($"{id} - {SteamFriends.GetFriendRichPresence(id, "connect")}");
-                Debug.Log($"{id} - {SteamFriends.GetFriendRichPresence(id, "status")}");
-            }
-
             SteamNetworkingUtils.InitRelayNetworkAccess();
 
             Callback<GameRichPresenceJoinRequested_t>.Create(t => { JoinByCommandLine(t.m_rgchConnect); });

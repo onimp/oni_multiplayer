@@ -20,34 +20,33 @@ namespace MultiplayerMod.multiplayer
     {
 
         // 33 ms is 30 hz
-        private const int RefreshDelayMS = 33;
-        private ClientActions _clientActions;
+        private const int refreshDelayMS = 33;
+        private ClientActions clientActions;
 
-        private System.DateTime _lastUpdateTime;
-        private PlayersState _playersState;
-        private Server _server;
+        private System.DateTime lastUpdateTime;
+        private PlayersState playersState;
+        private Server server;
 
         private void Update()
         {
-            if ((System.DateTime.Now - _lastUpdateTime).TotalMilliseconds < RefreshDelayMS)
+            if ((System.DateTime.Now - lastUpdateTime).TotalMilliseconds < refreshDelayMS)
                 return;
 
-            _lastUpdateTime = System.DateTime.Now;
-            _server.BroadcastCommand(Command.PlayersState, _playersState);
+            lastUpdateTime = System.DateTime.Now;
+            server.BroadcastCommand(Command.PlayersState, playersState);
         }
 
         private void OnEnable()
         {
-            _server = FindObjectsOfType<Server>().FirstOrDefault();
-            _clientActions = FindObjectsOfType<ClientActions>().FirstOrDefault();
+            server = FindObjectsOfType<Server>().FirstOrDefault();
+            clientActions = FindObjectsOfType<ClientActions>().FirstOrDefault();
 
-            _server!.ServerCreated += OnServerCreated;
-            _server!.ClientJoined += OnClientJoined;
-            _server!.OnCommandReceived += OnCommandReceived;
+            server!.ServerCreated += OnServerCreated;
+            server!.ClientJoined += OnClientJoined;
+            server!.OnCommandReceived += OnCommandReceived;
 
             SaveLoaderPatch.OnWorldSaved += SaveLoaderPatchOnOnWorldSaved;
-            StateMachinePatch.OnGoToState += StateMachinePatchOnOnGoToState;
-            ChoreDriverPatch.OnChoreSet += ChoreDriverPatchOnOnChoreSet;
+            ChoreConsumerPatch.OnFindNextChore += ChoreDriverPatchOnOnChoreSet;
         }
 
         protected override void OnSpawn()
@@ -55,13 +54,13 @@ namespace MultiplayerMod.multiplayer
             var go = new GameObject();
             // To send server infos as their become available
             var worldDiffer = go.AddComponent<WorldDebugDiffer>();
-            worldDiffer.OnDebugInfoAvailable += info => _server.BroadcastCommand(Command.WorldDebugDiff, info);
+            worldDiffer.OnDebugInfoAvailable += info => server.BroadcastCommand(Command.WorldDebugDiff, info);
         }
 
         private void OnServerCreated()
         {
-            _clientActions.ConnectToServer(_server.SteamId);
-            _playersState = new PlayersState();
+            clientActions.ConnectToServer(server.SteamId);
+            playersState = new PlayersState();
             SteamFriends.ActivateGameOverlayToUser("friends", SteamUser.GetSteamID());
         }
 
@@ -72,16 +71,7 @@ namespace MultiplayerMod.multiplayer
 
         private void ChoreDriverPatchOnOnChoreSet(object[] payload)
         {
-            _server.BroadcastCommand(SteamUser.GetSteamID(), Command.ChoreSet, payload);
-        }
-
-        private void StateMachinePatchOnOnGoToState(object[] payload)
-        {
-            _server.BroadcastCommand(
-                SteamUser.GetSteamID(),
-                Command.GoToState,
-                payload
-            );
+            server.BroadcastCommand(SteamUser.GetSteamID(), Command.ChoreSet, payload);
         }
 
         private void OnClientJoined(CSteamID steamID)
@@ -94,7 +84,7 @@ namespace MultiplayerMod.multiplayer
 
         private void HardSyncClients(List<WorldSaveChunk> saveWorldChunks)
         {
-            _server.BroadcastCommand(
+            server.BroadcastCommand(
                 Command.UserAction,
                 new UserAction
                 {
@@ -103,7 +93,7 @@ namespace MultiplayerMod.multiplayer
             );
             saveWorldChunks.ForEach(
                 chunk =>
-                    _server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk)
+                    server.BroadcastCommand(SteamUser.GetSteamID(), Command.LoadWorld, chunk)
             );
         }
 
@@ -112,10 +102,10 @@ namespace MultiplayerMod.multiplayer
             switch (typedMessage.Command)
             {
                 case Command.UserAction:
-                    _server.BroadcastCommand(userId, Command.UserAction, typedMessage.Payload);
+                    server.BroadcastCommand(userId, Command.UserAction, typedMessage.Payload);
                     break;
                 case Command.MouseMove:
-                    _playersState.UpdateMousePos(userId, (Pair<float, float>)typedMessage.Payload);
+                    playersState.UpdateMousePos(userId, (Pair<float, float>)typedMessage.Payload);
                     break;
                 default:
                     throw new InvalidEnumArgumentException($"Unknown command received {typedMessage.Command}");

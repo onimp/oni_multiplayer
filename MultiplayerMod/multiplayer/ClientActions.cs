@@ -18,19 +18,19 @@ namespace MultiplayerMod.multiplayer
     {
 
         // 33 ms is 30 hz
-        private const int RefreshDelayMS = 33;
-        private Client _client;
+        private const int refreshDelayMS = 33;
+        private Client client;
 
-        private System.DateTime _lastUpdateSent;
+        private System.DateTime lastUpdateSent;
 
         private void OnEnable()
         {
-            _client = FindObjectsOfType<Client>().FirstOrDefault();
-            if (_client == null)
+            client = FindObjectsOfType<Client>().FirstOrDefault();
+            if (client == null)
                 throw new Exception("Client object is missing.");
 
-            _client.OnConnectedToServer += OnConnectedToServer;
-            _client.OnCommandReceived += OnCommandReceived;
+            client.OnConnectedToServer += OnConnectedToServer;
+            client.OnCommandReceived += OnCommandReceived;
             InterfaceToolOnMouseMovePatch.OnMouseMove += OnMouseMoved;
 
             SpeedControlScreenPatches.SetSpeedPatch.OnSetSpeed +=
@@ -85,7 +85,7 @@ namespace MultiplayerMod.multiplayer
 
         private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload = null)
         {
-            _client.SendUserActionToServer(
+            client.SendUserActionToServer(
                 new UserAction
                 {
                     userActionType = actionType,
@@ -96,16 +96,16 @@ namespace MultiplayerMod.multiplayer
 
         private void OnMouseMoved(float x, float y)
         {
-            if ((System.DateTime.Now - _lastUpdateSent).TotalMilliseconds < RefreshDelayMS)
+            if ((System.DateTime.Now - lastUpdateSent).TotalMilliseconds < refreshDelayMS)
                 return;
 
-            _lastUpdateSent = System.DateTime.Now;
-            _client.SendCommandToServer(Command.MouseMove, new Pair<float, float>(x, y));
+            lastUpdateSent = System.DateTime.Now;
+            client.SendCommandToServer(Command.MouseMove, new Pair<float, float>(x, y));
         }
 
         public void ConnectToServer(CSteamID serverId)
         {
-            _client.ConnectToServer(serverId, true);
+            client.ConnectToServer(serverId, true);
         }
 
         private void OnCommandReceived(SerializedMessage.TypedMessage typedMessage)
@@ -124,11 +124,8 @@ namespace MultiplayerMod.multiplayer
                 case Command.UserAction:
                     HandleUserAction((UserAction)typedMessage.Payload);
                     break;
-                case Command.GoToState:
-                    GoToStateEffect.GoToState((object[])typedMessage.Payload);
-                    break;
                 case Command.ChoreSet:
-                    ChoreConsumerPatch.AddServerChore((object[])typedMessage.Payload);
+                    FindNextChoreEffect.AddServerChore((object[])typedMessage.Payload);
                     break;
                 default:
                     throw new InvalidEnumArgumentException($"Unknown command received {typedMessage.Command}");
