@@ -1,6 +1,6 @@
+*.user
 /.idea
 /packages
-/OniMod.sln.DotSettings.user
 /Assembly-CSharp-firstpass
 /Assembly-CSharp
 /*/bin/
