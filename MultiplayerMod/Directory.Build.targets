@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+    <Target Name="InstallMod" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+        <Message Text="Copy mod files to ONI mods directory" />
+        <ItemGroup>
+            <ModFiles Include="$(TargetDir)*.dll" />
+            <ModMetadata Include="$(SourceDir)*.yaml" />
+        </ItemGroup>
+        <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)" />
+        <Copy SourceFiles="@(ModMetadata)" DestinationFolder="$(ModInstallationPath)" />
+    </Target>
+</Project>
