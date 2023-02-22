@@ -2,13 +2,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using MultiplayerMod.multiplayer.message;
+using MultiplayerMod.patch;
 
 namespace MultiplayerMod.multiplayer.effect
 {
     public static class WorldLoader
     {
-        private static readonly Dictionary<int, WorldSaveChunk> SaveChunks = new Dictionary<int, WorldSaveChunk>();
-        private static readonly Mutex LoadMutex = new Mutex();
+        private static readonly Dictionary<int, WorldSaveChunk> SaveChunks = new();
+        private static readonly Mutex LoadMutex = new();
 
         public static void StartLoading()
         {
@@ -25,12 +26,10 @@ namespace MultiplayerMod.multiplayer.effect
         {
             if (LoadMutex.WaitOne(1))
             {
-                LoadingOverlay.Load(() =>
-                {
-                    LoadMutex.WaitOne();
-                    LoadMutex.ReleaseMutex();
-                });
+                LoadMutex.ReleaseMutex();
+                StartLoading();
             }
+
             var chunk = (WorldSaveChunk)obj;
             SaveChunks[chunk.chunkIndex] = chunk;
             if (chunk.chunkIndex + 1 != chunk.totalChunks)

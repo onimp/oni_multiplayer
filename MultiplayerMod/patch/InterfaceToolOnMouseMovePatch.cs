@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace MultiplayerMod.patch
 {
+
     [HarmonyPatch(typeof(InterfaceTool), nameof(InterfaceTool.OnMouseMove))]
     public static class InterfaceToolOnMouseMovePatch
     {
@@ -14,4 +15,5 @@ namespace MultiplayerMod.patch
             OnMouseMove?.Invoke(cursor_pos.x, cursor_pos.y);
         }
     }
+
 }

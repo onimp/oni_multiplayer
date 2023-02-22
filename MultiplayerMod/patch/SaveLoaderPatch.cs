@@ -3,6 +3,7 @@ using HarmonyLib;
 
 namespace MultiplayerMod.patch
 {
+
     [HarmonyPatch(typeof(SaveLoader), nameof(SaveLoader.Save), typeof(string), typeof(bool), typeof(bool))]
     public abstract class SaveLoaderPatch
     {
@@ -13,7 +14,9 @@ namespace MultiplayerMod.patch
         public static void Postfix(string filename)
         {
             if (DisablePatch) return;
+
             OnWorldSaved?.Invoke(filename);
         }
     }
+
 }

@@ -6,116 +6,106 @@ using MultiplayerMod.multiplayer.message;
 using MultiplayerMod.patch;
 using MultiplayerMod.steam;
 using Steamworks;
-using UnityEngine;
 
 namespace MultiplayerMod.multiplayer
 {
+
     /// <summary>
-    /// Contains and handles user events.
-    /// Based on the event either send it to the server or change game via `Effect` class.
+    ///     Contains and handles user events.
+    ///     Based on the event either send it to the server or change game via `Effect` class.
     /// </summary>
     public class ClientActions : KMonoBehaviour
     {
-        private Client _client;
-
-        private System.DateTime _lastUpdateSent;
-        private bool _worldSpawned;
 
         // 33 ms is 30 hz
-        private const int RefreshDelayMS = 33;
+        private const int refreshDelayMS = 33;
+        private Client client;
 
-        public bool WorldSpawned
-        {
-            get => _worldSpawned;
-            set
-            {
-                _worldSpawned = value;
-                if (!_worldSpawned) return;
-                var go = new GameObject();
-                go.AddComponent<PlayerStateEffect>();
-                go.AddComponent<WorldDebugDiffer>();
-            }
-        }
+        private System.DateTime lastUpdateSent;
 
-        void OnEnable()
+        private void OnEnable()
         {
-            _client = FindObjectsOfType<Client>().FirstOrDefault();
-            if (_client == null)
+            client = FindObjectsOfType<Client>().FirstOrDefault();
+            if (client == null)
                 throw new Exception("Client object is missing.");
 
-            _client.OnConnectedToServer += OnConnectedToServer;
-            _client.OnCommandReceived += OnCommandReceived;
+            client.OnConnectedToServer += OnConnectedToServer;
+            client.OnCommandReceived += OnCommandReceived;
             InterfaceToolOnMouseMovePatch.OnMouseMove += OnMouseMoved;
 
             SpeedControlScreenPatches.SetSpeedPatch.OnSetSpeed +=
-                (speed) => SendToServer(UserAction.UserActionTypeEnum.SetSpeed, speed);
+                speed => SendToServer(UserAction.UserActionTypeEnum.SetSpeed, speed);
             SpeedControlScreenPatches.TogglePausePatch.OnPause +=
                 () => SendToServer(UserAction.UserActionTypeEnum.Pause);
             SpeedControlScreenPatches.TogglePausePatch.OnUnpause +=
                 () => SendToServer(UserAction.UserActionTypeEnum.Unpause);
 
-            DragToolPatches.AttackToolPatch.OnDragComplete += (payload) =>
+            DragToolPatches.AttackToolPatch.OnDragComplete += payload =>
                 SendToServer(UserAction.UserActionTypeEnum.Attack, payload);
-            DragToolPatches.BaseUtilityBuildToolPatch.OnUtilityTool += (payload) =>
+            DragToolPatches.BaseUtilityBuildToolPatch.OnUtilityTool += payload =>
                 SendToServer(UserAction.UserActionTypeEnum.UtilityBuild, payload);
-            DragToolPatches.BaseUtilityBuildToolPatch.OnWireTool += (payload) =>
+            DragToolPatches.BaseUtilityBuildToolPatch.OnWireTool += payload =>
                 SendToServer(UserAction.UserActionTypeEnum.WireBuild, payload);
             DragToolPatches.BuildToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Build, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Build, payload);
             DragToolPatches.CancelToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Cancel, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Cancel, payload);
             DragToolPatches.CaptureToolPatch.OnDragComplete +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Capture, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Capture, payload);
             DragToolPatches.ClearToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Clear, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Clear, payload);
             DragToolPatches.CopySettingsToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.CopySettings, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.CopySettings, payload);
             DragToolPatches.DebugToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Debug, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Debug, payload);
             DragToolPatches.DeconstructToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Deconstruct, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Deconstruct, payload);
             DragToolPatches.DigToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Dig, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Dig, payload);
             DragToolPatches.DisinfectToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Disinfect, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Disinfect, payload);
             DragToolPatches.EmptyPipeToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.EmptyPipe, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.EmptyPipe, payload);
             DragToolPatches.HarvestToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Harvest, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Harvest, payload);
             DragToolPatches.MopToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Mop, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Mop, payload);
             DragToolPatches.PlaceToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Place, payload);
+                payload => SendToServer(UserAction.UserActionTypeEnum.Place, payload);
             DragToolPatches.PrioritizeToolPatch.OnDragTool +=
-                (payload) => SendToServer(UserAction.UserActionTypeEnum.Priority, payload);
-        }
-
-        private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload = null)
-        {
-            _client.SendUserActionToServer(new UserAction
-            {
-                userActionType = actionType,
-                Payload = payload
-            });
-        }
-
-        private void OnMouseMoved(float x, float y)
-        {
-            if ((System.DateTime.Now - _lastUpdateSent).TotalMilliseconds < RefreshDelayMS)
-                return;
-            _lastUpdateSent = System.DateTime.Now;
-            _client.SendCommandToServer(Command.MouseMove, new Pair<float, float>(x, y));
+                payload => SendToServer(UserAction.UserActionTypeEnum.Priority, payload);
         }
 
         private void OnConnectedToServer(bool isLocal)
         {
             if (isLocal) return;
+
             WorldLoader.StartLoading();
+        }
+
+        private void SendToServer(UserAction.UserActionTypeEnum actionType, object payload = null)
+        {
+            client.SendUserActionToServer(
+                new UserAction
+                {
+                    userActionType = actionType,
+                    Payload = payload
+                }
+            );
+        }
+
+        private void OnMouseMoved(float x, float y)
+        {
+            if ((System.DateTime.Now - lastUpdateSent).TotalMilliseconds < refreshDelayMS)
+                return;
+
+            lastUpdateSent = System.DateTime.Now;
+            client.SendCommandToServer(Command.MouseMove, new Pair<float, float>(x, y));
         }
 
         public void ConnectToServer(CSteamID serverId)
         {
-            _client.ConnectToServer(serverId, true);
+            client.ConnectToServer(serverId, true);
         }
 
         private void OnCommandReceived(SerializedMessage.TypedMessage typedMessage)
@@ -134,6 +124,9 @@ namespace MultiplayerMod.multiplayer
                 case Command.UserAction:
                     HandleUserAction((UserAction)typedMessage.Payload);
                     break;
+                case Command.ChoreSet:
+                    FindNextChoreEffect.AddServerChore((object[])typedMessage.Payload);
+                    break;
                 default:
                     throw new InvalidEnumArgumentException($"Unknown command received {typedMessage.Command}");
             }
@@ -141,7 +134,8 @@ namespace MultiplayerMod.multiplayer
 
         private void HandleUserAction(UserAction userAction)
         {
-            if (!WorldSpawned) return;
+            if (!MultiplayerState.IsSpawned) return;
+
             switch (userAction.userActionType)
             {
                 case UserAction.UserActionTypeEnum.Pause:
@@ -211,4 +205,5 @@ namespace MultiplayerMod.multiplayer
             }
         }
     }
+
 }
