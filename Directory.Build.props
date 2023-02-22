@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <LangVersion>9</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <Import Condition="Exists('Directory.Build.props.user')" Project="Directory.Build.props.user" />
+    <PropertyGroup Condition="!Exists('Directory.Build.props.user')">
+        <SteamLibraryPath>C:\Program Files (x86)\Steam</SteamLibraryPath>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <ManagedPath>$(SteamLibraryPath)\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ManagedPath>
+        <ModInstallationPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\dev\$(MSBuildProjectName)</ModInstallationPath>
+    </PropertyGroup>
+
+</Project>
