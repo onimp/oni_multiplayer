@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DebugType>full</DebugType>
+    </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
             <Link>logs/Player.log</Link>
