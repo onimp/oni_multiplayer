@@ -10,6 +10,8 @@ namespace MultiplayerMod.steam
     public class Client : MonoBehaviour
     {
         private HSteamNetConnection _conn;
+        private CallResult<LobbyEnter_t> lobbyJoined;
+        private CSteamID lobbyId = CSteamID.Nil;
 
         private void Update()
         {
@@ -33,20 +35,28 @@ namespace MultiplayerMod.steam
 
             SteamNetworkingUtils.InitRelayNetworkAccess();
 
-            Callback<GameRichPresenceJoinRequested_t>.Create(t => { JoinByCommandLine(t.m_rgchConnect); });
-            Callback<NewUrlLaunchParameters_t>.Create(
-                _ =>
-                {
-                    SteamApps.GetLaunchCommandLine(out var cmd, 1024);
-                    JoinByCommandLine(cmd);
-                }
-            );
+            Callback<GameLobbyJoinRequested_t>.Create(t => { ConnectToServer(t.m_steamIDLobby, false); });
             SteamClient.SetWarningMessageHook((severity, text) => { Debug.Log($"Steam warning. {severity} {text}."); });
+            Callback<SteamNetConnectionStatusChangedCallback_t>.Create(t => {
+                Debug.Log($"[Client] SteamNetConnectionStatusChangedCallback_t: {t.m_info.m_eState}");
+            });
+
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length <= 2 || args[1] != "+connect_lobby")
+                return;
+
+            var id = new CSteamID(ulong.Parse(args[2]));
+            Debug.Log($"Connect via the command line to {id}");
+            ConnectToServer(id, false);
         }
 
         private void OnDestroy()
         {
             Debug.Log("OnDestroy");
+            if (MultiplayerState.IsConnected) {
+                SteamMatchmaking.LeaveLobby(lobbyId);
+                SteamNetworkingSockets.CloseConnection(_conn, 0, "", false);
+            }
             SteamAPI.Shutdown();
         }
 
@@ -80,39 +90,30 @@ namespace MultiplayerMod.steam
             }
         }
 
-        private void JoinByCommandLine(string cmd)
+        public void ConnectToServer(CSteamID lobbyId, bool isLocal)
         {
-            Debug.Log($"We have been asked to run and join {cmd}");
-            if (cmd.Contains("+connect"))
-            {
-                var steamIdString = cmd.Split(' ')[1];
-                Debug.Log($"Trying to connect to {steamIdString}");
-                MultiplayerState.ConnectToServer();
-                ConnectToServer(new CSteamID(ulong.Parse(steamIdString)), false);
-                return;
-            }
+            MultiplayerState.ConnectToServer();
+            var lobbyJoinResult = SteamMatchmaking.JoinLobby(lobbyId);
+            lobbyJoined = CallResult<LobbyEnter_t>.Create((_, _) => {
+                this.lobbyId = lobbyId;
+                Debug.Log($"[Client] Joined lobby {lobbyId}");
+                var res = SteamMatchmaking.GetLobbyGameServer(lobbyId, out var ip, out var port, out var serverId);
+                Debug.Log($"[Client] GetLobbyData['srvId']: {serverId}");
+                if (!res)
+                    return;
+                Debug.Log($"[Client] Lobby game server id: {serverId}");
 
-            Debug.Log("Unknown command line.");
-        }
+                var identity = new SteamNetworkingIdentity();
+                identity.SetSteamID(serverId);
+                _conn = SteamNetworkingSockets.ConnectP2P(ref identity, 0, 1, new[] { Server.BufferSizeConfig });
 
-        public void ConnectToServer(CSteamID serverId, bool isLocal)
-        {
-            var identity = new SteamNetworkingIdentity();
-            identity.SetSteamID(serverId);
+                Debug.Log($"[Client] ConnectP2P to {serverId}");
+                SteamFriends.SetRichPresence("connect", $"+connect_lobby {lobbyId}");
+                MultiplayerState.Connected();
 
-            _conn = SteamNetworkingSockets.ConnectP2P(
-                ref identity,
-                0,
-                1,
-                new[] { Server.BufferSizeConfig }
-            );
-
-            Debug.Log($"+connect {serverId}");
-            // TODO make sure that other client can handle it and connect
-            // TODO Make sure that there is no game startup warning
-            SteamFriends.SetRichPresence("connect", $"+connect {serverId}");
-            MultiplayerState.Connected();
-            OnConnectedToServer?.Invoke(isLocal);
+                OnConnectedToServer?.Invoke(isLocal);
+            });
+            lobbyJoined.Set(lobbyJoinResult);
         }
 
         private void ReceiveNetworkData()

@@ -103,9 +103,9 @@ namespace MultiplayerMod.multiplayer
             client.SendCommandToServer(Command.MouseMove, new Pair<float, float>(x, y));
         }
 
-        public void ConnectToServer(CSteamID serverId)
+        public void ConnectToServer(CSteamID lobbyId)
         {
-            client.ConnectToServer(serverId, true);
+            client.ConnectToServer(lobbyId, true);
         }
 
         private void OnCommandReceived(SerializedMessage.TypedMessage typedMessage)

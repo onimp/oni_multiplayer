@@ -59,7 +59,7 @@ namespace MultiplayerMod.multiplayer
 
         private void OnServerCreated()
         {
-            clientActions.ConnectToServer(server.SteamId);
+            clientActions.ConnectToServer(server.lobbyId);
             playersState = new PlayersState();
             SteamFriends.ActivateGameOverlayToUser("friends", SteamUser.GetSteamID());
         }

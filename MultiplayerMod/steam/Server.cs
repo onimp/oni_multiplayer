@@ -25,6 +25,11 @@ namespace MultiplayerMod.steam
         private bool _isServerStarted;
         public CSteamID SteamId => SteamGameServer.GetSteamID();
 
+        private CallResult<LobbyCreated_t> lobbyCreatedCallback;
+        public CSteamID lobbyId;
+        private Callback<SteamServersConnected_t> steamServersConnected;
+        private Callback<SteamNetConnectionStatusChangedCallback_t> netConnectionStatusChanged;
+
         private void Update()
         {
             if (!_isServerStarted)
@@ -47,21 +52,21 @@ namespace MultiplayerMod.steam
 
             SteamNetworkingUtils.InitRelayNetworkAccess();
 
-            if (!SteamManager.Initialized) throw new Exception("Steam manager is not initialized");
+            if (!SteamManager.Initialized)
+                throw new Exception("Steam manager is not initialized");
 
-            Callback<SteamServersConnected_t>.CreateGameServer(
-                _ =>
-                {
-                    Debug.Log("Game server created");
-                    SteamGameServer.SetMaxPlayerCount(4);
-                    SteamGameServer.SetPasswordProtected(false);
-                    SteamGameServer.SetServerName($"{SteamFriends.GetPersonaName()}'s game");
-                    SteamGameServer.SetBotPlayerCount(0); // optional, defaults to zero
-                    SteamGameServer.SetMapName("MilkyWay");
-                    ServerCreated?.Invoke();
-                }
-            );
-            Callback<SteamNetConnectionStatusChangedCallback_t>.CreateGameServer(Steam_HandleIncomingConnection);
+            steamServersConnected = Callback<SteamServersConnected_t>.CreateGameServer(_ => {
+                Debug.Log($"[Server] GameServer connected to Steam: {SteamId}");
+                SteamGameServer.SetMaxPlayerCount(4);
+                SteamGameServer.SetPasswordProtected(false);
+                SteamGameServer.SetServerName($"{SteamFriends.GetPersonaName()}'s game");
+                Debug.Log("[Server] Invoke ServerCreated");
+                var steamId = SteamId;
+                SteamMatchmaking.SetLobbyGameServer(lobbyId, 0, 0, steamId);
+                Debug.Log($"[Server] SetLobbyData {lobbyId} -> {steamId}");
+                ServerCreated?.Invoke();
+            });
+            netConnectionStatusChanged = Callback<SteamNetConnectionStatusChangedCallback_t>.CreateGameServer(Steam_HandleIncomingConnection);
         }
 
         public event System.Action ServerCreated;
@@ -117,15 +122,16 @@ namespace MultiplayerMod.steam
             SteamNetworkingUtils.InitRelayNetworkAccess();
             SteamGameServer.SetAdvertiseServerActive(true);
 
-            SteamGameServerNetworkingSockets.CreateListenSocketP2P(
-                0,
-                1,
-                new[]
-                {
-                    BufferSizeConfig
-                }
-            );
+            SteamGameServerNetworkingSockets.CreateListenSocketP2P(0, 1, new[] { BufferSizeConfig });
             _hNetPollGroup = SteamGameServerNetworkingSockets.CreatePollGroup();
+
+            var lobbyResult = SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 4);
+            lobbyCreatedCallback = CallResult<LobbyCreated_t>.Create((t, _) => {
+                lobbyId = new CSteamID(t.m_ulSteamIDLobby);
+                Debug.Log($"[Server] CreateLobby result: {t.m_eResult}");
+            });
+            lobbyCreatedCallback.Set(lobbyResult);
+
             _isServerStarted = true;
         }
 
@@ -168,7 +174,8 @@ namespace MultiplayerMod.steam
 
                 SteamGameServerNetworkingSockets.SetConnectionPollGroup(hConn, _hNetPollGroup);
 
-                if (_clients.ContainsKey(steamID)) _clients.Remove(steamID);
+                if (_clients.ContainsKey(steamID))
+                    _clients.Remove(steamID);
                 _clients.Add(steamID, hConn);
                 Debug.Log($"Connection accepted from {steamID}");
                 ClientJoined?.Invoke(steamID);
