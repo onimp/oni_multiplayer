@@ -9,8 +9,8 @@ namespace MultiplayerMod.Network.Command {
             return new SerializedCommand(command);
         }
 
-        public static unsafe ICommand Deserialize(ISerializedCommand binary) {
-            return (ICommand) new BinaryFormatter().Deserialize(
+        public static unsafe T Deserialize<T>(ISerializedCommand binary) where T : ICommand {
+            return (T) new BinaryFormatter().Deserialize(
                 new UnmanagedMemoryStream((byte*)binary.GetPointer().ToPointer(), binary.GetSize())
             );
         }
