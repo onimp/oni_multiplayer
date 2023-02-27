@@ -2,7 +2,7 @@
 
 namespace MultiplayerMod.Network.Command {
 
-    public interface IBinaryCommand : IDisposable {
+    public interface ISerializedCommand : IDisposable {
         IntPtr GetPointer();
         long GetSize();
     }

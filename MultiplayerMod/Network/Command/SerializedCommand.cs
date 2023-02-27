@@ -5,12 +5,12 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace MultiplayerMod.Network.Command {
 
-    public class BinaryCommand : IBinaryCommand {
+    public class SerializedCommand : ISerializedCommand {
 
         private readonly MemoryStream memory;
         private GCHandle handle;
 
-        public BinaryCommand(ICommand command) {
+        public SerializedCommand(ICommand command) {
             memory = new MemoryStream();
             var formatter = new BinaryFormatter();
             formatter.Serialize(memory, command);

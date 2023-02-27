@@ -2,12 +2,12 @@
 
 namespace MultiplayerMod.Network.Command {
 
-    public class BinaryCommandHandle : IBinaryCommand {
+    public class SerializedCommandHandle : ISerializedCommand {
 
         private IntPtr pointer;
         private long size;
 
-        public BinaryCommandHandle(IntPtr pointer, long size) {
+        public SerializedCommandHandle(IntPtr pointer, long size) {
             this.pointer = pointer;
             this.size = size;
         }
