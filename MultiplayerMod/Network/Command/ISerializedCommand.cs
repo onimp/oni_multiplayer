@@ -1,10 +1,8 @@
 ﻿using System;
 
-namespace MultiplayerMod.Network.Command {
+namespace MultiplayerMod.Network.Command;
 
-    public interface ISerializedCommand : IDisposable {
-        IntPtr GetPointer();
-        long GetSize();
-    }
-
+public interface ISerializedCommand : IDisposable {
+    IntPtr GetPointer();
+    long GetSize();
 }

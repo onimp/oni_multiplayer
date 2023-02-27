@@ -1,7 +1,5 @@
-﻿namespace MultiplayerMod.Network.Command {
+﻿namespace MultiplayerMod.Network.Command;
 
-    public interface ICommand {
-        void Execute();
-    }
-
+public interface ICommand {
+    void Execute();
 }
