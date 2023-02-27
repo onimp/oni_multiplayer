@@ -14,7 +14,7 @@ namespace MultiplayerMod.Network.Command {
             memory = new MemoryStream();
             var formatter = new BinaryFormatter();
             formatter.Serialize(memory, command);
-            handle = GCHandle.Alloc(memory.GetBuffer());
+            handle = GCHandle.Alloc(memory.GetBuffer(), GCHandleType.Pinned);
         }
 
         public void Dispose() {
