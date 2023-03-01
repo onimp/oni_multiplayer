@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace MultiplayerMod.Logging;
+namespace MultiplayerMod.Core.Logging;
 
 public class Logger {
 

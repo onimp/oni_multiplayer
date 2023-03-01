@@ -5,10 +5,10 @@
     </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
-            <Link>logs/Player.log</Link>
+            <Link>_logs/Player.log</Link>
         </Content>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\VM\Player.log">
-            <Link>logs/VM Player.log</Link>
+            <Link>_logs/VM Player.log</Link>
         </Content>
     </ItemGroup>
     <ItemGroup>

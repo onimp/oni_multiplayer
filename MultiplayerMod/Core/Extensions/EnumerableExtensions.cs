@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MultiplayerMod.Extensions;
+namespace MultiplayerMod.Core.Extensions;
 
 public static class EnumerableExtensions {
 

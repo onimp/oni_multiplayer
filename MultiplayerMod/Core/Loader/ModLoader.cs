@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using KMod;
-using MultiplayerMod.Extensions;
+using MultiplayerMod.Core.Extensions;
 
-namespace MultiplayerMod.Loader;
+namespace MultiplayerMod.Core.Loader;
 
 public class ModLoader : UserMod2 {
 
