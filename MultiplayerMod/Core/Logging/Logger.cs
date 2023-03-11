@@ -7,8 +7,8 @@ public class Logger {
 
     private readonly string group;
 
-    public Logger(string group) {
-        this.group = group;
+    public Logger(Type type) {
+        group = type.Name;
     }
 
     public void Info(string message) => Log(LogLevel.Info, message);

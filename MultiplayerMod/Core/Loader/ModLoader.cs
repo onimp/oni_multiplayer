@@ -9,7 +9,7 @@ namespace MultiplayerMod.Core.Loader;
 
 public class ModLoader : UserMod2 {
 
-    private readonly Logging.Logger log = new("ModLoader");
+    private readonly Logging.Logger log = new(typeof(ModLoader));
 
     // ReSharper disable once CollectionNeverQueried.Local
     private readonly Dictionary<Type, object> initializers = new();
