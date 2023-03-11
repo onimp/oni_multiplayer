@@ -16,6 +16,7 @@ public class Logger {
     public void Error(string message) => Log(LogLevel.Error, message);
     public void Debug(string message) => Log(LogLevel.Debug, message);
     public void Trace(string message) => Log(LogLevel.Trace, message);
+    public void Trace(Func<string> messageProvider) => Log(LogLevel.Trace, messageProvider());
 
     private void Log(LogLevel level, string message) {
         var timestamp = System.DateTime.UtcNow.ToString("HH:mm:ss.fff");
