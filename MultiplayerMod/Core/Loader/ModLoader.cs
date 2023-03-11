@@ -20,7 +20,7 @@ public class ModLoader : UserMod2 {
             .Where(type => typeof(IModComponentLoader).IsAssignableFrom(type) && type.IsClass)
             .ForEach(type => {
                 var instance = (IModComponentLoader) Activator.CreateInstance(type);
-                log.Debug($"Running mod initializer {type.FullName}");
+                log.Debug($"Running mod component loader {type.FullName}");
                 instance.OnLoad(harmony);
                 initializers[type] = instance;
             });
