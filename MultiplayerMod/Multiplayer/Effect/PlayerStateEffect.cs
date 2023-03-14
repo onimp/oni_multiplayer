@@ -1,8 +1,8 @@
-using MultiplayerMod.multiplayer.message;
+using MultiplayerMod.Multiplayer.Message;
 using Steamworks;
 using UnityEngine;
 
-namespace MultiplayerMod.multiplayer.effect
+namespace MultiplayerMod.Multiplayer.Effect
 {
     // TODO consider using IRenderEveryTick
     public class PlayerStateEffect : MonoBehaviour

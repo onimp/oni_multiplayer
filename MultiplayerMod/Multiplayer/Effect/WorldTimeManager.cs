@@ -1,6 +1,6 @@
 using MultiplayerMod.patch;
 
-namespace MultiplayerMod.multiplayer.effect
+namespace MultiplayerMod.Multiplayer.Effect
 {
     public static class WorldTimeManager
     {

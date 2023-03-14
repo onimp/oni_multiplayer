@@ -1,13 +1,13 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
-using MultiplayerMod.multiplayer.effect;
-using MultiplayerMod.multiplayer.message;
+using MultiplayerMod.Multiplayer.Effect;
+using MultiplayerMod.Multiplayer.Message;
 using MultiplayerMod.patch;
 using MultiplayerMod.steam;
 using Steamworks;
 
-namespace MultiplayerMod.multiplayer
+namespace MultiplayerMod.Multiplayer
 {
 
     /// <summary>

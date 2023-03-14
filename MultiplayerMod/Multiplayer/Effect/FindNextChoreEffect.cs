@@ -4,7 +4,7 @@ using JetBrains.Annotations;
 using UnityEngine;
 using Random = System.Random;
 
-namespace MultiplayerMod.multiplayer.effect
+namespace MultiplayerMod.Multiplayer.Effect
 {
 
     public static class FindNextChoreEffect

@@ -1,7 +1,7 @@
 using System;
-using MultiplayerMod.multiplayer.message;
+using MultiplayerMod.Multiplayer.Message;
 
-namespace MultiplayerMod.multiplayer.effect
+namespace MultiplayerMod.Multiplayer.Effect
 {
     public class WorldDebugDiffer : KMonoBehaviour, IRenderEveryTick
     {

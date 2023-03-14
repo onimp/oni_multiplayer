@@ -1,4 +1,4 @@
-using MultiplayerMod.multiplayer.effect;
+using MultiplayerMod.Multiplayer.Effect;
 
 namespace MultiplayerMod.oni
 {

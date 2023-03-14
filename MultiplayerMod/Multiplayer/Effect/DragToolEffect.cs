@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using MultiplayerMod.patch;
 using UnityEngine;
 
-namespace MultiplayerMod.multiplayer.effect
+namespace MultiplayerMod.Multiplayer.Effect
 {
     public abstract class DragToolEffect
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using MultiplayerMod.multiplayer;
+using MultiplayerMod.Multiplayer;
 using Steamworks;
 using UnityEngine;
 

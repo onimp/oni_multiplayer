@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Steamworks;
 
-namespace MultiplayerMod.multiplayer.message
+namespace MultiplayerMod.Multiplayer.Message
 {
     [Serializable]
     public class PlayersState

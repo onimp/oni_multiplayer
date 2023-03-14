@@ -1,4 +1,4 @@
-namespace MultiplayerMod.multiplayer
+namespace MultiplayerMod.Multiplayer
 {
 
     /// <summary>

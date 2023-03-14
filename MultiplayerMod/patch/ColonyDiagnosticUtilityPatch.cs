@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using HarmonyLib;
-using MultiplayerMod.multiplayer;
+using MultiplayerMod.Multiplayer;
 using MultiplayerMod.oni;
 
 namespace MultiplayerMod.patch

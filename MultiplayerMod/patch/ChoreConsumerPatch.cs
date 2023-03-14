@@ -1,7 +1,7 @@
 using System;
 using HarmonyLib;
-using MultiplayerMod.multiplayer;
-using MultiplayerMod.multiplayer.effect;
+using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Effect;
 
 namespace MultiplayerMod.patch
 {

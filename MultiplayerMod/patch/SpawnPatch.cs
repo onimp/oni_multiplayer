@@ -1,6 +1,6 @@
 ﻿using HarmonyLib;
-using MultiplayerMod.multiplayer;
-using MultiplayerMod.multiplayer.effect;
+using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Effect;
 using MultiplayerMod.steam;
 using UnityEngine;
 

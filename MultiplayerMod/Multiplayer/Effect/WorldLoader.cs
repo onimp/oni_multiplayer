@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using MultiplayerMod.multiplayer.message;
+using MultiplayerMod.Multiplayer.Message;
 using MultiplayerMod.patch;
 
-namespace MultiplayerMod.multiplayer.effect
+namespace MultiplayerMod.Multiplayer.Effect
 {
     public static class WorldLoader
     {

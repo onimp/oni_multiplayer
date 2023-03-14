@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Object = UnityEngine.Object;
 
-namespace MultiplayerMod.multiplayer.message
+namespace MultiplayerMod.Multiplayer.Message
 {
     static class Extensions
     {

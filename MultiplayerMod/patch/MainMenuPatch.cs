@@ -1,5 +1,5 @@
 ﻿using HarmonyLib;
-using MultiplayerMod.multiplayer;
+using MultiplayerMod.Multiplayer;
 using MultiplayerMod.steam;
 using Steamworks;
 using UnityEngine;

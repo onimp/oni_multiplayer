@@ -1,6 +1,6 @@
 using System;
 
-namespace MultiplayerMod.multiplayer.message
+namespace MultiplayerMod.Multiplayer.Message
 {
     [Serializable]
     public struct UserAction
