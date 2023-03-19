@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using KMod;
 using MultiplayerMod.Core.Extensions;
@@ -18,6 +19,7 @@ public class ModLoader : UserMod2 {
         base.OnLoad(harmony);
         assembly.GetTypes()
             .Where(type => typeof(IModComponentLoader).IsAssignableFrom(type) && type.IsClass)
+            .OrderBy(type => type.GetCustomAttribute<ModComponentOrder>()?.Order ?? ModComponentOrder.Default)
             .ForEach(type => {
                 var instance = (IModComponentLoader) Activator.CreateInstance(type);
                 log.Debug($"Running mod component loader {type.FullName}");
