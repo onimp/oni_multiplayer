@@ -1,39 +1,39 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using MultiplayerMod.Network.Command;
+using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Network;
+using MultiplayerMod.Network.Messaging;
 using NUnit.Framework;
 
-namespace MultiplayerModTests {
+namespace MultiplayerModTests;
 
-    [TestFixture]
-    public class CommandTests {
+[TestFixture]
+public class CommandTests {
 
-        [Serializable]
-        class Command : ICommand {
-            public int Value { set; get; }
+    [Serializable]
+    class Command : IMultiplayerCommand {
+        public int Value { set; get; }
 
-            public void Execute() { }
-        }
+        public void Execute() { }
+    }
 
-        [Test]
-        public void TestSerializationDeserialization() {
-            var command = new Command { Value = 10 };
-            var serialized = CommandSerializer.Serialize(command);
+    [Test]
+    public void TestSerializationDeserialization() {
+        var command = new Command { Value = 42 };
+        var serialized = NetworkSerializer.Serialize(new NetworkMessage(command, MultiplayerCommandOptions.None));
 
-            byte[] data = new byte[serialized.GetSize()];
-            Marshal.Copy(serialized.GetPointer(), data, 0, (int)serialized.GetSize());
+        byte[] data = new byte[serialized.GetSize()];
+        Marshal.Copy(serialized.GetPointer(), data, 0, (int)serialized.GetSize());
 
-            serialized.Dispose();
+        serialized.Dispose();
 
-            var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
-            var commandHandle = new SerializedCommandHandle(dataHandle.AddrOfPinnedObject(), data.Length);
+        var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
+        var messageHandle = new NetworkMessageHandle(dataHandle.AddrOfPinnedObject(), data.Length);
 
-            var result = CommandSerializer.Deserialize<Command>(commandHandle);
+        var message = NetworkSerializer.Deserialize(messageHandle);
 
-            Assert.AreNotSame(command, result);
-            Assert.AreEqual(result.Value, 10);
-        }
-
+        Assert.AreNotSame(command, message.Command);
+        Assert.AreEqual(((Command)message.Command).Value, 42);
     }
 
 }

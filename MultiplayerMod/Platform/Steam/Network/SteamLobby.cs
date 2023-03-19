@@ -1,0 +1,70 @@
+﻿using MultiplayerMod.Network;
+using Steamworks;
+
+namespace MultiplayerMod.Platform.Steam.Network;
+
+public delegate void LobbyEventHandler();
+
+public class SteamLobby {
+
+    public CSteamID Id { get; private set; } = CSteamID.Nil;
+    public bool Connected => Id != CSteamID.Nil;
+
+    public event LobbyEventHandler OnCreate;
+    public event LobbyEventHandler OnLeave;
+    public event LobbyEventHandler OnJoin;
+
+    private readonly Core.Logging.Logger log = new(typeof(SteamLobby));
+    private readonly CallResult<LobbyCreated_t> lobbyCreatedCallback;
+    private readonly CallResult<LobbyEnter_t> lobbyEnteredCallback;
+
+    public SteamLobby() {
+        lobbyCreatedCallback = CallResult<LobbyCreated_t>.Create(LobbyCreatedCallback);
+        lobbyEnteredCallback = CallResult<LobbyEnter_t>.Create(LobbyEnteredCallback);
+    }
+
+    public void Create(ELobbyType type = ELobbyType.k_ELobbyTypeFriendsOnly, int maxPlayers = 4) {
+        if (Id != CSteamID.Nil)
+            Leave();
+        lobbyCreatedCallback.Set(SteamMatchmaking.CreateLobby(type, maxPlayers));
+    }
+
+    public void Join(CSteamID lobbyId) {
+        if (Id != CSteamID.Nil)
+            Leave();
+        lobbyEnteredCallback.Set(SteamMatchmaking.JoinLobby(lobbyId));
+    }
+
+    public void Leave() {
+        if (Id == CSteamID.Nil)
+            return;
+        SteamMatchmaking.LeaveLobby(Id);
+        try {
+            OnLeave?.Invoke();
+        } finally {
+            Id = CSteamID.Nil;
+        }
+    }
+
+    private void LobbyCreatedCallback(LobbyCreated_t result, bool failure) {
+        if (failure)
+            throw new NetworkPlatformException("I/O failure.");
+
+        if (result.m_eResult != EResult.k_EResultOK)
+            throw new NetworkPlatformException($"Unable to create a lobby. Error: {result.m_eResult}");
+
+        Id = new CSteamID(result.m_ulSteamIDLobby);
+        log.Debug($"Lobby {Id} created");
+        OnCreate?.Invoke();
+    }
+
+    private void LobbyEnteredCallback(LobbyEnter_t result, bool failure) {
+        if (failure)
+            throw new NetworkPlatformException("I/O failure.");
+
+        Id = new CSteamID(result.m_ulSteamIDLobby);
+        log.Debug($"Joined to lobby {Id}");
+        OnJoin?.Invoke();
+    }
+
+}

@@ -3,17 +3,17 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 
-namespace MultiplayerMod.Network.Command;
+namespace MultiplayerMod.Network.Messaging;
 
-public class SerializedCommand : ISerializedCommand {
+public class SerializedNetworkMessage : INetworkMessageHandle {
 
     private readonly MemoryStream memory;
     private GCHandle handle;
 
-    public SerializedCommand(ICommand command) {
+    public SerializedNetworkMessage(NetworkMessage message) {
         memory = new MemoryStream();
         var formatter = new BinaryFormatter();
-        formatter.Serialize(memory, command);
+        formatter.Serialize(memory, message);
         handle = GCHandle.Alloc(memory.GetBuffer(), GCHandleType.Pinned);
     }
 
@@ -24,6 +24,6 @@ public class SerializedCommand : ISerializedCommand {
 
     public IntPtr GetPointer() => handle.AddrOfPinnedObject();
 
-    public long GetSize() => memory.Length;
+    public uint GetSize() => (uint) memory.Length;
 
 }
