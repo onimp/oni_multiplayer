@@ -25,13 +25,16 @@ namespace MultiplayerMod.Platform.Steam.Network;
 public class SteamServer : IMultiplayerServer {
 
     public MultiplayerServerState State { private set; get; } = MultiplayerServerState.Stopped;
+
     public IMultiplayerEndpoint Endpoint {
         get {
             if (State != MultiplayerServerState.Started)
                 throw new NetworkPlatformException("Server isn't started");
+
             return new SteamServerEndpoint(lobby.Id);
         }
     }
+
     public List<IPlayer> Players => new(players.Keys);
 
     public event EventHandler<ServerStateChangedEventArgs> StateChanged;
@@ -100,8 +103,12 @@ public class SteamServer : IMultiplayerServer {
     public void Send(IMultiplayerCommand command, MultiplayerCommandOptions options) {
         using var handle = Serialize(command, options);
 
+        IEnumerable<KeyValuePair<IPlayer, HSteamNetConnection>> recipients = players;
+        if (options.HasFlag(MultiplayerCommandOptions.SkipHost))
+            recipients = recipients.Where(entry => entry.Key != currentPlayer);
+
         // ReSharper disable once AccessToDisposedClosure
-        players.ForEach(it => Send(it.Value, handle));
+        recipients.ForEach(it => Send(it.Value, handle));
     }
 
     private INetworkMessageHandle Serialize(IMultiplayerCommand command, MultiplayerCommandOptions options) {
