@@ -200,12 +200,11 @@ public class SteamServer : IMultiplayerServer {
             var handle = steamMessage.GetNetworkMessageHandle();
             var message = NetworkSerializer.Deserialize(handle);
 
-            if (!message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
-                players.Where(it => it.Key != currentPlayer).ForEach(it => Send(it.Value, handle));
-            } else {
-                var player = new SteamPlayer(steamMessage.m_identityPeer.GetSteamID());
+            IPlayer player = new SteamPlayer(steamMessage.m_identityPeer.GetSteamID());
+            if (!message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer))
+                players.Where(it => it.Key != player).ForEach(it => Send(it.Value, handle));
+            else
                 CommandReceived?.Invoke(this, new CommandReceivedEventArgs(player, message.Command));
-            }
             SteamNetworkingMessage_t.Release(messages[i]);
         }
     }
