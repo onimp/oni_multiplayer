@@ -65,7 +65,7 @@ public class SteamServer : IMultiplayerServer {
             throw new NetworkPlatformException("Steam API is not initialized");
 
         log.Debug("Starting...");
-        SetState(MultiplayerServerState.Starting);
+        SetState(MultiplayerServerState.Preparing);
         try {
             Initialize();
         } catch (Exception) {
@@ -87,12 +87,14 @@ public class SteamServer : IMultiplayerServer {
     }
 
     public void Tick() {
-        if (State != MultiplayerServerState.Started)
-            return;
-
-        GameServer.RunCallbacks();
-        SteamGameServerNetworkingSockets.RunCallbacks();
-        ReceiveMessages();
+        switch (State) {
+            case MultiplayerServerState.Starting:
+            case MultiplayerServerState.Started:
+                GameServer.RunCallbacks();
+                SteamGameServerNetworkingSockets.RunCallbacks();
+                ReceiveMessages();
+                break;
+        }
     }
 
     public void Send(IPlayer player, IMultiplayerCommand command) {
@@ -105,7 +107,7 @@ public class SteamServer : IMultiplayerServer {
 
         IEnumerable<KeyValuePair<IPlayer, HSteamNetConnection>> recipients = players;
         if (options.HasFlag(MultiplayerCommandOptions.SkipHost))
-            recipients = recipients.Where(entry => entry.Key != currentPlayer);
+            recipients = recipients.Where(entry => !entry.Key.Equals(currentPlayer));
 
         // ReSharper disable once AccessToDisposedClosure
         recipients.ForEach(it => Send(it.Value, handle));
@@ -159,6 +161,8 @@ public class SteamServer : IMultiplayerServer {
 
         listenSocket = SteamGameServerNetworkingSockets.CreateListenSocketP2P(0, networkConfig.Length, networkConfig);
         pollGroup = SteamGameServerNetworkingSockets.CreatePollGroup();
+
+        SetState(MultiplayerServerState.Starting);
     }
 
     private void Reset() {

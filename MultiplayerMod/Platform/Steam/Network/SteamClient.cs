@@ -11,7 +11,6 @@ using Steamworks;
 using UnityEngine;
 using static Steamworks.Constants;
 using static Steamworks.ESteamNetConnectionEnd;
-using Sockets = Steamworks.SteamNetworkingSockets;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
@@ -39,7 +38,9 @@ public class SteamClient : IMultiplayerClient {
 
         SetState(MultiplayerClientState.Connecting);
 
-        SteamNetworkingUtils.InitRelayNetworkAccess();
+        SteamNetworkingUtils.GetRelayNetworkStatus(out var status);
+        if (status.m_eAvail != ESteamNetworkingAvailability.k_ESteamNetworkingAvailability_Current)
+            SteamNetworkingUtils.InitRelayNetworkAccess();
 
         if (lobby.Connected) {
             OnLobbyJoin();
@@ -57,14 +58,14 @@ public class SteamClient : IMultiplayerClient {
         UnityObject.Destroy(gameObject);
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
-        Sockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
+        SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
     }
 
     public void Tick() {
         if (State != MultiplayerClientState.Connected)
             return;
 
-        Sockets.RunCallbacks();
+        SteamNetworkingSockets.RunCallbacks();
         ReceiveCommands();
     }
 
@@ -73,7 +74,7 @@ public class SteamClient : IMultiplayerClient {
             throw new NetworkPlatformException("Client not connected");
 
         using var data = NetworkSerializer.Serialize(new NetworkMessage(command, options));
-        var result = Sockets.SendMessageToConnection(
+        var result = SteamNetworkingSockets.SendMessageToConnection(
             connection,
             data.GetPointer(),
             data.GetSize(),
@@ -98,7 +99,7 @@ public class SteamClient : IMultiplayerClient {
         }
         log.Debug($"Lobby game server is {serverId}");
         var identity = GetNetworkingIdentity(serverId);
-        connection = Sockets.ConnectP2P(ref identity, 0, networkConfig.Length, networkConfig);
+        connection = SteamNetworkingSockets.ConnectP2P(ref identity, 0, networkConfig.Length, networkConfig);
 
         log.Debug($"P2P Connect to {serverId}");
 
@@ -120,7 +121,7 @@ public class SteamClient : IMultiplayerClient {
 
     private void ReceiveCommands() {
         var messages = new IntPtr[128];
-        var messagesCount = Sockets.ReceiveMessagesOnConnection(connection, messages, 128);
+        var messagesCount = SteamNetworkingSockets.ReceiveMessagesOnConnection(connection, messages, 128);
         for (var i = 0; i < messagesCount; i++) {
             var message = (SteamNetworkingMessage_t) Marshal.PtrToStructure(
                 messages[i],
