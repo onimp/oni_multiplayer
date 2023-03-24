@@ -183,7 +183,10 @@ public class SteamServer : IMultiplayerServer {
         source = null;
     }
 
-    private void OnServerStarted() => SetState(MultiplayerServerState.Started);
+    private void OnServerStarted() {
+        lobby.GameServerId = SteamGameServer.GetSteamID();
+        SetState(MultiplayerServerState.Started);
+    }
 
     private void OnLobbyCreated() => lobbyCompletionSource.SetResult(true);
 

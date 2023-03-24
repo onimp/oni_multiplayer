@@ -10,6 +10,18 @@ public class SteamLobby {
     public CSteamID Id { get; private set; } = CSteamID.Nil;
     public bool Connected => Id != CSteamID.Nil;
 
+    public CSteamID GameServerId {
+        get {
+            if (!Connected)
+                return CSteamID.Nil;
+            return !SteamMatchmaking.GetLobbyGameServer(Id, out _, out _, out var serverId) ? CSteamID.Nil : serverId;
+        }
+        set {
+            if (Connected)
+                SteamMatchmaking.SetLobbyGameServer(Id, 0, 0, value);
+        }
+    }
+
     public event LobbyEventHandler OnCreate;
     public event LobbyEventHandler OnLeave;
     public event LobbyEventHandler OnJoin;
@@ -30,6 +42,8 @@ public class SteamLobby {
     }
 
     public void Join(CSteamID lobbyId) {
+        if (Id == lobbyId)
+            return;
         if (Id != CSteamID.Nil)
             Leave();
         lobbyEnteredCallback.Set(SteamMatchmaking.JoinLobby(lobbyId));

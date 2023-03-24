@@ -46,8 +46,8 @@ public class SteamClient : IMultiplayerClient {
             return;
         }
 
-        lobby.Join(steamServerEndpoint.LobbyID);
         lobby.OnJoin += OnLobbyJoin;
+        lobby.Join(steamServerEndpoint.LobbyID);
     }
 
     public void Disconnect() {
@@ -90,8 +90,8 @@ public class SteamClient : IMultiplayerClient {
     }
 
     private void OnLobbyJoin() {
-        var result = SteamMatchmaking.GetLobbyGameServer(lobby.Id, out _, out _, out var serverId);
-        if (!result) {
+        var serverId = lobby.GameServerId;
+        if (serverId == CSteamID.Nil) {
             log.Error("Unable to get lobby game server");
             SetState(MultiplayerClientState.Error);
             return;
