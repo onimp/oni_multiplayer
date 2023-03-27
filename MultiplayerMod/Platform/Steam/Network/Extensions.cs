@@ -1,4 +1,4 @@
-﻿using MultiplayerMod.Network.Messaging;
+﻿using MultiplayerMod.Platform.Steam.Network.Messaging;
 using Steamworks;
 
 namespace MultiplayerMod.Platform.Steam.Network;
@@ -6,6 +6,6 @@ namespace MultiplayerMod.Platform.Steam.Network;
 public static class SteamExtensions {
 
     public static INetworkMessageHandle GetNetworkMessageHandle(this SteamNetworkingMessage_t message) =>
-        new NetworkMessageHandle(message.m_pData, message.m_cbSize);
+        new NetworkMessageHandle(message.m_pData, (uint) message.m_cbSize);
 
 }

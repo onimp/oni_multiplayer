@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
 using MultiplayerMod.Network.Events;
-using MultiplayerMod.Network.Messaging;
 using MultiplayerMod.Platform.Steam.Network.Components;
+using MultiplayerMod.Platform.Steam.Network.Messaging;
 using Steamworks;
 using UnityEngine;
 using static Steamworks.Constants;
@@ -24,6 +25,9 @@ public class SteamClient : IMultiplayerClient {
     private readonly Core.Logging.Logger log = new(typeof(SteamClient));
     private readonly SteamLobby lobby = Container.Get<SteamLobby>();
     private readonly Lazy<IPlayer> playerContainer = new(() => new SteamPlayer(SteamUser.GetSteamID()));
+
+    private readonly NetworkMessageProcessor messageProcessor = new();
+    private readonly NetworkMessageFactory messageFactory = new();
 
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
@@ -73,16 +77,19 @@ public class SteamClient : IMultiplayerClient {
         if (State != MultiplayerClientState.Connected)
             throw new NetworkPlatformException("Client not connected");
 
-        using var data = NetworkSerializer.Serialize(new NetworkMessage(command, options));
-        var result = SteamNetworkingSockets.SendMessageToConnection(
-            connection,
-            data.GetPointer(),
-            data.GetSize(),
-            k_nSteamNetworkingSend_Reliable,
-            out var messageOut
+        messageFactory.Create(command, options).ForEach(
+            handle => {
+                var result = SteamNetworkingSockets.SendMessageToConnection(
+                    connection,
+                    handle.Pointer,
+                    handle.Size,
+                    k_nSteamNetworkingSend_Reliable,
+                    out var messageOut
+                );
+                if (result != EResult.k_EResultOK && messageOut == 0)
+                    log.Error($"Failed to send {command}: {result}");
+            }
         );
-        if (result != EResult.k_EResultOK && messageOut == 0)
-            log.Error($"Failed to send {command}: {result}");
     }
 
     private void SetState(MultiplayerClientState status) {
@@ -123,13 +130,13 @@ public class SteamClient : IMultiplayerClient {
         var messages = new IntPtr[128];
         var messagesCount = SteamNetworkingSockets.ReceiveMessagesOnConnection(connection, messages, 128);
         for (var i = 0; i < messagesCount; i++) {
-            var message = (SteamNetworkingMessage_t) Marshal.PtrToStructure(
-                messages[i],
-                typeof(SteamNetworkingMessage_t)
+            var steamMessage = Marshal.PtrToStructure<SteamNetworkingMessage_t>(messages[i]);
+            var message = messageProcessor.Process(
+                steamMessage.m_conn.m_HSteamNetConnection,
+                steamMessage.GetNetworkMessageHandle()
             );
-            var data = NetworkSerializer.Deserialize(message.GetNetworkMessageHandle());
-            var player = new SteamPlayer(message.m_identityPeer.GetSteamID());
-            CommandReceived?.Invoke(this, new CommandReceivedEventArgs(player, data.Command));
+            if (message != null)
+                CommandReceived?.Invoke(this, new CommandReceivedEventArgs(null, message.Command));
             SteamNetworkingMessage_t.Release(messages[i]);
         }
     }

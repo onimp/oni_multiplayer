@@ -1,10 +1,11 @@
 ﻿using System;
 using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Network;
 
-namespace MultiplayerMod.Network.Messaging;
+namespace MultiplayerMod.Platform.Steam.Network.Messaging;
 
 [Serializable]
-public class NetworkMessage {
+public class NetworkMessage : INetworkMessage {
 
     public IMultiplayerCommand Command { get; }
     public MultiplayerCommandOptions Options { get; }
