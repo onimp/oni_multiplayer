@@ -17,4 +17,10 @@
         <ModInstallationPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\dev\$(MSBuildProjectName)</ModInstallationPath>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <AssemblyExposerName>AssemblyExposer.MSBuild.Task</AssemblyExposerName>
+        <AssemblyExposerProject>..\$(AssemblyExposerName)\$(AssemblyExposerName).csproj</AssemblyExposerProject>
+    </PropertyGroup>
+    <UsingTask TaskName="ExposeAssembly" AssemblyFile="$(AssemblyExposerName)\tasks\$(AssemblyExposerName).dll"/>
+
 </Project>

@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
     <Target Name="InstallMod" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-        <Message Text="Copy mod files to ONI mods directory" />
+        <Message Text="Copy mod files to ONI mods directory"/>
         <ItemGroup>
-            <ModFiles Include="$(TargetDir)*.dll" />
-            <ModMetadata Include="$(SourceDir)*.yaml" />
+            <ModFiles Include="$(TargetDir)*.dll"/>
+            <ModMetadata Include="$(SourceDir)*.yaml"/>
         </ItemGroup>
-        <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)" />
-        <Copy SourceFiles="@(ModMetadata)" DestinationFolder="$(ModInstallationPath)" />
+        <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)"/>
+        <Copy SourceFiles="@(ModMetadata)" DestinationFolder="$(ModInstallationPath)"/>
+    </Target>
+    <Target Name="BuildAssemblyExposer">
+        <MSBuild Projects="$(AssemblyExposerProject)"/>
+    </Target>
+    <Target Name="ExposeAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
+            <ExposureRules Include="Make private targets public">
+                <PatternRule>^private</PatternRule>
+                <TargetRule>All</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+        </ItemGroup>
+        <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
     </Target>
 </Project>
