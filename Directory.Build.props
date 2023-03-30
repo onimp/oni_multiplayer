@@ -20,7 +20,8 @@
     <PropertyGroup>
         <AssemblyExposerName>AssemblyExposer.MSBuild.Task</AssemblyExposerName>
         <AssemblyExposerProject>..\$(AssemblyExposerName)\$(AssemblyExposerName).csproj</AssemblyExposerProject>
+        <AssemblyExposer>$(AssemblyExposerName)\tasks\$(AssemblyExposerName).dll</AssemblyExposer>
     </PropertyGroup>
-    <UsingTask TaskName="ExposeAssembly" AssemblyFile="$(AssemblyExposerName)\tasks\$(AssemblyExposerName).dll"/>
+    <UsingTask TaskName="ExposeAssembly" AssemblyFile="$(AssemblyExposer)"/>
 
 </Project>

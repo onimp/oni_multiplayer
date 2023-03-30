@@ -9,7 +9,7 @@
         <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)"/>
         <Copy SourceFiles="@(ModMetadata)" DestinationFolder="$(ModInstallationPath)"/>
     </Target>
-    <Target Name="BuildAssemblyExposer">
+    <Target Name="BuildAssemblyExposer" Condition="!Exists('..\$(AssemblyExposer)')">
         <MSBuild Projects="$(AssemblyExposerProject)"/>
     </Target>
     <Target Name="ExposeAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
