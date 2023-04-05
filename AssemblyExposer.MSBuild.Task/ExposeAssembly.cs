@@ -101,8 +101,16 @@ public class ExposeAssembly : Microsoft.Build.Utilities.Task {
             ApplyRules(rules, type);
             foreach (var method in type.Methods)
                 ApplyRules(rules, method);
-            foreach (var field in type.Fields)
+            foreach (var field in type.Fields) {
+                if (type.HasEvents) {
+                    var eventDef = type.FindEvent(field.Name);
+                    if (eventDef != null) {
+                        Log.LogMessage($"Ignoring field '{field.FullName}' as it's related to the event '{eventDef.FullName}'");
+                        continue;
+                    }
+                }
                 ApplyRules(rules, field);
+            }
         }
         return assembly;
     }
