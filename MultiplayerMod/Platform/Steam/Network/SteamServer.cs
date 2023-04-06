@@ -113,11 +113,6 @@ public class SteamServer : IMultiplayerServer {
         SendCommand(command, options, recipients.Select(it => it.Value));
     }
 
-    private SerializedNetworkMessage Serialize(IMultiplayerCommand command, MultiplayerCommandOptions options) {
-        var message = new NetworkMessage(command, options);
-        return NetworkSerializer.Serialize(message);
-    }
-
     private void SetState(MultiplayerServerState state) {
         State = state;
         StateChanged?.Invoke(this, new ServerStateChangedEventArgs(state));
@@ -210,7 +205,7 @@ public class SteamServer : IMultiplayerServer {
                 if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
                     CommandReceived?.Invoke(this, new CommandReceivedEventArgs(player, message.Command));
                 } else {
-                    var connections = players.Where(it => it.Key != player).Select(it => it.Value);
+                    var connections = players.Where(it => !it.Key.Equals(player)).Select(it => it.Value);
                     SendCommand(message.Command, message.Options, connections);
                 }
             }
