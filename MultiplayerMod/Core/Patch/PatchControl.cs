@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace MultiplayerMod.Core.Patch;
 
-public static class PatchEnhancer {
+public static class PatchControl {
 
     private static readonly ThreadLocal<bool> disabled = new(() => false);
 
@@ -26,5 +26,10 @@ public static class PatchEnhancer {
     }
 
     public static bool PatchesDisabled() => disabled.Value;
+
+    public static void RunIfEnabled(System.Action action) {
+        if (!disabled.Value)
+            action();
+    }
 
 }
