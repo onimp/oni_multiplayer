@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
+using MultiplayerMod.Platform.Steam.Network.Messaging.Unity;
 
 namespace MultiplayerMod.Platform.Steam.Network.Messaging;
 
@@ -15,7 +16,7 @@ public class SerializedNetworkMessage : INetworkMessageHandle {
 
     public SerializedNetworkMessage(INetworkMessage message) {
         memory = new MemoryStream();
-        var formatter = new BinaryFormatter();
+        var formatter = new BinaryFormatter { SurrogateSelector = UnitySurrogates.Selector };
         formatter.Serialize(memory, message);
         handle = GCHandle.Alloc(memory.GetBuffer(), GCHandleType.Pinned);
         Pointer = handle.AddrOfPinnedObject();
