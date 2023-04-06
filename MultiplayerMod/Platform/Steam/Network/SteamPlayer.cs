@@ -1,9 +1,10 @@
-﻿using MultiplayerMod.Multiplayer;
-using MultiplayerMod.Network;
+﻿using System;
+using MultiplayerMod.Multiplayer;
 using Steamworks;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
+[Serializable]
 public record SteamPlayer(CSteamID Id) : IPlayer {
 
     public bool Equals(IPlayer other) {
