@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using MultiplayerMod.Platform.Steam.Network.Messaging.Unity;
+using MultiplayerMod.Platform.Steam.Network.Messaging.Surrogates;
 
 namespace MultiplayerMod.Platform.Steam.Network.Messaging;
 
@@ -11,7 +11,7 @@ public static class NetworkSerializer {
     }
 
     public static unsafe INetworkMessage Deserialize(INetworkMessageHandle message) {
-        return (INetworkMessage) new BinaryFormatter { SurrogateSelector = UnitySurrogates.Selector }.Deserialize(
+        return (INetworkMessage) new BinaryFormatter { SurrogateSelector = SerializationSurrogates.Selector }.Deserialize(
             new UnmanagedMemoryStream((byte*) message.Pointer.ToPointer(), message.Size)
         );
     }
