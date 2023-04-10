@@ -1,12 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
     <Target Name="InstallMod" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-        <Message Text="Copy mod files to ONI mods directory" />
+        <Message Text="Copy mod files to ONI mods directory"/>
         <ItemGroup>
-            <ModFiles Include="$(TargetDir)*.dll" />
-            <ModMetadata Include="$(SourceDir)*.yaml" />
+            <ModFiles Include="$(TargetDir)*.dll"/>
+            <ModMetadata Include="$(SourceDir)*.yaml"/>
         </ItemGroup>
-        <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)" />
-        <Copy SourceFiles="@(ModMetadata)" DestinationFolder="$(ModInstallationPath)" />
+        <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)"/>
+        <Copy SourceFiles="@(ModMetadata)" DestinationFolder="$(ModInstallationPath)"/>
+    </Target>
+    <Target Name="BuildAssemblyExposer" Condition="!Exists('..\$(AssemblyExposer)')">
+        <MSBuild Projects="$(AssemblyExposerProject)"/>
+    </Target>
+    <Target Name="ExposeAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
+            <ExposeAssembliesPdb Include="$(ManagedPath)\Assembly-CSharp*.pdb"/>
+            <ExposureRules Include="Private targets to public">
+                <PatternRule>^private</PatternRule>
+                <TargetRule>All</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="DragTool::OnDrag* to public">
+                <PatternRule>Tool::OnDrag</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="MaterialSelectionPanel::OnPrefabInit to public">
+                <PatternRule>MaterialSelectionPanel::OnPrefabInit</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="Protected types and fields to public">
+                <PatternRule>protected</PatternRule>
+                <TargetRule>Type, Field</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+        </ItemGroup>
+        <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
+        <Copy SourceFiles="@(ExposeAssembliesPdb)" DestinationFolder="lib\exposed"/>
     </Target>
 </Project>

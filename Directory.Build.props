@@ -3,7 +3,7 @@
 
     <PropertyGroup>
         <TargetFramework>net48</TargetFramework>
-        <LangVersion>9</LangVersion>
+        <LangVersion>11</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
@@ -16,5 +16,12 @@
         <ManagedPath>$(SteamLibraryPath)\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ManagedPath>
         <ModInstallationPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\dev\$(MSBuildProjectName)</ModInstallationPath>
     </PropertyGroup>
+
+    <PropertyGroup>
+        <AssemblyExposerName>AssemblyExposer.MSBuild.Task</AssemblyExposerName>
+        <AssemblyExposerProject>..\$(AssemblyExposerName)\$(AssemblyExposerName).csproj</AssemblyExposerProject>
+        <AssemblyExposer>$(AssemblyExposerName)\tasks\$(AssemblyExposerName).dll</AssemblyExposer>
+    </PropertyGroup>
+    <UsingTask TaskName="ExposeAssembly" AssemblyFile="$(AssemblyExposer)"/>
 
 </Project>
