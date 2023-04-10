@@ -1,7 +1,7 @@
 using HarmonyLib;
 using MultiplayerMod.Multiplayer.State;
 
-namespace MultiplayerMod.Multiplayer.Debug;
+namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
 
 [HarmonyPatch(typeof(ColonyDiagnosticScreen))]
 public class ColonyDiagnosticScreenPatch {

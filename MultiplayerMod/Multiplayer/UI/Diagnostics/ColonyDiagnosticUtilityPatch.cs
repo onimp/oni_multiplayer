@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using HarmonyLib;
 using MultiplayerMod.Multiplayer.State;
 
-namespace MultiplayerMod.Multiplayer.Debug;
+namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
 
 [HarmonyPatch(typeof(ColonyDiagnosticUtility))]
 static class ColonyDiagnosticUtilityPatch {

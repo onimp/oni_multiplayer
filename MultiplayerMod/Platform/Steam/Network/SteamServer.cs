@@ -101,7 +101,7 @@ public class SteamServer : IMultiplayerServer {
     }
 
     public void Send(IPlayer player, IMultiplayerCommand command) {
-        var connections = new SingleEnumerator<HSteamNetConnection>(players[player]);
+        var connections = new SingletonCollection<HSteamNetConnection>(players[player]);
         SendCommand(command, MultiplayerCommandOptions.None, connections);
     }
 

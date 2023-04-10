@@ -1,6 +1,7 @@
 ﻿using System;
+using MultiplayerMod.Multiplayer.Debug;
 
-namespace MultiplayerMod.Multiplayer.Debug;
+namespace MultiplayerMod.Multiplayer.Commands.Debug;
 
 [Serializable]
 public class SyncWorldDebugSnapshot : IMultiplayerCommand {

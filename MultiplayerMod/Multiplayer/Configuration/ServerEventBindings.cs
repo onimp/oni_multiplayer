@@ -2,6 +2,7 @@
 using MultiplayerMod.Game;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Debug;
 using MultiplayerMod.Multiplayer.State;

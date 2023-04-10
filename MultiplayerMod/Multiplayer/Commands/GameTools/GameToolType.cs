@@ -9,10 +9,10 @@ public enum GameToolType {
     Deconstruct,
     Prioritize,
     Disinfect,
-    Sweep,
+    Sweep, // Clear
     Attack,
     Mop,
-    Wrangle,
+    Wrangle, // Capture
     Harvest,
     EmptyPipe,
     Disconnect,

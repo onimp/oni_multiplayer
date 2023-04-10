@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace MultiplayerMod.Core.Collections;
 
-public class SingleEnumerator<T> : IReadOnlyCollection<T> {
+public class SingletonCollection<T> : IReadOnlyCollection<T> {
     private readonly T value;
 
     public int Count => 1;
 
-    public SingleEnumerator(T value) {
+    public SingletonCollection(T value) {
         this.value = value;
     }
 

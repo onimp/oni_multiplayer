@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace MultiplayerMod.Multiplayer.Debug;
+namespace MultiplayerMod.Multiplayer.UI.WorldTrackers;
 
 [HarmonyPatch(typeof(TrackerTool))]
 static class TrackerToolPatch {

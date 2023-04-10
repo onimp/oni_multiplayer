@@ -1,6 +1,6 @@
-using STRINGS;
+using MultiplayerMod.Multiplayer.UI.WorldTrackers;
 
-namespace MultiplayerMod.Multiplayer.Debug;
+namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
 
 public class MultiplayerColonyDiagnostic : ColonyDiagnostic {
 
@@ -13,7 +13,7 @@ public class MultiplayerColonyDiagnostic : ColonyDiagnostic {
     private DiagnosticResult CheckSyncErrorsCount() {
         var diagnosticResult = new DiagnosticResult(
             DiagnosticResult.Opinion.Normal,
-            UI.COLONY_DIAGNOSTICS.GENERIC_CRITERIA_PASS
+            STRINGS.UI.COLONY_DIAGNOSTICS.GENERIC_CRITERIA_PASS
         );
 
         var averageValue = tracker.GetAverageValue(5f);

@@ -111,7 +111,7 @@ public class MultiplayerCoordinator {
                 break;
         }
 
-        MultiplayerState.GameObject = UnityObject.CreateStaticWithComponent<
+        UnityObject.CreateStaticWithComponent<
             DrawCursorComponent,
             WorldDebugSnapshotRunner
         >();

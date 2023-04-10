@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace MultiplayerMod.Multiplayer.State;
+﻿namespace MultiplayerMod.Multiplayer.State;
 
 public static class MultiplayerState {
 
@@ -15,8 +13,6 @@ public static class MultiplayerState {
             log.Trace(() => $"Setting role to {role}");
         }
     }
-
-    public static GameObject GameObject { get; set; }
 
     public static bool WorldSpawned { get; set; }
 

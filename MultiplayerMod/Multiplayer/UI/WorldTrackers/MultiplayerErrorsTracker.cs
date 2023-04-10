@@ -1,4 +1,6 @@
-namespace MultiplayerMod.Multiplayer.Debug;
+using MultiplayerMod.Multiplayer.Debug;
+
+namespace MultiplayerMod.Multiplayer.UI.WorldTrackers;
 
 public class MultiplayerErrorsTracker : WorldTracker {
 

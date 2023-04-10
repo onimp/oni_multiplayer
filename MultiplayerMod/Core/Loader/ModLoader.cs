@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
@@ -12,9 +11,6 @@ public class ModLoader : UserMod2 {
 
     private readonly Logging.Logger log = new(typeof(ModLoader));
 
-    // ReSharper disable once CollectionNeverQueried.Local
-    private readonly Dictionary<Type, object> initializers = new();
-
     public override void OnLoad(Harmony harmony) {
         base.OnLoad(harmony);
         assembly.GetTypes()
@@ -24,7 +20,6 @@ public class ModLoader : UserMod2 {
                 var instance = (IModComponentLoader) Activator.CreateInstance(type);
                 log.Debug($"Running mod component loader {type.FullName}");
                 instance.OnLoad(harmony);
-                initializers[type] = instance;
             });
     }
 
