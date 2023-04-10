@@ -29,9 +29,32 @@ public class DrawCursorComponent : MonoBehaviour {
     private void RenderCursor(Vector2 position) {
         var worldPos = new Vector3(position.x, position.y, 0);
         var screenPoint = mainCamera.WorldToScreenPoint(worldPos);
-        Graphics.DrawTexture(
-            new Rect(screenPoint.x, Screen.height - screenPoint.y, cursorTexture.width, cursorTexture.height),
-            cursorTexture
+
+        var outOfView = screenPoint.x < -cursorTexture.width || screenPoint.x > Screen.width ||
+                        screenPoint.y < 0 || screenPoint.y > Screen.height + cursorTexture.height;
+
+        GUI.DrawTexture(
+            new Rect(
+                Mathf.Clamp(
+                    screenPoint.x,
+                    outOfView ? 0 : -cursorTexture.width,
+                    outOfView ? Screen.width - cursorTexture.width : Screen.width
+                ),
+                Mathf.Clamp(
+                    Screen.height - screenPoint.y,
+                    outOfView ? 0 : -cursorTexture.height,
+                    outOfView ? Screen.height - cursorTexture.height : Screen.height
+                ),
+                cursorTexture.width,
+                cursorTexture.height
+            ),
+            cursorTexture,
+            ScaleMode.ScaleToFit,
+            alphaBlend: true,
+            imageAspect: 0,
+            color: new Color(1.0f, 1.0f, 1.0f, outOfView ? 0.4f : 1.0f),
+            borderWidth: 0,
+            borderRadius: 0
         );
     }
 
