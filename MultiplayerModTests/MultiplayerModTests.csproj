@@ -4,6 +4,6 @@
         <PackageReference Include="NUnit" Version="3.13.3" />
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\MultiplayerMod\MultiplayerMod.csproj" />
+        <ProjectReference Include="..\MultiplayerMod\MultiplayerMod.csproj" />
     </ItemGroup>
 </Project>
