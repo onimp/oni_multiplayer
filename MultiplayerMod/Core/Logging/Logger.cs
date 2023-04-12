@@ -7,7 +7,7 @@ public class Logger {
 
     private readonly string group;
 
-    public LogLevel LogLevel { get; set; } = LogLevel.Info;
+    public LogLevel Level { get; set; } = LogLevel.Info;
 
     public Logger(Type type) {
         group = type.Name;
@@ -21,7 +21,8 @@ public class Logger {
     public void Trace(Func<string> messageProvider) => Log(LogLevel.Trace, messageProvider());
 
     private void Log(LogLevel level, string message) {
-        if (level < LogLevel) return;
+        if (level < Level)
+            return;
         var timestamp = System.DateTime.UtcNow.ToString("HH:mm:ss.fff");
         var threadId = Thread.CurrentThread.ManagedThreadId;
         var levelId = level.ToString().ToUpper();
