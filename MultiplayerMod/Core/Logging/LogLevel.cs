@@ -1,6 +1,7 @@
 ﻿namespace MultiplayerMod.Core.Logging;
 
-public enum LogLevel {
+public enum LogLevel
+{
     Trace,
     Debug,
     Info,
