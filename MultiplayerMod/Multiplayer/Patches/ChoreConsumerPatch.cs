@@ -5,12 +5,10 @@ using MultiplayerMod.Multiplayer.State;
 namespace MultiplayerMod.Multiplayer.Patches;
 
 //[HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
-public class ChoreConsumerPatch
-{
+public class ChoreConsumerPatch {
 
     // ReSharper disable once InconsistentNaming
-    public static bool Prefix(ChoreConsumer __instance, ref Chore.Precondition.Context out_context, ref bool __result)
-    {
+    public static bool Prefix(ChoreConsumer __instance, ref Chore.Precondition.Context out_context, ref bool __result) {
         if (MultiplayerState.Role != MultiplayerRole.Client)
             return true;
 

@@ -5,12 +5,10 @@ using MultiplayerMod.Multiplayer.State;
 namespace MultiplayerMod.Game.Chores;
 
 [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
-public static class ChoreConsumerEvents
-{
+public static class ChoreConsumerEvents {
     public static event Action<FindNextChoreEventArgs> FindNextChore;
 
-    public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, ref bool __result)
-    {
+    public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, ref bool __result) {
         if (MultiplayerState.Role != MultiplayerRole.Host)
             return;
 
@@ -22,10 +20,9 @@ public static class ChoreConsumerEvents
         var choreId = out_context.chore.id;
 
         FindNextChore?.Invoke(
-            new FindNextChoreEventArgs
-            {
+            new FindNextChoreEventArgs {
                 InstanceId = instanceId,
-                InstantType = __instance.GetType(),
+                InstanceType = __instance.GetType(),
                 ChoreId = choreId,
                 ChoreType = out_context.chore.GetType(),
                 ChoreCell = Grid.PosToCell(out_context.chore.gameObject.transform.position)
@@ -35,11 +32,10 @@ public static class ChoreConsumerEvents
 
 }
 
-public class FindNextChoreEventArgs : EventArgs
-{
+public class FindNextChoreEventArgs : EventArgs {
     public int InstanceId { get; init; }
 
-    public Type InstantType { get; init; }
+    public Type InstanceType { get; init; }
     public int ChoreId { get; init; }
     public Type ChoreType { get; init; }
     public int ChoreCell { get; init; }

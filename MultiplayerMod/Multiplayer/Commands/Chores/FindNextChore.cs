@@ -4,11 +4,10 @@ using JetBrains.Annotations;
 using MultiplayerMod.Game.Chores;
 using Object = UnityEngine.Object;
 
-namespace MultiplayerMod.Multiplayer.Commands.Chore;
+namespace MultiplayerMod.Multiplayer.Commands.Chores;
 
 [Serializable]
-public class FindNextChore : IMultiplayerCommand
-{
+public class FindNextChore : IMultiplayerCommand {
 
     private static Core.Logging.Logger log = new(typeof(FindNextChore));
 
@@ -18,33 +17,28 @@ public class FindNextChore : IMultiplayerCommand
     private string choreType;
     private int choreCell;
 
-    public FindNextChore(FindNextChoreEventArgs findNextChoreEventArgs)
-    {
-        instanceType = findNextChoreEventArgs.InstantType.ToString();
-        instanceId = findNextChoreEventArgs.InstanceId;
-        choreId = findNextChoreEventArgs.ChoreId;
-        choreType = findNextChoreEventArgs.ChoreType.ToString();
-        choreCell = findNextChoreEventArgs.ChoreCell;
+    public FindNextChore(FindNextChoreEventArgs args) {
+        instanceType = args.InstanceType.ToString();
+        instanceId = args.InstanceId;
+        choreId = args.ChoreId;
+        choreType = args.ChoreType.ToString();
+        choreCell = args.ChoreCell;
     }
 
-    public void Execute()
-    {
+    public void Execute() {
         var prefabID = Object.FindObjectsOfType<KPrefabID>().FirstOrDefault(a => a.InstanceID == instanceId);
-        if (prefabID == null)
-        {
+        if (prefabID == null) {
             log.Warning($"Multiplayer: KPrefabID not found {instanceId}");
             return;
         }
         var consumer = prefabID.GetComponent<ChoreConsumer>();
-        if (consumer == null)
-        {
+        if (consumer == null) {
             log.Warning(
                 $"Multiplayer: Consumer does not exists at KPrefabId with desired ID {instanceId}. Id collision??"
             );
             return;
         }
-        if (instanceType != consumer.GetType().ToString())
-        {
+        if (instanceType != consumer.GetType().ToString()) {
             log.Warning(
                 $"Multiplayer: Consumer type {consumer.GetType()} is not equal to the server {instanceType}."
             );
@@ -56,14 +50,13 @@ public class FindNextChore : IMultiplayerCommand
         HostChores.Index[instanceId] = choreContext;
     }
 
-    private static global::Chore.Precondition.Context? FindContext(
+    private static Chore.Precondition.Context? FindContext(
         ChoreConsumer instance,
         int choreId,
         int cell,
         string serverChoreType
-    )
-    {
-        global::Chore choreWithIdCollision = null;
+    ) {
+        Chore choreWithIdCollision = null;
         var chore = FindInInstance(
                         instance,
                         choreId,
@@ -79,36 +72,32 @@ public class FindNextChore : IMultiplayerCommand
                         ref choreWithIdCollision
                     );
 
-        if (choreWithIdCollision != null)
-        {
+        if (choreWithIdCollision != null) {
             choreWithIdCollision.id = new Random().Next();
             choreWithIdCollision.driver = null;
         }
 
-        if (chore == null)
-        {
+        if (chore == null) {
             log.Warning($"Multiplayer: Chore not found {choreId} {serverChoreType}");
             return null;
         }
 
-        if (chore.id != choreId)
-        {
+        if (chore.id != choreId) {
             chore.id = choreId;
             log.Info("Multiplayer: Corrected chore id.");
         }
 
         chore.driver = null;
-        return new global::Chore.Precondition.Context(chore, instance.consumerState, true);
+        return new Chore.Precondition.Context(chore, instance.consumerState, true);
     }
 
-    private static global::Chore FindInInstance(
+    private static Chore FindInInstance(
         ChoreConsumer instance,
         int choreId,
         int cell,
         string serverChoreType,
-        ref global::Chore choreWithIdCollision
-    )
-    {
+        ref Chore choreWithIdCollision
+    ) {
         var chores = instance.GetProviders()
             .SelectMany(provider => provider.choreWorldMap.Values.SelectMany(x => x))
             .ToArray();
@@ -121,14 +110,13 @@ public class FindNextChore : IMultiplayerCommand
         ) ?? FindMatchWithoutId(chores, cell, serverChoreType);
     }
 
-    private static global::Chore FindInGlobal(
+    private static Chore FindInGlobal(
         ChoreConsumer instance,
         int choreId,
         int cell,
         string serverChoreType,
-        ref global::Chore choreWithIdCollision
-    )
-    {
+        ref Chore choreWithIdCollision
+    ) {
         var globalChores =
             Object.FindObjectsOfType<ChoreConsumer>()
                 .SelectMany(
@@ -150,14 +138,13 @@ public class FindNextChore : IMultiplayerCommand
     }
 
     [CanBeNull]
-    private static global::Chore FindFullMatch(
-        global::Chore[] chores,
+    private static Chore FindFullMatch(
+        Chore[] chores,
         int choreId,
         int choreCell,
         string choreType,
-        ref global::Chore choreWithIdCollision
-    )
-    {
+        ref Chore choreWithIdCollision
+    ) {
         var result = chores.FirstOrDefault(
             chore => chore.id == choreId
         );
@@ -165,16 +152,14 @@ public class FindNextChore : IMultiplayerCommand
         if (result == null) return null;
 
         var clientChoreCell = Grid.PosToCell(result.gameObject.transform.GetPosition());
-        if (choreCell != clientChoreCell)
-        {
+        if (choreCell != clientChoreCell) {
             log.Warning(
                 $"Multiplayer: Server chore pos != client chore pos. {choreId}. {choreCell} != {clientChoreCell}"
             );
             choreWithIdCollision = result;
             return null;
         }
-        if (result.GetType().ToString() != choreType)
-        {
+        if (result.GetType().ToString() != choreType) {
             log.Warning(
                 $"Chore type is not equal client: {result.GetType()} != server {choreType}"
             );
@@ -184,12 +169,10 @@ public class FindNextChore : IMultiplayerCommand
         return result;
     }
 
-    private static global::Chore FindMatchWithoutId(global::Chore[] chores, int choreCell, string choreType)
-    {
+    private static Chore FindMatchWithoutId(Chore[] chores, int choreCell, string choreType) {
         return chores.FirstOrDefault(
             chore => chore.GetType().ToString() == choreType &&
                      choreCell == Grid.PosToCell(chore.gameObject.transform.GetPosition())
         );
     }
-
 }
