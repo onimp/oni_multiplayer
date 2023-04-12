@@ -1,7 +1,7 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Game;
 using MultiplayerMod.Game.Chores;
-using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Commands.Chores;
 using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Debug;
@@ -30,22 +30,8 @@ public class ServerEventBindings {
         WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));
         SaveLoaderEvents.WorldSaved += WorldManager.Sync;
 
-        ChoreConsumerEvents.FindNextChore += ChoreConsumerOnFindNextChore;
+        ChoreConsumerEvents.FindNextChore += p => server.Send(new FindNextChore(p), MultiplayerCommandOptions.SkipHost);
 
         bound = true;
     }
-
-    private void ChoreConsumerOnFindNextChore(object sender, FindNextChoreEventArgs e) {
-        server.Send(
-            new FindNextChore(
-                sender.GetType().ToString(),
-                e.InstanceId,
-                e.ChoreId,
-                e.ChoreType.ToString(),
-                e.ChoreCell
-            ),
-            MultiplayerCommandOptions.SkipHost
-        );
-    }
-
 }

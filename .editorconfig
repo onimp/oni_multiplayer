@@ -16,6 +16,7 @@ ij_visual_guides = none
 ij_wrap_on_typing = false
 
 [*.cs]
+csharp_other_braces = end_of_line
 csharp_new_line_before_catch = false
 csharp_new_line_before_else = false
 csharp_new_line_before_finally = false
@@ -48,6 +49,7 @@ dotnet_naming_symbols.parameters_symbols.applicable_accessibilities = *
 dotnet_naming_symbols.parameters_symbols.applicable_kinds = parameter
 dotnet_naming_style.upper_camel_case_style.capitalization = pascal_case
 
+resharper_csharp_brace_style = end_of_line
 resharper_allow_comment_after_lbrace = true
 resharper_autodetect_indent_settings = true
 resharper_blank_lines_after_block_statements = 0
