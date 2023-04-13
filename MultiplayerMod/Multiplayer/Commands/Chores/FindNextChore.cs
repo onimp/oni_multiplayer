@@ -1,6 +1,10 @@
 using System;
 using System.Linq;
+using System.Threading;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Game.Chores;
 using Object = UnityEngine.Object;
 
@@ -26,28 +30,49 @@ public class FindNextChore : IMultiplayerCommand {
     }
 
     public void Execute() {
+        new Thread(() => TryWithRetry()).Start();
+    }
+
+    private void TryWithRetry(int retries = 20) {
+        const int retryDelayMs = 50;
+        log.Level = retries > 0 ? LogLevel.Error : LogLevel.Info;
+        bool choreFound = false;
+        Container.Get<UnityTaskScheduler>().Run(
+            () => {
+                var choreContext = FindContext();
+                if (choreContext != null) {
+                    HostChores.Index[instanceId] = choreContext;
+                    choreFound = true;
+                }
+            }
+        );
+         if (!choreFound && retries > 0) {
+            Thread.Sleep(retryDelayMs);
+            TryWithRetry(retries - 1);
+        }
+    }
+
+    private Chore.Precondition.Context? FindContext() {
         var prefabID = Object.FindObjectsOfType<KPrefabID>().FirstOrDefault(a => a.InstanceID == instanceId);
         if (prefabID == null) {
             log.Warning($"Multiplayer: KPrefabID not found {instanceId}");
-            return;
+            return null;
         }
         var consumer = prefabID.GetComponent<ChoreConsumer>();
         if (consumer == null) {
             log.Warning(
                 $"Multiplayer: Consumer does not exists at KPrefabId with desired ID {instanceId}. Id collision??"
             );
-            return;
+            return null;
         }
         if (instanceType != consumer.GetType().ToString()) {
             log.Warning(
                 $"Multiplayer: Consumer type {consumer.GetType()} is not equal to the server {instanceType}."
             );
-            return;
+            return null;
         }
 
-        var choreContext = FindContext(consumer, choreId, choreCell, choreType);
-
-        HostChores.Index[instanceId] = choreContext;
+        return FindContext(consumer, choreId, choreCell, choreType);
     }
 
     private static Chore.Precondition.Context? FindContext(
@@ -84,7 +109,7 @@ public class FindNextChore : IMultiplayerCommand {
 
         if (chore.id != choreId) {
             chore.id = choreId;
-            log.Info("Multiplayer: Corrected chore id.");
+            log.Debug("Multiplayer: Corrected chore id.");
         }
 
         chore.driver = null;
@@ -131,7 +156,7 @@ public class FindNextChore : IMultiplayerCommand {
             serverChoreType,
             ref choreWithIdCollision
         ) ?? FindMatchWithoutId(globalChores, cell, serverChoreType);
-        log.Info(
+        log.Debug(
             $"Multiplayer: Chore global search. Result is {chore != null}. {instance.GetType()} {serverChoreType}"
         );
         return chore;
