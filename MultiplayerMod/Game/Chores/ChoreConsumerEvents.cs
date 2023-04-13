@@ -4,7 +4,7 @@ using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Game.Chores;
 
-[HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
+//[HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
 public static class ChoreConsumerEvents {
     public static event Action<FindNextChoreEventArgs> FindNextChore;
 
