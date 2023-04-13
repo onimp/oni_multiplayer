@@ -8,7 +8,7 @@ namespace MultiplayerMod.Multiplayer.Debug;
 
 [Serializable]
 public class WorldDebugSnapshot {
-    [NonSerialized] private static Core.Logging.Logger log = new(typeof(WorldDebugSnapshot));
+    private static Core.Logging.Logger log = new(typeof(WorldDebugSnapshot));
     public float worldTime;
     public int cellsCount;
     public int[] elementIdxHashes;
