@@ -1,8 +1,10 @@
-﻿namespace MultiplayerMod.Multiplayer.State;
+﻿using MultiplayerMod.Core.Logging;
+
+namespace MultiplayerMod.Multiplayer.State;
 
 public static class MultiplayerState {
 
-    private static readonly Core.Logging.Logger log = new(typeof(MultiplayerState));
+    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(MultiplayerState));
 
     private static MultiplayerRole role = MultiplayerRole.None;
 

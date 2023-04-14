@@ -13,7 +13,7 @@ namespace MultiplayerMod.Multiplayer.Commands.Chores;
 [Serializable]
 public class FindNextChore : IMultiplayerCommand {
 
-    private static Core.Logging.Logger log = new(typeof(FindNextChore));
+    private static Core.Logging.Logger log = LoggerFactory.GetLogger<FindNextChore>();
 
     private string instanceType;
     private int instanceId;

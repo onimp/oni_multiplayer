@@ -4,12 +4,13 @@ using System.Reflection;
 using HarmonyLib;
 using KMod;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.Core.Loader;
 
 public class ModLoader : UserMod2 {
 
-    private readonly Logging.Logger log = new(typeof(ModLoader));
+    private readonly Logging.Logger log = LoggerFactory.GetLogger<ModLoader>();
 
     public override void OnLoad(Harmony harmony) {
         base.OnLoad(harmony);

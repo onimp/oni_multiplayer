@@ -1,4 +1,5 @@
 ﻿using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game;
@@ -14,7 +15,7 @@ namespace MultiplayerMod.Multiplayer.Configuration;
 
 public class MultiplayerCoordinator {
 
-    private readonly Core.Logging.Logger log = new(typeof(MultiplayerCoordinator));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<MultiplayerCoordinator>();
 
     private readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
     private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();

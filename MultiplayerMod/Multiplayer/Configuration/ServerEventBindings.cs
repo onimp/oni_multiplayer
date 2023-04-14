@@ -1,4 +1,5 @@
 ﻿using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.Commands.Chores;
@@ -13,7 +14,7 @@ namespace MultiplayerMod.Multiplayer.Configuration;
 
 public class ServerEventBindings {
 
-    private readonly Core.Logging.Logger log = new(typeof(ServerEventBindings));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ServerEventBindings>();
     private readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
     private bool bound;
 

@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Loader;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
@@ -11,7 +12,7 @@ namespace MultiplayerMod.Platform.Steam;
 
 public class SteamPlatformLoader : IModComponentLoader {
 
-    private readonly Core.Logging.Logger log = new(typeof(SteamPlatformLoader));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamPlatformLoader>();
 
     public void OnLoad(Harmony harmony) {
         var steam = DistributionPlatform.Inst.Platform == "Steam";

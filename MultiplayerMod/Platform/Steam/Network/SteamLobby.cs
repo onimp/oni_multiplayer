@@ -1,4 +1,4 @@
-﻿using MultiplayerMod.Network;
+﻿using MultiplayerMod.Core.Logging;
 using Steamworks;
 
 namespace MultiplayerMod.Platform.Steam.Network;
@@ -26,7 +26,7 @@ public class SteamLobby {
     public event LobbyEventHandler OnLeave;
     public event LobbyEventHandler OnJoin;
 
-    private readonly Core.Logging.Logger log = new(typeof(SteamLobby));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamLobby>();
     private readonly CallResult<LobbyCreated_t> lobbyCreatedCallback;
     private readonly CallResult<LobbyEnter_t> lobbyEnteredCallback;
 
