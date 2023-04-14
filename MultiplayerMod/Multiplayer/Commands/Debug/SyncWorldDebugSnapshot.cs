@@ -1,5 +1,5 @@
 ﻿using System;
-using MultiplayerMod.Multiplayer.Debug;
+using MultiplayerMod.Multiplayer.World.Debug;
 
 namespace MultiplayerMod.Multiplayer.Commands.Debug;
 

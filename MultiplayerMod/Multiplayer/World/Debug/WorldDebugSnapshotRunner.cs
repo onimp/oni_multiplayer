@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace MultiplayerMod.Multiplayer.Debug;
+namespace MultiplayerMod.Multiplayer.World.Debug;
 
 public class WorldDebugSnapshotRunner : KMonoBehaviour, IRenderEveryTick {
 

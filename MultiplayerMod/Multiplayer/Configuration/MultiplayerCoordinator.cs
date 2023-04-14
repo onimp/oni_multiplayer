@@ -5,9 +5,9 @@ using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game.Events;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Components;
-using MultiplayerMod.Multiplayer.Debug;
 using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Multiplayer.World;
+using MultiplayerMod.Multiplayer.World.Debug;
 using MultiplayerMod.Network;
 using MultiplayerMod.Network.Events;
 
