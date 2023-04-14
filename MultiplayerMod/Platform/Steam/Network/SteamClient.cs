@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
@@ -22,7 +23,7 @@ public class SteamClient : IMultiplayerClient {
     public event EventHandler<ClientStateChangedEventArgs> StateChanged;
     public event EventHandler<CommandReceivedEventArgs> CommandReceived;
 
-    private readonly Core.Logging.Logger log = new(typeof(SteamClient));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
     private readonly SteamLobby lobby = Container.Get<SteamLobby>();
     private readonly Lazy<IPlayer> playerContainer = new(() => new SteamPlayer(SteamUser.GetSteamID()));
 

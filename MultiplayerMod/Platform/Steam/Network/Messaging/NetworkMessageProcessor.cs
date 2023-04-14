@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using MultiplayerMod.Core.Logging;
 using Steamworks;
 using static MultiplayerMod.Platform.Steam.Network.Configuration;
 
@@ -10,7 +11,7 @@ namespace MultiplayerMod.Platform.Steam.Network.Messaging;
 public class NetworkMessageProcessor {
 
     private readonly ConcurrentDictionary<uint, ConcurrentDictionary<int, FragmentsBuffer>> fragments = new();
-    private readonly Core.Logging.Logger log = new(typeof(NetworkMessageProcessor));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<NetworkMessageProcessor>();
 
     public NetworkMessage Process(uint clientId, INetworkMessageHandle handle) =>
         NetworkSerializer.Deserialize(handle) switch {

@@ -1,5 +1,6 @@
 ﻿using System;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Network;
 using Steamworks;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace MultiplayerMod.Platform.Steam.Network.Components;
 
 public class LobbyJoinRequestComponent : MonoBehaviour {
 
-    private readonly Core.Logging.Logger log = new(typeof(LobbyJoinRequestComponent));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<LobbyJoinRequestComponent>();
 
     private SteamClient client;
     private Callback<GameLobbyJoinRequested_t> lobbyJoinRequestedCallback;

@@ -1,5 +1,6 @@
 ﻿using System;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.Commands.GameTools;
 using MultiplayerMod.Multiplayer.Commands.Speed;
@@ -12,7 +13,7 @@ namespace MultiplayerMod.Multiplayer.Configuration;
 
 public class GameEventBindings {
 
-    private readonly Core.Logging.Logger log = new(typeof(GameEventBindings));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameEventBindings>();
 
     private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();
 

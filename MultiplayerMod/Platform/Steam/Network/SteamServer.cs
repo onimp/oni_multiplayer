@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MultiplayerMod.Core.Collections;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
@@ -42,7 +43,7 @@ public class SteamServer : IMultiplayerServer {
     public event EventHandler<PlayerConnectedEventArgs> PlayerConnected;
     public event EventHandler<CommandReceivedEventArgs> CommandReceived;
 
-    private readonly Core.Logging.Logger log = new(typeof(SteamServer));
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamServer>();
 
     private Callback<SteamServersConnected_t> steamServersConnectedCallback;
     private TaskCompletionSource<bool> lobbyCompletionSource;
