@@ -3,7 +3,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.State;
 
-namespace MultiplayerMod.Game.Chores;
+namespace MultiplayerMod.Game.Events;
 
 //[HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
 public class ChoreConsumerEvents {
