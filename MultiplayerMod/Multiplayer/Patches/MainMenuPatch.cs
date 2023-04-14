@@ -1,5 +1,4 @@
-﻿using System;
-using HarmonyLib;
+﻿using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.State;

@@ -2,9 +2,11 @@
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Events;
+using MultiplayerMod.Game.Events.Tools;
 using MultiplayerMod.Multiplayer.Commands.GameTools;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
+using MultiplayerMod.Multiplayer.Commands.Tools;
 using MultiplayerMod.Multiplayer.Patches;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
@@ -38,6 +40,35 @@ public class GameEventBindings {
         );
 
         BindTools();
+
+        DragToolEvents.DragComplete += (sender, args) => {
+            var x = args.Parameters != null ? string.Join(", ", args.Parameters) : "n/a";
+            log.Debug(
+                $"Drag complete: {sender.GetType().Name}, " +
+                $"cursor up: {args.CursorUp}, " +
+                $"cursor down: {args.CursorDown}, " +
+                $"parameters: [{x}], " +
+                $"priority: {args.Priority.priority_class}:{args.Priority.priority_value}, " +
+                $"cells: [{string.Join(", ", args.Cells)}]."
+            );
+
+            // @formatter:off
+            switch (sender) {
+                case DigTool: client.Send(new Dig(args)); break;
+                case CancelTool: client.Send(new Cancel(args)); break;
+                case DeconstructTool: client.Send(new Deconstruct(args)); break;
+                case PrioritizeTool: client.Send(new Prioritize(args)); break;
+                case DisinfectTool: client.Send(new Disinfect(args)); break;
+                case ClearTool: client.Send(new Sweep(args)); break;
+                case AttackTool: client.Send(new Commands.Tools.Attack(args)); break;
+                case MopTool: client.Send(new Mop(args)); break;
+                case CaptureTool: client.Send(new Wrangle(args)); break;
+                case HarvestTool: client.Send(new Harvest(args)); break;
+                case EmptyPipeTool: client.Send(new EmptyPipe(args)); break;
+                case DisconnectTool: client.Send(new Disconnect(args)); break;
+            }
+            // @formatter:on
+        };
 
         bound = true;
     }
