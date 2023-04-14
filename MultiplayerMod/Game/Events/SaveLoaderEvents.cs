@@ -1,7 +1,7 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game;
+namespace MultiplayerMod.Game.Events;
 
 [HarmonyPatch(typeof(SaveLoader))]
 public abstract class SaveLoaderEvents {

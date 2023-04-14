@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace MultiplayerMod.Game.Chores;
+namespace MultiplayerMod.Multiplayer.World;
 
 public static class HostChores {
 

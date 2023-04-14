@@ -1,6 +1,6 @@
 using HarmonyLib;
-using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.State;
+using MultiplayerMod.Multiplayer.World;
 
 namespace MultiplayerMod.Multiplayer.Patches;
 
