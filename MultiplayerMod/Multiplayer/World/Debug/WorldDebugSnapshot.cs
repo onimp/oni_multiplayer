@@ -4,7 +4,7 @@ using System.Linq;
 using MultiplayerMod.Core.Logging;
 using Object = UnityEngine.Object;
 
-namespace MultiplayerMod.Multiplayer.Debug;
+namespace MultiplayerMod.Multiplayer.World.Debug;
 
 [Serializable]
 public class WorldDebugSnapshot {

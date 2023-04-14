@@ -1,4 +1,4 @@
-using MultiplayerMod.Multiplayer.Debug;
+using MultiplayerMod.Multiplayer.World.Debug;
 
 namespace MultiplayerMod.Multiplayer.UI.WorldTrackers;
 
