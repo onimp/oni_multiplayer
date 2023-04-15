@@ -15,7 +15,6 @@
     <Target Name="ExposeAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
-            <ExposeAssembliesPdb Include="$(ManagedPath)\Assembly-CSharp*.pdb"/>
             <ExposureRules Include="Private targets to public">
                 <PatternRule>^private</PatternRule>
                 <TargetRule>All</TargetRule>
@@ -38,6 +37,16 @@
             </ExposureRules>
         </ItemGroup>
         <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
-        <Copy SourceFiles="@(ExposeAssembliesPdb)" DestinationFolder="lib\exposed"/>
+    </Target>
+    <Target Name="ExposeUnityAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
+            <UnityExposureRules Include="Cached pointer to public">
+                <PatternRule>^private.*?Object::m_CachedPtr</PatternRule>
+                <TargetRule>Field</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </UnityExposureRules>
+        </ItemGroup>
+        <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)"/>
     </Target>
 </Project>
