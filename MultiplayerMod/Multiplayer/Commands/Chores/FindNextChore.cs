@@ -15,41 +15,52 @@ public class FindNextChore : IMultiplayerCommand {
 
     private static Core.Logging.Logger log = LoggerFactory.GetLogger<FindNextChore>();
 
-    private string instanceType;
     private int instanceId;
+    private string instanceString;
+    private int instanceCell;
     private int choreId;
     private string choreType;
     private int choreCell;
+    private bool isAttemptingOverride;
 
     public FindNextChore(FindNextChoreEventArgs args) {
-        instanceType = args.InstanceType.ToString();
+        log.Level = LogLevel.Debug;
+
         instanceId = args.InstanceId;
+        instanceString = args.InstanceString;
+        instanceCell = args.InstanceCell;
         choreId = args.ChoreId;
         choreType = args.ChoreType.ToString();
         choreCell = args.ChoreCell;
+        isAttemptingOverride = args.IsAttemptingOverride;
     }
 
     public void Execute() {
-        new Thread(() => TryWithRetry()).Start();
+        log.Debug(
+            $"Received {instanceId} {instanceString} {instanceCell} {choreId} {choreType} {choreCell}"
+        );
+        TryWithRetry();
     }
 
     private void TryWithRetry(int retries = 20) {
         const int retryDelayMs = 50;
-        log.Level = retries > 0 ? LogLevel.Error : LogLevel.Info;
-        bool choreFound = false;
-        Container.Get<UnityTaskScheduler>().Run(
-            () => {
-                var choreContext = FindContext();
-                if (choreContext != null) {
-                    HostChores.Index[instanceId] = choreContext;
-                    choreFound = true;
+
+        Container.Get<UnityTaskScheduler>()
+            .Run(
+                () => {
+                    var choreContext = FindContext();
+                    if (choreContext != null) {
+                        HostChores.Index[instanceId] = choreContext;
+                    } else if (retries > 0) {
+                        new Thread(
+                            () => {
+                                Thread.Sleep(retryDelayMs);
+                                TryWithRetry(retries - 1);
+                            }
+                        ).Start();
+                    }
                 }
-            }
-        );
-         if (!choreFound && retries > 0) {
-            Thread.Sleep(retryDelayMs);
-            TryWithRetry(retries - 1);
-        }
+            );
     }
 
     private Chore.Precondition.Context? FindContext() {
@@ -65,21 +76,28 @@ public class FindNextChore : IMultiplayerCommand {
             );
             return null;
         }
-        if (instanceType != consumer.GetType().ToString()) {
+        if (instanceString != consumer.ToString()) {
             log.Warning(
-                $"Multiplayer: Consumer type {consumer.GetType()} is not equal to the server {instanceType}."
+                $"Multiplayer: Consumer type {consumer.GetType()} is not equal to the server {instanceString}."
             );
             return null;
         }
+        var localCell = Grid.PosToCell(consumer.transform.position);
+        if (instanceCell != localCell) {
+            log.Warning(
+                $"Multiplayer: Consumer {consumer}-{choreType} found but in different cell. Server {instanceCell} - local {localCell}."
+            );
+        }
 
-        return FindContext(consumer, choreId, choreCell, choreType);
+        return FindContext(consumer, choreId, choreCell, choreType, isAttemptingOverride);
     }
 
     private static Chore.Precondition.Context? FindContext(
         ChoreConsumer instance,
         int choreId,
         int cell,
-        string serverChoreType
+        string serverChoreType,
+        bool isAttemptingOverride
     ) {
         Chore choreWithIdCollision = null;
         var chore = FindInInstance(
@@ -103,17 +121,20 @@ public class FindNextChore : IMultiplayerCommand {
         }
 
         if (chore == null) {
-            log.Warning($"Multiplayer: Chore not found {choreId} {serverChoreType}");
+            log.Warning($"Multiplayer: Chore not found {instance} - id#{choreId}. Type-{serverChoreType}");
             return null;
         }
 
+        log.Level = LogLevel.Debug;
+
         if (chore.id != choreId) {
             chore.id = choreId;
-            log.Debug("Multiplayer: Corrected chore id.");
+            log.Trace($"Multiplayer: Corrected {instance}-{serverChoreType} chore id.");
         }
 
         chore.driver = null;
-        return new Chore.Precondition.Context(chore, instance.consumerState, true);
+        log.Debug($"Found {instance}-{serverChoreType} {choreId}-{cell}");
+        return new Chore.Precondition.Context(chore, instance.consumerState, isAttemptingOverride);
     }
 
     private static Chore FindInInstance(
@@ -132,7 +153,7 @@ public class FindNextChore : IMultiplayerCommand {
             cell,
             serverChoreType,
             ref choreWithIdCollision
-        ) ?? FindMatchWithoutId(chores, cell, serverChoreType);
+        ) ?? FindByTypeAndCell(chores, cell, serverChoreType);
     }
 
     private static Chore FindInGlobal(
@@ -155,7 +176,7 @@ public class FindNextChore : IMultiplayerCommand {
             cell,
             serverChoreType,
             ref choreWithIdCollision
-        ) ?? FindMatchWithoutId(globalChores, cell, serverChoreType);
+        ) ?? FindByTypeAndCell(globalChores, cell, serverChoreType);
         log.Debug(
             $"Multiplayer: Chore global search. Result is {chore != null}. {instance.GetType()} {serverChoreType}"
         );
@@ -176,10 +197,10 @@ public class FindNextChore : IMultiplayerCommand {
 
         if (result == null) return null;
 
-        var clientChoreCell = Grid.PosToCell(result.gameObject.transform.GetPosition());
-        if (choreCell != clientChoreCell) {
+        var clientChoreCell = Grid.PosToCell(result.gameObject.transform.position);
+        if (!DependsOnConsumerCell(choreType) && choreCell != clientChoreCell) {
             log.Warning(
-                $"Multiplayer: Server chore pos != client chore pos. {choreId}. {choreCell} != {clientChoreCell}"
+                $"Multiplayer: Server chore pos != client chore pos. {choreId}. {choreType}. {choreCell} != {clientChoreCell}"
             );
             choreWithIdCollision = result;
             return null;
@@ -194,10 +215,46 @@ public class FindNextChore : IMultiplayerCommand {
         return result;
     }
 
-    private static Chore FindMatchWithoutId(Chore[] chores, int choreCell, string choreType) {
-        return chores.FirstOrDefault(
-            chore => chore.GetType().ToString() == choreType &&
-                     choreCell == Grid.PosToCell(chore.gameObject.transform.GetPosition())
-        );
+    private static Chore FindByTypeAndCell(Chore[] chores, int choreCell, string choreType) {
+        var choreOfType = chores.Where(chore => chore.GetType().ToString() == choreType).ToList();
+        var results = choreOfType.Where(
+            chore => DependsOnConsumerCell(choreType) ||
+                     choreCell == Grid.PosToCell(chore.gameObject.transform.position)
+        ).ToArray();
+        if (results.Length == 0) {
+            var cellPoses = string.Join(
+                ", ",
+                choreOfType.Select(chore => Grid.PosToCell(chore.gameObject.transform.position))
+            );
+            log.Debug(
+                $"FindByTypeAndCell : Not found {choreType}(cell={choreCell}) in total chores {chores.Length}. Chores of type {choreOfType.Count}."
+            );
+            log.Debug($"FindByTypeAndCell: Positions of typed chores: {cellPoses}");
+            return null;
+        }
+        if (results.Length > 1) {
+            var cellPoses = string.Join(
+                ", ",
+                results.Select(chore => Grid.PosToCell(chore.gameObject.transform.position))
+            );
+            log.Warning(
+                $"FindByTypeAndCell : Not single {choreType} in total chores {chores.Length}. Matches of type {results.Length}."
+            );
+            log.Warning($"FindByTypeAndCell: Positions of results chores: {cellPoses}");
+            return null;
+        }
+        return results.Single();
     }
+
+    /// <summary>
+    /// This chores depends only on consumer position.
+    ///
+    /// If consumer position is off due to any reason chore must be taken regardless of its positon.
+    /// </summary>
+    /// <returns></returns>
+    private static bool DependsOnConsumerCell(string choreType) {
+        string[] independent = { "IdleChore", "MoveToSafetyChore" };
+        return independent.Any(choreType.Contains);
+    }
+
 }
