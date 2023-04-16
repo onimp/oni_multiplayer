@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using HarmonyLib;
-using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Patches
 {
@@ -10,36 +8,6 @@ namespace MultiplayerMod.Multiplayer.Patches
     public static class DragToolPatches
     {
         public static bool DisablePatch;
-
-        [HarmonyPatch(typeof(BuildTool), "OnDragTool")]
-        public static class BuildToolPatch
-        {
-            public static event Action<object> OnDragTool;
-
-            public static void Prefix(BuildTool __instance, int cell, int distFromOrigin)
-            {
-                if (DisablePatch) return;
-
-                OnDragTool?.Invoke(
-                    new object[]
-                    {
-                        PlanScreen.Instance.ProductInfoScreen.materialSelectionPanel.PriorityScreen
-                            .GetLastSelectedPriority().priority_value,
-                        cell,
-                        distFromOrigin,
-                        new object[]
-                        {
-                            __instance.def.PrefabID,
-                            __instance.facadeID,
-                            __instance.selectedElements,
-                            __instance.buildingOrientation
-                        }
-                    }
-                );
-            }
-        }
-
-
 
         [HarmonyPatch(typeof(CopySettingsTool), "OnDragTool")]
         public static class CopySettingsToolPatch
