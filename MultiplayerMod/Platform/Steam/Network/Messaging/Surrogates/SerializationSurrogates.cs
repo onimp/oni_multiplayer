@@ -10,6 +10,8 @@ public static class SerializationSurrogates {
         Selector.Add(new Vector2SerializationSurrogate());
         Selector.Add(new Vector3SerializationSurrogate());
         Selector.Add(new PrioritySettingSurrogate());
+        Selector.Add(new TagSurrogate());
+        Selector.Add(new PathNodeSurrogate());
     }
 
     private static void Add<T>(this SurrogateSelector selector, T surrogate) where T : ISerializationSurrogate, ISurrogateType {

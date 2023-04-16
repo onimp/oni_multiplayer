@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Events;
@@ -70,15 +71,28 @@ public class GameEventBindings {
             // @formatter:on
         };
 
+        UtilityBuildEvents.Build += (sender, args) => {
+            log.Debug(
+                $"Utility build: {sender.GetType().Name}, " +
+                $"prefab: {args.PrefabId}, " +
+                $"materials: {string.Join(", ", args.Materials.Select(it => it.name))}, " +
+                $"path: [{string.Join(", ", args.Path.Where(it => it.valid).Select(it => it.cell))}], " +
+                $"priority: {args.Priority.priority_class}:{args.Priority.priority_value}"
+            );
+
+            // @formatter:off
+            switch (sender) {
+                case UtilityBuildTool: client.Send(new BuildUtility(args)); break;
+                case WireBuildTool: client.Send(new BuildWire(args)); break;
+            }
+            // @formatter:on
+        };
+
         bound = true;
     }
 
     [Obsolete("For payload-based compatibility")]
     private void BindTools() {
-        DragToolPatches.BaseUtilityBuildToolPatch.OnUtilityTool +=
-            p => client.Send(new UseTool(GameToolType.UtilityBuild, p));
-        DragToolPatches.BaseUtilityBuildToolPatch.OnWireTool +=
-            p => client.Send(new UseTool(GameToolType.WireBuild, p));
         DragToolPatches.BuildToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Build, p));
         DragToolPatches.CopySettingsToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.CopySettings, p));
         DragToolPatches.DebugToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Debug, p));
