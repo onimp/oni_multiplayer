@@ -11,46 +11,6 @@ namespace MultiplayerMod.Multiplayer.Patches
     {
         public static bool DisablePatch;
 
-        [HarmonyPatch(typeof(BaseUtilityBuildTool), "OnLeftClickUp")]
-        public static class BaseUtilityBuildToolPatch
-        {
-            public static event Action<object> OnWireTool;
-            public static event Action<object> OnUtilityTool;
-
-            public static void Prefix(BaseUtilityBuildTool __instance, Vector3 cursor_pos)
-            {
-                if (DisablePatch) return;
-
-                (__instance is UtilityBuildTool ? OnUtilityTool : OnWireTool)?.Invoke(
-                    new object[]
-                    {
-                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value,
-                        Grid.PosToCell(cursor_pos),
-                        0,
-                        new object[]
-                        {
-                            __instance.def.PrefabID,
-                            __instance.selectedElements,
-                            GetPath(__instance)
-                        }
-                    }
-                );
-            }
-
-            private static List<int> GetPath(BaseUtilityBuildTool buildTool)
-            {
-                var path = buildTool.path;
-                var intPath = new List<int>();
-                for (var index = 0; index < path.Count; index++)
-                {
-                    var node = path[index];
-                    intPath.Add(node.cell);
-                }
-
-                return intPath;
-            }
-        }
-
         [HarmonyPatch(typeof(BuildTool), "OnDragTool")]
         public static class BuildToolPatch
         {
