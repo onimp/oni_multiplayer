@@ -88,12 +88,27 @@ public class GameEventBindings {
             // @formatter:on
         };
 
+        BuildEvents.Build += (sender, args) => {
+            log.Debug(
+                $"Build event: {sender.GetType().Name}, " +
+                $"prefab: {args.PrefabId}, " +
+                $"cell: {args.Cell}, " +
+                $"facade: {args.FacadeId}, " +
+                $"orientation: {args.Orientation}, " +
+                $"instant: {args.InstantBuild}, " +
+                $"upgrade: {args.Upgrade}, " +
+                $"materials: {string.Join(", ", args.Materials.Select(it => it.name))}, " +
+                $"priority: {args.Priority.priority_class}:{args.Priority.priority_value}"
+            );
+
+            client.Send(new Build(args));
+        };
+
         bound = true;
     }
 
     [Obsolete("For payload-based compatibility")]
     private void BindTools() {
-        DragToolPatches.BuildToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Build, p));
         DragToolPatches.CopySettingsToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.CopySettings, p));
         DragToolPatches.DebugToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Debug, p));
         DragToolPatches.PlaceToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Place, p));
