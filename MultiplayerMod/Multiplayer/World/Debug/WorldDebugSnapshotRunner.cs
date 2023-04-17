@@ -8,7 +8,7 @@ public class WorldDebugSnapshotRunner : KMonoBehaviour, IRenderEveryTick {
     private WorldDebugSnapshot current;
     public static event Action<WorldDebugSnapshot> SnapshotAvailable;
 
-    private const float CheckPeriod = 5.0f;
+    private const float CheckPeriod = 30.0f;
     private float lastTime;
     public static WorldDebugSnapshot LastServerInfo { private get; set; }
 
