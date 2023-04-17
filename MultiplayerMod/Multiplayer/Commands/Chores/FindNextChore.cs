@@ -1,10 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using JetBrains.Annotations;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Game.Chores;
 using Object = UnityEngine.Object;
 
@@ -39,28 +37,13 @@ public class FindNextChore : IMultiplayerCommand {
         log.Debug(
             $"Received {instanceId} {instanceString} {instanceCell} {choreId} {choreType} {choreCell}"
         );
-        TryWithRetry();
-    }
-
-    private void TryWithRetry(int retries = 20) {
-        const int retryDelayMs = 50;
-
-        Container.Get<UnityTaskScheduler>()
-            .Run(
-                () => {
-                    var choreContext = FindContext();
-                    if (choreContext != null) {
-                        HostChores.Index[instanceId] = choreContext;
-                    } else if (retries > 0) {
-                        new Thread(
-                            () => {
-                                Thread.Sleep(retryDelayMs);
-                                TryWithRetry(retries - 1);
-                            }
-                        ).Start();
-                    }
-                }
-            );
+        var choreContext = FindContext();
+        if (choreContext != null) {
+            if (!HostChores.Index.ContainsKey(instanceId)) {
+                HostChores.Index[instanceId] = new Queue<Chore.Precondition.Context>();
+            }
+            HostChores.Index[instanceId].Enqueue(choreContext.Value);
+        }
     }
 
     private Chore.Precondition.Context? FindContext() {

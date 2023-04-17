@@ -13,10 +13,10 @@ public class ChoreConsumerPatch {
             return true;
 
         var instanceId = __instance.gameObject.GetComponent<KPrefabID>().InstanceID;
-        var choreContext = HostChores.Index.GetValueSafe(instanceId);
+        var queue = HostChores.Index.GetValueSafe(instanceId);
+        var choreContext = (queue?.Count ?? 0) > 0 ? queue?.Dequeue() : null;
         __result = choreContext != null;
         if (choreContext != null) out_context = choreContext.Value;
-        HostChores.Index.Remove(instanceId);
 
         return false;
     }
