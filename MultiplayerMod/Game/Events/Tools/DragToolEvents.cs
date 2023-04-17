@@ -129,6 +129,15 @@ public static class DragToolEvents {
 
     #endregion
 
+    #region Copy Settings
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(CopySettingsTool), nameof(CopySettingsTool.OnDragTool))]
+    private static void CopySettingsToolOnDragToolPostfix(CopySettingsTool __instance, int cell) =>
+        AddDragCell(__instance, cell);
+
+    #endregion
+
     [HarmonyPostfix]
     [HarmonyPatch(typeof(DragTool), nameof(DragTool.OnDragTool))]
     private static void DragToolOnDragToolPostfix(DragTool __instance, int cell) =>

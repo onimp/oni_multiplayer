@@ -9,26 +9,6 @@ namespace MultiplayerMod.Multiplayer.Patches
     {
         public static bool DisablePatch;
 
-        [HarmonyPatch(typeof(CopySettingsTool), "OnDragTool")]
-        public static class CopySettingsToolPatch
-        {
-            public static event Action<object> OnDragTool;
-
-            public static void Postfix(int cell, int distFromOrigin)
-            {
-                if (DisablePatch) return;
-
-                OnDragTool?.Invoke(
-                    new object[]
-                    {
-                        ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority().priority_value, cell, distFromOrigin
-                    }
-                );
-            }
-        }
-
-
-
         [HarmonyPatch(typeof(DebugTool), "OnDragTool")]
         public static class DebugToolPatch
         {

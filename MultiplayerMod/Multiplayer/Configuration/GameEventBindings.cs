@@ -2,6 +2,7 @@
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Game;
 using MultiplayerMod.Game.Events;
 using MultiplayerMod.Game.Events.Tools;
 using MultiplayerMod.Multiplayer.Commands.GameTools;
@@ -104,12 +105,19 @@ public class GameEventBindings {
             client.Send(new Build(args));
         };
 
+        CopySettingsEvents.Copy += (sender, args) => {
+            log.Debug($"Copy settings from: " +
+                      $"cell: {args.SourceCell}, " +
+                      $"layer: {args.SourceLayer}, " +
+                      $"object: {GameState.LastSelectedObject.GetProperName()}");
+            client.Send(new CopySettings(args));
+        };
+
         bound = true;
     }
 
     [Obsolete("For payload-based compatibility")]
     private void BindTools() {
-        DragToolPatches.CopySettingsToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.CopySettings, p));
         DragToolPatches.DebugToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Debug, p));
         DragToolPatches.PlaceToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Place, p));
     }
