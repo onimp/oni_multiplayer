@@ -25,8 +25,8 @@
                 <TargetRule>Method</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </ExposureRules>
-            <ExposureRules Include="MaterialSelectionPanel::OnPrefabInit to public">
-                <PatternRule>MaterialSelectionPanel::OnPrefabInit</PatternRule>
+            <ExposureRules Include="Game::OnPrefabInit to public">
+                <PatternRule>Game::OnPrefabInit</PatternRule>
                 <TargetRule>Method</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </ExposureRules>
