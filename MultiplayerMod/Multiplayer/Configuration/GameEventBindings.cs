@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using MultiplayerMod.Core.Dependency;
+﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Game;
 using MultiplayerMod.Game.Events;
 using MultiplayerMod.Game.Events.Tools;
 using MultiplayerMod.Multiplayer.Commands.Speed;
@@ -39,16 +37,6 @@ public class GameEventBindings {
         );
 
         DragToolEvents.DragComplete += (sender, args) => {
-            var x = args.Parameters != null ? string.Join(", ", args.Parameters) : "n/a";
-            log.Debug(
-                $"Drag complete: {sender.GetType().Name}, " +
-                $"cursor up: {args.CursorUp}, " +
-                $"cursor down: {args.CursorDown}, " +
-                $"parameters: [{x}], " +
-                $"priority: {args.Priority.priority_class}:{args.Priority.priority_value}, " +
-                $"cells: [{string.Join(", ", args.Cells)}]."
-            );
-
             // @formatter:off
             switch (sender) {
                 case DigTool: client.Send(new Dig(args)); break;
@@ -68,14 +56,6 @@ public class GameEventBindings {
         };
 
         UtilityBuildEvents.Build += (sender, args) => {
-            log.Debug(
-                $"Utility build: {sender.GetType().Name}, " +
-                $"prefab: {args.PrefabId}, " +
-                $"materials: {string.Join(", ", args.Materials.Select(it => it.name))}, " +
-                $"path: [{string.Join(", ", args.Path.Where(it => it.valid).Select(it => it.cell))}], " +
-                $"priority: {args.Priority.priority_class}:{args.Priority.priority_value}"
-            );
-
             // @formatter:off
             switch (sender) {
                 case UtilityBuildTool: client.Send(new BuildUtility(args)); break;
@@ -84,35 +64,9 @@ public class GameEventBindings {
             // @formatter:on
         };
 
-        BuildEvents.Build += (sender, args) => {
-            log.Debug(
-                $"Build event: {sender.GetType().Name}, " +
-                $"prefab: {args.PrefabId}, " +
-                $"cell: {args.Cell}, " +
-                $"facade: {args.FacadeId}, " +
-                $"orientation: {args.Orientation}, " +
-                $"instant: {args.InstantBuild}, " +
-                $"upgrade: {args.Upgrade}, " +
-                $"materials: {string.Join(", ", args.Materials.Select(it => it.name))}, " +
-                $"priority: {args.Priority.priority_class}:{args.Priority.priority_value}"
-            );
-
-            client.Send(new Build(args));
-        };
-
-        CopySettingsEvents.Copy += (sender, args) => {
-            log.Debug($"Copy settings from: " +
-                      $"cell: {args.SourceCell}, " +
-                      $"layer: {args.SourceLayer}, " +
-                      $"object: {GameState.LastSelectedObject.GetProperName()}");
-            client.Send(new CopySettings(args));
-        };
-
-        DebugToolEvents.Modify += (sender, args) => {
-            log.Debug($"debug tool paint: " +
-                      $"type: {args.Type} ");
-            client.Send(new Modify(args));
-        };
+        BuildEvents.Build += (_, args) => client.Send(new Build(args));
+        CopySettingsEvents.Copy += (_, args) => client.Send(new CopySettings(args));
+        DebugToolEvents.Modify += (_, args) => client.Send(new Modify(args));
 
         bound = true;
     }
