@@ -1,15 +1,12 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game;
 using MultiplayerMod.Game.Events;
 using MultiplayerMod.Game.Events.Tools;
-using MultiplayerMod.Multiplayer.Commands.GameTools;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
-using MultiplayerMod.Multiplayer.Patches;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
@@ -40,8 +37,6 @@ public class GameEventBindings {
         InterfaceToolEvents.MouseMoved += position => throttle10Hz.Run<UpdateCursorPosition>(
             () => client.Send(new UpdateCursorPosition(client.Player, position))
         );
-
-        BindTools();
 
         DragToolEvents.DragComplete += (sender, args) => {
             var x = args.Parameters != null ? string.Join(", ", args.Parameters) : "n/a";
@@ -120,11 +115,6 @@ public class GameEventBindings {
         };
 
         bound = true;
-    }
-
-    [Obsolete("For payload-based compatibility")]
-    private void BindTools() {
-        DragToolPatches.PlaceToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Place, p));
     }
 
 }
