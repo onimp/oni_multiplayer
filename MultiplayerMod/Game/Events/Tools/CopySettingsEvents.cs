@@ -10,9 +10,7 @@ public static class CopySettingsEvents {
 
     public static event EventHandler<CopySettingsEventArgs> Copy;
 
-    static CopySettingsEvents() {
-        DragToolEvents.DragComplete += OnDragComplete;
-    }
+    static CopySettingsEvents() => DragToolEvents.DragComplete += OnDragComplete;
 
     private static void OnDragComplete(object sender, DragCompleteEventArgs e) {
         if (sender is not CopySettingsTool)
