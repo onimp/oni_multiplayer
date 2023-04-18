@@ -41,9 +41,15 @@
     <Target Name="ExposeUnityAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
+            <UnityAssemblies Include="$(ManagedPath)\UnityEngine.UI.dll"/>
             <UnityExposureRules Include="Cached pointer to public">
                 <PatternRule>^private.*?Object::m_CachedPtr</PatternRule>
                 <TargetRule>Field</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </UnityExposureRules>
+            <UnityExposureRules Include="Open Toggle constructor">
+                <PatternRule>Toggle::.ctor()</PatternRule>
+                <TargetRule>Method</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </UnityExposureRules>
         </ItemGroup>

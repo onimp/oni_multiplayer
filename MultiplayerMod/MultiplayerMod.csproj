@@ -17,6 +17,7 @@
         <Reference Include="Assembly-CSharp" HintPath="lib\exposed\Assembly-CSharp.dll" Private="false" />
         <Reference Include="Assembly-CSharp-firstpass" HintPath="lib\exposed\Assembly-CSharp-firstpass.dll" Private="false" />
         <Reference Include="UnityEngine.CoreModule" HintPath="lib\exposed\UnityEngine.CoreModule.dll" Private="false" />
+        <Reference Include="UnityEngine.UI" HintPath="lib\exposed\UnityEngine.UI.dll" Private="false" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="0Harmony" HintPath="$(ManagedPath)\0Harmony.dll" Private="false" />
@@ -26,6 +27,5 @@
         <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
         <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(ManagedPath)\UnityEngine.ImageConversionModule.dll" Private="false" />
         <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedPath)\UnityEngine.IMGUIModule.dll" Private="false" />
-        <Reference Include="UnityEngine.UI" HintPath="$(ManagedPath)\UnityEngine.UI.dll" Private="false" />
     </ItemGroup>
 </Project>

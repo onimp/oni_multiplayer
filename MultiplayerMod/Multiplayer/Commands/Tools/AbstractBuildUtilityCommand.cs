@@ -24,7 +24,7 @@ public class AbstractBuildUtilityCommand<T> : IMultiplayerCommand where T : Base
             path = Event.Path
         };
 
-        GameContextManager.Override(context, () => { tool.BuildPath(); });
+        GameContextManager.Override(context, () => tool.BuildPath());
     }
 
 }

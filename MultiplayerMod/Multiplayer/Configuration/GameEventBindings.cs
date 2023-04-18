@@ -113,12 +113,17 @@ public class GameEventBindings {
             client.Send(new CopySettings(args));
         };
 
+        DebugToolEvents.Modify += (sender, args) => {
+            log.Debug($"debug tool paint: " +
+                      $"type: {args.Type} ");
+            client.Send(new Modify(args));
+        };
+
         bound = true;
     }
 
     [Obsolete("For payload-based compatibility")]
     private void BindTools() {
-        DragToolPatches.DebugToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Debug, p));
         DragToolPatches.PlaceToolPatch.OnDragTool += p => client.Send(new UseTool(GameToolType.Place, p));
     }
 
