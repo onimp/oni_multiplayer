@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
         <DebugType>full</DebugType>
+        <DefineConstants>$(DefineConstants);USE_DEV_NET</DefineConstants>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants />
+        <DefineConstants>$(DefineConstants);USE_DEV_NET</DefineConstants>
     </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">

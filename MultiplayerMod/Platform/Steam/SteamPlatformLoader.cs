@@ -20,6 +20,9 @@ public class SteamPlatformLoader : IModComponentLoader {
             return;
 
         log.Info("Steam platform detected");
+#if USE_DEV_NET
+        GNS.Sockets.Library.Initialize();
+#endif
         Container.Register<IMultiplayerOperations, SteamMultiplayerOperations>();
         Container.Register<IMultiplayerServer, SteamServer>();
         Container.Register<IMultiplayerClient, SteamClient>();

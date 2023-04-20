@@ -12,3 +12,11 @@ public record SteamPlayer(CSteamID Id) : IPlayer {
     }
 
 }
+
+[Serializable]
+public record DevPlayer(string Id) : IPlayer {
+    public bool Equals (IPlayer other)
+    {
+        return other is DevPlayer player && player.Equals(this);
+    }
+}
