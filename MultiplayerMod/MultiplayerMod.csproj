@@ -14,6 +14,9 @@
         </Content>
     </ItemGroup>
     <ItemGroup>
+      <ProjectReference Include="..\GameNetworkingSockets\GameNetworkingSockets.csproj" />
+    </ItemGroup>
+    <ItemGroup>
         <Reference Include="Assembly-CSharp" HintPath="lib\exposed\Assembly-CSharp.dll" Private="false" />
         <Reference Include="Assembly-CSharp-firstpass" HintPath="lib\exposed\Assembly-CSharp-firstpass.dll" Private="false" />
         <Reference Include="UnityEngine.CoreModule" HintPath="lib\exposed\UnityEngine.CoreModule.dll" Private="false" />
