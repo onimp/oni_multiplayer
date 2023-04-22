@@ -67,6 +67,7 @@ public class GameEventBindings {
         BuildEvents.Build += (_, args) => client.Send(new Build(args));
         CopySettingsEvents.Copy += (_, args) => client.Send(new CopySettings(args));
         DebugToolEvents.Modify += (_, args) => client.Send(new Modify(args));
+        StampToolEvents.Stamp += (_, args) => client.Send(new Stamp(args));
 
         bound = true;
     }

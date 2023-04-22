@@ -8,6 +8,7 @@ public static class SerializationSurrogates {
 
     static SerializationSurrogates() {
         Selector.Add(new Vector2SerializationSurrogate());
+        Selector.Add(new Vector2fSerializationSurrogate());
         Selector.Add(new Vector3SerializationSurrogate());
         Selector.Add(new PrioritySettingSurrogate());
         Selector.Add(new TagSurrogate());
