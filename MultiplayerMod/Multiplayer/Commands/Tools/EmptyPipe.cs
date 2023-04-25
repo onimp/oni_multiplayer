@@ -1,9 +1,9 @@
 ﻿using System;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class EmptyPipe : AbstractDragToolCommand<EmptyPipeTool> {
-    public EmptyPipe(DragCompleteEventArgs @event) : base(@event) { }
+    public EmptyPipe(DragCompleteEventArgs arguments) : base(arguments) { }
 }

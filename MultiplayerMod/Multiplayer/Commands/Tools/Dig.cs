@@ -1,9 +1,9 @@
 ﻿using System;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class Dig : AbstractDragToolCommand<DigTool> {
-    public Dig(DragCompleteEventArgs @event) : base(@event) { }
+    public Dig(DragCompleteEventArgs arguments) : base(arguments) { }
 }

@@ -1,24 +1,17 @@
-﻿namespace MultiplayerMod.Game.Context;
+﻿using System.Diagnostics.CodeAnalysis;
 
-public class GameContext {
+namespace MultiplayerMod.Game.Context;
 
-    public ToolMenu ToolMenu { get; set; }
-    public BuildMenu BuildMenu { get; set; }
-    public PlanScreen PlanScreen { get; set; }
-    public DebugPaintElementScreen DebugPaintElementScreen { get; set; }
+public static class GameContext {
 
-    public static GameContext GetCurrent() => new() {
-        ToolMenu = ToolMenu.Instance,
-        BuildMenu = BuildMenu.Instance,
-        PlanScreen = PlanScreen.Instance,
-        DebugPaintElementScreen = DebugPaintElementScreen.Instance
-    };
-
-    public void Restore() {
-        ToolMenu.Instance = ToolMenu;
-        BuildMenu.Instance = BuildMenu;
-        PlanScreen.Instance = PlanScreen;
-        DebugPaintElementScreen.Instance = DebugPaintElementScreen;
+    [SuppressMessage("ReSharper", "SuspiciousTypeConversion.Global")]
+    public static void Override(IGameContext context, System.Action action) {
+        try {
+            context.Apply();
+            action();
+        } finally {
+            context.Restore();
+        }
     }
 
 }

@@ -1,7 +1,7 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.Events;
+namespace MultiplayerMod.Game.World;
 
 [HarmonyPatch(typeof(SaveLoader))]
 public abstract class SaveLoaderEvents {
@@ -10,7 +10,6 @@ public abstract class SaveLoaderEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SaveLoader.Save), typeof(string), typeof(bool), typeof(bool))]
-    public static void SavePostfix() =>
-        PatchControl.RunIfEnabled(() => { WorldSaved?.Invoke(); });
+    public static void SavePostfix() => PatchControl.RunIfEnabled(() => { WorldSaved?.Invoke(); });
 
 }

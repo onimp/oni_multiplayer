@@ -1,7 +1,7 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Events;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;

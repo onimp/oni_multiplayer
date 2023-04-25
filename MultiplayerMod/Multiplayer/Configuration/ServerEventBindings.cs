@@ -1,6 +1,7 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Game.Events;
+using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands.Chores;
 using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.Commands.State;

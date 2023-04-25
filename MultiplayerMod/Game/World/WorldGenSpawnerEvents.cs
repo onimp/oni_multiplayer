@@ -1,7 +1,7 @@
 ﻿using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.Events;
+namespace MultiplayerMod.Game.World;
 
 [HarmonyPatch(typeof(WorldGenSpawner))]
 public static class WorldGenSpawnerEvents {

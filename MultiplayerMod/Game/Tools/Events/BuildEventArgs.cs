@@ -1,9 +1,9 @@
 ﻿using System;
 
-namespace MultiplayerMod.Game.Events.Tools;
+namespace MultiplayerMod.Game.Tools.Events;
 
 [Serializable]
-public class BuildEventArgs {
+public class BuildEventArgs : EventArgs {
     public int Cell { get; set; }
     public string PrefabId { get; set; }
     public bool InstantBuild { get; set; }

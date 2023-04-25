@@ -1,26 +1,26 @@
 ﻿using System;
 using MultiplayerMod.Game.Context;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class Modify : IMultiplayerCommand {
 
-    private ModifyEventArgs @event;
+    private ModifyEventArgs arguments;
 
-    public Modify(ModifyEventArgs @event) {
-        this.@event = @event;
+    public Modify(ModifyEventArgs arguments) {
+        this.arguments = arguments;
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     public void Execute() {
         var tool = new DebugTool {
-            type = @event.Type
+            type = arguments.Type
         };
-        GameContextManager.Override(
-            new OverrideContext { ModifyParameters = @event.Parameters },
-            () => { @event.DragEvent.Cells.ForEach(it => tool.OnDragTool(it, 0)); }
+        GameContext.Override(
+            arguments.ToolContext,
+            () => { arguments.DragEventArgs.Cells.ForEach(it => tool.OnDragTool(it, 0)); }
         );
     }
 

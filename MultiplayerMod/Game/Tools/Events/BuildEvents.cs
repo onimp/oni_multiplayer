@@ -6,7 +6,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using Object = UnityEngine.Object;
 
-namespace MultiplayerMod.Game.Events.Tools;
+namespace MultiplayerMod.Game.Tools.Events;
 
 [HarmonyPatch(typeof(BuildTool))]
 public static class BuildEvents {
@@ -25,7 +25,7 @@ public static class BuildEvents {
         var instantBuildReplaceMethod = AccessTools.Method(typeof(BuildTool), nameof(BuildTool.InstantBuildReplace));
         var postProcessBuildMethod = AccessTools.Method(typeof(BuildTool), nameof(BuildTool.PostProcessBuild));
 
-        result.AddConditional(source, stopWhen: it => it.StoresField(lastDragCellField));
+        result.AddConditional(source, it => it.StoresField(lastDragCellField));
 
         // var replaced = false;
         var replaced = generator.DeclareLocal(typeof(bool));
@@ -37,32 +37,26 @@ public static class BuildEvents {
         result.Add(new CodeInstruction(OpCodes.Ldc_I4_0));
         result.Add(new CodeInstruction(OpCodes.Stloc_S, asyncReplace));
 
-        result.AddConditional(source, stopWhen: it => it.IsStoreToLocal(4));
+        result.AddConditional(source, it => it.IsStoreToLocal(4));
 
         // replaced = true;
         result.Add(new CodeInstruction(OpCodes.Ldc_I4_1));
         result.Add(new CodeInstruction(OpCodes.Stloc_S, replaced));
 
-        result.AddConditional(source, stopWhen: it => it.Calls(instantBuildReplaceMethod));
+        result.AddConditional(source, it => it.Calls(instantBuildReplaceMethod));
         result.AddRange(source, 1); // stloc.1
 
         // asyncReplace = true;
         result.Add(new CodeInstruction(OpCodes.Ldc_I4_1));
         result.Add(new CodeInstruction(OpCodes.Stloc_S, asyncReplace));
 
-        result.AddConditional(source, stopWhen: it => it.Calls(postProcessBuildMethod));
+        result.AddConditional(source, it => it.Calls(postProcessBuildMethod));
 
         // if (builtItem != null || asyncReplace)
         var falseCondition = generator.DefineLabel();
         result.Add(new CodeInstruction(OpCodes.Ldloc_1));
         result.Add(new CodeInstruction(OpCodes.Ldnull));
-        result.Add(
-            CodeInstruction.Call(
-                typeof(Object),
-                "op_Inequality",
-                new[] { typeof(Object), typeof(Object) }
-            )
-        );
+        result.Add(CodeInstruction.Call(typeof(Object), "op_Inequality", new[] { typeof(Object), typeof(Object) }));
         result.Add(new CodeInstruction(OpCodes.Ldloc_S, asyncReplace));
         result.Add(new CodeInstruction(OpCodes.Or));
         result.Add(new CodeInstruction(OpCodes.Brfalse_S, falseCondition));
@@ -74,7 +68,7 @@ public static class BuildEvents {
         result.Add(new CodeInstruction(OpCodes.Ldloc_S, replaced));
         result.Add(CodeInstruction.Call(typeof(BuildEvents), nameof(BuildComplete)));
 
-        result.AddConditional(source, stopWhen: _ => false);
+        result.AddConditional(source, _ => false);
 
         result.Last().labels.Add(falseCondition);
 

@@ -13,7 +13,6 @@ public class ModLoader : UserMod2 {
     private readonly Logging.Logger log = LoggerFactory.GetLogger<ModLoader>();
 
     public override void OnLoad(Harmony harmony) {
-        Harmony.DEBUG = true;
         base.OnLoad(harmony);
         assembly.GetTypes()
             .Where(type => typeof(IModComponentLoader).IsAssignableFrom(type) && type.IsClass)

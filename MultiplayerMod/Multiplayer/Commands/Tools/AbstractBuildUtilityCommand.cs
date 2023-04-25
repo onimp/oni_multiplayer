@@ -1,30 +1,30 @@
 ﻿using System;
 using MultiplayerMod.Game.Context;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Context;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class AbstractBuildUtilityCommand<T> : IMultiplayerCommand where T : BaseUtilityBuildTool, new() {
 
-    protected UtilityBuildEventArgs Event;
+    protected UtilityBuildEventArgs Arguments;
 
-    public AbstractBuildUtilityCommand(UtilityBuildEventArgs @event) {
-        Event = @event;
+    public AbstractBuildUtilityCommand(UtilityBuildEventArgs arguments) {
+        Arguments = arguments;
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     public void Execute() {
-        var context = new OverrideContext { Priority = Event.Priority };
-        var definition = Assets.GetBuildingDef(Event.PrefabId);
+        var definition = Assets.GetBuildingDef(Arguments.PrefabId);
         var tool = new T {
             def = definition,
             conduitMgr = definition.BuildingComplete.GetComponent<IHaveUtilityNetworkMgr>().GetNetworkManager(),
-            selectedElements = Event.Materials,
-            path = Event.Path
+            selectedElements = Arguments.Materials,
+            path = Arguments.Path
         };
 
-        GameContextManager.Override(context, () => tool.BuildPath());
+        GameContext.Override(new PrioritySettingsContext(Arguments.Priority), () => tool.BuildPath());
     }
 
 }

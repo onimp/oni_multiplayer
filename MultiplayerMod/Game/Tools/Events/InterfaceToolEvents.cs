@@ -2,7 +2,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.Events;
+namespace MultiplayerMod.Game.Tools.Events;
 
 [HarmonyPatch(typeof(InterfaceTool))]
 public static class InterfaceToolEvents {

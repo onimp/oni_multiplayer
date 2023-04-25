@@ -5,7 +5,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.Events.Tools;
+namespace MultiplayerMod.Game.Tools.Events;
 
 [HarmonyPatch]
 public static class DragToolEvents {
