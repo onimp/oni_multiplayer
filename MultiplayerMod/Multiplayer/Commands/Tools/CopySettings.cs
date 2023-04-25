@@ -1,7 +1,8 @@
 ﻿using System;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.Effects;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
@@ -17,12 +18,7 @@ public class CopySettings : IMultiplayerCommand {
     }
 
     public void Execute() {
-        try {
-            PopUpEffects.Enabled = false;
-            DoExecute();
-        } finally {
-            PopUpEffects.Enabled = true;
-        }
+        GameContext.Override(new DisablePopUpEffects(), DoExecute);
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation

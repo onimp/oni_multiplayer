@@ -1,32 +1,28 @@
 ﻿using System;
-using MultiplayerMod.Game.Building;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Context;
+using MultiplayerMod.Game.Tools.Context;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class Stamp : IMultiplayerCommand {
 
-    private StampEventArgs args;
+    private StampEventArgs arguments;
 
-    public Stamp(StampEventArgs args) {
-        this.args = args;
+    public Stamp(StampEventArgs arguments) {
+        this.arguments = arguments;
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     public void Execute() {
         var tool = new StampTool {
-            stampTemplate = args.Template,
+            stampTemplate = arguments.Template,
             ready = true,
             selectAffected = false,
             deactivateOnStamp = false
         };
-        try {
-            StampCompletion.Override = true;
-            tool.Stamp(args.Location);
-        } finally {
-            StampCompletion.Override = false;
-        }
+        GameContext.Override(new StampCompletionOverride(), () => tool.Stamp(arguments.Location));
     }
 
 }

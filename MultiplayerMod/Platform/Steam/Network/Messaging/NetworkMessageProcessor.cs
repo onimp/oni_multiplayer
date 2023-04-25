@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using MultiplayerMod.Core.Logging;
-using Steamworks;
 using static MultiplayerMod.Platform.Steam.Network.Configuration;
 
 namespace MultiplayerMod.Platform.Steam.Network.Messaging;

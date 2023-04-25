@@ -1,9 +1,9 @@
 ﻿using System;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class Disinfect : AbstractDragToolCommand<DisinfectTool> {
-    public Disinfect(DragCompleteEventArgs @event) : base(@event) { }
+    public Disinfect(DragCompleteEventArgs arguments) : base(arguments) { }
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MultiplayerMod.Game.Events.Tools;
+namespace MultiplayerMod.Game.Tools.Events;
 
 [Serializable]
 public class UtilityBuildEventArgs {

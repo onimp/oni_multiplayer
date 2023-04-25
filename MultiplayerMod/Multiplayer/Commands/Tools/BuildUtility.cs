@@ -1,9 +1,9 @@
 ﻿using System;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class BuildUtility : AbstractBuildUtilityCommand<UtilityBuildTool> {
-    public BuildUtility(UtilityBuildEventArgs @event) : base(@event) { }
+    public BuildUtility(UtilityBuildEventArgs arguments) : base(arguments) { }
 }

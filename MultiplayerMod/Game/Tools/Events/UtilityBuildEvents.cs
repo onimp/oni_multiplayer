@@ -3,7 +3,7 @@ using System.Linq;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.Events.Tools;
+namespace MultiplayerMod.Game.Tools.Events;
 
 [HarmonyPatch(typeof(BaseUtilityBuildTool))]
 public static class UtilityBuildEvents {

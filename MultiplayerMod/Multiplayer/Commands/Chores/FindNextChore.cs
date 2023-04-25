@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Game.Events;
+using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.World;
 using Object = UnityEngine.Object;
 

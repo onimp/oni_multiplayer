@@ -1,10 +1,12 @@
 ﻿using System;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class Wrangle : AbstractDragToolCommand<CaptureTool> {
-    public Wrangle(DragCompleteEventArgs @event) : base(@event) { }
-    protected override void InvokeTool(CaptureTool tool) => tool.OnDragComplete(Event.CursorDown, Event.CursorUp);
+    public Wrangle(DragCompleteEventArgs arguments) : base(arguments) { }
+
+    protected override void InvokeTool(CaptureTool tool) =>
+        tool.OnDragComplete(Arguments.CursorDown, Arguments.CursorUp);
 }

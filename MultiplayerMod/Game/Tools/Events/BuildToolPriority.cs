@@ -1,4 +1,4 @@
-﻿namespace MultiplayerMod.Game.Events.Tools;
+﻿namespace MultiplayerMod.Game.Tools.Events;
 
 public static class BuildToolPriority {
 

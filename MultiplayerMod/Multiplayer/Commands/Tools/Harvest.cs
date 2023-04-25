@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.Game.Events.Tools;
+using MultiplayerMod.Game.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
 public class Harvest : AbstractDragToolCommand<HarvestTool> {
 
-    public Harvest(DragCompleteEventArgs @event) : base(@event) { }
+    public Harvest(DragCompleteEventArgs arguments) : base(arguments) { }
 
     protected override void InitializeTool(HarvestTool tool) {
         base.InitializeTool(tool);
@@ -16,7 +16,7 @@ public class Harvest : AbstractDragToolCommand<HarvestTool> {
             ["HARVEST_WHEN_READY"] = ToolParameterMenu.ToggleState.Off,
             ["DO_NOT_HARVEST"] = ToolParameterMenu.ToggleState.Off
         };
-        Event.Parameters?.ForEach(it => tool.options[it] = ToolParameterMenu.ToggleState.On);
+        Arguments.Parameters?.ForEach(it => tool.options[it] = ToolParameterMenu.ToggleState.On);
     }
 
 }
