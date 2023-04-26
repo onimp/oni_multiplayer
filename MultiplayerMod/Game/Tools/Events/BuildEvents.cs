@@ -85,7 +85,7 @@ public static class BuildEvents {
                 FacadeId = tool.facadeID,
                 Materials = tool.selectedElements.ToArray(),
                 Orientation = tool.buildingOrientation,
-                Priority = BuildToolPriority.Get(),
+                Priority = GameState.BuildToolPriority,
                 PrefabId = tool.def.PrefabID
             }
         );

@@ -27,23 +27,18 @@ public static class DebugToolEvents {
         if (!ModificationTypes.Contains(tool.type))
             return;
 
+        var instance = DebugPaintElementScreen.Instance;
         var context = new DebugToolContext {
-            AffectCells = DebugPaintElementScreen.Instance.affectCells.isOn,
-            AffectBuildings = DebugPaintElementScreen.Instance.affectBuildings.isOn,
-            PreventFowReveal = DebugPaintElementScreen.Instance.set_prevent_fow_reveal,
-            AllowFowReveal = DebugPaintElementScreen.Instance.set_allow_fow_reveal
+            Element = instance.paintElement.isOn ? instance.element : null,
+            DiseaseType = instance.paintDisease.isOn ? instance.diseaseIdx : null,
+            DiseaseCount = instance.paintDiseaseCount.isOn ? instance.diseaseCount : null,
+            Temperature = instance.paintTemperature.isOn ? instance.temperature : null,
+            Mass = instance.paintMass.isOn ? instance.mass : null,
+            AffectCells = instance.affectCells.isOn,
+            AffectBuildings = instance.affectBuildings.isOn,
+            PreventFowReveal = instance.set_prevent_fow_reveal,
+            AllowFowReveal = instance.set_allow_fow_reveal
         };
-
-        if (DebugPaintElementScreen.Instance.paintElement.isOn)
-            context.Element = DebugPaintElementScreen.Instance.element;
-        if (DebugPaintElementScreen.Instance.paintDisease.isOn)
-            context.DiseaseType = DebugPaintElementScreen.Instance.diseaseIdx;
-        if (DebugPaintElementScreen.Instance.paintDiseaseCount.isOn)
-            context.DiseaseCount = DebugPaintElementScreen.Instance.diseaseCount;
-        if (DebugPaintElementScreen.Instance.paintTemperature.isOn)
-            context.Temperature = DebugPaintElementScreen.Instance.temperature;
-        if (DebugPaintElementScreen.Instance.paintMass.isOn)
-            context.Mass = DebugPaintElementScreen.Instance.mass;
 
         Modify?.Invoke(sender, new ModifyEventArgs { DragEventArgs = e, Type = tool.type, ToolContext = context });
     }
