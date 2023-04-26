@@ -22,8 +22,6 @@ Working functionality:
 - Every mornings hard syncs to avoid accumulated errors
 - Hard sync on any server save
 
-That is it. Nothing else is working yet. No actions will be synchronised yet. It is just a proof of concept.
-
 ## Game mechanics
 
 All players play all together and share controls over a single colony. Order given by a player might be overruled by
