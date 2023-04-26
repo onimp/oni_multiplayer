@@ -7,6 +7,7 @@ namespace MultiplayerMod.Game;
 public static class GameState {
 
     public static GameObject LastSelectedObject { get; private set; }
+    public static PrioritySetting BuildToolPriority => GetBuildToolPriority();
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(global::Game), nameof(global::Game.OnPrefabInit))]
@@ -18,6 +19,18 @@ public static class GameState {
                     LastSelectedObject = (GameObject) o;
             }
         );
+    }
+
+    private static PrioritySetting GetBuildToolPriority() {
+        var priority = new PrioritySetting(PriorityScreen.PriorityClass.basic, 0);
+
+        // Reference: BaseUtilityBuildTool.BuildPath, BuildTool.PostProcessBuild
+        if (BuildMenu.Instance != null)
+            priority = BuildMenu.Instance.GetBuildingPriority();
+        if (PlanScreen.Instance != null)
+            priority = PlanScreen.Instance.GetBuildingPriority();
+
+        return priority;
     }
 
 }

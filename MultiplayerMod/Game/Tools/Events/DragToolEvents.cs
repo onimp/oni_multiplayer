@@ -138,7 +138,7 @@ public static class DragToolEvents {
 
     #endregion
 
-    #region Copy Settings
+    #region Debug Tool
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(DebugTool), nameof(DebugTool.OnDragTool))]

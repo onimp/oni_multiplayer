@@ -18,7 +18,7 @@ public static class UtilityBuildEvents {
                 PrefabId = __instance.def.PrefabID,
                 Materials = __instance.selectedElements.ToArray(),
                 Path = __instance.path,
-                Priority = BuildToolPriority.Get()
+                Priority = GameState.BuildToolPriority
             };
             Build?.Invoke(__instance, args);
         }

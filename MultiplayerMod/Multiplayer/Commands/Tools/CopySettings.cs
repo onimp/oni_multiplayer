@@ -11,10 +11,10 @@ public class CopySettings : IMultiplayerCommand {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<CopySettings>();
 
-    private CopySettingsEventArgs @event;
+    private CopySettingsEventArgs arguments;
 
-    public CopySettings(CopySettingsEventArgs @event) {
-        this.@event = @event;
+    public CopySettings(CopySettingsEventArgs arguments) {
+        this.arguments = arguments;
     }
 
     public void Execute() {
@@ -24,13 +24,13 @@ public class CopySettings : IMultiplayerCommand {
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     private void DoExecute() {
         var tool = new CopySettingsTool();
-        var source = Grid.Objects[@event.SourceCell, (int) @event.SourceLayer];
+        var source = Grid.Objects[arguments.SourceCell, (int) arguments.SourceLayer];
         if (source == null) {
-            log.Warning($"Unable to locate source at cell #{@event.SourceCell} on {@event.SourceLayer} layer");
+            log.Warning($"Unable to locate source at cell #{arguments.SourceCell} on {arguments.SourceLayer} layer");
             return;
         }
         tool.SetSourceObject(source);
-        @event.DragEvent.Cells.ForEach(it => tool.OnDragTool(it, 0));
+        arguments.DragEvent.Cells.ForEach(it => tool.OnDragTool(it, 0));
     }
 
 }
