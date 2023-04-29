@@ -18,31 +18,32 @@ public class DebugToolContext : IGameContext {
 
     public void Apply() {
         GameStaticContext.Override();
+        var instance = GameStaticContext.Current.DebugPaintElementScreen;
         if (Element != null) {
-            GameStaticContext.Current.DebugPaintElementScreen.paintElement.isOn = true;
-            GameStaticContext.Current.DebugPaintElementScreen.element = Element.Value;
+            instance.paintElement.isOn = true;
+            instance.element = Element.Value;
         }
         if (Temperature != null) {
-            GameStaticContext.Current.DebugPaintElementScreen.paintTemperature.isOn = true;
-            GameStaticContext.Current.DebugPaintElementScreen.temperature = Temperature.Value;
+            instance.paintTemperature.isOn = true;
+            instance.temperature = Temperature.Value;
         }
         if (Mass != null) {
-            GameStaticContext.Current.DebugPaintElementScreen.paintMass.isOn = true;
-            GameStaticContext.Current.DebugPaintElementScreen.mass = Mass.Value;
+            instance.paintMass.isOn = true;
+            instance.mass = Mass.Value;
         }
         if (DiseaseCount != null) {
-            GameStaticContext.Current.DebugPaintElementScreen.paintDiseaseCount.isOn = true;
-            GameStaticContext.Current.DebugPaintElementScreen.diseaseCount = DiseaseCount.Value;
+            instance.paintDiseaseCount.isOn = true;
+            instance.diseaseCount = DiseaseCount.Value;
         }
         if (DiseaseType != null) {
-            GameStaticContext.Current.DebugPaintElementScreen.paintDisease.isOn = true;
-            GameStaticContext.Current.DebugPaintElementScreen.diseaseIdx = DiseaseType.Value;
+            instance.paintDisease.isOn = true;
+            instance.diseaseIdx = DiseaseType.Value;
         }
 
-        GameStaticContext.Current.DebugPaintElementScreen.affectBuildings.isOn = AffectBuildings;
-        GameStaticContext.Current.DebugPaintElementScreen.affectCells.isOn = AffectCells;
-        GameStaticContext.Current.DebugPaintElementScreen.set_prevent_fow_reveal = PreventFowReveal;
-        GameStaticContext.Current.DebugPaintElementScreen.set_allow_fow_reveal = AllowFowReveal;
+        instance.affectBuildings.isOn = AffectBuildings;
+        instance.affectCells.isOn = AffectCells;
+        instance.set_prevent_fow_reveal = PreventFowReveal;
+        instance.set_allow_fow_reveal = AllowFowReveal;
     }
 
     public void Restore() {
