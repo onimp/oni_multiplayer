@@ -26,6 +26,7 @@ public class GameStaticContext {
     public static void Override() {
         if (originalContext != null)
             throw new Exception("Unable to override already overridden static context");
+        originalContext = GetCurrent();
         overridden.Switch();
     }
 
