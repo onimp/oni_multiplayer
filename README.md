@@ -69,3 +69,5 @@ And also we're using a GitHub project for task management
 
 https://github.com/users/zuev93/projects/1
 
+# Contacts
+If you have any suggestions or questions feel free to create discussion or issue in GitHub or join our discord server https://discord.gg/9NnwSsbG
