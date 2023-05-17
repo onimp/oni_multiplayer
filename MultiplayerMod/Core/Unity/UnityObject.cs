@@ -16,7 +16,7 @@ public abstract class UnityObject {
 
     private static GameObject CreateWithComponents(bool destroyOnLoad, params Type[] components) {
         var gameObject = new GameObject(null, components);
-        if (destroyOnLoad)
+        if (!destroyOnLoad)
             Object.DontDestroyOnLoad(gameObject);
         return gameObject;
     }
