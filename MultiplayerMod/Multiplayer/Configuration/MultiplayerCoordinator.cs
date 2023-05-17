@@ -112,11 +112,10 @@ public class MultiplayerCoordinator {
                 break;
         }
 
-        var go = UnityObject.CreateStaticWithComponent<
+        UnityObject.CreateWithComponent<
             DrawCursorComponent,
             WorldDebugSnapshotRunner
         >();
-        go.DestroyOnLoad();
 
         MultiplayerState.WorldSpawned = true;
     }
