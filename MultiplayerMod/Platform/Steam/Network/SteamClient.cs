@@ -57,7 +57,7 @@ public class SteamClient : IMultiplayerClient {
     }
 
     public void Disconnect() {
-        if (State != MultiplayerClientState.Connected)
+        if (State <= MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
         UnityObject.Destroy(gameObject);
