@@ -27,6 +27,7 @@ public class MultiplayerCoordinator {
         ConfigureServer();
         ConfigureClient();
         WorldGenSpawnerEvents.Spawned += OnWorldSpawned;
+        PauseScreenEvents.OnDestroy += OnWorldDestroy;
     }
 
     #region Server configuration
@@ -120,4 +121,16 @@ public class MultiplayerCoordinator {
         MultiplayerState.WorldSpawned = true;
     }
 
+    private void OnWorldDestroy() {
+        switch (MultiplayerState.Role) {
+            case MultiplayerRole.Host:
+                if (client.State >= MultiplayerClientState.Connecting)
+                    client.Disconnect();
+                server.Stop();
+                break;
+            case MultiplayerRole.Client:
+                client.Disconnect();
+                break;
+        }
+    }
 }

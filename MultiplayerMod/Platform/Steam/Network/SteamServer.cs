@@ -81,7 +81,7 @@ public class SteamServer : IMultiplayerServer {
     }
 
     public void Stop() {
-        if (State != MultiplayerServerState.Started)
+        if (State <= MultiplayerServerState.Stopped)
             throw new NetworkPlatformException("Server isn't started");
 
         log.Debug("Stopping...");
