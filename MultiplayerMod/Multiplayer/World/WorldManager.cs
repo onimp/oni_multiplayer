@@ -13,7 +13,7 @@ public static class WorldManager {
     private static readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
 
     public static byte[] GetWorldSave() {
-        var path = SaveLoader.GetActiveAutoSavePath();
+        var path = SaveLoader.GetActiveSaveFilePath();
         PatchControl.RunWithDisabledPatches(() => SaveLoader.Instance.Save(path));
         return File.ReadAllBytes(path);
     }
