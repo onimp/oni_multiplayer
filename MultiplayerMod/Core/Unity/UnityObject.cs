@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -6,7 +7,7 @@ namespace MultiplayerMod.Core.Unity;
 
 public abstract class UnityObject {
 
-    private static IntPtr NonZeroPtr = new(1);
+    private static IntPtr NonZeroPtr = Marshal.AllocHGlobal(1);
 
     public static GameObject CreateStaticWithComponent<T>() where T : Component =>
         CreateWithComponents(false, typeof(T));
