@@ -7,7 +7,7 @@ namespace MultiplayerMod.Multiplayer.Commands.Research;
 [Serializable]
 public abstract class AbstractResearchEntryCommand : IMultiplayerCommand {
 
-    [NonSerialized] private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<AbstractResearchEntryCommand>();
+    private static Core.Logging.Logger log = LoggerFactory.GetLogger<AbstractResearchEntryCommand>();
 
     private string techId;
 
