@@ -10,17 +10,26 @@ Stage: Early WIP and proof of concept
 Working functionality:
 
 - Currently tested in Vanilla only (NO DLC)
-- Basic main menu UI
+- Main menu UI
   - Join/Load/Create MP game
-- Ability to join/invite friends via Steam overlay UI
-- Showing cursor of all active players
-- Syncing user actions (dig/build/mop/harvest/etc and other from bottom toolbar)
-- Syncing warp settings and pause
-- Additional diagnostic showing amount of synchronization error
-  - Always 0 on the server side
-  - Huge on any client :)
+- Steam overlay support
+  - Ability to join/invite friends
+- Synced tools (bottom toolbar)
+  - dig/build/mop/harvest/etc and other from bottom toolbar
+- Synced game settings
+  - warp settings
+  - pause
+- Synced colony settings
+  - Consumables screen
+  - Research tree
+- Additional in-game UI
+  - Active players info
+      - Cursors of all players
+  - Additional diagnostic showing amount of synchronization error
+    - Always 0 on the server side
+    - Huge on any client :)
 - Every mornings hard syncs to avoid accumulated errors
-- Hard sync on any server save
+- Hard sync on each server save action
 
 ## Game mechanics
 
