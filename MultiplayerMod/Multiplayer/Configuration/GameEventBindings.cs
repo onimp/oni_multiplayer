@@ -51,8 +51,8 @@ public class GameEventBindings {
     }
 
     private void BingColonyControls() {
-        ResearchEvents.OnResearchCanceled += (techId) => client.Send(new CancelResearch(techId));
-        ResearchEvents.OnResearchSelected += (techId) => client.Send(new SelectResearch(techId));
+        ResearchEvents.ResearchCanceled += (techId) => client.Send(new CancelResearch(techId));
+        ResearchEvents.ResearchSelected += (techId) => client.Send(new SelectResearch(techId));
     }
 
     private void BindTools() {
