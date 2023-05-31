@@ -2,7 +2,7 @@
 using System.Linq;
 using MultiplayerMod.Core.Logging;
 
-namespace MultiplayerMod.Multiplayer.Commands.Research;
+namespace MultiplayerMod.Multiplayer.Commands.Screens.Research;
 
 [Serializable]
 public abstract class AbstractResearchEntryCommand : IMultiplayerCommand {
@@ -22,6 +22,7 @@ public abstract class AbstractResearchEntryCommand : IMultiplayerCommand {
         var entry = screen.entryMap.Values.FirstOrDefault(entry => entry.targetTech.Id == techId);
         if (entry == null) {
             log.Warning($"Tech {techId} is not found.");
+            return;
         }
         Execute(entry);
     }
