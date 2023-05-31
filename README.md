@@ -53,8 +53,16 @@ small world syncs for smaller areas of different layers (e.g. sync gases within 
 
 ## How to install
 
+### Automatic way (from release 0.2.0-alpha)
+* Be aware that mod will be installed to %USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\MultiplayerMod.
 - Download latest release from https://github.com/zuev93/oni_multiplayer/releases/latest
-- Copy release content (with folder) to %USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local (if
+- Unzip mod to any folder
+- Double click on install.bat
+    
+### Manual way
+- Download latest release from https://github.com/zuev93/oni_multiplayer/releases/latest
+- Unzip mod to any folder
+- Copy release content (mod.yaml, mod_info.yaml and MultiplayerMod.dll) to %USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\MultiplayerMod (if
 some folders are missing, please create them).
 
 ## How to use
