@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MultiplayerMod.Multiplayer.Commands.Research;
+namespace MultiplayerMod.Multiplayer.Commands.Screens.Research;
 
 [Serializable]
 public class CancelResearch : AbstractResearchEntryCommand {
