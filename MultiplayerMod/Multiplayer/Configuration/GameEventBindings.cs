@@ -1,7 +1,9 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Events;
+using MultiplayerMod.Game.Research;
 using MultiplayerMod.Game.Tools.Events;
+using MultiplayerMod.Multiplayer.Commands.Research;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
@@ -26,16 +28,34 @@ public class GameEventBindings {
 
         log.Debug("Binding game events");
 
+        BindSpeedControl();
+        BindMouse();
+        BingColonyControls();
+        BindTools();
+
+        bound = true;
+    }
+
+    private void BindSpeedControl() {
         GameSpeedControlEvents.GamePaused += () => client.Send(new PauseGame());
         GameSpeedControlEvents.GameResumed += () => client.Send(new ResumeGame());
         GameSpeedControlEvents.SpeedChanged += speed => client.Send(new ChangeGameSpeed(speed));
+    }
 
+    private void BindMouse() {
         // TODO: Cursor update may be ignored if MouseMoved isn't triggered after the rate period.
         // TODO: Will be changed later (probably with current / last sent positions check).
         InterfaceToolEvents.MouseMoved += position => throttle10Hz.Run<UpdateCursorPosition>(
             () => client.Send(new UpdateCursorPosition(client.Player, position))
         );
+    }
 
+    private void BingColonyControls() {
+        ResearchEvents.OnResearchCanceled += (techId) => client.Send(new CancelResearch(techId));
+        ResearchEvents.OnResearchSelected += (techId) => client.Send(new SelectResearch(techId));
+    }
+
+    private void BindTools() {
         DragToolEvents.DragComplete += (sender, args) => {
             // @formatter:off
             switch (sender) {
@@ -68,8 +88,6 @@ public class GameEventBindings {
         CopySettingsEvents.Copy += (_, args) => client.Send(new CopySettings(args));
         DebugToolEvents.Modify += (_, args) => client.Send(new Modify(args));
         StampToolEvents.Stamp += (_, args) => client.Send(new Stamp(args));
-
-        bound = true;
     }
 
 }
