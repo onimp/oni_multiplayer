@@ -2,10 +2,10 @@
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Events;
 using MultiplayerMod.Game.Screens;
-using MultiplayerMod.Game.Screens.Consumable;
 using MultiplayerMod.Game.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 using MultiplayerMod.Multiplayer.Commands.Screens.Research;
+using MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
@@ -53,13 +53,15 @@ public class GameEventBindings {
     }
 
     private void BingColonyControls() {
-        ResearchEvents.ResearchCanceled += (techId) => client.Send(new CancelResearch(techId));
-        ResearchEvents.ResearchSelected += (techId) => client.Send(new SelectResearch(techId));
+        ResearchEvents.ResearchCanceled += techId => client.Send(new CancelResearch(techId));
+        ResearchEvents.ResearchSelected += techId => client.Send(new SelectResearch(techId));
 
-        ConsumablesTableScreenEvents.PermittedByDefault +=
+        ConsumableEvents.PermittedByDefault +=
             permittedList => client.Send(new PermitConsumableByDefault(permittedList));
-        ConsumablesEvents.PermittedToMinion += (properName, consumableId, isAllowed) =>
+        ConsumableEvents.PermittedToMinion += (properName, consumableId, isAllowed) =>
             client.Send(new PermitConsumableToMinion(properName, consumableId, isAllowed));
+
+        ScheduleEvents.SchedulesChanged += schedules => client.Send(new ChangeSchedulesList(schedules));
     }
 
     private void BindTools() {
