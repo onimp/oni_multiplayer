@@ -36,6 +36,7 @@ public class ChangeSchedulesList : IMultiplayerCommand {
         private static Dictionary<String, ScheduleGroup> groups =
             Db.Get().ScheduleGroups.allGroups.ToDictionary(
                 a => a.Id,
+                // It is a group for 1 hour, so it's important to change defaultSegments value to '1' from the default.
                 a => new ScheduleGroup(
                     a.Id,
                     null,
