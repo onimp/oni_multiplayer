@@ -31,6 +31,10 @@ public class PermitConsumableToMinion : IMultiplayerCommand {
         var consumableConsumer = minionIdentity.GetComponent<ConsumableConsumer>();
         consumableConsumer.SetPermitted(consumableId, isAllowed);
 
+        RefreshTable();
+    }
+
+    private void RefreshTable() {
         var screen = ManagementMenu.Instance.consumablesScreen;
         foreach (var row in screen.rows) {
             var minion = row.GetIdentity();
