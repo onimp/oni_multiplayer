@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Linq;
-using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Multiplayer.Extensions;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 
 [Serializable]
 public class PermitConsumableToMinion : IMultiplayerCommand {
-
-    private static Core.Logging.Logger log = LoggerFactory.GetLogger<PermitConsumableToMinion>();
 
     private string properName;
     private string consumableId;
@@ -20,14 +18,7 @@ public class PermitConsumableToMinion : IMultiplayerCommand {
     }
 
     public void Execute() {
-        var minionIdentity =
-            global::Components.LiveMinionIdentities.Items.FirstOrDefault(
-                minion => minion.GetProperName() == properName
-            );
-        if (minionIdentity == null) {
-            log.Warning($"Minion {properName} is not found.");
-            return;
-        }
+        var minionIdentity = MinionIdentityUtils.GetLiveMinion(properName);
         var consumableConsumer = minionIdentity.GetComponent<ConsumableConsumer>();
         consumableConsumer.SetPermitted(consumableId, isAllowed);
 
