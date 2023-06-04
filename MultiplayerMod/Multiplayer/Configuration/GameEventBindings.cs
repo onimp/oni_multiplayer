@@ -8,6 +8,7 @@ using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 using MultiplayerMod.Multiplayer.Commands.Screens.Research;
 using MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
 using MultiplayerMod.Multiplayer.Commands.Screens.Skill;
+using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
@@ -35,6 +36,7 @@ public class GameEventBindings {
         BindSpeedControl();
         BindMouse();
         BingColonyControls();
+        BindUserMenu();
         BindTools();
 
         bound = true;
@@ -72,6 +74,11 @@ public class GameEventBindings {
 
         SkillEvents.HatSet += (properName, hat) => client.Send(new SetHat(properName, hat));
         SkillEvents.SkillMastered += (properName, skillId) => client.Send(new MasterSkill(properName, skillId));
+    }
+
+    private void BindUserMenu() {
+        UserMenuButtonEvents.UserMenuButtonClicked +=
+            (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
     }
 
     private void BindTools() {
