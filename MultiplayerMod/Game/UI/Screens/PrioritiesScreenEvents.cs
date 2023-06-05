@@ -2,9 +2,9 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.Screens;
+namespace MultiplayerMod.Game.UI.Screens;
 
-public static class PrioritiesEvents {
+public static class PrioritiesScreenEvents {
 
     public static event Action<string, string, int> PersonalPrioritySet;
     public static event Action<bool> PersonalPrioritiesAdvancedSet;

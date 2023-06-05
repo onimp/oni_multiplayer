@@ -1,7 +1,7 @@
 ﻿using System;
-using MultiplayerMod.Game.Tools.Context;
+using MultiplayerMod.Game.UI.Tools.Context;
 
-namespace MultiplayerMod.Game.Tools.Events;
+namespace MultiplayerMod.Game.UI.Tools.Events;
 
 [Serializable]
 public class ModifyEventArgs {

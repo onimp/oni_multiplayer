@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using MultiplayerMod.Game.Tools.Context;
+using MultiplayerMod.Game.UI.Tools.Context;
 using static DebugTool.Type;
 
-namespace MultiplayerMod.Game.Tools.Events;
+namespace MultiplayerMod.Game.UI.Tools.Events;
 
 public static class DebugToolEvents {
 
-    private static readonly HashSet<DebugTool.Type> ModificationTypes = new() {
+    private static readonly HashSet<DebugTool.Type> modificationTypes = new() {
         ReplaceSubstance,
         FillReplaceSubstance,
         Clear,
@@ -24,7 +24,7 @@ public static class DebugToolEvents {
         if (sender is not DebugTool tool)
             return;
 
-        if (!ModificationTypes.Contains(tool.type))
+        if (!modificationTypes.Contains(tool.type))
             return;
 
         var instance = DebugPaintElementScreen.Instance;

@@ -5,7 +5,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.Tools.Events;
+namespace MultiplayerMod.Game.UI.Tools.Events;
 
 [HarmonyPatch(typeof(StampTool))]
 public static class StampToolEvents {

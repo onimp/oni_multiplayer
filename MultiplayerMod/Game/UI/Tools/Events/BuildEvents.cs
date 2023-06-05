@@ -6,7 +6,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using Object = UnityEngine.Object;
 
-namespace MultiplayerMod.Game.Tools.Events;
+namespace MultiplayerMod.Game.UI.Tools.Events;
 
 [HarmonyPatch(typeof(BuildTool))]
 public static class BuildEvents {

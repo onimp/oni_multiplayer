@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.Tools.Events;
+namespace MultiplayerMod.Game.UI.Tools.Events;
 
 [Serializable]
 public class DragCompleteEventArgs : EventArgs {

@@ -2,7 +2,7 @@
 using MultiplayerMod.Core.Logging;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.Tools.Events;
+namespace MultiplayerMod.Game.UI.Tools.Events;
 
 public static class CopySettingsEvents {
 
