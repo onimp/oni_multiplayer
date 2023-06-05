@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.Screens;
+namespace MultiplayerMod.Game.UI.Screens;
 
-public static class ScheduleEvents {
+public static class ScheduleScreenEvents {
     public static event Action<List<Schedule>> SchedulesChanged;
 
-    static ScheduleEvents() {
-        ScheduleScreenEntryEvents.ScheduleChanged += schedules => SchedulesChanged?.Invoke(schedules);
-        ScheduleScreenEvents.ScheduleAdded += schedules => SchedulesChanged?.Invoke(schedules);
+    static ScheduleScreenEvents() {
+        ScheduleScreenEntryPatch.ScheduleChanged += schedules => SchedulesChanged?.Invoke(schedules);
+        ScheduleScreenPatch.ScheduleAdded += schedules => SchedulesChanged?.Invoke(schedules);
     }
 
     [HarmonyPatch(typeof(ScheduleScreen))]
-    private static class ScheduleScreenEvents {
+    private static class ScheduleScreenPatch {
         public static event Action<List<Schedule>> ScheduleAdded;
 
         [HarmonyPostfix]
@@ -26,7 +26,7 @@ public static class ScheduleEvents {
     }
 
     [HarmonyPatch(typeof(ScheduleScreenEntry))]
-    private static class ScheduleScreenEntryEvents {
+    private static class ScheduleScreenEntryPatch {
         public static event Action<List<Schedule>> ScheduleChanged;
 
         [HarmonyPostfix]

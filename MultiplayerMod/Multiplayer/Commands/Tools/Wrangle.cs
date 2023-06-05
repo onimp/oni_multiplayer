@@ -1,5 +1,5 @@
 ﻿using System;
-using MultiplayerMod.Game.Tools.Events;
+using MultiplayerMod.Game.UI.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 

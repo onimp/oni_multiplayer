@@ -5,7 +5,7 @@ using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Game.Context;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.Tools.Context;
+namespace MultiplayerMod.Game.UI.Tools.Context;
 
 [HarmonyPatch]
 public class StampCompletionOverride : IGameContext {

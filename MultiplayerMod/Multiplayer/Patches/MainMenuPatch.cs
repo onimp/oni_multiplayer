@@ -1,11 +1,11 @@
 ﻿using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Patches;
 
 [HarmonyPatch(typeof(MainMenu))]
+// ReSharper disable once UnusedType.Global
 internal class MainMenuPatch {
 
     [HarmonyPrefix]

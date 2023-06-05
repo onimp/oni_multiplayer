@@ -1,6 +1,6 @@
 ﻿using MultiplayerMod.Game.Context;
 
-namespace MultiplayerMod.Game.Tools.Context;
+namespace MultiplayerMod.Game.UI.Tools.Context;
 
 public class PrioritySettingsContext : IGameContext {
 

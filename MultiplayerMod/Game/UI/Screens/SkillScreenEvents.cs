@@ -2,9 +2,9 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.Screens;
+namespace MultiplayerMod.Game.UI.Screens;
 
-public static class SkillEvents {
+public static class SkillScreenEvents {
 
     public static event Action<string, string> HatSet;
     public static event Action<string, string> SkillMastered;

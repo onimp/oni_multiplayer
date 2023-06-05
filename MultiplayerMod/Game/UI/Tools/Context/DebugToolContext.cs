@@ -1,7 +1,7 @@
 ﻿using System;
 using MultiplayerMod.Game.Context;
 
-namespace MultiplayerMod.Game.Tools.Context;
+namespace MultiplayerMod.Game.UI.Tools.Context;
 
 [Serializable]
 public class DebugToolContext : IGameContext {

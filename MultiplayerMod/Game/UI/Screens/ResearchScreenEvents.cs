@@ -2,7 +2,7 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.Screens;
+namespace MultiplayerMod.Game.UI.Screens;
 
 [HarmonyPatch(typeof(ResearchEntry))]
 public static class ResearchEvents {

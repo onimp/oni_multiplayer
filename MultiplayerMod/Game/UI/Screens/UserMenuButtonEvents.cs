@@ -4,7 +4,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.Screens;
+namespace MultiplayerMod.Game.UI.Screens;
 
 public static class UserMenuButtonEvents {
 

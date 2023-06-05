@@ -4,7 +4,7 @@ using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Game.Context;
 
-namespace MultiplayerMod.Game.Tools.Context;
+namespace MultiplayerMod.Game.UI.Tools.Context;
 
 [HarmonyPatch]
 public class DisableBuildingValidation : IGameContext {
