@@ -53,11 +53,11 @@ public class SteamClient : IMultiplayerClient {
 
     private int ReconnectAttempts = 0;
 
-    private SteamServer getServer()
+    private GNSServer getServer()
     {
         try
         {
-            return (SteamServer) Container.Get<IMultiplayerServer>();
+            return (GNSServer) Container.Get<IMultiplayerServer>();
         } catch
         {
             return null;

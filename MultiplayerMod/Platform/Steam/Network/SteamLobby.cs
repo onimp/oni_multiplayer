@@ -64,13 +64,11 @@ public class SteamLobby {
         if (failure)
             throw new NetworkPlatformException("I/O failure.");
 
-#if !USE_DEV_NET
         if (result.m_eResult != EResult.k_EResultOK)
             throw new NetworkPlatformException($"Unable to create a lobby. Error: {result.m_eResult}");
 
         Id = new CSteamID(result.m_ulSteamIDLobby);
         log.Debug($"Lobby {Id} created");
-#endif
         OnCreate?.Invoke();
     }
 
