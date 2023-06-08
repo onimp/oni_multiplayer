@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
@@ -270,6 +270,7 @@ public class SteamClient : IMultiplayerClient {
         }
     }
 
+#if USE_DEV_NET
     private void ReceiveDevCommands() {
         const int maxMessages = 20;
 
@@ -302,5 +303,5 @@ public class SteamClient : IMultiplayerClient {
           }
         }
     }
-
+#endif
 }

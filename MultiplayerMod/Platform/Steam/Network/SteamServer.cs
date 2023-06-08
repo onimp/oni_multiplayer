@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -267,24 +267,24 @@ public class SteamServer : IMultiplayerServer {
 #if !USE_DEV_NET
         lobby.OnCreate -= OnLobbyCreated;
         lobby.Leave();
-#endif
 
         connectionStatusChangedCallback.Unregister();
         SteamGameServerNetworkingSockets.DestroyPollGroup(pollGroup);
         SteamGameServerNetworkingSockets.CloseListenSocket(listenSocket);
 
         GameServer.Shutdown();
+#endif
 #if USE_DEV_NET
         devServer.DestroyPollGroup(devPollGroup);
         devServer.DestroyPollGroup(unidentifiedPollGroup);
         log.Info("Destroying poll groups");
-#endif
-
+#else
         steamServersConnectedCallback.Unregister();
 
         ResetTaskCompletionSource(ref lobbyCompletionSource);
         ResetTaskCompletionSource(ref steamServersCompletionSource);
         callbacksCancellationTokenSource.Cancel();
+#endif
     }
 
     private void ResetTaskCompletionSource<T>(ref TaskCompletionSource<T> source) {
@@ -327,6 +327,7 @@ public class SteamServer : IMultiplayerServer {
         }
     }
 
+#if USE_DEV_NET
     private void IdentifyClients()
     {
         const int maxMessages = 20;
@@ -407,7 +408,6 @@ public class SteamServer : IMultiplayerServer {
         }
     }
 
-#if USE_DEV_NET
     private void SendCommand(
         IMultiplayerCommand command,
         MultiplayerCommandOptions options,
