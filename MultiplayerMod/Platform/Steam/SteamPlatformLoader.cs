@@ -24,10 +24,11 @@ public class SteamPlatformLoader : IModComponentLoader {
 #if USE_DEV_NET
         GNS.Sockets.Library.Initialize();
         Container.Register<IMultiplayerServer, GNSServer>();
+        Container.Register<IMultiplayerClient, GNSClient>();
 #else
         Container.Register<IMultiplayerServer, SteamServer>();
-#endif
         Container.Register<IMultiplayerClient, SteamClient>();
+#endif
         Container.Register<SteamLobby>();
         UnityObject.CreateStaticWithComponent<LobbyJoinRequestComponent>();
     }
