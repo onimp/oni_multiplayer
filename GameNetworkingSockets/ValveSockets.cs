@@ -22,6 +22,7 @@
  */
 
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -787,7 +788,7 @@ namespace GNS.Sockets {
         public static void LoadNativeDLL()
         {
             string absolutePath = @"GameNetworkingSocketsNative.dll";
-            string searchPath = @"F:\VisualStudioProjects\ONI\GameNetworkingSockets\install\bin\";
+            string searchPath = Path.Combine(Util.RootFolder(), "GNS");
             IntPtr result = SetDllDirectory(searchPath);
             if (result == IntPtr.Zero)
             {

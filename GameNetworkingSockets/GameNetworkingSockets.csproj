@@ -40,6 +40,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="..\MultiplayerMod\lib\exposed\Assembly-CSharp-firstpass.dll" Private="false" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ValveSockets.cs" />
