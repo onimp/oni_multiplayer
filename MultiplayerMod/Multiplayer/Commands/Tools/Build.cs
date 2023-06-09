@@ -2,8 +2,8 @@
 using System.Runtime.CompilerServices;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game.Context;
-using MultiplayerMod.Game.Tools.Context;
-using MultiplayerMod.Game.Tools.Events;
+using MultiplayerMod.Game.UI.Tools.Context;
+using MultiplayerMod.Game.UI.Tools.Events;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;

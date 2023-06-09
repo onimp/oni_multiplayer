@@ -17,6 +17,33 @@ open source contributions:
 
 ## Getting started
 
+1. Install `Visual Studio 2022`
+2. Clone the Oni Multiplayer repository
+3. If you do not have a custom `steam library` location for `Oxygen Not Included` skip to `step 4`
+   - Copy/paste the file `Directory.Build.props` inside the `root` folder, and rename the copy to `Directory.Build.props.user`
+   - Erase all contents, and fill it in with the following (example for `D` drive)
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+    <PropertyGroup>
+        <SteamLibraryPath>D:\SteamLibrary</SteamLibraryPath>
+    </PropertyGroup>
+</Project>
+```
+
+4.  Open the `OniMod.sln` file inside of the `root` folder
+5. If you do not have the multiplayer mod subscribe skip to step 6. If you do have it installed you will have 2 entries in game, so lets distinguish them: to the right of solution explorer, go to `MultiplayerMod -> mod.yaml`
+   - Add `DEV` to the text value end of the `Title` property
+6. Build solution (keys ctrl+shift+B) or `Top bar build -> build solution`
+   - If you get an error about `Unable to find package` inside of `Microsoft Visual Studio Offline Packages`.
+     - Right click the `solution` in the top right
+     - Click `Manage Nuget`
+     - Click the `gear` at the right top
+     - Add name: `nuget.org`, url: `https://api.nuget.org/v3/index.json`
+7. Start the game trough steam
+8. If you did `step 5`, then go to mods and make sure you got the `DEV` version `enabled` and the `subscribed` one `disabled`
+9. Edit your code, and repeat `step 6`, `step 7` and test ingame
+
 ### Issues
 
 #### Create a new issue

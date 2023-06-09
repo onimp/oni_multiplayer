@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.Game.Tools.Events;
+using MultiplayerMod.Game.UI.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 

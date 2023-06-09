@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Game.Context;
-using MultiplayerMod.Game.Tools.Context;
-using MultiplayerMod.Game.Tools.Events;
+using MultiplayerMod.Game.UI.Tools.Context;
+using MultiplayerMod.Game.UI.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 

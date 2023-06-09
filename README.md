@@ -89,3 +89,7 @@ https://github.com/users/zuev93/projects/1
 
 # Contacts
 If you have any suggestions or questions feel free to create discussion or issue in GitHub or join our discord server https://discord.gg/3TQ97w8Qwq
+
+# How to develop
+
+For a guide and more info, refer to the [Contributing.md](docs/CONTRIBUTING.md)

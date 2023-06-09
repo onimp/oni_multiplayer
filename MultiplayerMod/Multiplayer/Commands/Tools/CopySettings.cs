@@ -2,7 +2,7 @@
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.Effects;
-using MultiplayerMod.Game.Tools.Events;
+using MultiplayerMod.Game.UI.Tools.Events;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
