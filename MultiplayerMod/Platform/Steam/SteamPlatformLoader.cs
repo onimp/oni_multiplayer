@@ -28,9 +28,9 @@ public class SteamPlatformLoader : IModComponentLoader {
 #else
         Container.Register<IMultiplayerServer, SteamServer>();
         Container.Register<IMultiplayerClient, SteamClient>();
-#endif
         Container.Register<SteamLobby>();
         UnityObject.CreateStaticWithComponent<LobbyJoinRequestComponent>();
+#endif
     }
 
 }
