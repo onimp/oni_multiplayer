@@ -14,11 +14,8 @@ using HarmonyLib;
 namespace MultiplayerMod.Platform.Steam.Network;
 
 [HarmonyPatch(typeof(Global), "OnApplicationQuit")]
-public class CleanupPatch
-{
-    public static void Postfix()
-    {
-        System.Console.WriteLine("GNS deinitialize!!!!");
+public class CleanupPatch {
+    public static void Postfix() {
         Library.Deinitialize();
     }
 };
@@ -39,12 +36,10 @@ public class GNSServer : BaseServer {
     private uint unidentifiedPollGroup;
     private uint devListenSocket;
 
-    public void StatusCallback(ref StatusInfo info)
-    {
+    public void StatusCallback(ref StatusInfo info) {
         if (devServer == null)
             return;
-        switch (info.connectionInfo.state)
-        {
+        switch (info.connectionInfo.state) {
             case ConnectionState.None:
                 break;
             case ConnectionState.Connecting:
@@ -87,22 +82,18 @@ public class GNSServer : BaseServer {
         SendCommand(command, options, recipients.Select(it => it.Value));
     }
 
-    private void IdentifyClients()
-    {
+    private void IdentifyClients() {
         const int maxMessages = 20;
         NetworkingMessage[] netMessages = new NetworkingMessage[maxMessages];
         int count = devServer.ReceiveMessagesOnPollGroup(unidentifiedPollGroup, netMessages, maxMessages);
-        if (count == 0)
-            return;
-        for (int i = 0; i < count; ++i)
-        {
+
+        for (int i = 0; i < count; ++i) {
             ref NetworkingMessage netMessage = ref netMessages[i];
             log.Info("IdentifyClients(): Message received from - ID: " + netMessage.connection 
             + ", Channel ID: " + netMessage.channel 
             + ", Data length: " + netMessage.length);
             var connection = netMessage.connection;
-            try
-            {
+            try {
                 byte[] buffer = new byte[64];
                 netMessage.CopyTo(buffer);
                int pos = Array.IndexOf(buffer, (byte)0);
@@ -117,53 +108,42 @@ public class GNSServer : BaseServer {
                 players[connectedPlayer] = connection;
                 OnPlayerConnected(new PlayerConnectedEventArgs(connectedPlayer));
             }
-            catch(Exception)
-            {
+            catch(Exception) {
                 devServer.CloseConnection(connection);
                 log.Info($"Failed to identify client - disconnecting {connection}");
             }
         }
     }
 
-    private void ReceiveDevMessages()
-    {
+    private void ReceiveDevMessages() {
         const int maxMessages = 20;
 
         NetworkingMessage[] netMessages = new NetworkingMessage[maxMessages];
 
         int netMessagesCount = devServer.ReceiveMessagesOnPollGroup(devPollGroup, netMessages, maxMessages);
-        if (netMessagesCount > 0)
+        for (int i = 0; i < netMessagesCount; i++)
         {
-            for (int i = 0; i < netMessagesCount; i++)
-            {
-                ref NetworkingMessage netMessage = ref netMessages[i];
+            ref NetworkingMessage netMessage = ref netMessages[i];
 
-                log.Info("Message received from - ID: " + netMessage.connection + ", Channel ID: " + netMessage.channel + ", Data length: " + netMessage.length);
-                var message = messageProcessor.Process(
-                    netMessage.connection,
-                    new NetworkMessageHandle(netMessage.data, (uint)netMessage.length)
-                );
+            log.Info("Message received from - ID: " + netMessage.connection + ", Channel ID: " + netMessage.channel + ", Data length: " + netMessage.length);
+            var message = messageProcessor.Process(
+                netMessage.connection,
+                new NetworkMessageHandle(netMessage.data, (uint)netMessage.length)
+            );
+            if (message != null) {
                 log.Info ($"Received message {message}");
-                if (message != null)
-                {
-                    var connection = netMessage.connection;
-                    var temp = players.Where(it => it.Value.Equals(connection));
-                    log.Info($"temp = {temp}");
-                    IPlayer player = temp.Select(it => it.Key).First();
-                    log.Info($"player = {player}");
-                    log.Info($"executeOnServer = {message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)}");
-                    if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer))
-                    {
-                        OnCommandReceived(new CommandReceivedEventArgs(player, message.Command));
-                    } else
-                    {
-                        var connections = players.Where(it => !it.Key.Equals(player)).Select(it => it.Value);
-                        log.Info($"connections = {connections.Count()}: {connections}");
-                        SendCommand(message.Command, message.Options, connections);
-                    }
+
+                var connection = netMessage.connection;
+                IPlayer player = players.Where(it => it.Value.Equals(connection)).Select(it => it.Key).First();
+
+                if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
+                    OnCommandReceived(new CommandReceivedEventArgs(player, message.Command));
+                } else {
+                    var connections = players.Where(it => !it.Key.Equals(player)).Select(it => it.Value);
+                    SendCommand(message.Command, message.Options, connections);
                 }
-                netMessage.Destroy();
             }
+            netMessage.Destroy();
         }
     }
 
@@ -187,8 +167,7 @@ public class GNSServer : BaseServer {
             log.Error($"Failed to send message, result: {result}");
     }
 
-    protected override void doStart()
-    {
+    protected override void doStart() {
         log.Debug("Starting...");
         SetState(MultiplayerServerState.Preparing);
         SetState(MultiplayerServerState.Starting);
@@ -218,11 +197,11 @@ public class GNSServer : BaseServer {
                 configuration, timeoutInitial, timeoutConnect});
         SetState(MultiplayerServerState.Started);
     }
-    protected override void doReset()
-    {
+
+    protected override void doReset() {
         devServer.DestroyPollGroup(devPollGroup);
         devServer.DestroyPollGroup(unidentifiedPollGroup);
-        log.Info("Destroying poll groups");
+        log.Info("Destroyed poll groups");
     }
 
 }
