@@ -44,6 +44,22 @@ open source contributions:
 8. If you did `step 5`, then go to mods and make sure you got the `DEV` version `enabled` and the `subscribed` one `disabled`
 9. Edit your code, and repeat `step 6`, `step 7` and test ingame
 
+## Using the dev server
+
+In case you don't own two copies of the game and want to develop on a single machine you can use the dev server that uses Valve's [GameNetworkingSockets](https://github.com/ValveSoftware/GameNetworkingSockets). To enable that however you would have to build GNS yourself and put the required binaries to `GameNetworkingSockets\GNS`. The required files are:
+* `GameNetworkingSockets.dll` (rename that to `GameNetworkingSocketsNative.dll`)
+* `libcrypto-3-x64.dll`
+* `libprotobufd.dll` for debug or `libprotobuf.dll` for release builds
+
+After putting the files to `GameNetworkingSockets\GNS` the last step is to add
+```xml
+<PropertyGroup>
+    <DefineConstants>USE_DEV_NET</DefineConstants>
+</PropertyGroup>
+```
+to `Directory.Build.props.user` to enable the dev server in the build.
+
+*Hint:* You might want to use a tool like sandboxie-plus to start steam in offline mode and ONI twice on the same computer.
 ### Issues
 
 #### Create a new issue

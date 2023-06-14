@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <Target Name="CopyNativeFiles" AfterTargets="Build" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch(
+         $(DefineConstants), '^(.*;)*USE_DEV_NET(;.*)*$'))">
+    <Message Text="Copy GNS files to ONI documents folder directory" Importance="high"/>
+    <ItemGroup>
+      <RuntimeFiles Include="$(ProjectDir)GNS\*.dll"/>
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeFiles)" DestinationFolder="$(USERPROFILE)\Documents\Klei\OxygenNotIncluded\GNS"/>
+  </Target>
+</Project>

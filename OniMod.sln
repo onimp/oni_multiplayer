@@ -5,9 +5,9 @@ VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiplayerMod", "MultiplayerMod\MultiplayerMod.csproj", "{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-firstpass", "Assembly-CSharp-firstpass\Assembly-CSharp-firstpass.csproj", "{CBFB9C4F-74EA-4D63-ADA1-80A1C21B41E3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-firstpass", "Assembly-CSharp-firstpass\Assembly-CSharp-firstpass.csproj", "{01E7D059-7C21-4F39-8AF2-91131A237F98}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp\Assembly-CSharp.csproj", "{CBFB9C4F-74EA-4D63-ADA1-80A1C21B41E3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp\Assembly-CSharp.csproj", "{EDBF9AB3-8398-4C56-8CFF-C7C46B41557C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E643528F-7D08-43AF-8D51-60C6AB5D49EF}"
 	ProjectSection(SolutionItems) = preProject
@@ -27,24 +27,32 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{3D14A142-7
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyExposer.MSBuild.Task", "AssemblyExposer.MSBuild.Task\AssemblyExposer.MSBuild.Task.csproj", "{80DD29DB-6127-4F8B-845E-A04420FE22AB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameNetworkingSockets", "GameNetworkingSockets\GameNetworkingSockets.csproj", "{CB54EA0B-6976-472F-B06D-70702FA91475}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Release|Any CPU = Release|Any CPU
 		Debug|Any CPU = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{CBFB9C4F-74EA-4D63-ADA1-80A1C21B41E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CBFB9C4F-74EA-4D63-ADA1-80A1C21B41E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8CF3CE61-EFA2-422A-BDB9-CD8BC5376CCB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01E7D059-7C21-4F39-8AF2-91131A237F98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01E7D059-7C21-4F39-8AF2-91131A237F98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDBF9AB3-8398-4C56-8CFF-C7C46B41557C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDBF9AB3-8398-4C56-8CFF-C7C46B41557C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB54EA0B-6976-472F-B06D-70702FA91475}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB54EA0B-6976-472F-B06D-70702FA91475}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB54EA0B-6976-472F-B06D-70702FA91475}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB54EA0B-6976-472F-B06D-70702FA91475}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

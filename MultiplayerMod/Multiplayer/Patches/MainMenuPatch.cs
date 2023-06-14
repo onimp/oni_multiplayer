@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Patches;

@@ -3,7 +3,6 @@
         <DebugType>full</DebugType>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants />
     </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
@@ -12,6 +11,9 @@
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\VM\Player.log">
             <Link>_logs/VM Player.log</Link>
         </Content>
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\GameNetworkingSockets\GameNetworkingSockets.csproj" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Assembly-CSharp" HintPath="lib\exposed\Assembly-CSharp.dll" Private="false" />

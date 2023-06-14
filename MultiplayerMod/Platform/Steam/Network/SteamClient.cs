@@ -13,19 +13,16 @@ using Steamworks;
 using UnityEngine;
 using static Steamworks.Constants;
 using static Steamworks.ESteamNetConnectionEnd;
+using GNS.Sockets;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
-public class SteamClient : IMultiplayerClient {
-
-    public IPlayer Player => playerContainer.Value;
-    public MultiplayerClientState State { get; private set; } = MultiplayerClientState.Disconnected;
-    public event EventHandler<ClientStateChangedEventArgs> StateChanged;
-    public event EventHandler<CommandReceivedEventArgs> CommandReceived;
+public class SteamClient : BaseClient {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
     private readonly SteamLobby lobby = Container.Get<SteamLobby>();
     private readonly Lazy<IPlayer> playerContainer = new(() => new SteamPlayer(SteamUser.GetSteamID()));
+    protected override Lazy<IPlayer> getPlayer() => playerContainer;
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
@@ -33,9 +30,7 @@ public class SteamClient : IMultiplayerClient {
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
 
-    private GameObject gameObject;
-
-    public void Connect(IMultiplayerEndpoint endpoint) {
+    public override void Connect(IMultiplayerEndpoint endpoint) {
         if (!SteamManager.Initialized)
             return;
 
@@ -56,25 +51,20 @@ public class SteamClient : IMultiplayerClient {
         lobby.Join(steamServerEndpoint.LobbyID);
     }
 
-    public void Disconnect() {
-        if (State <= MultiplayerClientState.Disconnected)
-            throw new NetworkPlatformException("Client not connected");
-
-        UnityObject.Destroy(gameObject);
+    protected override void doDisconnect() {
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
         SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
     }
 
-    public void Tick() {
+    public override void Tick() {
         if (State != MultiplayerClientState.Connected)
             return;
-
         SteamNetworkingSockets.RunCallbacks();
         ReceiveCommands();
     }
 
-    public void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None) {
+    public override void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None) {
         if (State != MultiplayerClientState.Connected)
             throw new NetworkPlatformException("Client not connected");
 
@@ -91,11 +81,6 @@ public class SteamClient : IMultiplayerClient {
                     log.Error($"Failed to send {command}: {result}");
             }
         );
-    }
-
-    private void SetState(MultiplayerClientState status) {
-        State = status;
-        StateChanged?.Invoke(this, new ClientStateChangedEventArgs(status));
     }
 
     private void OnLobbyJoin() {
@@ -137,9 +122,8 @@ public class SteamClient : IMultiplayerClient {
                 steamMessage.GetNetworkMessageHandle()
             );
             if (message != null)
-                CommandReceived?.Invoke(this, new CommandReceivedEventArgs(null, message.Command));
+                OnCommandReceived(new CommandReceivedEventArgs(null, message.Command));
             SteamNetworkingMessage_t.Release(messages[i]);
         }
     }
-
 }
