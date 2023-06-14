@@ -14,14 +14,20 @@ Working functionality:
   - Join/Load/Create MP game
 - Steam overlay support
   - Ability to join/invite friends
-- Synced tools (bottom toolbar)
-  - dig/build/mop/harvest/etc and other from bottom toolbar
-- Synced game settings
-  - warp settings
-  - pause
-- Synced colony settings
-  - Consumables screen
-  - Research tree
+- Synced UI elements
+    - Colony settings
+      - Skills (and hats) screen 
+      - Priorities screen
+      - Schedules screen   
+      - Consumables screen
+      - Research tree
+    - Game settings
+        - warp settings
+        - pause
+    - Building dialogs
+        - User menu buttons (such as `Enable` building, `Disable autodisenfect`, `Cancel building`, `Dig`, etc)
+    - Tools (bottom toolbar)
+        - dig/build/mop/harvest/etc and other from bottom toolbar
 - Additional in-game UI
   - Active players info
       - Cursors of all players
