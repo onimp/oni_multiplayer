@@ -19,6 +19,7 @@ public class PermitConsumableToMinion : IMultiplayerCommand {
 
     public void Execute() {
         var minionIdentity = MinionIdentityUtils.GetLiveMinion(properName);
+        if (minionIdentity == null) return;
         var consumableConsumer = minionIdentity.GetComponent<ConsumableConsumer>();
         consumableConsumer.SetPermitted(consumableId, isAllowed);
 

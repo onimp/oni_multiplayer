@@ -16,6 +16,8 @@ public class SetHat : IMultiplayerCommand {
 
     public void Execute() {
         var minion = MinionIdentityUtils.GetLiveMinion(properName);
+        if (minion == null) return;
+
         var resume = minion.GetComponent<MinionResume>();
         if (resume == null)
             return;

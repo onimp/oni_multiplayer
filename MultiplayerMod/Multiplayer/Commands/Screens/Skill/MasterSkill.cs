@@ -16,6 +16,7 @@ public class MasterSkill : IMultiplayerCommand {
 
     public void Execute() {
         var minionIdentity = MinionIdentityUtils.GetLiveMinion(properName);
+        if (minionIdentity == null) return;
 
         var component = minionIdentity.GetComponent<MinionResume>();
         if (DebugHandler.InstantBuildMode && component.AvailableSkillpoints < 1)

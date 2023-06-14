@@ -23,6 +23,7 @@ public class SetPersonalPriority : IMultiplayerCommand {
 
     public void Execute() {
         var identity = MinionIdentityUtils.GetLiveMinion(properName);
+        if (identity == null) return;
         identity.GetComponent<ChoreConsumer>().SetPersonalPriority(ChoreGroup, value);
         RefreshTable();
     }
