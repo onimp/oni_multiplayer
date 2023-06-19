@@ -56,8 +56,8 @@ public class GameEventBindings {
     }
 
     private void BindScreens() {
-        ResearchScreenEvents.Canceled += techId => client.Send(new CancelResearch(techId));
-        ResearchScreenEvents.Selected += techId => client.Send(new SelectResearch(techId));
+        ResearchScreenEvents.Cancel += techId => client.Send(new CancelResearch(techId));
+        ResearchScreenEvents.Select += techId => client.Send(new SelectResearch(techId));
 
         ConsumableScreenEvents.PermitByDefault +=
             permittedList => client.Send(new PermitConsumableByDefault(permittedList));
