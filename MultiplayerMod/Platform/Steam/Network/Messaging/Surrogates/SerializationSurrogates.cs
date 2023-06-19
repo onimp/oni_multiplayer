@@ -13,6 +13,8 @@ public static class SerializationSurrogates {
         Selector.Add(new PrioritySettingSurrogate());
         Selector.Add(new TagSurrogate());
         Selector.Add(new PathNodeSurrogate());
+        Selector.Add(new CarePackageInstanceDataSurrogate());
+        Selector.Add(new MinionStartingStatsSurrogate());
     }
 
     private static void Add<T>(this SurrogateSelector selector, T surrogate) where T : ISerializationSurrogate, ISurrogateType {

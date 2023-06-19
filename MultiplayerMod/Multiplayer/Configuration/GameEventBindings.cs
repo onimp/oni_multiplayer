@@ -4,6 +4,7 @@ using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
+using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 using MultiplayerMod.Multiplayer.Commands.Screens.Research;
 using MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
@@ -74,6 +75,11 @@ public class GameEventBindings {
         SkillScreenEvents.MasterSkill += (properName, skillId) => client.Send(new MasterSkill(properName, skillId));
 
         UserMenuButtonEvents.Click += (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
+
+        ImmigrantScreenEvents.Initialize +=
+            containers => client.Send(new InitializeImmigration(containers));
+        ImmigrantScreenEvents.Proceed += deliverable => client.Send(new ProceedImmigration(deliverable));
+        ImmigrantScreenEvents.Reject += () => client.Send(new RejectImmigration());
     }
 
     private void BindTools() {
