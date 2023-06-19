@@ -28,7 +28,7 @@ public class MultiplayerCoordinator {
         ConfigureServer();
         ConfigureClient();
         WorldGenSpawnerEvents.Spawned += OnWorldSpawned;
-        PauseScreenEvents.OnDestroy += OnWorldDestroy;
+        PauseScreenEvents.QuitGame += OnWorldDestroy;
     }
 
     #region Server configuration

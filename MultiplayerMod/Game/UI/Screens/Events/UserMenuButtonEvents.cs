@@ -8,7 +8,7 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class UserMenuButtonEvents {
 
-    public static event Action<GameObject, System.Action> UserMenuButtonClicked;
+    public static event Action<GameObject, System.Action> Click;
 
     private static readonly Type[] skipButtonTypes = {
         // Camera specific actions
@@ -32,7 +32,7 @@ public static class UserMenuButtonEvents {
             button.onClick = () => {
                 original?.Invoke();
                 PatchControl.RunIfEnabled(
-                    () => UserMenuButtonClicked?.Invoke(
+                    () => Click?.Invoke(
                         go,
                         original
                     )

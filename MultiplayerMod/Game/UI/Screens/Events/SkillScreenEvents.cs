@@ -6,8 +6,8 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class SkillScreenEvents {
 
-    public static event Action<string, string> HatSet;
-    public static event Action<string, string> SkillMastered;
+    public static event Action<string, string> SetHat;
+    public static event Action<string, string> MasterSkill;
 
     [HarmonyPatch(typeof(SkillsScreen))]
     // ReSharper disable once UnusedType.Local
@@ -17,7 +17,7 @@ public static class SkillScreenEvents {
         // ReSharper disable once UnusedMember.Local
         private static void OnHatDropEntryClick(SkillsScreen __instance, IListableOption skill) =>
             PatchControl.RunIfEnabled(
-                () => HatSet?.Invoke(
+                () => SetHat?.Invoke(
                     __instance.currentlySelectedMinion.GetProperName(),
                     (skill as SkillListable)?.skillHat
                 )
@@ -32,7 +32,7 @@ public static class SkillScreenEvents {
         // ReSharper disable once UnusedMember.Local
         private static void OnHatDropEntryClick(SkillMinionWidget __instance, IListableOption skill) =>
             PatchControl.RunIfEnabled(
-                () => HatSet?.Invoke(
+                () => SetHat?.Invoke(
                     __instance.assignableIdentity.GetProperName(),
                     (skill as SkillListable)?.skillHat
                 )
@@ -47,7 +47,7 @@ public static class SkillScreenEvents {
         // ReSharper disable once UnusedMember.Local
         private static void OnPointerClick(SkillWidget __instance) =>
             PatchControl.RunIfEnabled(
-                () => SkillMastered?.Invoke(
+                () => MasterSkill?.Invoke(
                     __instance.skillsScreen.CurrentlySelectedMinion.GetProperName(),
                     __instance.skillID
                 )
