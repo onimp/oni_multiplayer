@@ -6,8 +6,8 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class PrioritiesScreenEvents {
 
-    public static event Action<string, string, int> PersonalPrioritySet;
-    public static event Action<bool> PersonalPrioritiesAdvancedSet;
+    public static event Action<string, string, int> Set;
+    public static event Action<bool> AdvancedSet;
 
     [HarmonyPatch(typeof(ChoreConsumer))]
     // ReSharper disable once UnusedType.Global
@@ -16,7 +16,7 @@ public static class PrioritiesScreenEvents {
         [HarmonyPatch(nameof(ChoreConsumer.SetPersonalPriority))]
         // ReSharper disable once UnusedMember.Local
         private static void SetPersonalPriority(ChoreConsumer __instance, ChoreGroup group, int value) =>
-            PatchControl.RunIfEnabled(() => PersonalPrioritySet?.Invoke(__instance.GetProperName(), group.Id, value));
+            PatchControl.RunIfEnabled(() => Set?.Invoke(__instance.GetProperName(), group.Id, value));
     }
 
     [HarmonyPatch(typeof(Immigration))]
@@ -26,7 +26,7 @@ public static class PrioritiesScreenEvents {
         [HarmonyPatch(nameof(Immigration.SetPersonalPriority))]
         // ReSharper disable once UnusedMember.Local
         private static void SetPersonalPriority(ChoreGroup group, int value) =>
-            PatchControl.RunIfEnabled(() => PersonalPrioritySet?.Invoke(null, group.Id, value));
+            PatchControl.RunIfEnabled(() => Set?.Invoke(null, group.Id, value));
 
     }
 
@@ -38,7 +38,7 @@ public static class PrioritiesScreenEvents {
         // ReSharper disable once UnusedMember.Local
         private static void OnAdvancedModeToggleClicked() =>
             PatchControl.RunIfEnabled(
-                () => PersonalPrioritiesAdvancedSet?.Invoke(global::Game.Instance.advancedPersonalPriorities)
+                () => AdvancedSet?.Invoke(global::Game.Instance.advancedPersonalPriorities)
             );
 
     }

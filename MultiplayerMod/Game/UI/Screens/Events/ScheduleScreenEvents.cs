@@ -6,7 +6,7 @@ using MultiplayerMod.Core.Patch;
 namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class ScheduleScreenEvents {
-    public static event Action<List<Schedule>> SchedulesChanged;
+    public static event Action<List<Schedule>> Changed;
 
     [HarmonyPatch(typeof(ScheduleScreen))]
     private static class ScheduleScreenPatch {
@@ -15,7 +15,7 @@ public static class ScheduleScreenEvents {
         [HarmonyPatch(nameof(ScheduleScreen.OnAddScheduleClick))]
         // ReSharper disable once UnusedMember.Local
         private static void OnAddScheduleClick() =>
-            PatchControl.RunIfEnabled(() => SchedulesChanged?.Invoke(ScheduleManager.Instance.schedules));
+            PatchControl.RunIfEnabled(() => Changed?.Invoke(ScheduleManager.Instance.schedules));
 
     }
 
@@ -25,25 +25,25 @@ public static class ScheduleScreenEvents {
         [HarmonyPatch(nameof(ScheduleScreenEntry.OnDeleteClicked))]
         // ReSharper disable once UnusedMember.Local
         private static void OnDeleteClicked() =>
-            PatchControl.RunIfEnabled(() => SchedulesChanged?.Invoke(ScheduleManager.Instance.schedules));
+            PatchControl.RunIfEnabled(() => Changed?.Invoke(ScheduleManager.Instance.schedules));
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ScheduleScreenEntry.OnScheduleChanged))]
         // ReSharper disable once UnusedMember.Local
         private static void OnScheduleChanged() =>
-            PatchControl.RunIfEnabled(() => SchedulesChanged?.Invoke(ScheduleManager.Instance.schedules));
+            PatchControl.RunIfEnabled(() => Changed?.Invoke(ScheduleManager.Instance.schedules));
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ScheduleScreenEntry.OnNameChanged))]
         // ReSharper disable once UnusedMember.Local
         private static void OnNameChanged() =>
-            PatchControl.RunIfEnabled(() => SchedulesChanged?.Invoke(ScheduleManager.Instance.schedules));
+            PatchControl.RunIfEnabled(() => Changed?.Invoke(ScheduleManager.Instance.schedules));
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ScheduleScreenEntry.OnAlarmClicked))]
         // ReSharper disable once UnusedMember.Local
         private static void OnAlarmClicked() =>
-            PatchControl.RunIfEnabled(() => SchedulesChanged?.Invoke(ScheduleManager.Instance.schedules));
+            PatchControl.RunIfEnabled(() => Changed?.Invoke(ScheduleManager.Instance.schedules));
 
     }
 

@@ -56,26 +56,24 @@ public class GameEventBindings {
     }
 
     private void BindScreens() {
-        ResearchScreenEvents.ResearchCanceled += techId => client.Send(new CancelResearch(techId));
-        ResearchScreenEvents.ResearchSelected += techId => client.Send(new SelectResearch(techId));
+        ResearchScreenEvents.Canceled += techId => client.Send(new CancelResearch(techId));
+        ResearchScreenEvents.Selected += techId => client.Send(new SelectResearch(techId));
 
-        ConsumableScreenEvents.PermittedByDefault +=
+        ConsumableScreenEvents.PermitByDefault +=
             permittedList => client.Send(new PermitConsumableByDefault(permittedList));
-        ConsumableScreenEvents.PermittedToMinion += (properName, consumableId, isAllowed) =>
+        ConsumableScreenEvents.PermitToMinion += (properName, consumableId, isAllowed) =>
             client.Send(new PermitConsumableToMinion(properName, consumableId, isAllowed));
 
-        ScheduleScreenEvents.SchedulesChanged += schedules => client.Send(new ChangeSchedulesList(schedules));
+        ScheduleScreenEvents.Changed += schedules => client.Send(new ChangeSchedulesList(schedules));
 
-        PrioritiesScreenEvents.PersonalPrioritySet += (properName, choreGroup, value) =>
+        PrioritiesScreenEvents.Set += (properName, choreGroup, value) =>
             client.Send(new SetPersonalPriority(properName, choreGroup, value));
-        PrioritiesScreenEvents.PersonalPrioritiesAdvancedSet += (value) =>
-            client.Send(new SetPersonalPrioritiesAdvanced(value));
+        PrioritiesScreenEvents.AdvancedSet += value => client.Send(new SetPersonalPrioritiesAdvanced(value));
 
-        SkillScreenEvents.HatSet += (properName, hat) => client.Send(new SetHat(properName, hat));
-        SkillScreenEvents.SkillMastered += (properName, skillId) => client.Send(new MasterSkill(properName, skillId));
+        SkillScreenEvents.SetHat += (properName, hat) => client.Send(new SetHat(properName, hat));
+        SkillScreenEvents.MasterSkill += (properName, skillId) => client.Send(new MasterSkill(properName, skillId));
 
-        UserMenuButtonEvents.UserMenuButtonClicked +=
-            (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
+        UserMenuButtonEvents.Click += (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
     }
 
     private void BindTools() {

@@ -9,8 +9,8 @@ using UnityEngine;
 namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class ConsumableScreenEvents {
-    public static event Action<string, string, bool> PermittedToMinion;
-    public static event Action<List<Tag>> PermittedByDefault;
+    public static event Action<string, string, bool> PermitToMinion;
+    public static event Action<List<Tag>> PermitByDefault;
 
     [HarmonyPatch(typeof(ConsumableConsumer))]
     private static class ConsumablesEvents {
@@ -20,7 +20,7 @@ public static class ConsumableScreenEvents {
         // ReSharper disable once UnusedMember.Local
         private static void SetPermittedPatch(ConsumableConsumer __instance, string consumable_id, bool is_allowed) =>
             PatchControl.RunIfEnabled(
-                () => PermittedToMinion?.Invoke(__instance.GetProperName(), consumable_id, is_allowed)
+                () => PermitToMinion?.Invoke(__instance.GetProperName(), consumable_id, is_allowed)
             );
 
     }
@@ -39,7 +39,7 @@ public static class ConsumableScreenEvents {
                     );
                     if (TableRow.RowType.Default != widgetRow?.rowType) return;
 
-                    PermittedByDefault?.Invoke(ConsumerManager.instance.DefaultForbiddenTagsList);
+                    PermitByDefault?.Invoke(ConsumerManager.instance.DefaultForbiddenTagsList);
                 }
             );
     }
