@@ -6,14 +6,14 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using UnityEngine;
 
-namespace MultiplayerMod.Game.UI.Screens;
+namespace MultiplayerMod.Game.UI.Screens.Events;
 
-public static class ConsumableEvents {
+public static class ConsumableScreenEvents {
     public static event Action<string, string, bool> PermittedToMinion;
     public static event Action<List<Tag>> PermittedByDefault;
 
     [HarmonyPatch(typeof(ConsumableConsumer))]
-    public static class ConsumablesEvents {
+    private static class ConsumablesEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ConsumableConsumer.SetPermitted))]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
@@ -26,7 +26,7 @@ public static class ConsumableEvents {
     }
 
     [HarmonyPatch(typeof(ConsumablesTableScreen))]
-    public static class ConsumablesTableScreenEvents {
+    private static class ConsumablesTableScreenEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ConsumablesTableScreen.set_value_consumable_info))]
         [SuppressMessage("ReSharper", "InconsistentNaming")]

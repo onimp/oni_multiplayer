@@ -2,7 +2,7 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.UI.Screens;
+namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class PrioritiesScreenEvents {
 
@@ -11,7 +11,7 @@ public static class PrioritiesScreenEvents {
 
     [HarmonyPatch(typeof(ChoreConsumer))]
     // ReSharper disable once UnusedType.Global
-    public static class ChoreConsumerEvents {
+    private static class ChoreConsumerEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ChoreConsumer.SetPersonalPriority))]
         // ReSharper disable once UnusedMember.Local
@@ -21,7 +21,7 @@ public static class PrioritiesScreenEvents {
 
     [HarmonyPatch(typeof(Immigration))]
     // ReSharper disable once UnusedType.Global
-    public static class ImmigrationEvents {
+    private static class ImmigrationEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Immigration.SetPersonalPriority))]
         // ReSharper disable once UnusedMember.Local
@@ -32,7 +32,7 @@ public static class PrioritiesScreenEvents {
 
     [HarmonyPatch(typeof(JobsTableScreen))]
     // ReSharper disable once UnusedType.Global
-    public static class JobsTableScreenEvents {
+    private static class JobsTableScreenEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(JobsTableScreen.OnAdvancedModeToggleClicked))]
         // ReSharper disable once UnusedMember.Local

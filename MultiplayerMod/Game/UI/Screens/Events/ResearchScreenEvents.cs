@@ -2,10 +2,10 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.UI.Screens;
+namespace MultiplayerMod.Game.UI.Screens.Events;
 
 [HarmonyPatch(typeof(ResearchEntry))]
-public static class ResearchEvents {
+public static class ResearchScreenEvents {
 
     public static event Action<string> ResearchCanceled;
     public static event Action<string> ResearchSelected;

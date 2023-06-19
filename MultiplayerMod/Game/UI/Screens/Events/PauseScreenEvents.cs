@@ -1,6 +1,6 @@
 ﻿using HarmonyLib;
 
-namespace MultiplayerMod.Game.UI.Screens;
+namespace MultiplayerMod.Game.UI.Screens.Events;
 
 [HarmonyPatch(typeof(PauseScreen))]
 public static class PauseScreenEvents {
