@@ -2,7 +2,7 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.UI.Screens;
+namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class SkillScreenEvents {
 

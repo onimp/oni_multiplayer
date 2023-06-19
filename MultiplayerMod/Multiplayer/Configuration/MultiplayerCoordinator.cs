@@ -2,7 +2,7 @@
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Unity;
-using MultiplayerMod.Game.UI.Screens;
+using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Components;

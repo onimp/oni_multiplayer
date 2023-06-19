@@ -1,7 +1,7 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.UI;
-using MultiplayerMod.Game.UI.Screens;
+using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
@@ -35,8 +35,7 @@ public class GameEventBindings {
 
         BindSpeedControl();
         BindMouse();
-        BingColonyControls();
-        BindUserMenu();
+        BindScreens();
         BindTools();
 
         bound = true;
@@ -56,13 +55,13 @@ public class GameEventBindings {
         );
     }
 
-    private void BingColonyControls() {
-        ResearchEvents.ResearchCanceled += techId => client.Send(new CancelResearch(techId));
-        ResearchEvents.ResearchSelected += techId => client.Send(new SelectResearch(techId));
+    private void BindScreens() {
+        ResearchScreenEvents.ResearchCanceled += techId => client.Send(new CancelResearch(techId));
+        ResearchScreenEvents.ResearchSelected += techId => client.Send(new SelectResearch(techId));
 
-        ConsumableEvents.PermittedByDefault +=
+        ConsumableScreenEvents.PermittedByDefault +=
             permittedList => client.Send(new PermitConsumableByDefault(permittedList));
-        ConsumableEvents.PermittedToMinion += (properName, consumableId, isAllowed) =>
+        ConsumableScreenEvents.PermittedToMinion += (properName, consumableId, isAllowed) =>
             client.Send(new PermitConsumableToMinion(properName, consumableId, isAllowed));
 
         ScheduleScreenEvents.SchedulesChanged += schedules => client.Send(new ChangeSchedulesList(schedules));
@@ -74,9 +73,7 @@ public class GameEventBindings {
 
         SkillScreenEvents.HatSet += (properName, hat) => client.Send(new SetHat(properName, hat));
         SkillScreenEvents.SkillMastered += (properName, skillId) => client.Send(new MasterSkill(properName, skillId));
-    }
 
-    private void BindUserMenu() {
         UserMenuButtonEvents.UserMenuButtonClicked +=
             (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
     }
