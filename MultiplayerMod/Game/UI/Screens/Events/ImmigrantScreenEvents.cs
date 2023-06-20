@@ -23,7 +23,7 @@ public static class ImmigrantScreenEvents {
             async () => {
                 if (ImmigrantScreenPatch.Deliverables != null) return;
 
-                var readyDeliverables = await ImmigrantScreenPatch.WaitForAllDeliverablesReady(__instance);
+                var readyDeliverables = await ScreensUtils.WaitForAllDeliverablesReady(__instance);
                 if (readyDeliverables != null) {
                     Initialize?.Invoke(readyDeliverables);
                     ImmigrantScreenPatch.Deliverables = readyDeliverables;

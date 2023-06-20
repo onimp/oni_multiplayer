@@ -12,9 +12,6 @@ namespace MultiplayerMod.Game.UI.Screens;
 [HarmonyPatch(typeof(ImmigrantScreen))]
 public static class ImmigrantScreenPatch {
 
-    private const int delayMS = 1;
-    private const int maxWaitMS = 50;
-
     public static List<ITelepadDeliverable> Deliverables { get; set; }
 
     [HarmonyPostfix]
@@ -25,35 +22,16 @@ public static class ImmigrantScreenPatch {
                 if (Deliverables == null) return;
 
                 // Wait until default initialize is complete
-                await WaitForAllDeliverablesReady(__instance);
+                await ScreensUtils.WaitForAllDeliverablesReady(__instance);
                 // Create correct containers.
                 InitializeContainers(ImmigrantScreen.instance);
                 // Wait until those containers are initialized with random data.
-                await WaitForAllDeliverablesReady(__instance);
+                await ScreensUtils.WaitForAllDeliverablesReady(__instance);
 
                 SetDeliverablesData(__instance);
             }
         )
     );
-
-    public static async Task<List<ITelepadDeliverable>> WaitForAllDeliverablesReady(ImmigrantScreen instance) {
-        var currentDelay = 0;
-        while (currentDelay < maxWaitMS) {
-            var readyDeliverables = instance.containers?.Select(
-                a => a switch {
-                    CharacterContainer container => (ITelepadDeliverable) container.stats,
-                    CarePackageContainer packageContainer => packageContainer.carePackageInstanceData,
-                    _ => null
-                }
-            ).Where(a => a != null).ToList();
-            if (readyDeliverables != null && readyDeliverables.Count == instance.containers.Count)
-                return readyDeliverables;
-
-            await Task.Delay(delayMS);
-            currentDelay += delayMS;
-        }
-        return null;
-    }
 
     private static void InitializeContainers(CharacterSelectionController screen) {
         screen.OnReplacedEvent = null;
