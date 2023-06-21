@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using MultiplayerMod.Game.UI.Screens;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
@@ -14,6 +15,10 @@ public class ProceedImmigration : IMultiplayerCommand {
     public void Execute() {
         var immigrantScreen = ImmigrantScreen.instance;
         if (immigrantScreen == null) return;
+
+        immigrantScreen.selectedDeliverables ??= new List<ITelepadDeliverable>();
+        immigrantScreen.telepad ??= global::Components.Telepads[0];
+        immigrantScreen.containers ??= new List<ITelepadDeliverableContainer>();
 
         immigrantScreen.RemoveLast();
         immigrantScreen.AddDeliverable(deliverable);
