@@ -20,8 +20,10 @@ public class AbstractDragToolCommand<T> : IMultiplayerCommand where T : DragTool
     public void Execute() {
         var tool = new T();
         InitializeTool(tool);
-        GameContext.Override(new PrioritySettingsContext(Arguments.Priority), () => InvokeTool(tool));
+        GameContext.Override(CreateContext(), () => InvokeTool(tool));
     }
+
+    protected virtual IGameContext CreateContext() => new PrioritySettingsContext(Arguments.Priority);
 
     protected virtual void InitializeTool(T tool) {
         tool.downPos = Arguments.CursorDown;
