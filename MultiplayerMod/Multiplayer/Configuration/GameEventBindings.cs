@@ -3,6 +3,7 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
@@ -38,6 +39,7 @@ public class GameEventBindings {
         BindMouse();
         BindScreens();
         BindTools();
+        BindOverlays();
 
         bound = true;
     }
@@ -115,6 +117,11 @@ public class GameEventBindings {
         CopySettingsEvents.Copy += (_, args) => client.Send(new CopySettings(args));
         DebugToolEvents.Modify += (_, args) => client.Send(new Modify(args));
         StampToolEvents.Stamp += (_, args) => client.Send(new Stamp(args));
+    }
+
+    private void BindOverlays() {
+        DiseaseOverlayEvents.DiseaseSettingsChanged += (minGerm, enableAutoDisinfect) =>
+            client.Send(new SetDisinfectSettings(minGerm, enableAutoDisinfect));
     }
 
 }
