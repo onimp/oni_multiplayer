@@ -34,6 +34,18 @@ public static class DiseaseOverlayEvents {
     );
 
     [HarmonyPostfix]
+    [HarmonyPatch(nameof(DisinfectThresholdDiagram.ReceiveValueFromInput))]
+    // ReSharper disable once UnusedMember.Local
+    private static void ReceiveValueFromInput() => PatchControl.RunIfEnabled(
+        () => {
+            DiseaseSettingsChanged?.Invoke(
+                SaveGame.Instance.minGermCountForDisinfect,
+                SaveGame.Instance.enableAutoDisinfect
+            );
+        }
+    );
+
+    [HarmonyPostfix]
     [HarmonyPatch(nameof(DisinfectThresholdDiagram.OnClickToggle))]
     // ReSharper disable once InconsistentNaming
     // ReSharper disable once UnusedMember.Local
