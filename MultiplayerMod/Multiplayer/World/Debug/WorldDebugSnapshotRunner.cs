@@ -19,10 +19,12 @@ public class WorldDebugSnapshotRunner : KMonoBehaviour, IRenderEveryTick {
             return;
 
         lastTime = GameClock.Instance.GetTime();
-        CompareIfApplicable();
-        current = WorldDebugSnapshot.Create();
-        SnapshotAvailable?.Invoke(current);
-        CompareIfApplicable();
+        try {
+            CompareIfApplicable();
+            current = WorldDebugSnapshot.Create();
+            SnapshotAvailable?.Invoke(current);
+            CompareIfApplicable();
+        } catch (Exception) { }
     }
 
     private void CompareIfApplicable() {
