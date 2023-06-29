@@ -16,11 +16,10 @@ public class ProceedImmigration : IMultiplayerCommand {
         var immigrantScreen = ImmigrantScreen.instance;
         if (immigrantScreen == null) return;
 
-        immigrantScreen.selectedDeliverables ??= new List<ITelepadDeliverable>();
-        immigrantScreen.telepad ??= global::Components.Telepads[0];
+        immigrantScreen.selectedDeliverables = new List<ITelepadDeliverable>();
+        immigrantScreen.telepad = global::Components.Telepads[0];
         immigrantScreen.containers ??= new List<ITelepadDeliverableContainer>();
 
-        immigrantScreen.RemoveLast();
         immigrantScreen.AddDeliverable(deliverable);
         immigrantScreen.proceedButton.SignalClick(KKeyCode.Mouse0);
 
