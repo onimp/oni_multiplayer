@@ -1,28 +1,9 @@
-﻿using MultiplayerMod.Core.Logging;
+﻿using System;
+using System.Collections.Generic;
 
 namespace MultiplayerMod.Multiplayer.State;
 
-public static class MultiplayerState {
-
-    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(MultiplayerState));
-
-    private static MultiplayerRole role = MultiplayerRole.None;
-
-    public static MultiplayerRole Role {
-        get => role;
-        set {
-            role = value;
-            log.Trace(() => $"Setting role to {role}");
-        }
-    }
-
-    public static bool WorldSpawned { get; set; }
-
-    public static MultiplayerSharedState Shared { get; set; } = new();
-
-    public static void Reset() {
-        Role = MultiplayerRole.None;
-        WorldSpawned = false;
-    }
-
+[Serializable]
+public class MultiplayerState {
+    public Dictionary<IPlayer, PlayerState> Players = new();
 }

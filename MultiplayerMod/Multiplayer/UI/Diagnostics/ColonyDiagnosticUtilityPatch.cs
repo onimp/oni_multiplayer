@@ -10,7 +10,7 @@ static class ColonyDiagnosticUtilityPatch {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ColonyDiagnosticUtility.AddWorld))]
     private static void AddWorldPostfix(ColonyDiagnosticUtility __instance, int worldID) {
-        if (MultiplayerState.Role == MultiplayerRole.None)
+        if (MultiplayerGame.Role == MultiplayerRole.None)
             return;
 
         var colonyDiagnostic = new MultiplayerColonyDiagnostic(worldID);

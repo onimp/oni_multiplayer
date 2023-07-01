@@ -57,7 +57,7 @@ public class MultiplayerCoordinator {
     }
 
     private void OnPlayerConnected(object sender, PlayerConnectedEventArgs e) {
-        MultiplayerState.Shared.Players[e.Player] = new PlayerSharedState(e.Player);
+        MultiplayerGame.State.Players[e.Player] = new PlayerState(e.Player);
         if (e.Player.Equals(client.Player))
             return;
 
@@ -77,8 +77,8 @@ public class MultiplayerCoordinator {
     private void OnClientStateChanged(object sender, ClientStateChangedEventArgs e) {
         switch (e.State) {
             case MultiplayerClientState.Connecting:
-                if (MultiplayerState.Role != MultiplayerRole.Host) {
-                    MultiplayerState.Role = MultiplayerRole.Client;
+                if (MultiplayerGame.Role != MultiplayerRole.Host) {
+                    MultiplayerGame.Role = MultiplayerRole.Client;
                     LoadingOverlay.Load(() => { });
                 }
                 break;
@@ -89,7 +89,7 @@ public class MultiplayerCoordinator {
     }
 
     private void ClientOnCommandReceived(object sender, CommandReceivedEventArgs e) {
-        if (!MultiplayerState.WorldSpawned && e.Command is not LoadWorld) {
+        if (!MultiplayerGame.WorldSpawned && e.Command is not LoadWorld) {
             log.Warning($"Command {e.Command.GetType().FullName} received, but the world isn't spawned yet");
             return;
         }
@@ -100,7 +100,7 @@ public class MultiplayerCoordinator {
     #endregion
 
     private void OnWorldSpawned() {
-        switch (MultiplayerState.Role) {
+        switch (MultiplayerGame.Role) {
             case MultiplayerRole.None:
                 return;
             case MultiplayerRole.Host:
@@ -119,11 +119,11 @@ public class MultiplayerCoordinator {
             WorldDebugSnapshotRunner
         >();
 
-        MultiplayerState.WorldSpawned = true;
+        MultiplayerGame.WorldSpawned = true;
     }
 
     private void OnWorldDestroy() {
-        switch (MultiplayerState.Role) {
+        switch (MultiplayerGame.Role) {
             case MultiplayerRole.Host:
                 if (client.State >= MultiplayerClientState.Connecting)
                     client.Disconnect();

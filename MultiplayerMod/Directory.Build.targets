@@ -15,8 +15,8 @@
     <Target Name="ExposeAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
-            <ExposureRules Include="Private targets to public">
-                <PatternRule>^private</PatternRule>
+            <ExposureRules Include="Private and internal targets to public">
+                <PatternRule>^(private|internal)</PatternRule>
                 <TargetRule>All</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </ExposureRules>

@@ -9,7 +9,7 @@ public class ColonyDiagnosticScreenPatch {
     [HarmonyPrefix]
     [HarmonyPatch(nameof(ColonyDiagnosticScreen.SpawnTrackerLines))]
     public static void SpawnTrackerLines(ColonyDiagnosticScreen __instance, int world) {
-        if (MultiplayerState.Role == MultiplayerRole.None)
+        if (MultiplayerGame.Role == MultiplayerRole.None)
             return;
 
         __instance.AddDiagnostic<MultiplayerColonyDiagnostic>(

@@ -4,16 +4,16 @@ using MultiplayerMod.Multiplayer.State;
 namespace MultiplayerMod.Multiplayer.Commands.State;
 
 [Serializable]
-public class SyncSharedState : IMultiplayerCommand {
+public class SyncMultiplayerState : IMultiplayerCommand {
 
-    private MultiplayerSharedState state;
+    private MultiplayerState state;
 
-    public SyncSharedState(MultiplayerSharedState state) {
+    public SyncMultiplayerState(MultiplayerState state) {
         this.state = state;
     }
 
     public void Execute() {
-        MultiplayerState.Shared = state;
+        MultiplayerGame.State = state;
     }
 
 }

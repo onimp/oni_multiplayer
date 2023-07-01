@@ -27,7 +27,7 @@ public static class WorldManager {
     }
 
     public static void LoadWorldSave(byte[] data) {
-        MultiplayerState.WorldSpawned = false;
+        MultiplayerGame.WorldSpawned = false;
         var path = Path.GetTempFileName();
         using (var writer = new BinaryWriter(File.OpenWrite(path)))
             writer.Write(data);
