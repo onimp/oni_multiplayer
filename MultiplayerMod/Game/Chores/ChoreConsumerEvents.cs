@@ -11,7 +11,7 @@ public class ChoreConsumerEvents {
     public static event Action<FindNextChoreEventArgs> FindNextChore;
 
     public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, ref bool __result) {
-        if (MultiplayerState.Role != MultiplayerRole.Host)
+        if (MultiplayerGame.Role != MultiplayerRole.Host)
             return;
 
         if (!__result)

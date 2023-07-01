@@ -16,7 +16,7 @@ public class UpdateCursorPosition : IMultiplayerCommand {
     }
 
     public void Execute() {
-        MultiplayerState.Shared.Players.TryGetValue(player, out var state);
+        MultiplayerGame.State.Players.TryGetValue(player, out var state);
         if (state == null)
             return;
 

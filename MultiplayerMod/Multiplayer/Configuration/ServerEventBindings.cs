@@ -26,7 +26,7 @@ public class ServerEventBindings {
 
         MultiplayerEvents.PlayerWorldSpawned += player => server.Send(
             player,
-            new SyncSharedState(MultiplayerState.Shared)
+            new SyncMultiplayerState(MultiplayerGame.State)
         );
         WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));
         SaveLoaderEvents.WorldSaved += WorldManager.Sync;

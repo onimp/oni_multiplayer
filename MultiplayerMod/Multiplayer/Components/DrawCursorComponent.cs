@@ -18,7 +18,7 @@ public class DrawCursorComponent : MonoBehaviour {
     }
 
     private void OnGUI() {
-        foreach (var (player, state) in MultiplayerState.Shared.Players) {
+        foreach (var (player, state) in MultiplayerGame.State.Players) {
             if (player.Equals(client.Player))
                 continue;
 
