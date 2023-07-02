@@ -27,6 +27,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{3D14A142-7
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyExposer.MSBuild.Task", "AssemblyExposer.MSBuild.Task\AssemblyExposer.MSBuild.Task.csproj", "{80DD29DB-6127-4F8B-845E-A04420FE22AB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "steamworkshop", "steamworkshop", "{ED0C3369-C9E5-496C-9585-9014AAE83B8A}"
+	ProjectSection(SolutionItems) = preProject
+		docs\steamworkshop\STEAMWORSHOP_DESCRIPTION.md = docs\steamworkshop\STEAMWORSHOP_DESCRIPTION.md
+		docs\steamworkshop\preview.png = docs\steamworkshop\preview.png
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Release|Any CPU = Release|Any CPU
@@ -51,5 +57,8 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B532045A-7A46-4262-AE5F-F663106A26E5}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ED0C3369-C9E5-496C-9585-9014AAE83B8A} = {3D14A142-7EA5-4D30-B6D9-9DDB1998D450}
 	EndGlobalSection
 EndGlobal
