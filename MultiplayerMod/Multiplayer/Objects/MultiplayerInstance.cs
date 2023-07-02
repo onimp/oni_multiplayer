@@ -4,11 +4,11 @@ namespace MultiplayerMod.Multiplayer.Objects;
 
 public class MultiplayerInstance : KMonoBehaviour {
 
-    public long? Id { get; set; }
+    public MultiplayerId Id { get; set; }
 
     protected override void OnCleanUp() {
         if (Id != null)
-            MultiplayerGame.Objects.Remove(Id.Value);
+            MultiplayerGame.Objects.Remove(Id);
     }
 
 }

@@ -1,15 +1,18 @@
-﻿using MultiplayerMod.Game.World;
+﻿using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-public static class MultiplayerIdentityProvider {
+public class MultiplayerIdentityProvider {
 
-    private static long nextId;
+    public long NextObjectId { get; set; }
 
-    public static long GetNextId() => nextId++;
+    private readonly IMultiplayerClient client;
 
-    static MultiplayerIdentityProvider() {
-        WorldGenSpawnerEvents.Spawned += () => { nextId = KPrefabID.NextUniqueID; };
+    public MultiplayerIdentityProvider() {
+        client = Container.Get<IMultiplayerClient>();
     }
+
+    public MultiplayerId GetNextId() => new(client.Player, NextObjectId++);
 
 }

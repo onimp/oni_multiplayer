@@ -16,13 +16,14 @@ public abstract class Container {
 
     public static void Register<T>() where T : class, new() => TryAdd<T, T>();
 
-    public static void Register<T>(T instance) => TryAdd(instance);
+    public static T Register<T>(T instance) => TryAdd(instance);
 
     public static void Register<I, T>() where T : class, I, new() => TryAdd<I, T>();
 
-    private static void TryAdd<T>(T instance) {
+    private static T TryAdd<T>(T instance) {
         if (!instances.TryAdd(typeof(T), new Lazy<object>(() => instance)))
             throw new ContainerException($"A type {typeof(T).FullName} is already registered");
+        return instance;
     }
 
     private static void TryAdd<I, T>() where T : class, I, new() {
