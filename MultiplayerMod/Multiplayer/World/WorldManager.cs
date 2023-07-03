@@ -24,6 +24,7 @@ public static class WorldManager {
         // connected clients are ready.
         server.Send(new ShowOverlay(), MultiplayerCommandOptions.SkipHost);
         server.Send(new LoadWorld(GetWorldSave()), MultiplayerCommandOptions.SkipHost);
+        MultiplayerGame.Objects.Rebuild();
     }
 
     public static void LoadWorldSave(byte[] data) {
