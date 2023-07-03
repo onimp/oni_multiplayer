@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Reflection;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.State;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -12,21 +14,21 @@ public class ClickUserMenuButton : IMultiplayerCommand {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(ClickUserMenuButton));
 
-    private int instanceId;
+    private MultiplayerId multiplayerId;
     private Type actionDeclaringType;
     private string actionName;
 
     public ClickUserMenuButton(GameObject gameObject, System.Action action) {
-        instanceId = gameObject.GetComponent<KPrefabID>().InstanceID;
+        multiplayerId = gameObject.GetComponent<MultiplayerInstance>().Id;
         actionDeclaringType = action.Method.DeclaringType;
         actionName = action.Method.Name;
     }
 
     public void Execute() {
-        var kPrefabID = Object.FindObjectsOfType<KPrefabID>().FirstOrDefault(a => a.InstanceID == instanceId);
-        if (kPrefabID == null) return;
+        var gameObject = MultiplayerGame.Objects[multiplayerId];
+        if (gameObject == null) return;
 
-        var actionObject = kPrefabID.GetComponent(actionDeclaringType);
+        var actionObject = gameObject.GetComponent(actionDeclaringType);
         if (actionObject == null) return;
 
         try {
