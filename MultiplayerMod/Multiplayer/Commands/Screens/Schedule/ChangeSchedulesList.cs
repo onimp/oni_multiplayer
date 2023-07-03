@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
 
@@ -30,7 +32,7 @@ public class ChangeSchedulesList : IMultiplayerCommand {
     private class SerializableSchedule {
         public string name;
         public bool alarmActivated;
-        private List<int> assigned;
+        private List<MultiplayerId> assigned;
         private List<string> blocks;
 
         private static Dictionary<String, ScheduleGroup> groups =
@@ -53,15 +55,15 @@ public class ChangeSchedulesList : IMultiplayerCommand {
             name = schedule.name;
             alarmActivated = schedule.alarmActivated;
             blocks = schedule.blocks.Select(block => block.GroupId).ToList();
-            assigned = schedule.assigned.Select(@ref => @ref.id).ToList();
+            assigned = schedule.assigned.Select(@ref => @ref.obj.GetComponent<MultiplayerInstance>().Id).ToList();
         }
 
         public List<ScheduleGroup> Groups => blocks.Select(block => groups[block]).ToList();
         public List<Ref<Schedulable>> Assigned => assigned.Select(id => new Ref<Schedulable>(Get(id))).ToList();
 
-        public Schedulable Get(int id) {
-            var instance = KPrefabIDTracker.Get().GetInstance(id);
-            return instance?.GetComponent<Schedulable>();
+        public Schedulable Get(MultiplayerId id) {
+            var instance = MultiplayerGame.Objects[id];
+            return instance == null ? null : instance.GetComponent<Schedulable>();
         }
     }
 
