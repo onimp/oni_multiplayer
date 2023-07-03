@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using UnityEngine;
@@ -11,7 +12,7 @@ public class MultiplayerObjects {
 
     private readonly MultiplayerIdentityProvider provider = Container.Get<MultiplayerIdentityProvider>();
 
-    private readonly Dictionary<MultiplayerId, GameObject> objects = new();
+    private Dictionary<MultiplayerId, GameObject> objects = new();
 
     public void Add(MultiplayerInstance instance) {
         instance.Id ??= provider.GetNextId();
@@ -22,13 +23,19 @@ public class MultiplayerObjects {
 
     public GameObject this[MultiplayerId id] {
         get {
-            if (!objects.TryGetValue(id, out var result)) {
+            if (!objects.TryGetValue(id, out var result))
                 log.Warning($"Object {id} not found");
-            }
             return result;
         }
     }
 
-    public void Clear() => objects.Clear();
+    public void Clear() => objects = new Dictionary<MultiplayerId, GameObject>();
+
+    public void Rebuild() {
+        objects = KPrefabIDTracker.Get().prefabIdMap.ToDictionary(
+            entry => new MultiplayerId(null, entry.Key),
+            entry => entry.Value.gameObject
+        );
+    }
 
 }
