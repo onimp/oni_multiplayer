@@ -4,6 +4,7 @@ using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.Multiplayer.Commands.Mechanics;
 using MultiplayerMod.Multiplayer.Commands.Mechanics.Access;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
@@ -130,6 +131,8 @@ public class GameEventBindings {
     private void BindMechanics() {
         AccessControlEvents.DefaultPermissionChanged += (_, args) => client.Send(new ChangeDefaultPermission(args));
         AccessControlEvents.PermissionChanged += (_, args) => client.Send(new ChangePermission(args));
+
+        DoorToggleEvents.StateChanged += (_, args) => client.Send(new ChangeDoorState(args));
     }
 
 }
