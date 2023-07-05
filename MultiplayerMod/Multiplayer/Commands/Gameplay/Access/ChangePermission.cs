@@ -1,7 +1,7 @@
 ﻿using System;
 using MultiplayerMod.Game.Mechanics;
 
-namespace MultiplayerMod.Multiplayer.Commands.Mechanics.Access;
+namespace MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
 
 [Serializable]
 public class ChangePermission : AbstractAccessControlCommand {

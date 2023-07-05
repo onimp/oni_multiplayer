@@ -2,7 +2,7 @@
 using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Multiplayer.Tools;
 
-namespace MultiplayerMod.Multiplayer.Commands.Mechanics.Access;
+namespace MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
 
 [Serializable]
 public abstract class AbstractAccessControlCommand : IMultiplayerCommand {

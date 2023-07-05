@@ -4,8 +4,8 @@ using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
-using MultiplayerMod.Multiplayer.Commands.Mechanics;
-using MultiplayerMod.Multiplayer.Commands.Mechanics.Access;
+using MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
+using MultiplayerMod.Multiplayer.Commands.Gameplay.Doors;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
@@ -132,7 +132,8 @@ public class GameEventBindings {
         AccessControlEvents.DefaultPermissionChanged += (_, args) => client.Send(new ChangeDefaultPermission(args));
         AccessControlEvents.PermissionChanged += (_, args) => client.Send(new ChangePermission(args));
 
-        DoorToggleEvents.StateChanged += (_, args) => client.Send(new ChangeDoorState(args));
+        DoorEvents.StateChanged += (_, args) => client.Send(new ChangeDoorState(args));
+        DoorEvents.OrderUnseal += reference => client.Send(new OrderUnseal(reference));
     }
 
 }

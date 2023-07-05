@@ -6,9 +6,10 @@ using MultiplayerMod.Multiplayer.Objects;
 namespace MultiplayerMod.Game.Mechanics;
 
 [HarmonyPatch(typeof(Door))]
-public static class DoorToggleEvents {
+public static class DoorEvents {
 
     public static event EventHandler<DoorStateChangedEventArgs> StateChanged;
+    public static event Action<MultiplayerReference> OrderUnseal;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(Door.QueueStateChange))]
@@ -22,5 +23,11 @@ public static class DoorToggleEvents {
                 }
             )
         );
+
+    [HarmonyPostfix]
+    [HarmonyPatch(nameof(Door.OrderUnseal))]
+    private static void OrderUnsealPostfix(Door __instance) => PatchControl.RunIfEnabled(
+        () => OrderUnseal?.Invoke(__instance.GetMultiplayerReference())
+    );
 
 }
