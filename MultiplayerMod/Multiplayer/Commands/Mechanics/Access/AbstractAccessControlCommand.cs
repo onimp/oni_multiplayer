@@ -1,5 +1,6 @@
 ﻿using System;
 using MultiplayerMod.Game.Mechanics;
+using MultiplayerMod.Multiplayer.Tools;
 
 namespace MultiplayerMod.Multiplayer.Commands.Mechanics.Access;
 
@@ -15,17 +16,10 @@ public abstract class AbstractAccessControlCommand : IMultiplayerCommand {
     public void Execute() {
         var control = Arguments.Target.GetComponent<AccessControl>();
         Apply(control);
-        RefreshSideScreen(control);
+        if (SideScreen<AccessControlSideScreen>.TargetSelected(control, out var screen))
+            screen.Refresh(screen.identityList, false);
     }
 
     protected virtual void Apply(AccessControl control) { }
-
-    private void RefreshSideScreen(AccessControl control) {
-        if (DetailsScreen.Instance.currentSideScreen is not AccessControlSideScreen screen)
-            return;
-
-        if (screen.target == control)
-            screen.Refresh(screen.identityList, false);
-    }
 
 }
