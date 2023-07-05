@@ -2,7 +2,7 @@
 using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Multiplayer.Tools;
 
-namespace MultiplayerMod.Multiplayer.Commands.Mechanics;
+namespace MultiplayerMod.Multiplayer.Commands.Gameplay.Doors;
 
 [Serializable]
 public class ChangeDoorState : IMultiplayerCommand {
