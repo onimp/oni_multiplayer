@@ -1,10 +1,12 @@
-﻿using MultiplayerMod.Core.Dependency;
+﻿using System;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
+using MultiplayerMod.Multiplayer.Commands.Gameplay.Assignables;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Doors;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
@@ -17,6 +19,7 @@ using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
+using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
@@ -134,6 +137,20 @@ public class GameEventBindings {
 
         DoorEvents.StateChanged += (_, args) => client.Send(new ChangeDoorState(args));
         DoorEvents.OrderUnseal += reference => client.Send(new OrderUnseal(reference));
+
+        AssignableEvents.Assign += (assignable, identity) => {
+            if (identity != null && identity is not KMonoBehaviour) {
+                log.Warning($"Identity {identity.GetType().FullName} is not supported {Environment.StackTrace}");
+                return;
+            }
+            var component = (KMonoBehaviour) identity;
+            client.Send(
+                new Assign(
+                    assignable.GetMultiplayerReference(),
+                    component != null ? component.GetMultiplayerReference() : null
+                )
+            );
+        };
     }
 
 }
