@@ -1,28 +1,27 @@
 ﻿using System;
 using System.Linq;
-using MultiplayerMod.Multiplayer.Extensions;
+using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 
 [Serializable]
 public class PermitConsumableToMinion : IMultiplayerCommand {
 
-    private string properName;
-    private string consumableId;
-    private bool isAllowed;
+    private readonly MultiplayerReference consumableConsumerReference;
+    private readonly string consumableId;
+    private readonly bool isAllowed;
 
-    public PermitConsumableToMinion(string properName, string consumableId, bool isAllowed) {
-        this.properName = properName;
+    public PermitConsumableToMinion(ConsumableConsumer consumableConsumer, string consumableId, bool isAllowed) {
+        consumableConsumerReference = consumableConsumer.GetMultiplayerReference();
         this.consumableId = consumableId;
         this.isAllowed = isAllowed;
     }
 
     public void Execute() {
-        var minionIdentity = MinionIdentityUtils.GetLiveMinion(properName);
-        if (minionIdentity == null) return;
-        var consumableConsumer = minionIdentity.GetComponent<ConsumableConsumer>();
-        consumableConsumer.SetPermitted(consumableId, isAllowed);
+        var consumableConsumer = consumableConsumerReference.GetComponent<ConsumableConsumer>();
+        if (consumableConsumer == null) return;
 
+        consumableConsumer.SetPermitted(consumableId, isAllowed);
         RefreshTable();
     }
 

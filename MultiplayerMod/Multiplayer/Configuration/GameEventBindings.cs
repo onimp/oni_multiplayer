@@ -71,17 +71,20 @@ public class GameEventBindings {
 
         ConsumableScreenEvents.PermitByDefault +=
             permittedList => client.Send(new PermitConsumableByDefault(permittedList));
-        ConsumableScreenEvents.PermitToMinion += (properName, consumableId, isAllowed) =>
-            client.Send(new PermitConsumableToMinion(properName, consumableId, isAllowed));
+        ConsumableScreenEvents.PermitToMinion += (consumableConsumer, consumableId, isAllowed) =>
+            client.Send(new PermitConsumableToMinion(consumableConsumer, consumableId, isAllowed));
 
         ScheduleScreenEvents.Changed += schedules => client.Send(new ChangeSchedulesList(schedules));
 
-        PrioritiesScreenEvents.Set += (properName, choreGroup, value) =>
-            client.Send(new SetPersonalPriority(properName, choreGroup, value));
+        PrioritiesScreenEvents.Set += (choreConsumer, choreGroup, value) =>
+            client.Send(new SetPersonalPriority(choreConsumer, choreGroup, value));
+        PrioritiesScreenEvents.DefaultSet +=
+            (choreGroup, value) => client.Send(new SetDefaultPriority(choreGroup, value));
         PrioritiesScreenEvents.AdvancedSet += value => client.Send(new SetPersonalPrioritiesAdvanced(value));
 
-        SkillScreenEvents.SetHat += (properName, hat) => client.Send(new SetHat(properName, hat));
-        SkillScreenEvents.MasterSkill += (properName, skillId) => client.Send(new MasterSkill(properName, skillId));
+        SkillScreenEvents.SetHat += (minionIdentity, hat) => client.Send(new SetHat(minionIdentity, hat));
+        SkillScreenEvents.MasterSkill += (minionIdentity, skillId) =>
+            client.Send(new MasterSkill(minionIdentity, skillId));
 
         UserMenuButtonEvents.Click += (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
 

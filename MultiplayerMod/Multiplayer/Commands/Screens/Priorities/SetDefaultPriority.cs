@@ -1,30 +1,24 @@
 ﻿using System;
 using System.Linq;
-using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
 [Serializable]
-public class SetPersonalPriority : IMultiplayerCommand {
+public class SetDefaultPriority : IMultiplayerCommand {
 
-    private readonly MultiplayerReference choreConsumerReference;
     private readonly string choreGroupId;
     private readonly int value;
 
     private ChoreGroup ChoreGroup =>
         Db.Get().ChoreGroups.resources.FirstOrDefault(resource => resource.Id == choreGroupId);
 
-    public SetPersonalPriority(ChoreConsumer choreConsumer, ChoreGroup choreGroup, int value) {
-        choreConsumerReference = choreConsumer.GetMultiplayerReference();
+    public SetDefaultPriority(ChoreGroup choreGroup, int value) {
         choreGroupId = choreGroup.Id;
         this.value = value;
     }
 
     public void Execute() {
-        var choreConsumer = choreConsumerReference.GetComponent<ChoreConsumer>();
-        if (choreConsumer == null) return;
-
-        choreConsumer.SetPersonalPriority(ChoreGroup, value);
+        global::Immigration.Instance.SetPersonalPriority(ChoreGroup, value);
         RefreshTable();
     }
 
@@ -38,4 +32,5 @@ public class SetPersonalPriority : IMultiplayerCommand {
             }
         }
     }
+
 }
