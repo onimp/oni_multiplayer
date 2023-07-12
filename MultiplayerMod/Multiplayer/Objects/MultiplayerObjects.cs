@@ -23,8 +23,7 @@ public class MultiplayerObjects {
 
     public GameObject this[MultiplayerId id] {
         get {
-            if (!objects.TryGetValue(id, out var result))
-                log.Warning($"Object {id} not found");
+            objects.TryGetValue(id, out var result);
             return result;
         }
     }

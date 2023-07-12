@@ -7,13 +7,16 @@ namespace MultiplayerMod.Multiplayer.Objects;
 [Serializable]
 public class MultiplayerReference {
 
-    private MultiplayerId id;
+    public MultiplayerId Id { get; }
 
     public MultiplayerReference(MultiplayerId id) {
-        this.id = id;
+        Id = id;
     }
 
-    public GameObject GetGameObject() => MultiplayerGame.Objects[id];
+    public GameObject GetGameObject() {
+        var gameObject = MultiplayerGame.Objects[Id] ?? throw new MultiplayerObjectNotFoundException(Id);
+        return gameObject;
+    }
 
     public T GetComponent<T>() where T : class => GetGameObject()?.GetComponent<T>();
 
