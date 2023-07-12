@@ -5,7 +5,6 @@ using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
-using MultiplayerMod.Multiplayer.Commands.Gameplay;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Assignables;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Doors;
@@ -157,8 +156,7 @@ public class GameEventBindings {
             );
         };
 
-        SliderEvents.SetSliderValue += (reference, sliderIndex, value) =>
-            client.Send(new SetSliderValue(reference, sliderIndex, value));
+        SliderEvents.SetSliderValue += eventArgs => client.Send(new SetSliderValue(eventArgs));
     }
 
 }
