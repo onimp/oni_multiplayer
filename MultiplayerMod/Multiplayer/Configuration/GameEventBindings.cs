@@ -8,6 +8,7 @@ using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Assignables;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Doors;
+using MultiplayerMod.Multiplayer.Commands.Gameplay.SliderControl;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
@@ -92,9 +93,6 @@ public class GameEventBindings {
             containers => client.Send(new InitializeImmigration(containers));
         ImmigrantScreenEvents.Proceed += deliverable => client.Send(new ProceedImmigration(deliverable));
         ImmigrantScreenEvents.Reject += () => client.Send(new RejectImmigration());
-
-        SideScreenEvents.OnAction += (sideScreen, target, field) =>
-            client.Send(new InteractWithSideScreen(sideScreen, target, field));
     }
 
     private void BindTools() {
@@ -157,6 +155,8 @@ public class GameEventBindings {
                 )
             );
         };
+
+        SliderEvents.SetSliderValue += eventArgs => client.Send(new SetSliderValue(eventArgs));
     }
 
 }
