@@ -18,6 +18,6 @@ public class MultiplayerReference {
         return gameObject;
     }
 
-    public T GetComponent<T>() where T : class => GetGameObject()?.GetComponent<T>();
+    public T GetComponent<T>() where T : class => GetGameObject().GetComponent<T>();
 
 }
