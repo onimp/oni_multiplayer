@@ -92,6 +92,9 @@ public class GameEventBindings {
             containers => client.Send(new InitializeImmigration(containers));
         ImmigrantScreenEvents.Proceed += deliverable => client.Send(new ProceedImmigration(deliverable));
         ImmigrantScreenEvents.Reject += () => client.Send(new RejectImmigration());
+
+        SideScreenEvents.OnAction += (sideScreen, target, field) =>
+            client.Send(new InteractWithSideScreen(sideScreen, target, field));
     }
 
     private void BindTools() {

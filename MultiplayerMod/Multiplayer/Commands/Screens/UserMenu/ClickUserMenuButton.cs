@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Linq;
 using System.Reflection;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.State;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 
