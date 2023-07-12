@@ -1,4 +1,5 @@
-﻿using MultiplayerMod.Core.Dependency;
+﻿using System;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Unity;
@@ -23,6 +24,8 @@ public class MultiplayerCoordinator {
 
     private readonly GameEventBindings gameBindings = new();
     private readonly ServerEventBindings serverBindings = new();
+
+    private readonly CommandExceptionHandler exceptionHandler = new();
 
     public MultiplayerCoordinator() {
         ConfigureServer();
@@ -53,7 +56,7 @@ public class MultiplayerCoordinator {
 
     private void ServerOnCommandReceived(object sender, CommandReceivedEventArgs e) {
         log.Trace(() => $"Command {e.Command.GetType().Name} received from player {e.Player}");
-        PatchControl.RunWithDisabledPatches(() => e.Command.Execute());
+        PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
     }
 
     private void OnPlayerConnected(object sender, PlayerConnectedEventArgs e) {
@@ -94,10 +97,18 @@ public class MultiplayerCoordinator {
             return;
         }
         log.Trace(() => $"Command {e.Command.GetType().Name} received from server");
-        PatchControl.RunWithDisabledPatches(() => e.Command.Execute());
+        PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
     }
 
     #endregion
+
+    private void ExecuteCommand(IMultiplayerCommand command) {
+        try {
+            command.Execute();
+        } catch (Exception exception) {
+            exceptionHandler.Handle(command, exception);
+        }
+    }
 
     private void OnWorldSpawned() {
         switch (MultiplayerGame.Role) {
@@ -134,4 +145,5 @@ public class MultiplayerCoordinator {
                 break;
         }
     }
+
 }
