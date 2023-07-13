@@ -20,4 +20,6 @@ public class MultiplayerReference {
 
     public T GetComponent<T>() where T : class => GetGameObject().GetComponent<T>();
 
+    public Component GetComponent(Type type) => GetGameObject().GetComponent(type);
+
 }
