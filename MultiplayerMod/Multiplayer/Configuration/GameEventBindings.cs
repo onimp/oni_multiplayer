@@ -160,8 +160,8 @@ public class GameEventBindings {
         SliderEvents.SetSliderValue += eventArgs => client.Send(new SetSliderValue(eventArgs));
 
         FilterEvents.SetFilter += (reference, tag) => client.Send(new SetFilter(reference, tag));
-        FilterEvents.AddTagToFilter +=  (reference, tag) => client.Send(new AddTagToFilter(reference, tag));
-        FilterEvents.RemoveTagFromFilter +=  (reference, tag) => client.Send(new RemoveTagFromFilter(reference, tag));
+        FilterEvents.AddTagToFilter += (reference, tag) => client.Send(new AddTagToFilter(reference, tag));
+        FilterEvents.RemoveTagFromFilter += (reference, tag) => client.Send(new RemoveTagFromFilter(reference, tag));
     }
 
 }
