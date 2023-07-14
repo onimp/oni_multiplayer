@@ -33,6 +33,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "steamworkshop", "steamworks
 		docs\steamworkshop\preview.png = docs\steamworkshop\preview.png
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{46DE418C-9423-4A42-8B00-9499C65D7932}"
+	ProjectSection(SolutionItems) = preProject
+		docs\scripts\install.bat = docs\scripts\install.bat
+		docs\scripts\install.sh = docs\scripts\install.sh
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Release|Any CPU = Release|Any CPU
@@ -60,5 +66,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{ED0C3369-C9E5-496C-9585-9014AAE83B8A} = {3D14A142-7EA5-4D30-B6D9-9DDB1998D450}
+		{46DE418C-9423-4A42-8B00-9499C65D7932} = {3D14A142-7EA5-4D30-B6D9-9DDB1998D450}
 	EndGlobalSection
 EndGlobal

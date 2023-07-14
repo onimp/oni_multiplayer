@@ -1,0 +1,1 @@
+xcopy /s .\MultiplayerMod %USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\MultiplayerMod\
