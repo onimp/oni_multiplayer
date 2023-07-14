@@ -28,6 +28,13 @@ public static class ObjectEvents {
         { typeof(ManualGenerator), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
         { typeof(OilWellCap), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
         { typeof(Door), new[] { nameof(Door.QueueStateChange), nameof(Door.OrderUnseal) } },
+        { typeof(ComplexFabricator),
+            new[] {
+                nameof(ComplexFabricator.IncrementRecipeQueueCount),
+                nameof(ComplexFabricator.DecrementRecipeQueueCount),
+                nameof(ComplexFabricator.SetRecipeQueueCount)
+            }
+        },
         // TODO uncomment lines below after creating required surrogates.
         // { typeof(Assignable), new[] { nameof(Assignable.Assign), nameof(Assignable.Unassign) } },
         // { typeof(AccessControl),
