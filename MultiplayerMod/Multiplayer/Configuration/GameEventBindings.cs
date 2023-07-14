@@ -5,13 +5,11 @@ using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.Multiplayer.Commands.Gameplay;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
 using MultiplayerMod.Multiplayer.Commands.Gameplay.Assignables;
-using MultiplayerMod.Multiplayer.Commands.Gameplay.Doors;
-using MultiplayerMod.Multiplayer.Commands.Gameplay.SliderControl;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
-using MultiplayerMod.Multiplayer.Commands.Screens.Filters;
 using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 using MultiplayerMod.Multiplayer.Commands.Screens.Research;
@@ -140,9 +138,6 @@ public class GameEventBindings {
         AccessControlEvents.DefaultPermissionChanged += (_, args) => client.Send(new ChangeDefaultPermission(args));
         AccessControlEvents.PermissionChanged += (_, args) => client.Send(new ChangePermission(args));
 
-        DoorEvents.StateChanged += (_, args) => client.Send(new ChangeDoorState(args));
-        DoorEvents.OrderUnseal += reference => client.Send(new OrderUnseal(reference));
-
         AssignableEvents.Assign += (assignable, identity) => {
             if (identity != null && identity is not KMonoBehaviour) {
                 log.Warning($"Identity {identity.GetType().FullName} is not supported {Environment.StackTrace}");
@@ -157,11 +152,7 @@ public class GameEventBindings {
             );
         };
 
-        SliderEvents.SetSliderValue += eventArgs => client.Send(new SetSliderValue(eventArgs));
-
-        FilterEvents.SetFilter += (reference, tag) => client.Send(new SetFilter(reference, tag));
-        FilterEvents.AddTagToFilter += (reference, tag) => client.Send(new AddTagToFilter(reference, tag));
-        FilterEvents.RemoveTagFromFilter += (reference, tag) => client.Send(new RemoveTagFromFilter(reference, tag));
+        ObjectEvents.MethodCalled += args => client.Send(new CallMethod(args));
     }
 
 }
