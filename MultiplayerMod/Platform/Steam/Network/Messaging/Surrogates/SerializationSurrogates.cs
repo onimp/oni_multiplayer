@@ -14,6 +14,7 @@ public static class SerializationSurrogates {
         Selector.Add(new TagSurrogate());
         Selector.Add(new PathNodeSurrogate());
         Selector.Add(new CarePackageInstanceDataSurrogate());
+        Selector.Add(new ComplexRecipeSurrogate());
         Selector.Add(new MinionStartingStatsSurrogate());
     }
 
