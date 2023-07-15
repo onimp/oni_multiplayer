@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Reflection;
-using MultiplayerMod.Game.Mechanics;
+using MultiplayerMod.Game.Mechanics.Objects;
 
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
 public class CallMethod : IMultiplayerCommand {
-    private readonly ObjectEvents.ObjectEventsArgs args;
+    private readonly ObjectEventsArgs args;
 
-    public CallMethod(ObjectEvents.ObjectEventsArgs args) {
+    public CallMethod(ObjectEventsArgs args) {
         this.args = args;
     }
 

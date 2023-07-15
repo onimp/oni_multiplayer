@@ -8,8 +8,6 @@ namespace MultiplayerMod.Multiplayer.Objects;
 
 public class MultiplayerObjects {
 
-    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<MultiplayerObjects>();
-
     private readonly MultiplayerIdentityProvider provider = Container.Get<MultiplayerIdentityProvider>();
 
     private Dictionary<MultiplayerId, GameObject> objects = new();
