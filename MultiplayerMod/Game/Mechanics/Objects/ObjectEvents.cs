@@ -1,41 +1,78 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Multiplayer.Objects;
-using MultiplayerMod.Multiplayer.Objects.Reference;
 
-namespace MultiplayerMod.Game.Mechanics;
+namespace MultiplayerMod.Game.Mechanics.Objects;
 
 public static class ObjectEvents {
-
     public static event Action<ObjectEventsArgs> MethodCalled;
 
-    private static readonly Dictionary<Type, string[]> MethodsForPatch = new() {
-        { typeof(Filterable), new[] { nameof(Filterable.SelectedTag) } },
-        { typeof(TreeFilterable),
+    private static readonly Dictionary<Type, string[]> methodsForPatch = new() {
+        { typeof(Filterable), new[] { nameof(Filterable.SelectedTag) } }, {
+            typeof(TreeFilterable),
             new[] { nameof(TreeFilterable.AddTagToFilter), nameof(TreeFilterable.RemoveTagFromFilter), }
         },
-        { typeof(Clinic), new[] { "ISliderControl.SetSliderValue" } },
-        { typeof(DevRadiationEmitter), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(EnergyGenerator), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(HEPBattery.Instance), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(HighEnergyParticleSpawner), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(LogicGateBuffer), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(LogicGateFilter), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(ManualGenerator), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(OilWellCap), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(Door), new[] { nameof(Door.QueueStateChange), nameof(Door.OrderUnseal) } },
-        { typeof(ComplexFabricator),
+        { typeof(Door), new[] { nameof(Door.QueueStateChange), nameof(Door.OrderUnseal) } }, {
+            typeof(ComplexFabricator),
             new[] {
                 nameof(ComplexFabricator.IncrementRecipeQueueCount),
                 nameof(ComplexFabricator.DecrementRecipeQueueCount),
                 nameof(ComplexFabricator.SetRecipeQueueCount)
             }
         },
+        { typeof(PassengerRocketModule), new[] { nameof(PassengerRocketModule.RequestCrewBoard) } },
+        { typeof(RocketControlStation), new[] { nameof(RocketControlStation.RestrictWhenGrounded) } },
+        { typeof(ICheckboxControl), new[] { nameof(ICheckboxControl.SetCheckboxValue) } },
+        { typeof(SuitLocker), new[] { nameof(SuitLocker.ConfigNoSuit), nameof(SuitLocker.ConfigRequestSuit) } }, {
+            typeof(IThresholdSwitch),
+            new[] { nameof(IThresholdSwitch.Threshold), nameof(IThresholdSwitch.ActivateAboveThreshold) }
+        },
+        { typeof(ISliderControl), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
+        { typeof(Valve), new[] { nameof(Valve.ChangeFlow) } }, {
+            typeof(SingleEntityReceptacle),
+            new[] {
+                nameof(SingleEntityReceptacle.OrderRemoveOccupant),
+                nameof(SingleEntityReceptacle.CancelActiveRequest),
+                nameof(SingleEntityReceptacle.CreateOrder),
+                nameof(SingleEntityReceptacle.SetPreview)
+            }
+        },
+        // TODO decide how to proper patch KMonoBehaviour#Trigger
+        // {
+        //     typeof(ReorderableBuilding),
+        //     new[] {
+        //         nameof(ReorderableBuilding.SwapWithAbove),
+        //         nameof(ReorderableBuilding.SwapWithBelow),
+        //         nameof(ReorderableBuilding.Trigger)
+        //     }
+        // },
+        // TODO uncomment lines below after deciding on field patches.
+        //  { typeof(RailGun), new[] { nameof(RailGun.launchMass) } },
+        // {
+        //     typeof(TemperatureControlledSwitch),
+        //     new[] {
+        //         nameof(TemperatureControlledSwitch.thresholdTemperature),
+        //         nameof(TemperatureControlledSwitch.activateOnWarmerThan)
+        //     }
+        // },
+        // {
+        //     typeof(LogicTimeOfDaySensor),
+        //     new[] { nameof(LogicTimeOfDaySensor.startTime), nameof(LogicTimeOfDaySensor.duration) }
+        // },
+        // {
+        //     typeof(LogicTimerSensor),
+        //     new[] {
+        //         nameof(LogicTimerSensor.displayCyclesMode),
+        //         nameof(LogicTimerSensor.onDuration),
+        //         nameof(LogicTimerSensor.offDuration),
+        //         nameof(LogicTimerSensor.timeElapsedInCurrentState),
+        //         nameof(LogicTimerSensor.ResetTimer)
+        //     }
+        // },
         // TODO uncomment lines below after creating required surrogates.
         // { typeof(Assignable), new[] { nameof(Assignable.Assign), nameof(Assignable.Unassign) } },
         // { typeof(AccessControl),
@@ -47,32 +84,7 @@ public static class ObjectEvents {
     };
 
     private static IEnumerable<MethodBase> GetTargetMethods(int argsCount) {
-        var targetMethods = Assembly.GetAssembly(typeof(ISliderControl))
-            .GetTypes()
-            .Where(type => MethodsForPatch.Keys.Contains(type))
-            .SelectMany(
-                type =>
-                    MethodsForPatch[type].Select(
-                        methodName => {
-                            var methodInfo = type.GetMethod(
-                                methodName,
-                                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance |
-                                BindingFlags.DeclaredOnly
-                            );
-                            if (methodInfo != null) return methodInfo;
-
-                            var property = type.GetProperty(
-                                methodName,
-                                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance |
-                                BindingFlags.DeclaredOnly
-                            );
-                            return property?.GetSetMethod();
-                        }
-                    )
-            )
-            .Where(method => method.GetParameters().Length == argsCount)
-            .ToList();
-        return targetMethods;
+        return TargetExtractor.GetTargetMethods(methodsForPatch, argsCount);
     }
 
     [HarmonyPatch]
@@ -151,21 +163,4 @@ public static class ObjectEvents {
                 }
             );
     }
-
-    [Serializable]
-    public class ObjectEventsArgs {
-        public GameObjectReference Target { get; }
-
-        public Type MethodType { get; }
-        public string MethodName { get; }
-        public object[] Args { get; }
-
-        public ObjectEventsArgs(GameObjectReference target, Type methodType, string methodName, object[] args) {
-            Target = target;
-            MethodType = methodType;
-            MethodName = methodName;
-            Args = args;
-        }
-    }
-
 }
