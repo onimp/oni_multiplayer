@@ -1,15 +1,15 @@
 ﻿using System;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay.Assignables;
 
 [Serializable]
 public class Assign : IMultiplayerCommand {
 
-    private MultiplayerReference Target { get; }
-    private MultiplayerReference Identity { get; }
+    private GameObjectReference Target { get; }
+    private GameObjectReference Identity { get; }
 
-    public Assign(MultiplayerReference target, MultiplayerReference identity) {
+    public Assign(GameObjectReference target, GameObjectReference identity) {
         Target = target;
         Identity = identity;
     }

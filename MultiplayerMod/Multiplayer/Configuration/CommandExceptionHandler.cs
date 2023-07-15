@@ -1,6 +1,6 @@
 ﻿using System;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Configuration;
 
@@ -10,8 +10,8 @@ public class CommandExceptionHandler {
 
     public void Handle(IMultiplayerCommand command, Exception exception) {
         switch (exception) {
-            case MultiplayerObjectNotFoundException e:
-                log.Warning($"Multiplayer object {e.Id} not found in command {command.GetType().FullName}");
+            case ObjectNotFoundException e:
+                log.Warning($"Multiplayer object {e.Reference} not found in command {command.GetType().FullName}");
                 return;
             default:
                 throw exception;

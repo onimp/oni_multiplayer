@@ -6,6 +6,7 @@ using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Game.Mechanics;
 
@@ -88,7 +89,7 @@ public static class ObjectEvents {
                 () => {
                     MethodCalled?.Invoke(
                         new ObjectEventsArgs(
-                            ((KMonoBehaviour) __instance).GetMultiplayerReference(),
+                            ((KMonoBehaviour) __instance).GetGridReference(),
                             __originalMethod.DeclaringType,
                             __originalMethod.Name,
                             new object[] { }
@@ -112,7 +113,7 @@ public static class ObjectEvents {
                 () => {
                     MethodCalled?.Invoke(
                         new ObjectEventsArgs(
-                            ((KMonoBehaviour) __instance).GetMultiplayerReference(),
+                            ((KMonoBehaviour) __instance).GetGridReference(),
                             __originalMethod.DeclaringType,
                             __originalMethod.Name,
                             new[] { __0 }
@@ -141,7 +142,7 @@ public static class ObjectEvents {
                 () => {
                     MethodCalled?.Invoke(
                         new ObjectEventsArgs(
-                            ((KMonoBehaviour) __instance).GetMultiplayerReference(),
+                            ((KMonoBehaviour) __instance).GetGridReference(),
                             __originalMethod.DeclaringType,
                             __originalMethod.Name,
                             new[] { __0, __1 }
@@ -153,13 +154,13 @@ public static class ObjectEvents {
 
     [Serializable]
     public class ObjectEventsArgs {
-        public MultiplayerReference Target { get; }
+        public GameObjectReference Target { get; }
 
         public Type MethodType { get; }
         public string MethodName { get; }
         public object[] Args { get; }
 
-        public ObjectEventsArgs(MultiplayerReference target, Type methodType, string methodName, object[] args) {
+        public ObjectEventsArgs(GameObjectReference target, Type methodType, string methodName, object[] args) {
             Target = target;
             MethodType = methodType;
             MethodName = methodName;

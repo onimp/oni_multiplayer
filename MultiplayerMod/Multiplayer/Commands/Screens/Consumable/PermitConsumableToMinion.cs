@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Linq;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 
 [Serializable]
 public class PermitConsumableToMinion : IMultiplayerCommand {
 
-    private readonly MultiplayerReference consumableConsumerReference;
+    private readonly GameObjectReference consumableConsumerReference;
     private readonly string consumableId;
     private readonly bool isAllowed;
 

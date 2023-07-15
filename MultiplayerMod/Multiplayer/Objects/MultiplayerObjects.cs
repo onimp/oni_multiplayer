@@ -14,9 +14,10 @@ public class MultiplayerObjects {
 
     private Dictionary<MultiplayerId, GameObject> objects = new();
 
-    public void Add(MultiplayerInstance instance) {
+    public MultiplayerId Register(MultiplayerInstance instance) {
         instance.Id ??= provider.GetNextId();
         objects[instance.Id] = instance.gameObject;
+        return instance.Id;
     }
 
     public void Remove(MultiplayerId id) => objects.Remove(id);

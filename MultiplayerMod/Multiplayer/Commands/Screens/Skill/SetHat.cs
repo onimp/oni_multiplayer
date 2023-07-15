@@ -1,12 +1,13 @@
 ﻿using System;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 
 [Serializable]
 public class SetHat : IMultiplayerCommand {
 
-    private readonly MultiplayerReference minionIdentityReference;
+    private readonly GameObjectReference minionIdentityReference;
     private readonly string targetHat;
 
     public SetHat(MinionIdentity minionIdentity, string targetHat) {
