@@ -146,7 +146,7 @@ public class GameEventBindings {
             var component = (KMonoBehaviour) identity;
             client.Send(
                 new Assign(
-                    assignable.GetMultiplayerReference(),
+                    assignable.GetGridReference(),
                     component != null ? component.GetMultiplayerReference() : null
                 )
             );

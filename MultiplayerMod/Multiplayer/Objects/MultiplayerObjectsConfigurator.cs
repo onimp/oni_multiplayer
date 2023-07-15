@@ -9,12 +9,12 @@ public class MultiplayerObjectsConfigurator {
 
     public MultiplayerObjectsConfigurator() {
         KInstantiateEvents.Create += gameObject =>
-            MultiplayerGame.Objects.Add(gameObject.AddComponent<MultiplayerInstance>());
+            MultiplayerGame.Objects.Register(gameObject.AddComponent<MultiplayerInstance>());
 
         KPrefabIdEvents.Deserialize += kPrefabId => {
             var data = kPrefabId.gameObject.AddComponent<MultiplayerInstance>();
             data.Id = new MultiplayerId(null, kPrefabId.InstanceID);
-            MultiplayerGame.Objects.Add(data);
+            MultiplayerGame.Objects.Register(data);
         };
 
         var identityProvider = Container.Register(new MultiplayerIdentityProvider());

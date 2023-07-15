@@ -19,7 +19,7 @@ public static class AccessControlEvents {
                 __instance,
                 new AccessControlEventArgs {
                     Permission = value,
-                    Target = __instance.GetMultiplayerReference()
+                    Target = __instance.GetGridReference()
                 }
             )
         );
@@ -35,7 +35,7 @@ public static class AccessControlEvents {
             __instance,
             new AccessControlEventArgs {
                 Permission = permission,
-                Target = __instance.GetMultiplayerReference(),
+                Target = __instance.GetGridReference(),
                 MinionProxy = key.GetMultiplayerReference()
             }
         )
@@ -48,7 +48,7 @@ public static class AccessControlEvents {
             () => PermissionChanged?.Invoke(
                 __instance,
                 new AccessControlEventArgs {
-                    Target = __instance.GetMultiplayerReference(),
+                    Target = __instance.GetGridReference(),
                     MinionProxy = key.GetMultiplayerReference()
                 }
             )

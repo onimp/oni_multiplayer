@@ -1,12 +1,13 @@
 ﻿using System;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 
 [Serializable]
 public class MasterSkill : IMultiplayerCommand {
 
-    private readonly MultiplayerReference minionIdentityReference;
+    private readonly GameObjectReference minionIdentityReference;
     private readonly string skillId;
 
     public MasterSkill(MinionIdentity minionIdentity, string skillId) {

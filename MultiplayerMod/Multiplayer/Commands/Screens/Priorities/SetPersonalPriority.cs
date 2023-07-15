@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Linq;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
 [Serializable]
 public class SetPersonalPriority : IMultiplayerCommand {
 
-    private readonly MultiplayerReference choreConsumerReference;
+    private readonly GameObjectReference choreConsumerReference;
     private readonly string choreGroupId;
     private readonly int value;
 

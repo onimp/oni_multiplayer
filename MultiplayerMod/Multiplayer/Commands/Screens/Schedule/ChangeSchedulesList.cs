@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
 
@@ -31,7 +32,7 @@ public class ChangeSchedulesList : IMultiplayerCommand {
     private class SerializableSchedule {
         public string name;
         public bool alarmActivated;
-        private List<MultiplayerReference> assigned;
+        private List<GameObjectReference> assigned;
         private List<string> blocks;
 
         private static Dictionary<String, ScheduleGroup> groups =

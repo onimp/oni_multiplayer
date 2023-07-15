@@ -2,6 +2,7 @@
 using System.Reflection;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
@@ -11,7 +12,7 @@ public class ClickUserMenuButton : IMultiplayerCommand {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(ClickUserMenuButton));
 
-    private MultiplayerReference reference;
+    private GameObjectReference reference;
     private Type actionDeclaringType;
     private string actionName;
 
