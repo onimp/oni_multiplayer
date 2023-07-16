@@ -40,32 +40,12 @@ public class ChoreConsumerEvents {
 
 }
 
-public class FindNextChoreEventArgs : EventArgs {
-    public int InstanceId { get; }
-
-    public string InstanceString { get; }
-
-    public int InstanceCell { get; }
-    public int ChoreId { get; }
-    public Type ChoreType { get; }
-    public int ChoreCell { get; }
-    public bool IsAttemptingOverride { get; }
-
-    public FindNextChoreEventArgs(
-        int instanceId,
-        string instanceString,
-        int instanceCell,
-        int choreId,
-        Type choreType,
-        int choreCell,
-        bool isAttemptingOverride
-    ) {
-        InstanceId = instanceId;
-        InstanceString = instanceString;
-        InstanceCell = instanceCell;
-        ChoreId = choreId;
-        ChoreType = choreType;
-        ChoreCell = choreCell;
-        IsAttemptingOverride = isAttemptingOverride;
-    }
-}
+public record FindNextChoreEventArgs(
+    int InstanceId,
+    string InstanceString,
+    int InstanceCell,
+    int ChoreId,
+    Type ChoreType,
+    int ChoreCell,
+    bool IsAttemptingOverride
+);

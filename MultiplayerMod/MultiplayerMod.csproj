@@ -7,6 +7,7 @@
     </PropertyGroup>
     <PropertyGroup>
       <Nullable>enable</Nullable>
+      <WarningsAsErrors>Nullable</WarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">

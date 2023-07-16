@@ -12,7 +12,7 @@ public class LobbyJoinRequestComponent : MonoBehaviour {
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<LobbyJoinRequestComponent>();
 
     private SteamClient? client;
-    private Callback<GameLobbyJoinRequested_t>? lobbyJoinRequestedCallback;
+    private Callback<GameLobbyJoinRequested_t> lobbyJoinRequestedCallback = null!;
 
     private void Awake() {
         client = (SteamClient) Container.Get<IMultiplayerClient>();
