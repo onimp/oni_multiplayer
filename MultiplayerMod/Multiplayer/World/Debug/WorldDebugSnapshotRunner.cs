@@ -28,10 +28,10 @@ public class WorldDebugSnapshotRunner : KMonoBehaviour, IRenderEveryTick {
     }
 
     private void CompareIfApplicable() {
-        if (LastServerInfo == null || Mathf.Abs(LastServerInfo.worldTime - (current?.worldTime ?? 0f)) > 0.5f)
+        if (LastServerInfo == null || Mathf.Abs(LastServerInfo.WorldTime - (current?.WorldTime ?? 0f)) > 0.5f)
             return;
 
-        ErrorsCount = current?.Compare(LastServerInfo, true) ?? 0;
+        ErrorsCount = current != null ? WorldDebugSnapshotComparator.Compare(current, LastServerInfo, true) : 0;
         LastServerInfo = null;
     }
 
