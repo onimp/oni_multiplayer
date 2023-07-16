@@ -5,7 +5,7 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 [HarmonyPatch(typeof(PauseScreen))]
 public static class PauseScreenEvents {
 
-    public static event System.Action QuitGame;
+    public static event System.Action? QuitGame;
 
     [HarmonyPostfix]
     [HarmonyPatch("TriggerQuitGame")]

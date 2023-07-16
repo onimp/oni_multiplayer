@@ -7,7 +7,7 @@ namespace MultiplayerMod.Game.UI;
 [HarmonyPatch(typeof(DisinfectThresholdDiagram))]
 public static class DiseaseOverlayEvents {
 
-    public static event Action<int, bool> DiseaseSettingsChanged;
+    public static event Action<int, bool>? DiseaseSettingsChanged;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(DisinfectThresholdDiagram.OnReleaseHandle))]

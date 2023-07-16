@@ -7,9 +7,9 @@ namespace MultiplayerMod.Multiplayer.Commands.Gameplay.Assignables;
 public class Assign : IMultiplayerCommand {
 
     private GameObjectReference Target { get; }
-    private GameObjectReference Identity { get; }
+    private GameObjectReference? Identity { get; }
 
-    public Assign(GameObjectReference target, GameObjectReference identity) {
+    public Assign(GameObjectReference target, GameObjectReference? identity) {
         Target = target;
         Identity = identity;
     }

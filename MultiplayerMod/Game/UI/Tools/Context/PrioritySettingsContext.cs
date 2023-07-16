@@ -12,7 +12,8 @@ public class PrioritySettingsContext : IGameContext {
 
     public void Apply() {
         GameStaticContext.Override();
-        GameStaticContext.Current.PriorityScreen.lastSelectedPriority = priority;
+        if (GameStaticContext.Current.PriorityScreen != null)
+            GameStaticContext.Current.PriorityScreen.lastSelectedPriority = priority;
     }
 
     public void Restore() {

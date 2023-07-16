@@ -6,7 +6,7 @@ using MultiplayerMod.Core.Patch;
 namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class ScheduleScreenEvents {
-    public static event Action<List<Schedule>> Changed;
+    public static event Action<List<Schedule>>? Changed;
 
     [HarmonyPatch(typeof(ScheduleScreen))]
     private static class ScheduleScreenPatch {

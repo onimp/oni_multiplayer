@@ -7,8 +7,8 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 [HarmonyPatch(typeof(ResearchEntry))]
 public static class ResearchScreenEvents {
 
-    public static event Action<string> Cancel;
-    public static event Action<string> Select;
+    public static event Action<string>? Cancel;
+    public static event Action<string>? Select;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ResearchEntry.OnResearchCanceled))]

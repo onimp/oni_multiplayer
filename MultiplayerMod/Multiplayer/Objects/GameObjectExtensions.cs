@@ -8,7 +8,7 @@ public static class GameObjectExtensions {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static GameObjectReference GetMultiplayerReference(this GameObject gameObject) =>
-        new MultiplayerIdReference(gameObject.GetComponent<MultiplayerInstance>().Id);
+        new MultiplayerIdReference(gameObject.GetComponent<MultiplayerInstance>().Id!);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static GameObjectReference GetMultiplayerReference(this KMonoBehaviour component) =>

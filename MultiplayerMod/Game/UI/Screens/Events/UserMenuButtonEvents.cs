@@ -8,7 +8,7 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class UserMenuButtonEvents {
 
-    public static event Action<GameObject, System.Action> Click;
+    public static event Action<GameObject, System.Action>? Click;
 
     private static readonly Type[] skipButtonTypes = {
         // Camera specific actions
@@ -27,10 +27,12 @@ public static class UserMenuButtonEvents {
         // ReSharper disable once UnusedMember.Local
         private static void AddButton(GameObject go, ref KIconButtonMenu.ButtonInfo button) {
             var original = button.onClick;
+            if (original == null)
+                return;
             if (skipButtonTypes.Contains(original.Method.DeclaringType)) return;
 
             button.onClick = () => {
-                original?.Invoke();
+                original.Invoke();
                 PatchControl.RunIfEnabled(
                     () => Click?.Invoke(
                         go,

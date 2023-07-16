@@ -8,9 +8,9 @@ namespace MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 public class SetHat : IMultiplayerCommand {
 
     private readonly GameObjectReference minionIdentityReference;
-    private readonly string targetHat;
+    private readonly string? targetHat;
 
-    public SetHat(MinionIdentity minionIdentity, string targetHat) {
+    public SetHat(MinionIdentity minionIdentity, string? targetHat) {
         minionIdentityReference = minionIdentity.GetMultiplayerReference();
         this.targetHat = targetHat;
     }

@@ -32,29 +32,32 @@ static class TargetExtractor {
                     );
                 }
             )
-            .Where(method => method.GetParameters().Length == argsCount)
+            .Where(method => method!.GetParameters().Length == argsCount)
             .ToList();
         return targetMethods;
     }
 
-    private static MethodBase GetMethodOrSetter(Type type, string methodName, Type interfaceType) {
+    private static MethodBase GetMethodOrSetter(Type type, string methodName, Type? interfaceType) {
         var methodInfo = GetMethod(type, methodName, interfaceType);
-        if (methodInfo != null) return methodInfo;
+        if (methodInfo != null)
+            return methodInfo;
 
         var property = GetSetter(type, methodName, interfaceType);
-        if (property != null) return property;
+        if (property != null)
+            return property;
 
         var message = $"Method {type}.{methodName} ({interfaceType}) not found";
         log.Error(message);
         throw new Exception(message);
     }
 
-    private static MethodBase GetMethod(Type type, string methodName, Type interfaceType) {
+    private static MethodBase? GetMethod(Type type, string methodName, Type? interfaceType) {
         var methodInfo = type.GetMethod(
             methodName,
             BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
         );
-        if (methodInfo != null) return methodInfo;
+        if (methodInfo != null)
+            return methodInfo;
 
         if (interfaceType == null) return null;
 
@@ -66,12 +69,16 @@ static class TargetExtractor {
         return methodInfo;
     }
 
-    private static MethodBase GetSetter(Type type, string propertyName, Type interfaceType) {
+    private static MethodBase? GetSetter(Type type, string propertyName, Type? interfaceType) {
         var property = type.GetProperty(
             propertyName,
             BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
         );
-        if (property != null) return property.GetSetMethod(true);
+        if (property != null)
+            return property.GetSetMethod(true);
+
+        if (interfaceType == null)
+            return null;
 
         // Some overrides names prefixed by interface e.g. Clinic#ISliderControl.SetSliderValue
         property = type.GetProperty(

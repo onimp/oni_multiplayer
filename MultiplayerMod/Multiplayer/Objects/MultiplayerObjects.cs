@@ -20,7 +20,7 @@ public class MultiplayerObjects {
 
     public void Remove(MultiplayerId id) => objects.Remove(id);
 
-    public GameObject this[MultiplayerId id] {
+    public GameObject? this[MultiplayerId id] {
         get {
             objects.TryGetValue(id, out var result);
             return result;

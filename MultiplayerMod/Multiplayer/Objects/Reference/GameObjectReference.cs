@@ -14,6 +14,6 @@ public abstract class GameObjectReference {
 
     public Component GetComponent(Type type) => GetGameObject().GetComponent(type);
 
-    protected abstract GameObject Resolve();
+    protected abstract GameObject? Resolve();
 
 }

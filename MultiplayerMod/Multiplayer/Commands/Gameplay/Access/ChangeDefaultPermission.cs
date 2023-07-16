@@ -9,8 +9,8 @@ public class ChangeDefaultPermission : AbstractAccessControlCommand {
     public ChangeDefaultPermission(AccessControlEventArgs arguments) : base(arguments) { }
 
     protected override void Apply(AccessControl control) {
-        // ReSharper disable once PossibleInvalidOperationException
-        control.DefaultPermission = Arguments.Permission.Value;
+        if (Arguments.Permission != null)
+            control.DefaultPermission = Arguments.Permission.Value;
     }
 
 }

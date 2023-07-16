@@ -20,8 +20,8 @@ public class SteamClient : IMultiplayerClient {
 
     public IPlayer Player => playerContainer.Value;
     public MultiplayerClientState State { get; private set; } = MultiplayerClientState.Disconnected;
-    public event EventHandler<ClientStateChangedEventArgs> StateChanged;
-    public event EventHandler<CommandReceivedEventArgs> CommandReceived;
+    public event EventHandler<ClientStateChangedEventArgs>? StateChanged;
+    public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
     private readonly SteamLobby lobby = Container.Get<SteamLobby>();
@@ -33,7 +33,7 @@ public class SteamClient : IMultiplayerClient {
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
 
-    private GameObject gameObject;
+    private GameObject? gameObject;
 
     public void Connect(IMultiplayerEndpoint endpoint) {
         if (!SteamManager.Initialized)
@@ -60,7 +60,8 @@ public class SteamClient : IMultiplayerClient {
         if (State <= MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
-        UnityObject.Destroy(gameObject);
+        if (gameObject != null)
+            UnityObject.Destroy(gameObject);
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
         SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);

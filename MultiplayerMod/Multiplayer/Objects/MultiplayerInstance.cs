@@ -4,7 +4,7 @@ namespace MultiplayerMod.Multiplayer.Objects;
 
 public class MultiplayerInstance : KMonoBehaviour {
 
-    public MultiplayerId Id { get; set; }
+    public MultiplayerId? Id { get; set; }
 
     protected override void OnCleanUp() {
         if (Id != null)

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.World;
@@ -83,7 +82,7 @@ public class FindNextChore : IMultiplayerCommand {
         string serverChoreType,
         bool isAttemptingOverride
     ) {
-        Chore choreWithIdCollision = null;
+        Chore? choreWithIdCollision = null;
         var chore = FindInInstance(
                         instance,
                         choreId,
@@ -121,12 +120,12 @@ public class FindNextChore : IMultiplayerCommand {
         return new Chore.Precondition.Context(chore, instance.consumerState, isAttemptingOverride);
     }
 
-    private static Chore FindInInstance(
+    private static Chore? FindInInstance(
         ChoreConsumer instance,
         int choreId,
         int cell,
         string serverChoreType,
-        ref Chore choreWithIdCollision
+        ref Chore? choreWithIdCollision
     ) {
         var chores = instance.GetProviders()
             .SelectMany(provider => provider.choreWorldMap.Values.SelectMany(x => x))
@@ -140,12 +139,12 @@ public class FindNextChore : IMultiplayerCommand {
         ) ?? FindByTypeAndCell(chores, cell, serverChoreType);
     }
 
-    private static Chore FindInGlobal(
+    private static Chore? FindInGlobal(
         ChoreConsumer instance,
         int choreId,
         int cell,
         string serverChoreType,
-        ref Chore choreWithIdCollision
+        ref Chore? choreWithIdCollision
     ) {
         var globalChores =
             Object.FindObjectsOfType<ChoreConsumer>()
@@ -167,13 +166,12 @@ public class FindNextChore : IMultiplayerCommand {
         return chore;
     }
 
-    [CanBeNull]
-    private static Chore FindFullMatch(
+    private static Chore? FindFullMatch(
         Chore[] chores,
         int choreId,
         int choreCell,
         string choreType,
-        ref Chore choreWithIdCollision
+        ref Chore? choreWithIdCollision
     ) {
         var result = chores.FirstOrDefault(
             chore => chore.id == choreId
@@ -199,7 +197,7 @@ public class FindNextChore : IMultiplayerCommand {
         return result;
     }
 
-    private static Chore FindByTypeAndCell(Chore[] chores, int choreCell, string choreType) {
+    private static Chore? FindByTypeAndCell(Chore[] chores, int choreCell, string choreType) {
         var choreOfType = chores.Where(chore => chore.GetType().ToString() == choreType).ToList();
         var results = choreOfType.Where(
             chore => DependsOnConsumerCell(choreType) ||

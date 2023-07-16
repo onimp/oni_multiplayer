@@ -7,7 +7,7 @@ namespace MultiplayerMod.Game.UI.Tools.Events;
 [HarmonyPatch(typeof(InterfaceTool))]
 public static class InterfaceToolEvents {
 
-    public static event Action<Vector2> MouseMoved;
+    public static event Action<Vector2>? MouseMoved;
 
     // ReSharper disable once InconsistentNaming
     [HarmonyPrefix]

@@ -6,7 +6,7 @@ namespace MultiplayerMod.Game.World;
 [HarmonyPatch(typeof(SaveLoader))]
 public abstract class SaveLoaderEvents {
 
-    public static event System.Action WorldSaved;
+    public static event System.Action? WorldSaved;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SaveLoader.Save), typeof(string), typeof(bool), typeof(bool))]

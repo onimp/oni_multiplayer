@@ -9,8 +9,8 @@ using UnityEngine;
 namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class ConsumableScreenEvents {
-    public static event Action<ConsumableConsumer, string, bool> PermitToMinion;
-    public static event Action<List<Tag>> PermitByDefault;
+    public static event Action<ConsumableConsumer, string, bool>? PermitToMinion;
+    public static event Action<List<Tag>>? PermitByDefault;
 
     [HarmonyPatch(typeof(ConsumableConsumer))]
     private static class ConsumablesEvents {

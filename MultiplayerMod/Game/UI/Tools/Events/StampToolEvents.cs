@@ -10,7 +10,7 @@ namespace MultiplayerMod.Game.UI.Tools.Events;
 [HarmonyPatch(typeof(StampTool))]
 public static class StampToolEvents {
 
-    public static event EventHandler<StampEventArgs> Stamp;
+    public static event EventHandler<StampEventArgs>? Stamp;
 
     [HarmonyPriority(Priority.High)]
     [HarmonyTranspiler]
@@ -39,10 +39,10 @@ public static class StampToolEvents {
         () => {
             Stamp?.Invoke(
                 null,
-                new StampEventArgs {
-                    Template = instance.stampTemplate,
-                    Location = location
-                }
+                new StampEventArgs(
+                    instance.stampTemplate,
+                    location
+                )
             );
         }
     );

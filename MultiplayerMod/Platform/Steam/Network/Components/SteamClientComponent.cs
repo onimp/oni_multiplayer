@@ -5,7 +5,7 @@ using UnityEngine;
 namespace MultiplayerMod.Platform.Steam.Network.Components;
 
 public class SteamClientComponent : MonoBehaviour {
-    private SteamClient client;
+    private SteamClient? client;
     private void Awake() => client = (SteamClient) Container.Get<IMultiplayerClient>();
-    private void Update() => client.Tick();
+    private void Update() => client?.Tick();
 }

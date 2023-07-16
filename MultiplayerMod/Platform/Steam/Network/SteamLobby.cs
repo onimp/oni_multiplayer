@@ -22,9 +22,9 @@ public class SteamLobby {
         }
     }
 
-    public event LobbyEventHandler OnCreate;
-    public event LobbyEventHandler OnLeave;
-    public event LobbyEventHandler OnJoin;
+    public event LobbyEventHandler? OnCreate;
+    public event LobbyEventHandler? OnLeave;
+    public event LobbyEventHandler? OnJoin;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamLobby>();
     private readonly CallResult<LobbyCreated_t> lobbyCreatedCallback;

@@ -144,11 +144,10 @@ public class GameEventBindings {
                 log.Warning($"Identity {identity.GetType().FullName} is not supported {Environment.StackTrace}");
                 return;
             }
-            var component = (KMonoBehaviour) identity;
             client.Send(
                 new Assign(
                     assignable.GetGridReference(),
-                    component != null ? component.GetMultiplayerReference() : null
+                    ((KMonoBehaviour?) identity)?.GetMultiplayerReference()
                 )
             );
         };

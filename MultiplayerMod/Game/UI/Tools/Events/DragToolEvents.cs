@@ -10,9 +10,9 @@ namespace MultiplayerMod.Game.UI.Tools.Events;
 [HarmonyPatch]
 public static class DragToolEvents {
 
-    public static event EventHandler<DragCompleteEventArgs> DragComplete;
+    public static event EventHandler<DragCompleteEventArgs>? DragComplete;
 
-    private static DragTool lastTool;
+    private static DragTool? lastTool;
     private static readonly List<int> selection = new();
 
     #region Dig
@@ -170,17 +170,17 @@ public static class DragToolEvents {
             () => {
                 AssertSameInstance(instance);
 
-                var args = new DragCompleteEventArgs {
-                    Cells = selection,
-                    CursorDown = cursorDown,
-                    CursorUp = cursorUp,
-                    Priority = ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority(),
-                    Parameters = instance switch {
+                var args = new DragCompleteEventArgs(
+                    selection,
+                    cursorDown,
+                    cursorUp,
+                    ToolMenu.Instance.PriorityScreen.GetLastSelectedPriority(),
+                    instance switch {
                         FilteredDragTool filtered => GetActiveParameters(filtered.currentFilterTargets),
                         HarvestTool harvest => GetActiveParameters(harvest.options),
                         _ => null
                     }
-                };
+                );
 
                 DragComplete?.Invoke(instance, args);
 
