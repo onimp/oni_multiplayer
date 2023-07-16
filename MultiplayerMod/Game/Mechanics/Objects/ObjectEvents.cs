@@ -41,6 +41,34 @@ public static class ObjectEvents {
                 nameof(SingleEntityReceptacle.SetPreview)
             }
         },
+        { typeof(LimitValve), new[] { nameof(LimitValve.Limit), nameof(LimitValve.ResetAmount) } }, {
+            typeof(ILogicRibbonBitSelector),
+            new[] { nameof(ILogicRibbonBitSelector.SetBitSelection), nameof(ILogicRibbonBitSelector.UpdateVisuals) }
+        },
+        { typeof(CreatureLure), new[] { nameof(CreatureLure.ChangeBaitSetting) } },
+        { typeof(MonumentPart), new[] { nameof(MonumentPart.SetState) } },
+        { typeof(INToggleSideScreenControl), new[] { nameof(INToggleSideScreenControl.QueueSelectedOption) } },
+        { typeof(Artable), new[] { nameof(Artable.SetUserChosenTargetState), nameof(Artable.SetDefault) } },
+        { typeof(Automatable), new[] { nameof(Automatable.SetAutomationOnly) } }, {
+            typeof(IDispenser),
+            new[] {
+                nameof(IDispenser.OnCancelDispense), nameof(IDispenser.OnOrderDispense), nameof(IDispenser.SelectItem)
+            }
+        },
+        { typeof(FlatTagFilterable), new[] { nameof(FlatTagFilterable.ToggleTag) } },
+        { typeof(GeneShuffler), new[] { nameof(GeneShuffler.SetWorkTime), nameof(GeneShuffler.RequestRecharge) } }, {
+            typeof(GeneticAnalysisStation.StatesInstance),
+            new[] { nameof(GeneticAnalysisStation.StatesInstance.SetSeedForbidden) }
+        },
+        { typeof(IHighEnergyParticleDirection), new[] { nameof(IHighEnergyParticleDirection.Direction) } }, {
+            typeof(CraftModuleInterface),
+            new[] { nameof(CraftModuleInterface.CancelLaunch), nameof(CraftModuleInterface.TriggerLaunch) }
+        }, {
+            typeof(IActivationRangeTarget),
+            new[] { nameof(IActivationRangeTarget.ActivateValue), nameof(IActivationRangeTarget.DeactivateValue) }
+        },
+        { typeof(ISidescreenButtonControl), new[] { nameof(ISidescreenButtonControl.OnSidescreenButtonPressed) } },
+        { typeof(IUserControlledCapacity), new[] { nameof(IUserControlledCapacity.UserMaxCapacity) } },
         // TODO decide how to proper patch KMonoBehaviour#Trigger
         // {
         //     typeof(ReorderableBuilding),
@@ -73,6 +101,29 @@ public static class ObjectEvents {
         //         nameof(LogicTimerSensor.ResetTimer)
         //     }
         // },
+        // {
+        //          typeof(LogicAlarm),
+        //          new[] {
+        //              nameof(LogicAlarm.notificationName),
+        //              nameof(LogicAlarm.notificationTooltip),
+        //              nameof(LogicAlarm.pauseOnNotify),
+        //              nameof(LogicAlarm.zoomOnNotify),
+        //              nameof(LogicAlarm.notificationType),
+        //              nameof(LogicAlarm.UpdateNotification)
+        //          }
+        //      },
+        //      {
+        //          typeof(LogicCounter),
+        //          new[] {
+        //              nameof(LogicCounter.currentCount),
+        //              nameof(LogicCounter.maxCount),
+        //              nameof(LogicCounter.SetCounterState),
+        //              nameof(LogicCounter.UpdateLogicCircuit),
+        //              nameof(LogicCounter.UpdateVisualState),
+        //              nameof(LogicCounter.UpdateMeter)
+        //          }
+        //      },
+        //  { typeof(LogicCritterCountSensor), new[] { nameof(LogicCritterCountSensor.countCritters) } },
         // TODO uncomment lines below after creating required surrogates.
         // { typeof(Assignable), new[] { nameof(Assignable.Assign), nameof(Assignable.Unassign) } },
         // { typeof(AccessControl),
@@ -81,6 +132,10 @@ public static class ObjectEvents {
         //         nameof(AccessControl.DefaultPermission)
         //     }
         // }
+        // {typeof(LogicBroadcastReceiver), new []{nameof(LogicBroadcastReceiver.SetChannel)}},
+        // { typeof(LaunchConditionManager), new[] { nameof(LaunchConditionManager.Launch) } },
+        // { typeof(GeoTuner.Instance), new[] { nameof(GeoTuner.Instance.AssignFutureGeyser) } },
+        //  { typeof(IConfigurableConsumer), new[] { nameof(IConfigurableConsumer.SetSelectedOption) } },
     };
 
     private static IEnumerable<MethodBase> GetTargetMethods(int argsCount) {

@@ -21,15 +21,15 @@ static class TargetExtractor {
             )
             .SelectMany(
                 type => {
-                    Type interfaceType = null;
-                    if (!classTypes.Contains(type)) {
-                        interfaceType =
-                            interfaceTypes.Single(interfaceType => interfaceType.IsAssignableFrom(type));
-                    }
-                    var methodNames = interfaceType != null
-                        ? methodsForPatch[interfaceType]
-                        : methodsForPatch[type];
-                    return methodNames.Select(methodName => GetMethodOrSetter(type, methodName, interfaceType));
+                    if (classTypes.Contains(type))
+                        return methodsForPatch[type].Select(methodName => GetMethodOrSetter(type, methodName, null));
+
+                    var implementedInterfaces = GetImplementedInterfaces(interfaceTypes, type);
+                    return implementedInterfaces.SelectMany(
+                        implementedInterface => methodsForPatch[implementedInterface].Select(
+                            methodName => GetMethodOrSetter(type, methodName, implementedInterface)
+                        )
+                    );
                 }
             )
             .Where(method => method.GetParameters().Length == argsCount)
@@ -41,14 +41,12 @@ static class TargetExtractor {
         var methodInfo = GetMethod(type, methodName, interfaceType);
         if (methodInfo != null) return methodInfo;
 
-        var property = type.GetProperty(
-            methodName,
-            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
-        );
-        if (property != null) return property.GetSetMethod();
+        var property = GetSetter(type, methodName, interfaceType);
+        if (property != null) return property;
 
-        log.Error($"Method {type}.{methodName} not found");
-        return null;
+        var message = $"Method {type}.{methodName} ({interfaceType}) not found";
+        log.Error(message);
+        throw new Exception(message);
     }
 
     private static MethodBase GetMethod(Type type, string methodName, Type interfaceType) {
@@ -66,5 +64,24 @@ static class TargetExtractor {
             BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
         );
         return methodInfo;
+    }
+
+    private static MethodBase GetSetter(Type type, string propertyName, Type interfaceType) {
+        var property = type.GetProperty(
+            propertyName,
+            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
+        );
+        if (property != null) return property.GetSetMethod(true);
+
+        // Some overrides names prefixed by interface e.g. Clinic#ISliderControl.SetSliderValue
+        property = type.GetProperty(
+            interfaceType.Name + "." + propertyName,
+            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
+        );
+        return property?.GetSetMethod(true);
+    }
+
+    private static List<Type> GetImplementedInterfaces(List<Type> interfaceTypes, Type type) {
+        return interfaceTypes.Where(interfaceType => interfaceType.IsAssignableFrom(type)).ToList();
     }
 }
