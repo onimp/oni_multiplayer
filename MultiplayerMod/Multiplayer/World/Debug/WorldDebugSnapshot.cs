@@ -27,6 +27,40 @@ public class WorldDebugSnapshot {
     public Dictionary<int, int[]>[] ChoreProvidersChoresHashes;
     private const int maxBatchesCount = 128;
 
+    public WorldDebugSnapshot(
+        float worldTime,
+        int cellsCount,
+        int[] elementIdxHashes,
+        int[] temperatureHashes,
+        int[] radiationHashes,
+        int[] massHashes,
+        int[] propertiesHashes,
+        int[] strengthInfoHashes,
+        int[] insulationHashes,
+        int[] diseaseIdxHashes,
+        int[] diseaseCountHashes,
+        int[] accumulatedFlowValuesHashes,
+        Dictionary<string, string[]> stateMachineStates,
+        int[] choreProvidersHashes,
+        Dictionary<int, int[]>[] choreProvidersChoresHashes
+    ) {
+        this.worldTime = worldTime;
+        this.cellsCount = cellsCount;
+        this.elementIdxHashes = elementIdxHashes;
+        this.temperatureHashes = temperatureHashes;
+        this.radiationHashes = radiationHashes;
+        this.massHashes = massHashes;
+        this.propertiesHashes = propertiesHashes;
+        this.strengthInfoHashes = strengthInfoHashes;
+        this.insulationHashes = insulationHashes;
+        this.diseaseIdxHashes = diseaseIdxHashes;
+        this.diseaseCountHashes = diseaseCountHashes;
+        this.accumulatedFlowValuesHashes = accumulatedFlowValuesHashes;
+        StateMachineStates = stateMachineStates;
+        this.choreProvidersHashes = choreProvidersHashes;
+        ChoreProvidersChoresHashes = choreProvidersChoresHashes;
+    }
+
     public static unsafe WorldDebugSnapshot Create() {
         var stateMachines = Object.FindObjectsOfType<StateMachineController>();
         var stateMachineStates = stateMachines.ToDictionary(
@@ -40,28 +74,28 @@ public class WorldDebugSnapshot {
             }
         );
         var choreProviders = Object.FindObjectsOfType<ChoreProvider>();
-        return new WorldDebugSnapshot {
-            worldTime = GameClock.Instance.GetTime(),
-            cellsCount = Grid.CellCount,
-            elementIdxHashes = HashBatches(Grid.elementIdx),
-            temperatureHashes = HashBatches(Grid.temperature),
-            radiationHashes = HashBatches(Grid.radiation),
-            massHashes = HashBatches(Grid.mass),
-            propertiesHashes = HashBatches(Grid.properties),
-            strengthInfoHashes = HashBatches(Grid.strengthInfo),
-            insulationHashes = HashBatches(Grid.insulation),
-            diseaseIdxHashes = HashBatches(Grid.diseaseIdx),
-            diseaseCountHashes = HashBatches(Grid.diseaseCount),
-            accumulatedFlowValuesHashes = HashBatches(Grid.AccumulatedFlowValues),
-            StateMachineStates = stateMachineStates,
-            choreProvidersHashes = choreProviders.Select(choreProvider => choreProvider.Name.GetHashCode()).ToArray(),
-            ChoreProvidersChoresHashes = choreProviders.Select(
+        return new WorldDebugSnapshot(
+            GameClock.Instance.GetTime(),
+            Grid.CellCount,
+            HashBatches(Grid.elementIdx),
+            HashBatches(Grid.temperature),
+            HashBatches(Grid.radiation),
+            HashBatches(Grid.mass),
+            HashBatches(Grid.properties),
+            HashBatches(Grid.strengthInfo),
+            HashBatches(Grid.insulation),
+            HashBatches(Grid.diseaseIdx),
+            HashBatches(Grid.diseaseCount),
+            HashBatches(Grid.AccumulatedFlowValues),
+            stateMachineStates,
+            choreProviders.Select(choreProvider => choreProvider.Name.GetHashCode()).ToArray(),
+            choreProviders.Select(
                 choreProvider => choreProvider.choreWorldMap.ToDictionary(
                     pair => pair.Key,
                     pair => pair.Value.Select(Hash).ToArray()
                 )
             ).ToArray()
-        };
+        );
     }
 
     public int Compare(WorldDebugSnapshot other, bool printDebug) {
@@ -152,14 +186,14 @@ public class WorldDebugSnapshot {
         return ((h1 << 5) + h1) ^ h2;
     }
 
-    private int CompareValues<T>(string name, T a, T b) {
+    private int CompareValues<T>(string name, T a, T b) where T : IComparable {
         if (a.Equals(b)) return 0;
 
         log.Debug($"{name} {a} != {b}");
         return 1;
     }
 
-    private int CompareValues<T>(string name, T[] a, T[] b) {
+    private int CompareValues<T>(string name, T[] a, T[] b) where T : IComparable {
         var failures = Enumerable.Range(0, Math.Max(a.Length, b.Length))
             .Where(i => a.Length <= i || b.Length <= i || !a[i].Equals(b[i])).ToArray();
         if (failures.Length != 0)
@@ -201,4 +235,5 @@ public class WorldDebugSnapshot {
     private static string JoinToString<T>(T[] objects) {
         return String.Join(", ", objects);
     }
+
 }

@@ -7,7 +7,7 @@ namespace MultiplayerMod.Game.Objects;
 [HarmonyPatch(typeof(Util))]
 public static class KInstantiateEvents {
 
-    public static event Action<GameObject> Create;
+    public static event Action<GameObject>? Create;
 
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]

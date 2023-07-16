@@ -35,7 +35,7 @@ public class Build : IMultiplayerCommand {
             : definition.TryPlace(null, cbcPosition, arguments.Orientation, arguments.Materials, arguments.FacadeId);
     }
 
-    private GameObject DoUpgrade(BuildingDef definition, Vector3 cbcPosition) {
+    private GameObject? DoUpgrade(BuildingDef definition, Vector3 cbcPosition) {
         if (arguments.InstantBuild) {
             var candidate = definition.GetReplacementCandidate(arguments.Cell);
             return InstantUpgrade(definition, candidate);
@@ -45,7 +45,7 @@ public class Build : IMultiplayerCommand {
         return item;
     }
 
-    public GameObject InstantUpgrade(BuildingDef definition, GameObject candidate) {
+    public GameObject? InstantUpgrade(BuildingDef definition, GameObject candidate) {
         if (candidate.GetComponent<SimCellOccupier>() == null) {
             UnityObject.Destroy(candidate);
             return DoInstantBuild(definition);

@@ -12,7 +12,7 @@ namespace MultiplayerMod.Game.UI.Screens;
 [HarmonyPatch(typeof(ImmigrantScreen))]
 public static class ImmigrantScreenPatch {
 
-    public static List<ITelepadDeliverable> Deliverables { get; set; }
+    public static List<ITelepadDeliverable?>? Deliverables { get; set; }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
@@ -24,16 +24,19 @@ public static class ImmigrantScreenPatch {
                 // Wait until default initialize is complete
                 await ScreensUtils.WaitForAllDeliverablesReady(__instance);
                 // Create correct containers.
-                InitializeContainers(ImmigrantScreen.instance);
+                InitializeContainers(Deliverables, ImmigrantScreen.instance);
                 // Wait until those containers are initialized with random data.
                 await ScreensUtils.WaitForAllDeliverablesReady(__instance);
 
-                SetDeliverablesData(__instance);
+                SetDeliverablesData(Deliverables, __instance);
             }
         )
     );
 
-    private static void InitializeContainers(CharacterSelectionController screen) {
+    private static void InitializeContainers(
+        List<ITelepadDeliverable?> telepadDeliverables,
+        CharacterSelectionController screen
+    ) {
         screen.OnReplacedEvent = null;
         screen.containers?.ForEach(cc => Object.Destroy(cc.GetGameObject()));
         screen.containers?.Clear();
@@ -43,7 +46,7 @@ public static class ImmigrantScreenPatch {
         screen.numberOfDuplicantOptions = 0;
         screen.selectedDeliverables = new List<ITelepadDeliverable>();
 
-        foreach (var deliverable in Deliverables) {
+        foreach (var deliverable in telepadDeliverables) {
             if (deliverable is MinionStartingStats) {
                 var characterContainer = Util.KInstantiateUI<CharacterContainer>(
                     screen.containerPrefab.gameObject,
@@ -65,10 +68,13 @@ public static class ImmigrantScreenPatch {
         }
     }
 
-    private static void SetDeliverablesData(CharacterSelectionController screen) {
-        var minionStats = Deliverables.OfType<MinionStartingStats>().ToArray();
+    private static void SetDeliverablesData(
+        List<ITelepadDeliverable?> telepadDeliverables,
+        CharacterSelectionController screen
+    ) {
+        var minionStats = telepadDeliverables.OfType<MinionStartingStats>().ToArray();
         var packageData =
-            Deliverables.OfType<CarePackageContainer.CarePackageInstanceData>().ToArray();
+            telepadDeliverables.OfType<CarePackageContainer.CarePackageInstanceData>().ToArray();
         for (var i = 0; i < minionStats.Length; i++) {
             SetCharacterStats(screen.containers.OfType<CharacterContainer>().ToArray()[i], minionStats[i]);
         }

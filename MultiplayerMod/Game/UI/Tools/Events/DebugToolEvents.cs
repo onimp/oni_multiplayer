@@ -16,7 +16,7 @@ public static class DebugToolEvents {
         StoreSubstance
     };
 
-    public static event EventHandler<ModifyEventArgs> Modify;
+    public static event EventHandler<ModifyEventArgs>? Modify;
 
     static DebugToolEvents() => DragToolEvents.DragComplete += OnDragComplete;
 
@@ -40,7 +40,7 @@ public static class DebugToolEvents {
             AllowFowReveal = instance.set_allow_fow_reveal
         };
 
-        Modify?.Invoke(sender, new ModifyEventArgs { DragEventArgs = e, Type = tool.type, ToolContext = context });
+        Modify?.Invoke(sender, new ModifyEventArgs(e, tool.type, context));
     }
 
 }

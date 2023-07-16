@@ -11,8 +11,8 @@ public class LobbyJoinRequestComponent : MonoBehaviour {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<LobbyJoinRequestComponent>();
 
-    private SteamClient client;
-    private Callback<GameLobbyJoinRequested_t> lobbyJoinRequestedCallback;
+    private SteamClient? client;
+    private Callback<GameLobbyJoinRequested_t>? lobbyJoinRequestedCallback;
 
     private void Awake() {
         client = (SteamClient) Container.Get<IMultiplayerClient>();
@@ -27,16 +27,16 @@ public class LobbyJoinRequestComponent : MonoBehaviour {
 
         var id = new CSteamID(ulong.Parse(arguments[2]));
         log.Info($"Connecting to lobby {id} (command line)");
-        client.Connect(new SteamServerEndpoint(id));
+        client?.Connect(new SteamServerEndpoint(id));
     }
 
     private void OnLobbyJoinRequested(GameLobbyJoinRequested_t request) {
         log.Info($"Connecting to lobby {request.m_steamIDLobby} (lobby join request)");
-        client.Connect(new SteamServerEndpoint(request.m_steamIDLobby));
+        client?.Connect(new SteamServerEndpoint(request.m_steamIDLobby));
     }
 
     private void OnDestroy() {
-        lobbyJoinRequestedCallback.Unregister();
+        lobbyJoinRequestedCallback?.Unregister();
     }
 
 }

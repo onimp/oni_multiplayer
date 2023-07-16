@@ -12,7 +12,7 @@ public class NetworkMessageProcessor {
     private readonly ConcurrentDictionary<uint, ConcurrentDictionary<int, FragmentsBuffer>> fragments = new();
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<NetworkMessageProcessor>();
 
-    public NetworkMessage Process(uint clientId, INetworkMessageHandle handle) =>
+    public NetworkMessage? Process(uint clientId, INetworkMessageHandle handle) =>
         NetworkSerializer.Deserialize(handle) switch {
             NetworkMessage message => message,
             NetworkMessageFragmentsHeader header => ProcessFragmentsHeader(clientId, header),
@@ -20,7 +20,7 @@ public class NetworkMessageProcessor {
             _ => null
         };
 
-    private NetworkMessage ProcessFragmentsHeader(uint clientId, NetworkMessageFragmentsHeader header) {
+    private NetworkMessage? ProcessFragmentsHeader(uint clientId, NetworkMessageFragmentsHeader header) {
         fragments.TryGetValue(clientId, out var index);
         if (index == null) {
             index = new ConcurrentDictionary<int, FragmentsBuffer>();
@@ -35,7 +35,7 @@ public class NetworkMessageProcessor {
         return null;
     }
 
-    private NetworkMessage ProcessMessageFragment(uint clientId, NetworkMessageFragment fragment) {
+    private NetworkMessage? ProcessMessageFragment(uint clientId, NetworkMessageFragment fragment) {
         string ExceptionMessage() =>
             $"Message (id: {fragment.MessageId}) fragment received, but no fragments buffer found";
 
@@ -63,7 +63,7 @@ public class NetworkMessageProcessor {
         private readonly int count;
         private readonly byte[] buffer;
 
-        public event EventHandler Timeout;
+        public event EventHandler? Timeout;
 
         private readonly System.Timers.Timer watchdog = new(watchdogIntervalMs) {
             Enabled = true,
@@ -76,7 +76,7 @@ public class NetworkMessageProcessor {
             watchdog.Elapsed += (_, _) => Timeout?.Invoke(this, EventArgs.Empty);
         }
 
-        public NetworkMessage Append(NetworkMessageFragment fragment) {
+        public NetworkMessage? Append(NetworkMessageFragment fragment) {
             if (index >= count)
                 throw new NetworkPlatformException("Invalid fragmentation: more fragments than expected.");
 

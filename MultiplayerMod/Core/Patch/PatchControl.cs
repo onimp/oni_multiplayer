@@ -16,7 +16,7 @@ public static class PatchControl {
         );
     }
 
-    public static T RunWithDisabledPatches<T>(Func<T> action) {
+    public static T? RunWithDisabledPatches<T>(Func<T?> action) {
         disabled.Value = true;
         try {
             return action();

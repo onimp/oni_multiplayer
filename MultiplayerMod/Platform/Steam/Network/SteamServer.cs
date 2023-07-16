@@ -39,30 +39,30 @@ public class SteamServer : IMultiplayerServer {
 
     public List<IPlayer> Players => new(players.Keys);
 
-    public event EventHandler<ServerStateChangedEventArgs> StateChanged;
-    public event EventHandler<PlayerConnectedEventArgs> PlayerConnected;
-    public event EventHandler<CommandReceivedEventArgs> CommandReceived;
+    public event EventHandler<ServerStateChangedEventArgs>? StateChanged;
+    public event EventHandler<PlayerConnectedEventArgs>? PlayerConnected;
+    public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamServer>();
 
-    private Callback<SteamServersConnected_t> steamServersConnectedCallback;
-    private TaskCompletionSource<bool> lobbyCompletionSource;
-    private TaskCompletionSource<bool> steamServersCompletionSource;
-    private CancellationTokenSource callbacksCancellationTokenSource;
+    private Callback<SteamServersConnected_t>? steamServersConnectedCallback;
+    private TaskCompletionSource<bool>? lobbyCompletionSource;
+    private TaskCompletionSource<bool>? steamServersCompletionSource;
+    private CancellationTokenSource? callbacksCancellationTokenSource;
 
     private HSteamNetPollGroup pollGroup;
     private HSteamListenSocket listenSocket;
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
-    private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback;
+    private Callback<SteamNetConnectionStatusChangedCallback_t>? connectionStatusChangedCallback;
 
     private readonly Dictionary<IPlayer, HSteamNetConnection> players = new();
     private readonly IPlayer currentPlayer = new SteamPlayer(SteamUser.GetSteamID());
 
     private readonly SteamLobby lobby = Container.Get<SteamLobby>();
 
-    private GameObject gameObject;
+    private GameObject? gameObject;
 
     public void Start() {
         if (!SteamManager.Initialized)
@@ -85,7 +85,8 @@ public class SteamServer : IMultiplayerServer {
             throw new NetworkPlatformException("Server isn't started");
 
         log.Debug("Stopping...");
-        UnityObject.Destroy(gameObject);
+        if (gameObject != null)
+            UnityObject.Destroy(gameObject);
         Reset();
         SetState(MultiplayerServerState.Stopped);
     }
@@ -165,21 +166,21 @@ public class SteamServer : IMultiplayerServer {
         lobby.OnCreate -= OnLobbyCreated;
         lobby.Leave();
 
-        connectionStatusChangedCallback.Unregister();
+        connectionStatusChangedCallback?.Unregister();
         SteamGameServerNetworkingSockets.DestroyPollGroup(pollGroup);
         SteamGameServerNetworkingSockets.CloseListenSocket(listenSocket);
 
         GameServer.Shutdown();
 
-        steamServersConnectedCallback.Unregister();
+        steamServersConnectedCallback?.Unregister();
 
         ResetTaskCompletionSource(ref lobbyCompletionSource);
         ResetTaskCompletionSource(ref steamServersCompletionSource);
-        callbacksCancellationTokenSource.Cancel();
+        callbacksCancellationTokenSource?.Cancel();
     }
 
-    private void ResetTaskCompletionSource<T>(ref TaskCompletionSource<T> source) {
-        source.TrySetCanceled();
+    private void ResetTaskCompletionSource<T>(ref TaskCompletionSource<T>? source) {
+        source?.TrySetCanceled();
         source = null;
     }
 
@@ -188,9 +189,9 @@ public class SteamServer : IMultiplayerServer {
         SetState(MultiplayerServerState.Started);
     }
 
-    private void OnLobbyCreated() => lobbyCompletionSource.SetResult(true);
+    private void OnLobbyCreated() => lobbyCompletionSource?.SetResult(true);
 
-    private void ConnectedToSteamCallback() => steamServersCompletionSource.SetResult(true);
+    private void ConnectedToSteamCallback() => steamServersCompletionSource?.SetResult(true);
 
     public void ReceiveMessages() {
         var messages = new IntPtr[128];

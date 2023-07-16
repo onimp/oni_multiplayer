@@ -8,8 +8,8 @@ namespace MultiplayerMod.Game.Mechanics;
 [HarmonyPatch(typeof(AccessControl))]
 public static class AccessControlEvents {
 
-    public static event EventHandler<AccessControlEventArgs> DefaultPermissionChanged;
-    public static event EventHandler<AccessControlEventArgs> PermissionChanged;
+    public static event EventHandler<AccessControlEventArgs>? DefaultPermissionChanged;
+    public static event EventHandler<AccessControlEventArgs>? PermissionChanged;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(AccessControl.DefaultPermission), MethodType.Setter)]
@@ -17,10 +17,11 @@ public static class AccessControlEvents {
         PatchControl.RunIfEnabled(
             () => DefaultPermissionChanged?.Invoke(
                 __instance,
-                new AccessControlEventArgs {
-                    Permission = value,
-                    Target = __instance.GetGridReference()
-                }
+                new AccessControlEventArgs(
+                    null,
+                    __instance.GetGridReference(),
+                    value
+                )
             )
         );
 
@@ -33,11 +34,11 @@ public static class AccessControlEvents {
     ) => PatchControl.RunIfEnabled(
         () => PermissionChanged?.Invoke(
             __instance,
-            new AccessControlEventArgs {
-                Permission = permission,
-                Target = __instance.GetGridReference(),
-                MinionProxy = key.GetMultiplayerReference()
-            }
+            new AccessControlEventArgs(
+                key.GetMultiplayerReference(),
+                __instance.GetGridReference(),
+                permission
+            )
         )
     );
 
@@ -47,10 +48,11 @@ public static class AccessControlEvents {
         PatchControl.RunIfEnabled(
             () => PermissionChanged?.Invoke(
                 __instance,
-                new AccessControlEventArgs {
-                    Target = __instance.GetGridReference(),
-                    MinionProxy = key.GetMultiplayerReference()
-                }
+                new AccessControlEventArgs(
+                    key.GetMultiplayerReference(),
+                    __instance.GetGridReference(),
+                    null
+                )
             )
         );
 

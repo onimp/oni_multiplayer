@@ -12,9 +12,9 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 [HarmonyPatch(typeof(ImmigrantScreen))]
 [SuppressMessage("ReSharper", "UnusedMember.Local")]
 public static class ImmigrantScreenEvents {
-    public static event Action<List<ITelepadDeliverable>> Initialize;
-    public static event System.Action Reject;
-    public static event Action<ITelepadDeliverable> Proceed;
+    public static event Action<List<ITelepadDeliverable?>?>? Initialize;
+    public static event System.Action? Reject;
+    public static event Action<ITelepadDeliverable>? Proceed;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]

@@ -9,7 +9,7 @@ using MultiplayerMod.Multiplayer.Objects;
 namespace MultiplayerMod.Game.Mechanics.Objects;
 
 public static class ObjectEvents {
-    public static event Action<ObjectEventsArgs> MethodCalled;
+    public static event Action<ObjectEventsArgs>? MethodCalled;
 
     private static readonly Dictionary<Type, string[]> methodsForPatch = new() {
         { typeof(Filterable), new[] { nameof(Filterable.SelectedTag) } }, {

@@ -6,7 +6,7 @@ namespace MultiplayerMod.Game;
 [HarmonyPatch]
 public static class GameState {
 
-    public static GameObject LastSelectedObject { get; private set; }
+    public static GameObject? LastSelectedObject { get; private set; }
     public static PrioritySetting BuildToolPriority => GetBuildToolPriority();
 
     [HarmonyPostfix]

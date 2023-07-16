@@ -6,9 +6,9 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class PrioritiesScreenEvents {
 
-    public static event Action<ChoreConsumer, ChoreGroup, int> Set;
-    public static event Action<ChoreGroup, int> DefaultSet;
-    public static event Action<bool> AdvancedSet;
+    public static event Action<ChoreConsumer, ChoreGroup, int>? Set;
+    public static event Action<ChoreGroup, int>? DefaultSet;
+    public static event Action<bool>? AdvancedSet;
 
     [HarmonyPatch(typeof(ChoreConsumer))]
     // ReSharper disable once UnusedType.Local

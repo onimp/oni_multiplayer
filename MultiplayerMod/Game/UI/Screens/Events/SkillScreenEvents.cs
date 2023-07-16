@@ -6,8 +6,8 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 
 public static class SkillScreenEvents {
 
-    public static event Action<MinionIdentity, string> SetHat;
-    public static event Action<MinionIdentity, string> MasterSkill;
+    public static event Action<MinionIdentity, string?>? SetHat;
+    public static event Action<MinionIdentity, string>? MasterSkill;
 
     [HarmonyPatch(typeof(SkillsScreen))]
     // ReSharper disable once UnusedType.Local

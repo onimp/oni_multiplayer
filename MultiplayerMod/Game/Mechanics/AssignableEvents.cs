@@ -7,9 +7,9 @@ namespace MultiplayerMod.Game.Mechanics;
 [HarmonyPatch(typeof(Assignable))]
 public static class AssignableEvents {
 
-    public static event Action<Assignable, IAssignableIdentity> Assign;
+    public static event Action<Assignable, IAssignableIdentity?>? Assign;
 
-    // ReSharper disable once UnusedMember.Global
+    // ReSharper disable once UnusedMember.Global, InconsistentNaming
     [HarmonyPostfix]
     [HarmonyPatch(nameof(Assignable.Assign))]
     public static void AssignPostfix(Assignable __instance, IAssignableIdentity new_assignee) =>

@@ -5,6 +5,9 @@
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <DefineConstants />
     </PropertyGroup>
+    <PropertyGroup>
+      <Nullable>enable</Nullable>
+    </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
             <Link>_logs/Player.log</Link>

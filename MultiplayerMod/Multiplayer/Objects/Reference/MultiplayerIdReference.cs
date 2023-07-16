@@ -13,7 +13,7 @@ public class MultiplayerIdReference : GameObjectReference {
         Id = id;
     }
 
-    protected override GameObject Resolve() => MultiplayerGame.Objects[Id];
+    protected override GameObject? Resolve() => MultiplayerGame.Objects[Id];
 
     public override string ToString() => Id.ToString();
 

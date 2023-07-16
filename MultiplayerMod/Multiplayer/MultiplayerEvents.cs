@@ -4,7 +4,7 @@ namespace MultiplayerMod.Multiplayer;
 
 public static class MultiplayerEvents {
 
-    public static PlayerWorldSpawnedEventHandler PlayerWorldSpawned;
+    public static PlayerWorldSpawnedEventHandler? PlayerWorldSpawned;
 
     [Serializable]
     public class PlayerWorldSpawnedEvent : IMultiplayerCommand {
@@ -22,6 +22,5 @@ public static class MultiplayerEvents {
     }
 
     public delegate void PlayerWorldSpawnedEventHandler(IPlayer player);
-
 
 }
