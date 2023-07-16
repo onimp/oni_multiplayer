@@ -33,7 +33,7 @@ public class SteamClient : IMultiplayerClient {
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
 
-    private GameObject? gameObject;
+    private GameObject gameObject = null!;
 
     public void Connect(IMultiplayerEndpoint endpoint) {
         if (!SteamManager.Initialized)
@@ -60,8 +60,7 @@ public class SteamClient : IMultiplayerClient {
         if (State <= MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
-        if (gameObject != null)
-            UnityObject.Destroy(gameObject);
+        UnityObject.Destroy(gameObject);
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
         SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
