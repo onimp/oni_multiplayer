@@ -45,17 +45,17 @@ public class SteamServer : IMultiplayerServer {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamServer>();
 
-    private Callback<SteamServersConnected_t>? steamServersConnectedCallback;
-    private TaskCompletionSource<bool>? lobbyCompletionSource;
-    private TaskCompletionSource<bool>? steamServersCompletionSource;
-    private CancellationTokenSource? callbacksCancellationTokenSource;
+    private Callback<SteamServersConnected_t> steamServersConnectedCallback = null!;
+    private TaskCompletionSource<bool> lobbyCompletionSource = null!;
+    private TaskCompletionSource<bool> steamServersCompletionSource = null!;
+    private CancellationTokenSource callbacksCancellationTokenSource = null!;
 
     private HSteamNetPollGroup pollGroup;
     private HSteamListenSocket listenSocket;
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
-    private Callback<SteamNetConnectionStatusChangedCallback_t>? connectionStatusChangedCallback;
+    private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback = null!;
 
     private readonly Dictionary<IPlayer, HSteamNetConnection> players = new();
     private readonly IPlayer currentPlayer = new SteamPlayer(SteamUser.GetSteamID());
@@ -166,22 +166,17 @@ public class SteamServer : IMultiplayerServer {
         lobby.OnCreate -= OnLobbyCreated;
         lobby.Leave();
 
-        connectionStatusChangedCallback?.Unregister();
+        connectionStatusChangedCallback.Unregister();
         SteamGameServerNetworkingSockets.DestroyPollGroup(pollGroup);
         SteamGameServerNetworkingSockets.CloseListenSocket(listenSocket);
 
         GameServer.Shutdown();
 
-        steamServersConnectedCallback?.Unregister();
+        steamServersConnectedCallback.Unregister();
 
-        ResetTaskCompletionSource(ref lobbyCompletionSource);
-        ResetTaskCompletionSource(ref steamServersCompletionSource);
-        callbacksCancellationTokenSource?.Cancel();
-    }
-
-    private void ResetTaskCompletionSource<T>(ref TaskCompletionSource<T>? source) {
-        source?.TrySetCanceled();
-        source = null;
+        lobbyCompletionSource.TrySetCanceled();
+        steamServersCompletionSource.TrySetCanceled();
+        callbacksCancellationTokenSource.Cancel();
     }
 
     private void OnServerStarted() {
@@ -189,9 +184,9 @@ public class SteamServer : IMultiplayerServer {
         SetState(MultiplayerServerState.Started);
     }
 
-    private void OnLobbyCreated() => lobbyCompletionSource?.SetResult(true);
+    private void OnLobbyCreated() => lobbyCompletionSource.SetResult(true);
 
-    private void ConnectedToSteamCallback() => steamServersCompletionSource?.SetResult(true);
+    private void ConnectedToSteamCallback() => steamServersCompletionSource.SetResult(true);
 
     public void ReceiveMessages() {
         var messages = new IntPtr[128];
