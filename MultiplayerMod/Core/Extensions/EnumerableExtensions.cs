@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MultiplayerMod.Core.Extensions;
 
@@ -17,5 +18,9 @@ public static class EnumerableExtensions {
         foreach (var item in enumerable)
             action(index++, item);
     }
+
+    // ReSharper disable Unity.PerformanceAnalysis
+    public static IEnumerable<T> NotNull<T>(this IEnumerable<T?> enumerable) where T : notnull =>
+        enumerable.Where(it => it != null)!;
 
 }

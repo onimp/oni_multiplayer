@@ -1,9 +1,11 @@
 ﻿using HarmonyLib;
 using ImGuiNET;
+using MultiplayerMod.Core.Patch;
 
 namespace MultiplayerMod.Game.Dev;
 
 // ReSharper disable once UnusedType.Global
+[HarmonyOptional]
 [HarmonyPatch(typeof(DevToolSceneInspector))]
 public class DevToolSceneInspectorPatch {
 
