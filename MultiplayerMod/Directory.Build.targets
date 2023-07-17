@@ -55,4 +55,15 @@
         </ItemGroup>
         <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)"/>
     </Target>
+    <Target Name="ExposeHarmonyAssembly" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <HarmonyAssembly Include="$(ManagedPath)\0Harmony.dll"/>
+            <HarmonyExposureRules Include="Private and internal targets to public">
+                <PatternRule>^(private|internal).*?</PatternRule>
+                <TargetRule>All</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </HarmonyExposureRules>
+        </ItemGroup>
+        <ExposeAssembly SourceAssemblies="@(HarmonyAssembly)" Rules="@(HarmonyExposureRules)"/>
+    </Target>
 </Project>

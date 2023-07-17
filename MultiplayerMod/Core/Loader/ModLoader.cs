@@ -13,7 +13,7 @@ public class ModLoader : UserMod2 {
     private readonly Logging.Logger log = LoggerFactory.GetLogger<ModLoader>();
 
     public override void OnLoad(Harmony harmony) {
-        base.OnLoad(harmony);
+        PrioritizedPatch(harmony);
         assembly.GetTypes()
             .Where(type => typeof(IModComponentLoader).IsAssignableFrom(type) && type.IsClass)
             .OrderBy(type => type.GetCustomAttribute<ModComponentOrder>()?.Order ?? ModComponentOrder.Default)
@@ -23,5 +23,11 @@ public class ModLoader : UserMod2 {
                 instance.OnLoad(harmony);
             });
     }
+
+    private void PrioritizedPatch(Harmony harmony) => AccessTools.GetTypesFromAssembly(assembly)
+        .Select(harmony.CreateClassProcessor)
+        .Where(it => it.containerAttributes != null)
+        .OrderByDescending(it => it.containerAttributes.priority)
+        .ForEach(it => it.Patch());
 
 }

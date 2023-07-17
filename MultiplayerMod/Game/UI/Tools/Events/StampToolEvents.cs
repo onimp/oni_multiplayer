@@ -8,11 +8,11 @@ using UnityEngine;
 namespace MultiplayerMod.Game.UI.Tools.Events;
 
 [HarmonyPatch(typeof(StampTool))]
+[HarmonyPriority(Priority.High)]
 public static class StampToolEvents {
 
     public static event EventHandler<StampEventArgs>? Stamp;
 
-    [HarmonyPriority(Priority.High)]
     [HarmonyTranspiler]
     [HarmonyPatch(nameof(StampTool.Stamp))]
     private static IEnumerable<CodeInstruction> StampTranspiler(

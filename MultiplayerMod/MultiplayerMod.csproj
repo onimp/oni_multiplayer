@@ -22,9 +22,9 @@
         <Reference Include="Assembly-CSharp-firstpass" HintPath="lib\exposed\Assembly-CSharp-firstpass.dll" Private="false" />
         <Reference Include="UnityEngine.CoreModule" HintPath="lib\exposed\UnityEngine.CoreModule.dll" Private="false" />
         <Reference Include="UnityEngine.UI" HintPath="lib\exposed\UnityEngine.UI.dll" Private="false" />
+        <Reference Include="0Harmony" HintPath="lib\exposed\0Harmony.dll" Private="false" />
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="0Harmony" HintPath="$(ManagedPath)\0Harmony.dll" Private="false" />
         <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedPath)\com.rlabrecque.steamworks.net.dll" Private="false" />
         <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" Private="false" />
         <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedPath)\Unity.TextMeshPro.dll" Private="false" />
