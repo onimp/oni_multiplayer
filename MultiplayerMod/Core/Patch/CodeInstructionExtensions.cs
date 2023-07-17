@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
+using static System.Reflection.Emit.OperandType;
 
 namespace MultiplayerMod.Core.Patch;
 
@@ -54,5 +55,25 @@ public static class CodeInstructionExtensions {
         while (added++ < count && enumerator.MoveNext())
             instructions.Add(enumerator.Current);
     }
+
+    public static int GetSize(this CodeInstruction instruction) =>
+        instruction.opcode.Size + instruction.opcode.OperandType switch {
+            InlineBrTarget or
+                InlineField or
+                InlineI or
+                InlineMethod or
+                InlineString or
+                InlineTok or
+                InlineType or
+                ShortInlineR => 4,
+            InlineI8 or
+                InlineR => 8,
+            InlineSwitch => (((Label[]) instruction.operand).Length + 1) * 4,
+            InlineVar => 2,
+            ShortInlineBrTarget or
+                ShortInlineI or
+                ShortInlineVar => 1,
+            _ => 0
+        };
 
 }
