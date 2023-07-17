@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
@@ -8,31 +7,50 @@ using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Game.Mechanics.Objects;
 
+[HarmonyPatch]
 public static class ObjectEvents {
+
     public static event Action<ObjectEventsArgs>? MethodCalled;
 
     private static readonly Dictionary<Type, string[]> methodsForPatch = new() {
-        { typeof(Filterable), new[] { nameof(Filterable.SelectedTag) } }, {
+        {
+            typeof(Filterable),
+            new[] { nameof(Filterable.SelectedTag) }
+        }, {
             typeof(TreeFilterable),
-            new[] { nameof(TreeFilterable.AddTagToFilter), nameof(TreeFilterable.RemoveTagFromFilter), }
-        },
-        { typeof(Door), new[] { nameof(Door.QueueStateChange), nameof(Door.OrderUnseal) } }, {
+            new[] { nameof(TreeFilterable.AddTagToFilter), nameof(TreeFilterable.RemoveTagFromFilter) }
+        }, {
+            typeof(Door),
+            new[] { nameof(Door.QueueStateChange), nameof(Door.OrderUnseal) }
+        }, {
             typeof(ComplexFabricator),
             new[] {
                 nameof(ComplexFabricator.IncrementRecipeQueueCount),
                 nameof(ComplexFabricator.DecrementRecipeQueueCount),
                 nameof(ComplexFabricator.SetRecipeQueueCount)
             }
-        },
-        { typeof(PassengerRocketModule), new[] { nameof(PassengerRocketModule.RequestCrewBoard) } },
-        { typeof(RocketControlStation), new[] { nameof(RocketControlStation.RestrictWhenGrounded) } },
-        { typeof(ICheckboxControl), new[] { nameof(ICheckboxControl.SetCheckboxValue) } },
-        { typeof(SuitLocker), new[] { nameof(SuitLocker.ConfigNoSuit), nameof(SuitLocker.ConfigRequestSuit) } }, {
+        }, {
+            typeof(PassengerRocketModule),
+            new[] { nameof(PassengerRocketModule.RequestCrewBoard) }
+        }, {
+            typeof(RocketControlStation),
+            new[] { nameof(RocketControlStation.RestrictWhenGrounded) }
+        }, {
+            typeof(ICheckboxControl),
+            new[] { nameof(ICheckboxControl.SetCheckboxValue) }
+        }, {
+            typeof(SuitLocker),
+            new[] { nameof(SuitLocker.ConfigNoSuit), nameof(SuitLocker.ConfigRequestSuit) }
+        }, {
             typeof(IThresholdSwitch),
             new[] { nameof(IThresholdSwitch.Threshold), nameof(IThresholdSwitch.ActivateAboveThreshold) }
-        },
-        { typeof(ISliderControl), new[] { nameof(ISingleSliderControl.SetSliderValue) } },
-        { typeof(Valve), new[] { nameof(Valve.ChangeFlow) } }, {
+        }, {
+            typeof(ISliderControl),
+            new[] { nameof(ISingleSliderControl.SetSliderValue) }
+        }, {
+            typeof(Valve),
+            new[] { nameof(Valve.ChangeFlow) }
+        }, {
             typeof(SingleEntityReceptacle),
             new[] {
                 nameof(SingleEntityReceptacle.OrderRemoveOccupant),
@@ -40,35 +58,59 @@ public static class ObjectEvents {
                 nameof(SingleEntityReceptacle.CreateOrder),
                 nameof(SingleEntityReceptacle.SetPreview)
             }
-        },
-        { typeof(LimitValve), new[] { nameof(LimitValve.Limit), nameof(LimitValve.ResetAmount) } }, {
+        }, {
+            typeof(LimitValve),
+            new[] { nameof(LimitValve.Limit), nameof(LimitValve.ResetAmount) }
+        }, {
             typeof(ILogicRibbonBitSelector),
             new[] { nameof(ILogicRibbonBitSelector.SetBitSelection), nameof(ILogicRibbonBitSelector.UpdateVisuals) }
-        },
-        { typeof(CreatureLure), new[] { nameof(CreatureLure.ChangeBaitSetting) } },
-        { typeof(MonumentPart), new[] { nameof(MonumentPart.SetState) } },
-        { typeof(INToggleSideScreenControl), new[] { nameof(INToggleSideScreenControl.QueueSelectedOption) } },
-        { typeof(Artable), new[] { nameof(Artable.SetUserChosenTargetState), nameof(Artable.SetDefault) } },
-        { typeof(Automatable), new[] { nameof(Automatable.SetAutomationOnly) } }, {
+        }, {
+            typeof(CreatureLure),
+            new[] { nameof(CreatureLure.ChangeBaitSetting) }
+        }, {
+            typeof(MonumentPart),
+            new[] { nameof(MonumentPart.SetState) }
+        }, {
+            typeof(INToggleSideScreenControl),
+            new[] { nameof(INToggleSideScreenControl.QueueSelectedOption) }
+        }, {
+            typeof(Artable),
+            new[] { nameof(Artable.SetUserChosenTargetState), nameof(Artable.SetDefault) }
+        }, {
+            typeof(Automatable),
+            new[] { nameof(Automatable.SetAutomationOnly) }
+        }, {
             typeof(IDispenser),
             new[] {
-                nameof(IDispenser.OnCancelDispense), nameof(IDispenser.OnOrderDispense), nameof(IDispenser.SelectItem)
+                nameof(IDispenser.OnCancelDispense),
+                nameof(IDispenser.OnOrderDispense),
+                nameof(IDispenser.SelectItem)
             }
-        },
-        { typeof(FlatTagFilterable), new[] { nameof(FlatTagFilterable.ToggleTag) } },
-        { typeof(GeneShuffler), new[] { nameof(GeneShuffler.SetWorkTime), nameof(GeneShuffler.RequestRecharge) } }, {
+        }, {
+            typeof(FlatTagFilterable),
+            new[] { nameof(FlatTagFilterable.ToggleTag) }
+        }, {
+            typeof(GeneShuffler),
+            new[] { nameof(GeneShuffler.SetWorkTime), nameof(GeneShuffler.RequestRecharge) }
+        }, {
             typeof(GeneticAnalysisStation.StatesInstance),
             new[] { nameof(GeneticAnalysisStation.StatesInstance.SetSeedForbidden) }
-        },
-        { typeof(IHighEnergyParticleDirection), new[] { nameof(IHighEnergyParticleDirection.Direction) } }, {
+        }, {
+            typeof(IHighEnergyParticleDirection),
+            new[] { nameof(IHighEnergyParticleDirection.Direction) }
+        }, {
             typeof(CraftModuleInterface),
             new[] { nameof(CraftModuleInterface.CancelLaunch), nameof(CraftModuleInterface.TriggerLaunch) }
         }, {
             typeof(IActivationRangeTarget),
             new[] { nameof(IActivationRangeTarget.ActivateValue), nameof(IActivationRangeTarget.DeactivateValue) }
+        }, {
+            typeof(ISidescreenButtonControl),
+            new[] { nameof(ISidescreenButtonControl.OnSidescreenButtonPressed) }
+        }, {
+            typeof(IUserControlledCapacity),
+            new[] { nameof(IUserControlledCapacity.UserMaxCapacity) }
         },
-        { typeof(ISidescreenButtonControl), new[] { nameof(ISidescreenButtonControl.OnSidescreenButtonPressed) } },
-        { typeof(IUserControlledCapacity), new[] { nameof(IUserControlledCapacity.UserMaxCapacity) } },
         // TODO decide how to proper patch KMonoBehaviour#Trigger
         // {
         //     typeof(ReorderableBuilding),
@@ -138,84 +180,22 @@ public static class ObjectEvents {
         //  { typeof(IConfigurableConsumer), new[] { nameof(IConfigurableConsumer.SetSelectedOption) } },
     };
 
-    private static IEnumerable<MethodBase> GetTargetMethods(int argsCount) {
-        return TargetExtractor.GetTargetMethods(methodsForPatch, argsCount);
-    }
+    // ReSharper disable once UnusedMember.Local
+    private static IEnumerable<MethodBase> TargetMethods() => TargetExtractor.GetTargetMethods(methodsForPatch);
 
-    [HarmonyPatch]
-    [SuppressMessage("ReSharper", "UnusedMember.Local")]
-// ReSharper disable once UnusedType.Local
-    private class PatchFor0ArgumentMethods {
-        private static IEnumerable<MethodBase> TargetMethods() {
-            return GetTargetMethods(0);
-        }
+    [HarmonyPostfix]
+    private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object[] __args) =>
+        PatchControl.RunIfEnabled(
+            () => {
+                MethodCalled?.Invoke(
+                    new ObjectEventsArgs(
+                        ((KMonoBehaviour) __instance).GetGridReference(),
+                        __originalMethod.DeclaringType!,
+                        __originalMethod.Name,
+                        __args
+                    )
+                );
+            }
+        );
 
-        [HarmonyPostfix]
-        private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod) =>
-            PatchControl.RunIfEnabled(
-                () => {
-                    MethodCalled?.Invoke(
-                        new ObjectEventsArgs(
-                            ((KMonoBehaviour) __instance).GetGridReference(),
-                            __originalMethod.DeclaringType,
-                            __originalMethod.Name,
-                            new object[] { }
-                        )
-                    );
-                }
-            );
-    }
-
-    [HarmonyPatch]
-    [SuppressMessage("ReSharper", "UnusedMember.Local")]
-// ReSharper disable once UnusedType.Local
-    private class PatchFor1ArgumentMethods {
-        private static IEnumerable<MethodBase> TargetMethods() {
-            return GetTargetMethods(1);
-        }
-
-        [HarmonyPostfix]
-        private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object __0) =>
-            PatchControl.RunIfEnabled(
-                () => {
-                    MethodCalled?.Invoke(
-                        new ObjectEventsArgs(
-                            ((KMonoBehaviour) __instance).GetGridReference(),
-                            __originalMethod.DeclaringType,
-                            __originalMethod.Name,
-                            new[] { __0 }
-                        )
-                    );
-                }
-            );
-    }
-
-    [HarmonyPatch]
-    [SuppressMessage("ReSharper", "UnusedMember.Local")]
-// ReSharper disable once UnusedType.Local
-    private class PatchFor2ArgumentMethods {
-        private static IEnumerable<MethodBase> TargetMethods() {
-            return GetTargetMethods(2);
-        }
-
-        [HarmonyPostfix]
-        private static void ObjectEventsPostfix(
-            object __instance,
-            MethodBase __originalMethod,
-            object __0,
-            object __1
-        ) =>
-            PatchControl.RunIfEnabled(
-                () => {
-                    MethodCalled?.Invoke(
-                        new ObjectEventsArgs(
-                            ((KMonoBehaviour) __instance).GetGridReference(),
-                            __originalMethod.DeclaringType,
-                            __originalMethod.Name,
-                            new[] { __0, __1 }
-                        )
-                    );
-                }
-            );
-    }
 }

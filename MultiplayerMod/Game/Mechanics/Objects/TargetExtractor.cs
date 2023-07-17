@@ -10,7 +10,7 @@ static class TargetExtractor {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(TargetExtractor));
 
-    public static IEnumerable<MethodBase> GetTargetMethods(Dictionary<Type, string[]> methodsForPatch, int argsCount) {
+    public static IEnumerable<MethodBase> GetTargetMethods(Dictionary<Type, string[]> methodsForPatch) {
         var classTypes = methodsForPatch.Keys.Where(type => type.IsClass).ToList();
         var interfaceTypes = methodsForPatch.Keys.Where(type => type.IsInterface).ToList();
         var targetMethods = Assembly.GetAssembly(typeof(ISliderControl))
@@ -31,9 +31,7 @@ static class TargetExtractor {
                         )
                     );
                 }
-            )
-            .Where(method => method!.GetParameters().Length == argsCount)
-            .ToList();
+            ).ToList();
         return targetMethods;
     }
 
@@ -91,4 +89,5 @@ static class TargetExtractor {
     private static List<Type> GetImplementedInterfaces(List<Type> interfaceTypes, Type type) {
         return interfaceTypes.Where(interfaceType => interfaceType.IsAssignableFrom(type)).ToList();
     }
+
 }
