@@ -9,6 +9,10 @@ using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.Core.Patch;
 
+/// <summary>
+/// This is a patch for Harmony version 2.0.5.0 that adds a new version feature.
+/// If the library will be updated in game this patch must be removed.
+/// </summary>
 // ReSharper disable once UnusedType.Global
 [HarmonyPatch(typeof(MethodPatcher))]
 [HarmonyPriority(Priority.First)]
