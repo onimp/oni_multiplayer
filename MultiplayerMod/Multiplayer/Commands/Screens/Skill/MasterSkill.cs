@@ -11,7 +11,7 @@ public class MasterSkill : IMultiplayerCommand {
     private readonly string skillId;
 
     public MasterSkill(MinionIdentity minionIdentity, string skillId) {
-        minionIdentityReference = minionIdentity.GetMultiplayerReference();
+        minionIdentityReference = minionIdentity.gameObject.GetMultiplayerReference();
         this.skillId = skillId;
     }
 

@@ -13,7 +13,7 @@ public class PermitConsumableToMinion : IMultiplayerCommand {
     private readonly bool isAllowed;
 
     public PermitConsumableToMinion(ConsumableConsumer consumableConsumer, string consumableId, bool isAllowed) {
-        consumableConsumerReference = consumableConsumer.GetMultiplayerReference();
+        consumableConsumerReference = consumableConsumer.gameObject.GetMultiplayerReference();
         this.consumableId = consumableId;
         this.isAllowed = isAllowed;
     }

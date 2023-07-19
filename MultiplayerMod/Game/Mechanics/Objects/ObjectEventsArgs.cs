@@ -5,7 +5,7 @@ namespace MultiplayerMod.Game.Mechanics.Objects;
 
 [Serializable]
 public record ObjectEventsArgs(
-    GameObjectReference Target,
+    ComponentReference Target,
     Type MethodType,
     string MethodName,
     object[] Args

@@ -11,7 +11,7 @@ public class SetHat : IMultiplayerCommand {
     private readonly string? targetHat;
 
     public SetHat(MinionIdentity minionIdentity, string? targetHat) {
-        minionIdentityReference = minionIdentity.GetMultiplayerReference();
+        minionIdentityReference = minionIdentity.gameObject.GetMultiplayerReference();
         this.targetHat = targetHat;
     }
 

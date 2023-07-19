@@ -18,7 +18,7 @@ public class GridReference : GameObjectReference {
     public GridReference(GameObject gameObject) {
         var extension = gameObject.GetComponent<GameObjectExtension>();
         Cell = Grid.PosToCell(gameObject);
-        Layer = extension.GridLayer;
+        Layer = extension?.GridLayer ?? 0;
     }
 
     protected override GameObject Resolve() => Grid.Objects[Cell, Layer];
