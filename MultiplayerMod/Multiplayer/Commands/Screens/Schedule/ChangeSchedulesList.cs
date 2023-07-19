@@ -55,7 +55,7 @@ public class ChangeSchedulesList : IMultiplayerCommand {
             name = schedule.name;
             alarmActivated = schedule.alarmActivated;
             blocks = schedule.blocks.Select(block => block.GroupId).ToList();
-            assigned = schedule.assigned.Select(@ref => @ref.obj.GetMultiplayerReference()).ToList();
+            assigned = schedule.assigned.Select(@ref => @ref.obj.gameObject.GetMultiplayerReference()).ToList();
         }
 
         public List<ScheduleGroup> Groups => blocks.Select(block => groups[block]).ToList();

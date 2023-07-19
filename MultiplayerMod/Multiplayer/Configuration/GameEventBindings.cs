@@ -1,14 +1,10 @@
-﻿using System;
-using MultiplayerMod.Core.Dependency;
+﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Game.Mechanics;
 using MultiplayerMod.Game.Mechanics.Objects;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
-using MultiplayerMod.Multiplayer.Commands.Gameplay.Access;
-using MultiplayerMod.Multiplayer.Commands.Gameplay.Assignables;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
@@ -20,7 +16,6 @@ using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
-using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
@@ -136,22 +131,6 @@ public class GameEventBindings {
     }
 
     private void BindMechanics() {
-        AccessControlEvents.DefaultPermissionChanged += (_, args) => client.Send(new ChangeDefaultPermission(args));
-        AccessControlEvents.PermissionChanged += (_, args) => client.Send(new ChangePermission(args));
-
-        AssignableEvents.Assign += (assignable, identity) => {
-            if (identity != null && identity is not KMonoBehaviour) {
-                log.Warning($"Identity {identity.GetType().FullName} is not supported {Environment.StackTrace}");
-                return;
-            }
-            client.Send(
-                new Assign(
-                    assignable.GetGridReference(),
-                    ((KMonoBehaviour?) identity)?.GetMultiplayerReference()
-                )
-            );
-        };
-
         ObjectEvents.MethodCalled += args => client.Send(new CallMethod(args));
     }
 

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Multiplayer.Objects;
+using UnityEngine;
 
 namespace MultiplayerMod.Game.Mechanics.Objects;
 
@@ -19,7 +21,8 @@ public static class ObjectEvents {
         }, {
             typeof(TreeFilterable),
             new[] { nameof(TreeFilterable.AddTagToFilter), nameof(TreeFilterable.RemoveTagFromFilter) }
-        }, {
+        },
+        { typeof(Storage), new[] { nameof(Storage.SetOnlyFetchMarkedItems) } }, {
             typeof(Door),
             new[] { nameof(Door.QueueStateChange), nameof(Door.OrderUnseal) }
         }, {
@@ -111,6 +114,18 @@ public static class ObjectEvents {
             typeof(IUserControlledCapacity),
             new[] { nameof(IUserControlledCapacity.UserMaxCapacity) }
         },
+        { typeof(Assignable), new[] { nameof(Assignable.Assign), nameof(Assignable.Unassign) } }, {
+            typeof(AccessControl),
+            new[] {
+                nameof(AccessControl.SetPermission),
+                nameof(AccessControl.ClearPermission),
+                nameof(AccessControl.DefaultPermission)
+            }
+        },
+        { typeof(LogicBroadcastReceiver), new[] { nameof(LogicBroadcastReceiver.SetChannel) } },
+        { typeof(LaunchConditionManager), new[] { nameof(LaunchConditionManager.Launch) } },
+        { typeof(GeoTuner.Instance), new[] { nameof(GeoTuner.Instance.AssignFutureGeyser) } },
+        { typeof(IConfigurableConsumer), new[] { nameof(IConfigurableConsumer.SetSelectedOption) } },
         // TODO decide how to proper patch KMonoBehaviour#Trigger
         // {
         //     typeof(ReorderableBuilding),
@@ -166,24 +181,13 @@ public static class ObjectEvents {
         //          }
         //      },
         //  { typeof(LogicCritterCountSensor), new[] { nameof(LogicCritterCountSensor.countCritters) } },
-        // TODO uncomment lines below after creating required surrogates.
-        // { typeof(Assignable), new[] { nameof(Assignable.Assign), nameof(Assignable.Unassign) } },
-        // { typeof(AccessControl),
-        //     new[] {
-        //         nameof(AccessControl.SetPermission), nameof(AccessControl.ClearPermission),
-        //         nameof(AccessControl.DefaultPermission)
-        //     }
-        // }
-        // {typeof(LogicBroadcastReceiver), new []{nameof(LogicBroadcastReceiver.SetChannel)}},
-        // { typeof(LaunchConditionManager), new[] { nameof(LaunchConditionManager.Launch) } },
-        // { typeof(GeoTuner.Instance), new[] { nameof(GeoTuner.Instance.AssignFutureGeyser) } },
-        //  { typeof(IConfigurableConsumer), new[] { nameof(IConfigurableConsumer.SetSelectedOption) } },
     };
 
     // ReSharper disable once UnusedMember.Local
     private static IEnumerable<MethodBase> TargetMethods() => TargetExtractor.GetTargetMethods(methodsForPatch);
 
     [HarmonyPostfix]
+    // ReSharper disable once UnusedMember.Local
     private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object[] __args) =>
         PatchControl.RunIfEnabled(
             () => {
@@ -192,10 +196,30 @@ public static class ObjectEvents {
                         ((KMonoBehaviour) __instance).GetGridReference(),
                         __originalMethod.DeclaringType!,
                         __originalMethod.Name,
-                        __args
+                        __args.Select(
+                            obj =>
+                                obj switch {
+                                    GameObject gameObject => gameObject.GetGridReference(),
+                                    KMonoBehaviour kMonoBehaviour => IsStaticObject(kMonoBehaviour)
+                                        ? kMonoBehaviour.GetGridReference()
+                                        : kMonoBehaviour.GetMultiplayerReference(),
+                                    _ => obj
+                                }
+                        ).ToArray()
                     )
                 );
             }
         );
+
+    private static bool IsStaticObject(KMonoBehaviour kMonoBehaviour) {
+        var dynamicTypes = new[] {
+            typeof(MinionAssignablesProxy),
+            typeof(MinionResume),
+            typeof(Schedulable),
+            typeof(ConsumableConsumer),
+            typeof(ChoreConsumer)
+        };
+        return !dynamicTypes.Contains(kMonoBehaviour.GetType());
+    }
 
 }
