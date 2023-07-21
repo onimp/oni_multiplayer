@@ -126,7 +126,17 @@ public static class ObjectEvents {
         { typeof(LaunchConditionManager), new[] { nameof(LaunchConditionManager.Launch) } },
         { typeof(GeoTuner.Instance), new[] { nameof(GeoTuner.Instance.AssignFutureGeyser) } },
         { typeof(IConfigurableConsumer), new[] { nameof(IConfigurableConsumer.SetSelectedOption) } },
-        { typeof(LogicTimerSensor), new[] { nameof(LogicTimerSensor.ResetTimer) } },
+        { typeof(LogicTimerSensor), new[] { nameof(LogicTimerSensor.ResetTimer) } }, {
+            typeof(IEmptyableCargo),
+            new[] {
+                nameof(IEmptyableCargo.AutoDeploy),
+                nameof(IEmptyableCargo.EmptyCargo),
+                nameof(IEmptyableCargo.ChosenDuplicant)
+            }
+        }, {
+            typeof(IPlayerControlledToggle),
+            new[] { nameof(IPlayerControlledToggle.ToggleRequested), nameof(IPlayerControlledToggle.ToggledByPlayer) }
+        },
         // TODO decide how to proper patch KMonoBehaviour#Trigger
         // {
         //     typeof(ReorderableBuilding),
