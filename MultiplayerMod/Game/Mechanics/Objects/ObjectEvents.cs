@@ -126,6 +126,7 @@ public static class ObjectEvents {
         { typeof(LaunchConditionManager), new[] { nameof(LaunchConditionManager.Launch) } },
         { typeof(GeoTuner.Instance), new[] { nameof(GeoTuner.Instance.AssignFutureGeyser) } },
         { typeof(IConfigurableConsumer), new[] { nameof(IConfigurableConsumer.SetSelectedOption) } },
+        { typeof(LogicTimerSensor), new[] { nameof(LogicTimerSensor.ResetTimer) } },
         // TODO decide how to proper patch KMonoBehaviour#Trigger
         // {
         //     typeof(ReorderableBuilding),
@@ -134,53 +135,7 @@ public static class ObjectEvents {
         //         nameof(ReorderableBuilding.SwapWithBelow),
         //         nameof(ReorderableBuilding.Trigger)
         //     }
-        // },
-        // TODO uncomment lines below after deciding on field patches.
-        //  { typeof(RailGun), new[] { nameof(RailGun.launchMass) } },
-        // {
-        //     typeof(TemperatureControlledSwitch),
-        //     new[] {
-        //         nameof(TemperatureControlledSwitch.thresholdTemperature),
-        //         nameof(TemperatureControlledSwitch.activateOnWarmerThan)
-        //     }
-        // },
-        // {
-        //     typeof(LogicTimeOfDaySensor),
-        //     new[] { nameof(LogicTimeOfDaySensor.startTime), nameof(LogicTimeOfDaySensor.duration) }
-        // },
-        // {
-        //     typeof(LogicTimerSensor),
-        //     new[] {
-        //         nameof(LogicTimerSensor.displayCyclesMode),
-        //         nameof(LogicTimerSensor.onDuration),
-        //         nameof(LogicTimerSensor.offDuration),
-        //         nameof(LogicTimerSensor.timeElapsedInCurrentState),
-        //         nameof(LogicTimerSensor.ResetTimer)
-        //     }
-        // },
-        // {
-        //          typeof(LogicAlarm),
-        //          new[] {
-        //              nameof(LogicAlarm.notificationName),
-        //              nameof(LogicAlarm.notificationTooltip),
-        //              nameof(LogicAlarm.pauseOnNotify),
-        //              nameof(LogicAlarm.zoomOnNotify),
-        //              nameof(LogicAlarm.notificationType),
-        //              nameof(LogicAlarm.UpdateNotification)
-        //          }
-        //      },
-        //      {
-        //          typeof(LogicCounter),
-        //          new[] {
-        //              nameof(LogicCounter.currentCount),
-        //              nameof(LogicCounter.maxCount),
-        //              nameof(LogicCounter.SetCounterState),
-        //              nameof(LogicCounter.UpdateLogicCircuit),
-        //              nameof(LogicCounter.UpdateVisualState),
-        //              nameof(LogicCounter.UpdateMeter)
-        //          }
-        //      },
-        //  { typeof(LogicCritterCountSensor), new[] { nameof(LogicCritterCountSensor.countCritters) } },
+        // }
     };
 
     // ReSharper disable once UnusedMember.Local
