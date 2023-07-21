@@ -3,6 +3,7 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Mechanics.Objects;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Screens.Events;
+using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
@@ -11,6 +12,7 @@ using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 using MultiplayerMod.Multiplayer.Commands.Screens.Research;
 using MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
+using MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 using MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
@@ -40,6 +42,7 @@ public class GameEventBindings {
         BindSpeedControl();
         BindMouse();
         BindScreens();
+        BindSideScreens();
         BindTools();
         BindOverlays();
         BindMechanics();
@@ -132,6 +135,22 @@ public class GameEventBindings {
 
     private void BindMechanics() {
         ObjectEvents.MethodCalled += args => client.Send(new CallMethod(args));
+    }
+
+    private void BindSideScreens() {
+        AlarmSideScreenEvents.UpdateAlarm += (target, args) => client.Send(new UpdateAlarm(target, args));
+        CounterSideScreenEvents.UpdateLogicCounter +=
+            (target, args) => client.Send(new UpdateLogicCounter(target, args));
+        CritterSensorSideScreenEvents.UpdateCritterSensor +=
+            (target, args) => client.Send(new UpdateCritterSensor(target, args));
+        RailGunSideScreenEvents.UpdateRailGunCapacity +=
+            (target, args) => client.Send(new UpdateRailGunCapacity(target, args));
+        TemperatureSwitchSideScreenEvents.UpdateTemperatureSwitch +=
+            (target, args) => client.Send(new UpdateTemperatureSwitch(target, args));
+        TimeRangeSideScreenEvents.UpdateLogicTimeOfDaySensor +=
+            (target, args) => client.Send(new UpdateLogicTimeOfDaySensor(target, args));
+        TimerSideScreenEvents.UpdateLogicTimeSensor +=
+            (target, args) => client.Send(new UpdateLogicTimeSensor(target, args));
     }
 
 }
