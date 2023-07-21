@@ -158,16 +158,14 @@ public static class ObjectEvents {
             () => {
                 MethodCalled?.Invoke(
                     new ObjectEventsArgs(
-                        ((KMonoBehaviour) __instance).GetGridReference(),
+                        ((KMonoBehaviour) __instance).GetReference(),
                         __originalMethod.DeclaringType!,
                         __originalMethod.Name,
                         __args.Select(
                             obj =>
                                 obj switch {
                                     GameObject gameObject => gameObject.GetGridReference(),
-                                    KMonoBehaviour kMonoBehaviour => IsStaticObject(kMonoBehaviour)
-                                        ? kMonoBehaviour.GetGridReference()
-                                        : kMonoBehaviour.GetMultiplayerReference(),
+                                    KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
                                     _ => obj
                                 }
                         ).ToArray()
@@ -175,16 +173,5 @@ public static class ObjectEvents {
                 );
             }
         );
-
-    private static bool IsStaticObject(KMonoBehaviour kMonoBehaviour) {
-        var dynamicTypes = new[] {
-            typeof(MinionAssignablesProxy),
-            typeof(MinionResume),
-            typeof(Schedulable),
-            typeof(ConsumableConsumer),
-            typeof(ChoreConsumer)
-        };
-        return !dynamicTypes.Contains(kMonoBehaviour.GetType());
-    }
 
 }

@@ -38,7 +38,7 @@ public static class AlarmSideScreenEvents {
 
     private static void TriggerEvent(AlarmSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateAlarm?.Invoke(
-            instance.targetAlarm.GetGridReference(),
+            instance.targetAlarm.GetReference(),
             new AlarmSideScreenEventArgs(
                 instance.targetAlarm.notificationName,
                 instance.targetAlarm.notificationTooltip,

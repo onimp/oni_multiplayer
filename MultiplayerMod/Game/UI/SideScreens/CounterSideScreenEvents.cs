@@ -23,7 +23,7 @@ public static class CounterSideScreenEvents {
 
     private static void TriggerEvent(CounterSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateLogicCounter?.Invoke(
-            instance.targetLogicCounter.GetGridReference(),
+            instance.targetLogicCounter.GetReference(),
             new CounterSideScreenEventArgs(
                 instance.targetLogicCounter.currentCount,
                 instance.targetLogicCounter.maxCount,

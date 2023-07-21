@@ -23,7 +23,7 @@ public static class TimerSideScreenEvents {
 
     private static void TriggerEvent(TimerSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateLogicTimeSensor?.Invoke(
-            instance.targetTimedSwitch.GetGridReference(),
+            instance.targetTimedSwitch.GetReference(),
             new TimerSideScreenEventArgs(
                 instance.targetTimedSwitch.displayCyclesMode,
                 instance.targetTimedSwitch.onDuration,

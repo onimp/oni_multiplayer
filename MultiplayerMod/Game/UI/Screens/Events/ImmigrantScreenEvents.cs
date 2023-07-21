@@ -32,13 +32,4 @@ public static class ImmigrantScreenEvents {
         )
     );
 
-    [HarmonyPostfix]
-    [HarmonyPatch(nameof(ImmigrantScreen.OnRejectionConfirmed))]
-    private static void OnRejectionConfirmed() => PatchControl.RunIfEnabled(() => Reject?.Invoke());
-
-    [HarmonyPrefix]
-    [HarmonyPatch("OnProceed")]
-    private static void OnProceed(ImmigrantScreen __instance) =>
-        PatchControl.RunIfEnabled(() => Proceed?.Invoke(__instance.selectedDeliverables[0]));
-
 }

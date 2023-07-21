@@ -17,7 +17,7 @@ public static class TimeRangeSideScreenEvents {
     private static void ChangeSetting(TimeRangeSideScreen __instance) =>
         PatchControl.RunIfEnabled(
             () => UpdateLogicTimeOfDaySensor?.Invoke(
-                __instance.targetTimedSwitch.GetGridReference(),
+                __instance.targetTimedSwitch.GetReference(),
                 new TimeRangeSideScreenEventArgs(
                     __instance.targetTimedSwitch.startTime,
                     __instance.targetTimedSwitch.duration

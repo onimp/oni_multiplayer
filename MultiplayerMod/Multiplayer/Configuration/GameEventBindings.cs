@@ -1,6 +1,7 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Mechanics.Objects;
+using MultiplayerMod.Game.Mechanics.Printing;
 using MultiplayerMod.Game.UI;
 using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.UI.Screens.Events;
@@ -90,8 +91,6 @@ public class GameEventBindings {
 
         ImmigrantScreenEvents.Initialize +=
             containers => client.Send(new InitializeImmigration(containers));
-        ImmigrantScreenEvents.Proceed += deliverable => client.Send(new ProceedImmigration(deliverable));
-        ImmigrantScreenEvents.Reject += () => client.Send(new RejectImmigration());
         PauseScreenEvents.QuitGame += () => {
             if (client.State >= MultiplayerClientState.Connecting)
                 client.Disconnect();
@@ -140,6 +139,8 @@ public class GameEventBindings {
 
     private void BindMechanics() {
         ObjectEvents.MethodCalled += args => client.Send(new CallMethod(args));
+        TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
+        TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
     }
 
     private void BindSideScreens() {

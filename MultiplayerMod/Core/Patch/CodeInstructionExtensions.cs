@@ -28,21 +28,22 @@ public static class CodeInstructionExtensions {
         return variableIndex == index;
     }
 
-    public static void AddConditional(
+    public static bool AddConditional(
         this IList<CodeInstruction> instructions,
-        IEnumerator<CodeInstruction> enumerator,
+        IEnumerator<CodeInstruction?> enumerator,
         Func<CodeInstruction, bool> stopWhen,
         bool includeMatch = true
     ) {
         while (enumerator.MoveNext()) {
-            var instruction = enumerator.Current;
+            var instruction = enumerator.Current!;
             if (stopWhen(instruction)) {
                 if (includeMatch)
                     instructions.Add(instruction);
-                return;
+                return true;
             }
             instructions.Add(instruction);
         }
+        return false;
     }
 
     public static void AddRange(

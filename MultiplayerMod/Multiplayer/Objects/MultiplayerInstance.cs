@@ -11,4 +11,6 @@ public class MultiplayerInstance : KMonoBehaviour {
             MultiplayerGame.Objects.Remove(Id);
     }
 
+    public MultiplayerId Register() => MultiplayerGame.Objects.Register(this);
+
 }

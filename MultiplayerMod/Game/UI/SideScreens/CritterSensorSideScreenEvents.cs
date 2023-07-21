@@ -23,7 +23,7 @@ public static class CritterSensorSideScreenEvents {
 
     private static void TriggerEvent(CritterSensorSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateCritterSensor?.Invoke(
-            instance.targetSensor.GetGridReference(),
+            instance.targetSensor.GetReference(),
             new CritterSensorSideScreenEventArgs(
                 instance.targetSensor.countCritters,
                 instance.targetSensor.countEggs

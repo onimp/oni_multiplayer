@@ -8,8 +8,7 @@ namespace MultiplayerMod.Multiplayer.Objects;
 public class MultiplayerObjectsConfigurator {
 
     public MultiplayerObjectsConfigurator() {
-        KInstantiateEvents.Create += gameObject =>
-            MultiplayerGame.Objects.Register(gameObject.AddComponent<MultiplayerInstance>());
+        KInstantiateEvents.Create += gameObject => gameObject.AddComponent<MultiplayerInstance>();
 
         KPrefabIdEvents.Deserialize += kPrefabId => {
             var data = kPrefabId.gameObject.AddComponent<MultiplayerInstance>();

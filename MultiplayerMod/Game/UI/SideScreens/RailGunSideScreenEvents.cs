@@ -16,7 +16,7 @@ public static class RailGunSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void UpdateMaxCapacity(RailGunSideScreen __instance, float newValue) => PatchControl.RunIfEnabled(
         () => UpdateRailGunCapacity?.Invoke(
-            __instance.selectedGun.GetGridReference(),
+            __instance.selectedGun.GetReference(),
             new RailGunSideScreenEventArgs(newValue)
         )
     );

@@ -23,7 +23,7 @@ public static class TemperatureSwitchSideScreenEvents {
 
     private static void TriggerEvent(TemperatureSwitchSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateTemperatureSwitch?.Invoke(
-            instance.targetTemperatureSwitch.GetGridReference(),
+            instance.targetTemperatureSwitch.GetReference(),
             new TemperatureSwitchSideScreenEventArgs(
                 instance.targetTemperatureSwitch.thresholdTemperature,
                 instance.targetTemperatureSwitch.activateOnWarmerThan
