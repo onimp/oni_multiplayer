@@ -7,13 +7,12 @@ using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
 using MultiplayerMod.Network.Events;
-using MultiplayerMod.Platform.Steam.Network.Components;
-using MultiplayerMod.Platform.Steam.Network.Messaging;
+using MultiplayerMod.Platform.Base.Network;
+using MultiplayerMod.Platform.Base.Network.Components;
+using MultiplayerMod.Platform.Base.Network.Messaging;
 using Steamworks;
-using UnityEngine;
 using static Steamworks.Constants;
 using static Steamworks.ESteamNetConnectionEnd;
-using GNS.Sockets;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
@@ -28,7 +27,7 @@ public class SteamClient : BaseClient {
     private readonly NetworkMessageFactory messageFactory = new();
 
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
-    private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
+    private readonly SteamNetworkingConfigValue_t[] networkConfig = { SteamConfiguration.SendBufferSize() };
 
     public override void Connect(IMultiplayerEndpoint endpoint) {
         if (!SteamManager.Initialized)
@@ -60,11 +59,15 @@ public class SteamClient : BaseClient {
     public override void Tick() {
         if (State != MultiplayerClientState.Connected)
             return;
+
         SteamNetworkingSockets.RunCallbacks();
         ReceiveCommands();
     }
 
-    public override void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None) {
+    public override void Send(
+        IMultiplayerCommand command,
+        MultiplayerCommandOptions options = MultiplayerCommandOptions.None
+    ) {
         if (State != MultiplayerClientState.Connected)
             throw new NetworkPlatformException("Client not connected");
 
@@ -99,7 +102,7 @@ public class SteamClient : BaseClient {
         SetRichPresence();
         SetState(MultiplayerClientState.Connected);
 
-        gameObject = UnityObject.CreateStaticWithComponent<SteamClientComponent>();
+        gameObject = UnityObject.CreateStaticWithComponent<ClientComponent>();
     }
 
     private void SetRichPresence() {

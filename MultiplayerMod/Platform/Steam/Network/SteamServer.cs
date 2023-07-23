@@ -12,7 +12,8 @@ using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
 using MultiplayerMod.Network.Events;
-using MultiplayerMod.Platform.Steam.Network.Messaging;
+using MultiplayerMod.Platform.Base.Network;
+using MultiplayerMod.Platform.Base.Network.Messaging;
 using Steamworks;
 using static Steamworks.Constants;
 using static Steamworks.EResult;
@@ -34,7 +35,7 @@ public class SteamServer : BaseServer {
     private HSteamListenSocket listenSocket;
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
-    private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
+    private readonly SteamNetworkingConfigValue_t[] networkConfig = { SteamConfiguration.SendBufferSize() };
     private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback;
 
     private readonly Dictionary<IPlayer, HSteamNetConnection> players = new();
