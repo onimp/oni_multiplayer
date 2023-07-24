@@ -121,7 +121,7 @@ public class SteamClient : IMultiplayerClient {
         SteamFriends.SetRichPresence("connect", $"+connect_lobby {lobby.Id}");
     }
 
-    private static SteamNetworkingIdentity GetNetworkingIdentity(CSteamID steamId) {
+    private SteamNetworkingIdentity GetNetworkingIdentity(CSteamID steamId) {
         var identity = new SteamNetworkingIdentity();
         identity.SetSteamID(steamId);
         return identity;
