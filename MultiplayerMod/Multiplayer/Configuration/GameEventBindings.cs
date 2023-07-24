@@ -91,6 +91,10 @@ public class GameEventBindings {
             containers => client.Send(new InitializeImmigration(containers));
         ImmigrantScreenEvents.Proceed += deliverable => client.Send(new ProceedImmigration(deliverable));
         ImmigrantScreenEvents.Reject += () => client.Send(new RejectImmigration());
+        PauseScreenEvents.QuitGame += () => {
+            if (client.State >= MultiplayerClientState.Connecting)
+                client.Disconnect();
+        };
     }
 
     private void BindTools() {

@@ -2,4 +2,4 @@
 
 namespace MultiplayerMod.Network.Events;
 
-public record PlayerConnectedEventArgs(IPlayer Player);
+public record PlayerEventArgs(IPlayer Player);

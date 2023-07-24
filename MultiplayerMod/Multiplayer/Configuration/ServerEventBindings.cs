@@ -1,6 +1,7 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands.Chores;
 using MultiplayerMod.Multiplayer.Commands.Debug;
@@ -24,10 +25,11 @@ public class ServerEventBindings {
 
         log.Debug("Binding server events");
 
-        MultiplayerEvents.PlayerWorldSpawned += player => server.Send(
-            player,
-            new SyncMultiplayerState(MultiplayerGame.State)
-        );
+        PauseScreenEvents.QuitGame += server.Stop;
+        MultiplayerEvents.PlayerWorldSpawned += player => {
+            MultiplayerGame.State.Players[player].Spawned = true;
+            server.Send(new SyncMultiplayerState(MultiplayerGame.State));
+        };
         WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));
         SaveLoaderEvents.WorldSaved += WorldManager.Sync;
 
