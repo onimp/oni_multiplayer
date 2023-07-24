@@ -11,10 +11,13 @@ public class DisableBuildingValidation : IGameContext {
 
     private static bool validationEnabled = true;
 
-    private static IEnumerable<MethodBase> TargetMethods() => typeof(BuildingDef).GetMethods()
-        .Where(it => it.Name.StartsWith("IsValidPlaceLocation"));
+    // ReSharper disable once UnusedMember.Local
+    private static IEnumerable<MethodBase> TargetMethods() =>
+        typeof(BuildingDef).GetMethods()
+            .Where(it => it.Name.StartsWith("IsValidPlaceLocation"));
 
     [HarmonyPrefix]
+    // ReSharper disable once UnusedMember.Local
     private static bool IsValidPlaceLocationPrefix(ref bool __result) {
         if (validationEnabled)
             return true;

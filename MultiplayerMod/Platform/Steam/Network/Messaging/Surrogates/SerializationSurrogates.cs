@@ -21,7 +21,8 @@ public static class SerializationSurrogates {
         Selector.Add(new SpiceGrinderSurrogate());
     }
 
-    private static void Add<T>(this SurrogateSelector selector, T surrogate) where T : ISerializationSurrogate, ISurrogateType {
+    private static void Add<T>(this SurrogateSelector selector, T surrogate)
+        where T : ISerializationSurrogate, ISurrogateType {
         selector.AddSurrogate(surrogate.Type, new StreamingContext(StreamingContextStates.All), surrogate);
     }
 

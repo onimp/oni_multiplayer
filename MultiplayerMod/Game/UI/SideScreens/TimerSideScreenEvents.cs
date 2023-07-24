@@ -14,29 +14,21 @@ public static class TimerSideScreenEvents {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(TimerSideScreen.ChangeSetting))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void ChangeSetting(TimerSideScreen __instance) => PatchControl.RunIfEnabled(
-        () => UpdateLogicTimeSensor?.Invoke(
-            __instance.targetTimedSwitch.GetGridReference(),
-            new TimerSideScreenEventArgs(
-                __instance.targetTimedSwitch.displayCyclesMode,
-                __instance.targetTimedSwitch.onDuration,
-                __instance.targetTimedSwitch.offDuration,
-                __instance.targetTimedSwitch.timeElapsedInCurrentState
-            )
-        )
-    );
+    private static void ChangeSetting(TimerSideScreen __instance) => TriggerEvent(__instance);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(TimerSideScreen.ToggleMode))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void UpdateMaxCapacity(TimerSideScreen __instance) => PatchControl.RunIfEnabled(
+    private static void UpdateMaxCapacity(TimerSideScreen __instance) => TriggerEvent(__instance);
+
+    private static void TriggerEvent(TimerSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateLogicTimeSensor?.Invoke(
-            __instance.targetTimedSwitch.GetGridReference(),
+            instance.targetTimedSwitch.GetGridReference(),
             new TimerSideScreenEventArgs(
-                __instance.targetTimedSwitch.displayCyclesMode,
-                __instance.targetTimedSwitch.onDuration,
-                __instance.targetTimedSwitch.offDuration,
-                __instance.targetTimedSwitch.timeElapsedInCurrentState
+                instance.targetTimedSwitch.displayCyclesMode,
+                instance.targetTimedSwitch.onDuration,
+                instance.targetTimedSwitch.offDuration,
+                instance.targetTimedSwitch.timeElapsedInCurrentState
             )
         )
     );

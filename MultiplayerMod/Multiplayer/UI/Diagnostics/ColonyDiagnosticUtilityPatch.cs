@@ -5,10 +5,12 @@ using MultiplayerMod.Multiplayer.State;
 namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
 
 [HarmonyPatch(typeof(ColonyDiagnosticUtility))]
-static class ColonyDiagnosticUtilityPatch {
+// ReSharper disable once UnusedType.Global
+internal static class ColonyDiagnosticUtilityPatch {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ColonyDiagnosticUtility.AddWorld))]
+    // ReSharper disable once UnusedMember.Local
     private static void AddWorldPostfix(ColonyDiagnosticUtility __instance, int worldID) {
         if (MultiplayerGame.Role == MultiplayerRole.None)
             return;

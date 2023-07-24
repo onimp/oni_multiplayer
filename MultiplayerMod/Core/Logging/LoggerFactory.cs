@@ -8,14 +8,14 @@ namespace MultiplayerMod.Core.Logging;
 public static class LoggerFactory {
 
     private static readonly Dictionary<string, LogLevel> levels = new();
-    private static readonly Regex Pattern = new Regex("(.*?)=(.*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex pattern = new("(.*?)=(.*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     static LoggerFactory() {
         Environment.GetCommandLineArgs().ForEach(ParseLogConfiguration);
     }
 
     private static void ParseLogConfiguration(string arg) {
-        var match = Pattern.Match(arg);
+        var match = pattern.Match(arg);
         if (!match.Success)
             return;
 

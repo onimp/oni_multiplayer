@@ -10,6 +10,7 @@ public class ChoreConsumerEvents {
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ChoreConsumerEvents>();
     public static event Action<FindNextChoreEventArgs>? FindNextChore;
 
+    // ReSharper disable once InconsistentNaming, UnusedMember.Global
     public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, ref bool __result) {
         if (MultiplayerGame.Role != MultiplayerRole.Host)
             return;

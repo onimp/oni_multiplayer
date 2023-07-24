@@ -66,7 +66,7 @@ public class GameStaticContext {
         ) {
             PriorityScreen = UnityObject.CreateStub<PriorityScreen>(),
             ProductInfoScreen = UnityObject.CreateStub<ProductInfoScreen>(),
-            MaterialSelectionPanel = UnityObject.CreateStub<MaterialSelectionPanel>(),
+            MaterialSelectionPanel = UnityObject.CreateStub<MaterialSelectionPanel>()
         };
         context.ToolMenu.priorityScreen = context.PriorityScreen;
         context.BuildMenu.productInfoScreen = context.ProductInfoScreen;

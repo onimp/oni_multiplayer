@@ -18,7 +18,7 @@ public class ClickUserMenuButton : IMultiplayerCommand {
 
     public ClickUserMenuButton(GameObject gameObject, System.Action action) {
         reference = gameObject.GetMultiplayerReference();
-        actionDeclaringType = action.Method.DeclaringType;
+        actionDeclaringType = action.Method.DeclaringType!;
         actionName = action.Method.Name;
     }
 
@@ -33,7 +33,7 @@ public class ClickUserMenuButton : IMultiplayerCommand {
             );
             methodInfo?.Invoke(reference.GetComponent(actionDeclaringType), new object[] { });
         } catch (Exception e) {
-            log.Error(e.ToString);
+            log.Error(e.ToString());
         }
     }
 }

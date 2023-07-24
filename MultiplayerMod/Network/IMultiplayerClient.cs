@@ -13,6 +13,6 @@ public interface IMultiplayerClient {
 
     void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None);
 
-    event EventHandler<ClientStateChangedEventArgs> StateChanged;
-    event EventHandler<CommandReceivedEventArgs> CommandReceived;
+    event Action<ClientStateChangedEventArgs> StateChanged;
+    event Action<CommandReceivedEventArgs> CommandReceived;
 }

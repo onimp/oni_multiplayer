@@ -16,6 +16,7 @@ public static class ImmigrantScreenPatch {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
+    // ReSharper disable once UnusedMember.Local
     private static void Initialize(ImmigrantScreen __instance) => PatchControl.RunIfEnabled(
         () => new TaskFactory(Container.Get<UnityTaskScheduler>()).StartNew(
             async () => {

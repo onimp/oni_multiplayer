@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 
 namespace MultiplayerMod.Core.Dependency;
 
-public abstract class Container {
+public static class Container {
 
     private static readonly ConcurrentDictionary<Type, Lazy<object>> instances = new();
 
@@ -11,6 +11,7 @@ public abstract class Container {
         var singleton = instances[typeof(T)];
         if (singleton == null)
             throw new ContainerException($"Type {typeof(T).FullName} not registered");
+
         return (T) singleton.Value;
     }
 
@@ -23,6 +24,7 @@ public abstract class Container {
     private static T TryAdd<T>(T instance) where T : notnull {
         if (!instances.TryAdd(typeof(T), new Lazy<object>(() => instance)))
             throw new ContainerException($"A type {typeof(T).FullName} is already registered");
+
         return instance;
     }
 

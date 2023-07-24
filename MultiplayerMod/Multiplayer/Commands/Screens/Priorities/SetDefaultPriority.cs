@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using MultiplayerMod.Core.Extensions;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
@@ -9,7 +10,7 @@ public class SetDefaultPriority : IMultiplayerCommand {
     private readonly string choreGroupId;
     private readonly int value;
 
-    private ChoreGroup ChoreGroup =>
+    private ChoreGroup? ChoreGroup =>
         Db.Get().ChoreGroups.resources.FirstOrDefault(resource => resource.Id == choreGroupId);
 
     public SetDefaultPriority(ChoreGroup choreGroup, int value) {
@@ -26,10 +27,10 @@ public class SetDefaultPriority : IMultiplayerCommand {
         var screen = ManagementMenu.Instance.jobsScreen;
         foreach (var row in screen.rows) {
             var minion = row.GetIdentity();
-            foreach (var widget in row.widgets.Where(entry => entry.Key is PrioritizationGroupTableColumn)
-                         .Select(entry => entry.Value)) {
-                screen.LoadValue(minion, widget);
-            }
+            row.widgets.Where(entry => entry.Key is PrioritizationGroupTableColumn)
+                .Select(entry => entry.Value).ForEach(
+                    widget => screen.LoadValue(minion, widget)
+                );
         }
     }
 

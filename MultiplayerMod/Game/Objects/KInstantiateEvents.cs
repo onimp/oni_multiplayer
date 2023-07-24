@@ -9,7 +9,7 @@ public static class KInstantiateEvents {
 
     public static event Action<GameObject>? Create;
 
-    // ReSharper disable once UnusedMember.Local
+    // ReSharper disable once UnusedMember.Local, InconsistentNaming
     [HarmonyPostfix]
     [HarmonyPatch(
         nameof(Util.KInstantiate),

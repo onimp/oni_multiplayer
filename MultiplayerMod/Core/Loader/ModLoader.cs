@@ -9,6 +9,7 @@ using MultiplayerMod.Core.Patch;
 
 namespace MultiplayerMod.Core.Loader;
 
+// ReSharper disable once UnusedType.Global
 public class ModLoader : UserMod2 {
 
     private readonly Logging.Logger log = LoggerFactory.GetLogger<ModLoader>();
@@ -42,8 +43,9 @@ public class ModLoader : UserMod2 {
             if (optional) {
                 log.Trace(() => $"Unable to create class processor for patch {type.FullName}\n{exception}");
                 log.Info($"Optional patch {type.FullName} is omitted");
-            } else
+            } else {
                 throw;
+            }
         }
         return null;
     }

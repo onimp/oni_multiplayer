@@ -10,6 +10,7 @@ public static class WorldGenSpawnerEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch("OnSpawn")]
+    // ReSharper disable once UnusedMember.Local
     private static void OnSpawn() => PatchControl.RunIfEnabled(() => { Spawned?.Invoke(); });
 
 }

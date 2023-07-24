@@ -1,15 +1,14 @@
 ﻿using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Core.Unity;
 
-public abstract class UnityObject {
+public static class UnityObject {
 
-    private static int UnityPlayerObjectSize = 0x48;
-    private static IntPtr UnityPlayerNullObject;
+    private const int unityPlayerObjectSize = 0x48;
+    private static readonly IntPtr unityPlayerNullObject;
 
     static UnityObject() {
         // Unity mono GC extension reads m_InstanceID from m_CachedPtr and to prevent access violation
@@ -24,9 +23,9 @@ public abstract class UnityObject {
         // if m_InstanceID is 0 then the calling function UnityPlayer.dll!RegisterFilteredObjectCallback should ignore
         // this UnityPlayer!Object.
 
-        UnityPlayerNullObject = Marshal.AllocHGlobal(UnityPlayerObjectSize);
-        var data = new byte[UnityPlayerObjectSize];
-        Marshal.Copy(data, 0, UnityPlayerNullObject, UnityPlayerObjectSize);
+        unityPlayerNullObject = Marshal.AllocHGlobal(unityPlayerObjectSize);
+        var data = new byte[unityPlayerObjectSize];
+        Marshal.Copy(data, 0, unityPlayerNullObject, unityPlayerObjectSize);
     }
 
     public static GameObject CreateStaticWithComponent<T>() where T : Component =>
@@ -47,7 +46,7 @@ public abstract class UnityObject {
     }
 
     public static T CreateStub<T>() where T : MonoBehaviour, new() => new() {
-        m_CachedPtr = UnityPlayerNullObject // Support for != and == for Unity objects
+        m_CachedPtr = unityPlayerNullObject // Support for != and == for Unity objects
     };
 
 }

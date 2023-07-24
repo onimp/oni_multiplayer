@@ -18,7 +18,7 @@ public class UpdateAlarm : IMultiplayerCommand {
     }
 
     public void Execute() {
-        var alarm = ((LogicAlarm) target.GetComponent());
+        var alarm = (LogicAlarm) target.GetComponent();
         alarm.notificationName = alarmSideScreenEventArgs.NotificationName;
         alarm.notificationTooltip = alarmSideScreenEventArgs.NotificationTooltip;
         alarm.pauseOnNotify = alarmSideScreenEventArgs.PauseOnNotify;

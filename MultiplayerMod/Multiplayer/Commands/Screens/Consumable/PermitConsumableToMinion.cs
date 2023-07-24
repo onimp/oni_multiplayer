@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -30,10 +31,10 @@ public class PermitConsumableToMinion : IMultiplayerCommand {
         var screen = ManagementMenu.Instance.consumablesScreen;
         foreach (var row in screen.rows) {
             var minion = row.GetIdentity();
-            foreach (var widget in row.widgets.Where(entry => entry.Key is ConsumableInfoTableColumn)
-                         .Select(entry => entry.Value)) {
-                screen.on_load_consumable_info(minion, widget);
-            }
+            row.widgets.Where(entry => entry.Key is ConsumableInfoTableColumn)
+                .Select(entry => entry.Value).ForEach(
+                    widget => screen.on_load_consumable_info(minion, widget)
+                );
         }
     }
 }

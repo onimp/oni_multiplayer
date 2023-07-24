@@ -11,6 +11,7 @@ internal class MainMenuPatch {
 
     [HarmonyPrefix]
     [HarmonyPatch("OnPrefabInit")]
+    // ReSharper disable once UnusedMember.Local
     private static void OnPrefabInit(MainMenu __instance) {
         MultiplayerGame.Reset();
         var operations = Container.Get<IMultiplayerOperations>();
