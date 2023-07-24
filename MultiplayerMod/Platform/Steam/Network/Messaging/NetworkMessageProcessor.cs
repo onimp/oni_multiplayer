@@ -27,7 +27,7 @@ public class NetworkMessageProcessor {
             fragments[clientId] = index;
         }
         var buffer = new FragmentsBuffer(header.FragmentsCount);
-        buffer.Timeout += (_, _) => {
+        buffer.Timeout += () => {
             log.Warning($"Fragments buffer timed out (message id: {header.MessageId})");
             index.TryRemove(header.MessageId, out _);
         };
@@ -57,13 +57,13 @@ public class NetworkMessageProcessor {
     }
 
     private class FragmentsBuffer {
-        private static readonly int watchdogIntervalMs = 5000;
+        private const int watchdogIntervalMs = 5000;
 
         private int index;
         private readonly int count;
         private readonly byte[] buffer;
 
-        public event EventHandler? Timeout;
+        public event System.Action? Timeout;
 
         private readonly System.Timers.Timer watchdog = new(watchdogIntervalMs) {
             Enabled = true,
@@ -73,7 +73,7 @@ public class NetworkMessageProcessor {
         public FragmentsBuffer(int count) {
             this.count = count;
             buffer = new byte[count * MaxFragmentDataSize];
-            watchdog.Elapsed += (_, _) => Timeout?.Invoke(this, EventArgs.Empty);
+            watchdog.Elapsed += (_, _) => Timeout?.Invoke();
         }
 
         public NetworkMessage? Append(NetworkMessageFragment fragment) {

@@ -13,12 +13,12 @@ namespace MultiplayerMod.Core.Patch;
 /// This is a patch for Harmony version 2.0.5.0 that adds a new version feature.
 /// If the library will be updated in game this patch must be removed.
 /// </summary>
-// ReSharper disable once UnusedType.Global
 [HarmonyPatch(typeof(MethodPatcher))]
 [HarmonyPriority(Priority.First)]
+// ReSharper disable once UnusedType.Global
 public static class HarmonyArgsSupport {
 
-    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(HarmonyArgsSupport));
+    private static readonly Logging.Logger log = LoggerFactory.GetLogger(typeof(HarmonyArgsSupport));
 
     private const string argsParameterName = "__args";
     private const string supportedVersion = "2.0.5.0";

@@ -11,6 +11,7 @@ public static class GameState {
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(global::Game), nameof(global::Game.OnPrefabInit))]
+    // ReSharper disable once UnusedMember.Local
     private static void OnGamePrefabInit(global::Game __instance) {
         __instance.Subscribe(
             (int) GameHashes.SelectObject,

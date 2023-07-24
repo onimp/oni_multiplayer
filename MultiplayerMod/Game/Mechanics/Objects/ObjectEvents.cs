@@ -136,7 +136,7 @@ public static class ObjectEvents {
         }, {
             typeof(IPlayerControlledToggle),
             new[] { nameof(IPlayerControlledToggle.ToggleRequested), nameof(IPlayerControlledToggle.ToggledByPlayer) }
-        },
+        }
         // TODO decide how to proper patch KMonoBehaviour#Trigger
         // {
         //     typeof(ReorderableBuilding),

@@ -12,44 +12,24 @@ public static class DiseaseOverlayEvents {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(DisinfectThresholdDiagram.OnReleaseHandle))]
     // ReSharper disable once UnusedMember.Local
-    private static void OnReleaseHandle() => PatchControl.RunIfEnabled(
-        () => {
-            DiseaseSettingsChanged?.Invoke(
-                SaveGame.Instance.minGermCountForDisinfect,
-                SaveGame.Instance.enableAutoDisinfect
-            );
-        }
-    );
+    private static void OnReleaseHandle() => TriggerEvent();
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(DisinfectThresholdDiagram.ReceiveValueFromSlider))]
     // ReSharper disable once UnusedMember.Local
-    private static void ReceiveValueFromSlider() => PatchControl.RunIfEnabled(
-        () => {
-            DiseaseSettingsChanged?.Invoke(
-                SaveGame.Instance.minGermCountForDisinfect,
-                SaveGame.Instance.enableAutoDisinfect
-            );
-        }
-    );
+    private static void ReceiveValueFromSlider() => TriggerEvent();
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(DisinfectThresholdDiagram.ReceiveValueFromInput))]
     // ReSharper disable once UnusedMember.Local
-    private static void ReceiveValueFromInput() => PatchControl.RunIfEnabled(
-        () => {
-            DiseaseSettingsChanged?.Invoke(
-                SaveGame.Instance.minGermCountForDisinfect,
-                SaveGame.Instance.enableAutoDisinfect
-            );
-        }
-    );
+    private static void ReceiveValueFromInput() => TriggerEvent();
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(DisinfectThresholdDiagram.OnClickToggle))]
-    // ReSharper disable once InconsistentNaming
     // ReSharper disable once UnusedMember.Local
-    private static void OnClickToggle() => PatchControl.RunIfEnabled(
+    private static void OnClickToggle() => TriggerEvent();
+
+    private static void TriggerEvent() => PatchControl.RunIfEnabled(
         () => {
             DiseaseSettingsChanged?.Invoke(
                 SaveGame.Instance.minGermCountForDisinfect,

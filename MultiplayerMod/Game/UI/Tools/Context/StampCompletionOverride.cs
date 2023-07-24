@@ -23,6 +23,7 @@ public class StampCompletionOverride : IGameContext {
 
     [HarmonyTranspiler]
     [HarmonyPatch(typeof(StampTool), nameof(StampTool.Stamp))]
+    // ReSharper disable once UnusedMember.Local
     private static IEnumerable<CodeInstruction> StampTranspiler(
         IEnumerable<CodeInstruction> instructions,
         ILGenerator generator

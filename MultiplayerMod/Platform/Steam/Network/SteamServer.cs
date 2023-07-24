@@ -39,9 +39,9 @@ public class SteamServer : IMultiplayerServer {
 
     public List<IPlayer> Players => new(players.Keys);
 
-    public event EventHandler<ServerStateChangedEventArgs>? StateChanged;
-    public event EventHandler<PlayerConnectedEventArgs>? PlayerConnected;
-    public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
+    public event Action<ServerStateChangedEventArgs>? StateChanged;
+    public event Action<PlayerConnectedEventArgs>? PlayerConnected;
+    public event Action<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamServer>();
 
@@ -117,7 +117,7 @@ public class SteamServer : IMultiplayerServer {
 
     private void SetState(MultiplayerServerState state) {
         State = state;
-        StateChanged?.Invoke(this, new ServerStateChangedEventArgs(state));
+        StateChanged?.Invoke(new ServerStateChangedEventArgs(state));
     }
 
     private void Initialize() {
@@ -188,7 +188,7 @@ public class SteamServer : IMultiplayerServer {
 
     private void ConnectedToSteamCallback() => steamServersCompletionSource.SetResult(true);
 
-    public void ReceiveMessages() {
+    private void ReceiveMessages() {
         var messages = new IntPtr[128];
         var messagesCount = SteamGameServerNetworkingSockets.ReceiveMessagesOnPollGroup(pollGroup, messages, 128);
         for (var i = 0; i < messagesCount; i++) {
@@ -200,7 +200,7 @@ public class SteamServer : IMultiplayerServer {
             if (message != null) {
                 IPlayer player = new SteamPlayer(steamMessage.m_identityPeer.GetSteamID());
                 if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
-                    CommandReceived?.Invoke(this, new CommandReceivedEventArgs(player, message.Command));
+                    CommandReceived?.Invoke(new CommandReceivedEventArgs(player, message.Command));
                 } else {
                     var connections = players.Where(it => !it.Key.Equals(player)).Select(it => it.Value);
                     SendCommand(message.Command, message.Options, connections);
@@ -238,7 +238,7 @@ public class SteamServer : IMultiplayerServer {
         switch (state) {
             case k_ESteamNetworkingConnectionState_Connecting:
                 if (TryAcceptConnection(connection, clientSteamId))
-                    PlayerConnected?.Invoke(this, new PlayerConnectedEventArgs(new SteamPlayer(clientSteamId)));
+                    PlayerConnected?.Invoke(new PlayerConnectedEventArgs(new SteamPlayer(clientSteamId)));
                 break;
             case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
             case k_ESteamNetworkingConnectionState_ClosedByPeer:
@@ -274,9 +274,9 @@ public class SteamServer : IMultiplayerServer {
     private void CloseConnection(HSteamNetConnection connection, CSteamID clientSteamId) {
         SteamGameServerNetworkingSockets.CloseConnection(
             connection,
-            nReason: (int) k_ESteamNetConnectionEnd_App_Generic,
-            pszDebug: null,
-            bEnableLinger: false
+            (int) k_ESteamNetConnectionEnd_App_Generic,
+            null,
+            false
         );
         players.Remove(new SteamPlayer(clientSteamId));
         Debug.Log($"Connection closed for {clientSteamId}");

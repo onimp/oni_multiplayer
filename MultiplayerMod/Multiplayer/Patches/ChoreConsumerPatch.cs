@@ -5,9 +5,11 @@ using MultiplayerMod.Multiplayer.World;
 namespace MultiplayerMod.Multiplayer.Patches;
 
 //[HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
+// ReSharper disable once UnusedType.Global
 public class ChoreConsumerPatch {
 
     // ReSharper disable once InconsistentNaming
+    // ReSharper disable once UnusedMember.Global
     public static bool Prefix(ChoreConsumer __instance, ref Chore.Precondition.Context out_context, ref bool __result) {
         if (MultiplayerGame.Role != MultiplayerRole.Client)
             return true;

@@ -38,12 +38,12 @@ public class FindNextChore : IMultiplayerCommand {
             $"Received {instanceId} {instanceString} {instanceCell} {choreId} {choreType} {choreCell}"
         );
         var choreContext = FindContext();
-        if (choreContext != null) {
-            if (!HostChores.Index.ContainsKey(instanceId)) {
-                HostChores.Index[instanceId] = new Queue<Chore.Precondition.Context>();
-            }
-            HostChores.Index[instanceId].Enqueue(choreContext.Value);
-        }
+        if (choreContext == null)
+            return;
+
+        if (!HostChores.Index.ContainsKey(instanceId))
+            HostChores.Index[instanceId] = new Queue<Chore.Precondition.Context>();
+        HostChores.Index[instanceId].Enqueue(choreContext.Value);
     }
 
     private Chore.Precondition.Context? FindContext() {
@@ -187,14 +187,14 @@ public class FindNextChore : IMultiplayerCommand {
             choreWithIdCollision = result;
             return null;
         }
-        if (result.GetType().ToString() != choreType) {
-            log.Warning(
-                $"Chore type is not equal client: {result.GetType()} != server {choreType}"
-            );
-            choreWithIdCollision = result;
-            return null;
-        }
-        return result;
+        if (result.GetType().ToString() == choreType)
+            return result;
+
+        log.Warning(
+            $"Chore type is not equal client: {result.GetType()} != server {choreType}"
+        );
+        choreWithIdCollision = result;
+        return null;
     }
 
     private static Chore? FindByTypeAndCell(Chore[] chores, int choreCell, string choreType) {
@@ -231,7 +231,7 @@ public class FindNextChore : IMultiplayerCommand {
     /// <summary>
     /// This chores depends only on consumer position.
     ///
-    /// If consumer position is off due to any reason chore must be taken regardless of its positon.
+    /// If consumer position is off due to any reason chore must be taken regardless of its position.
     /// </summary>
     /// <returns></returns>
     private static bool DependsOnConsumerCell(string choreType) {

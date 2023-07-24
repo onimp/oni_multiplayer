@@ -14,32 +14,23 @@ public static class CounterSideScreenEvents {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(CounterSideScreen.SetMaxCount))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void SetMaxCount(CounterSideScreen __instance) =>
-        PatchControl.RunIfEnabled(
-            () => UpdateLogicCounter?.Invoke(
-                __instance.targetLogicCounter.GetGridReference(),
-                new CounterSideScreenEventArgs(
-                    __instance.targetLogicCounter.currentCount,
-                    __instance.targetLogicCounter.maxCount,
-                    __instance.targetLogicCounter.advancedMode
-                )
-            )
-        );
+    private static void SetMaxCount(CounterSideScreen __instance) => TriggerEvent(__instance);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(CounterSideScreen.ToggleAdvanced))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void ToggleAdvanced(CounterSideScreen __instance) =>
-        PatchControl.RunIfEnabled(
-            () => UpdateLogicCounter?.Invoke(
-                __instance.targetLogicCounter.GetGridReference(),
-                new CounterSideScreenEventArgs(
-                    __instance.targetLogicCounter.currentCount,
-                    __instance.targetLogicCounter.maxCount,
-                    __instance.targetLogicCounter.advancedMode
-                )
+    private static void ToggleAdvanced(CounterSideScreen __instance) => TriggerEvent(__instance);
+
+    private static void TriggerEvent(CounterSideScreen instance) => PatchControl.RunIfEnabled(
+        () => UpdateLogicCounter?.Invoke(
+            instance.targetLogicCounter.GetGridReference(),
+            new CounterSideScreenEventArgs(
+                instance.targetLogicCounter.currentCount,
+                instance.targetLogicCounter.maxCount,
+                instance.targetLogicCounter.advancedMode
             )
-        );
+        )
+    );
 
     [Serializable]
     public record CounterSideScreenEventArgs(int CurrentCount, int MaxCount, bool AdvancedMode);

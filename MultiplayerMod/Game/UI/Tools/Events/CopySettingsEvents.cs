@@ -8,7 +8,7 @@ public static class CopySettingsEvents {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(CopySettingsEvents));
 
-    public static event EventHandler<CopySettingsEventArgs>? Copy;
+    public static event Action<CopySettingsEventArgs>? Copy;
 
     static CopySettingsEvents() => DragToolEvents.DragComplete += OnDragComplete;
 
@@ -30,7 +30,7 @@ public static class CopySettingsEvents {
 
         var layer = component.Def.ObjectLayer;
 
-        Copy?.Invoke(sender, new CopySettingsEventArgs(e, cell, layer));
+        Copy?.Invoke( new CopySettingsEventArgs(e, cell, layer));
     }
 
 }

@@ -122,10 +122,10 @@ public class GameEventBindings {
             // @formatter:on
         };
 
-        BuildEvents.Build += (_, args) => client.Send(new Build(args));
-        CopySettingsEvents.Copy += (_, args) => client.Send(new CopySettings(args));
-        DebugToolEvents.Modify += (_, args) => client.Send(new Modify(args));
-        StampToolEvents.Stamp += (_, args) => client.Send(new Stamp(args));
+        BuildEvents.Build += args => client.Send(new Build(args));
+        CopySettingsEvents.Copy += args => client.Send(new CopySettings(args));
+        DebugToolEvents.Modify += args => client.Send(new Modify(args));
+        StampToolEvents.Stamp += args => client.Send(new Stamp(args));
     }
 
     private void BindOverlays() {

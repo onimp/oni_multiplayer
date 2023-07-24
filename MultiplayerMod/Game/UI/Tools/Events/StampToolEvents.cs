@@ -11,14 +11,12 @@ namespace MultiplayerMod.Game.UI.Tools.Events;
 [HarmonyPriority(Priority.High)]
 public static class StampToolEvents {
 
-    public static event EventHandler<StampEventArgs>? Stamp;
+    public static event Action<StampEventArgs>? Stamp;
 
     [HarmonyTranspiler]
     [HarmonyPatch(nameof(StampTool.Stamp))]
-    private static IEnumerable<CodeInstruction> StampTranspiler(
-        IEnumerable<CodeInstruction> instructions,
-        ILGenerator generator
-    ) {
+    // ReSharper disable once UnusedMember.Local
+    private static IEnumerable<CodeInstruction> StampTranspiler(IEnumerable<CodeInstruction> instructions) {
         using var source = instructions.GetEnumerator();
         var result = new List<CodeInstruction>();
 
@@ -38,7 +36,6 @@ public static class StampToolEvents {
     private static void OnStamp(StampTool instance, Vector2 location) => PatchControl.RunIfEnabled(
         () => {
             Stamp?.Invoke(
-                null,
                 new StampEventArgs(
                     instance.stampTemplate,
                     location

@@ -6,7 +6,7 @@ using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.Game.Mechanics.Objects;
 
-static class TargetExtractor {
+internal static class TargetExtractor {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(TargetExtractor));
 

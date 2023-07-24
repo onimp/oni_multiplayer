@@ -42,7 +42,7 @@ public class MultiplayerCoordinator {
         server.CommandReceived += ServerOnCommandReceived;
     }
 
-    private void OnServerStateChanged(object sender, ServerStateChangedEventArgs e) {
+    private void OnServerStateChanged(ServerStateChangedEventArgs e) {
         log.Debug($"Server state changed: {e.State}");
         switch (e.State) {
             case MultiplayerServerState.Starting:
@@ -54,12 +54,12 @@ public class MultiplayerCoordinator {
         }
     }
 
-    private void ServerOnCommandReceived(object sender, CommandReceivedEventArgs e) {
+    private void ServerOnCommandReceived(CommandReceivedEventArgs e) {
         log.Trace(() => $"Command {e.Command.GetType().Name} received from player {e.Player}");
         PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
     }
 
-    private void OnPlayerConnected(object sender, PlayerConnectedEventArgs e) {
+    private void OnPlayerConnected(PlayerConnectedEventArgs e) {
         MultiplayerGame.State.Players[e.Player] = new PlayerState(e.Player);
         if (e.Player.Equals(client.Player))
             return;
@@ -77,7 +77,7 @@ public class MultiplayerCoordinator {
         client.CommandReceived += ClientOnCommandReceived;
     }
 
-    private void OnClientStateChanged(object sender, ClientStateChangedEventArgs e) {
+    private void OnClientStateChanged(ClientStateChangedEventArgs e) {
         switch (e.State) {
             case MultiplayerClientState.Connecting:
                 if (MultiplayerGame.Role != MultiplayerRole.Host) {
@@ -91,7 +91,7 @@ public class MultiplayerCoordinator {
         }
     }
 
-    private void ClientOnCommandReceived(object sender, CommandReceivedEventArgs e) {
+    private void ClientOnCommandReceived(CommandReceivedEventArgs e) {
         if (!MultiplayerGame.WorldSpawned && e.Command is not LoadWorld) {
             log.Warning($"Command {e.Command.GetType().FullName} received, but the world isn't spawned yet");
             return;

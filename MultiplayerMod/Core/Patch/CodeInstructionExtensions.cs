@@ -18,15 +18,14 @@ public static class CodeInstructionExtensions {
         if (instruction.opcode == OpCodes.Stloc_3)
             return variableIndex == 3;
 
-        if (instruction.opcode == OpCodes.Stloc || instruction.opcode == OpCodes.Stloc_S) {
-            var index = instruction.operand switch {
-                int i => i,
-                LocalBuilder b => b.LocalIndex,
-                _ => -1
-            };
-            return variableIndex == index;
-        }
-        return false;
+        if (instruction.opcode != OpCodes.Stloc && instruction.opcode != OpCodes.Stloc_S) return false;
+
+        var index = instruction.operand switch {
+            int i => i,
+            LocalBuilder b => b.LocalIndex,
+            _ => -1
+        };
+        return variableIndex == index;
     }
 
     public static void AddConditional(

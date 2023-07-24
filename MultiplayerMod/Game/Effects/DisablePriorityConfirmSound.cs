@@ -10,6 +10,7 @@ public class DisablePriorityConfirmSound : IGameContext {
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(PriorityScreen.PlayPriorityConfirmSound))]
+    // ReSharper disable once UnusedMember.Local
     private static bool PlayPriorityConfirmSoundPrefix() => enabled;
 
     public void Apply() => enabled = false;

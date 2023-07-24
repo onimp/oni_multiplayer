@@ -9,6 +9,7 @@ public static class ScheduleScreenEvents {
     public static event Action<List<Schedule>>? Changed;
 
     [HarmonyPatch(typeof(ScheduleScreen))]
+    // ReSharper disable once UnusedType.Local
     private static class ScheduleScreenPatch {
 
         [HarmonyPostfix]
@@ -20,6 +21,7 @@ public static class ScheduleScreenEvents {
     }
 
     [HarmonyPatch(typeof(ScheduleScreenEntry))]
+    // ReSharper disable once UnusedType.Local
     private static class ScheduleScreenEntryPatch {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ScheduleScreenEntry.OnDeleteClicked))]

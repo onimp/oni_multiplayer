@@ -12,12 +12,6 @@ public static class WorldManager {
 
     private static readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
 
-    public static byte[] GetWorldSave() {
-        var path = SaveLoader.GetActiveSaveFilePath();
-        PatchControl.RunWithDisabledPatches(() => SaveLoader.Instance.Save(path));
-        return File.ReadAllBytes(path);
-    }
-
     public static void Sync() {
         server.Send(new PauseGame());
         // TODO: Improvement: overlay should be shown on server as well. But it must be hidden as soon as all
@@ -31,9 +25,15 @@ public static class WorldManager {
         MultiplayerGame.WorldSpawned = false;
         MultiplayerGame.Objects.Clear();
         var path = Path.GetTempFileName();
-        using (var writer = new BinaryWriter(File.OpenWrite(path)))
+        using (var writer = new BinaryWriter(File.OpenWrite(path))) {
             writer.Write(data);
+        }
         LoadScreen.DoLoad(path);
     }
 
+    private static byte[] GetWorldSave() {
+        var path = SaveLoader.GetActiveSaveFilePath();
+        PatchControl.RunWithDisabledPatches(() => SaveLoader.Instance.Save(path));
+        return File.ReadAllBytes(path);
+    }
 }

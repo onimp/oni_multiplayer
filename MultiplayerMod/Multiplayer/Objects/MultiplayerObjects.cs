@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Logging;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects;

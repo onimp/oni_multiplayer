@@ -14,25 +14,19 @@ public static class CritterSensorSideScreenEvents {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(CritterSensorSideScreen.ToggleCritters))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void ToggleCritters(CritterSensorSideScreen __instance) => PatchControl.RunIfEnabled(
-        () => UpdateCritterSensor?.Invoke(
-            __instance.targetSensor.GetGridReference(),
-            new CritterSensorSideScreenEventArgs(
-                __instance.targetSensor.countCritters,
-                __instance.targetSensor.countEggs
-            )
-        )
-    );
+    private static void ToggleCritters(CritterSensorSideScreen __instance) => TriggerEvent(__instance);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(CritterSensorSideScreen.ToggleEggs))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void ToggleEggs(CritterSensorSideScreen __instance) => PatchControl.RunIfEnabled(
+    private static void ToggleEggs(CritterSensorSideScreen __instance) => TriggerEvent(__instance);
+
+    private static void TriggerEvent(CritterSensorSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateCritterSensor?.Invoke(
-            __instance.targetSensor.GetGridReference(),
+            instance.targetSensor.GetGridReference(),
             new CritterSensorSideScreenEventArgs(
-                __instance.targetSensor.countCritters,
-                __instance.targetSensor.countEggs
+                instance.targetSensor.countCritters,
+                instance.targetSensor.countEggs
             )
         )
     );

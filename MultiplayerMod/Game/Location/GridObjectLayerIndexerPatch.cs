@@ -11,7 +11,7 @@ public static class GridObjectLayerIndexerPatch {
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
     [HarmonyPatch("set_Item")]
-    private static void SetItemPostfix(int cell, int layer, GameObject value) {
+    private static void SetItemPostfix(int layer, GameObject value) {
         if (value == null)
             return;
 

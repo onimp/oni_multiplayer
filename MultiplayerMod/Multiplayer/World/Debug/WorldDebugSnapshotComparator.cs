@@ -103,7 +103,7 @@ public static class WorldDebugSnapshotComparator {
             .Where(i => a.Length <= i || b.Length <= i || !CompareDictionaries(a[i], b[i])).ToArray();
         if (failures.Length != 0) {
             log.Debug(
-                $"Chore dicts Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures.ToArray())}"
+                $"Chore dictionaries Ok: {a.Length - failures.Length}/{a.Length}. Failures at {JoinToString(failures.ToArray())}"
             );
         }
         return failures.Length;
@@ -130,6 +130,6 @@ public static class WorldDebugSnapshotComparator {
     }
 
     private static string JoinToString<T>(T[] objects) {
-        return String.Join(", ", objects);
+        return string.Join(", ", objects);
     }
 }

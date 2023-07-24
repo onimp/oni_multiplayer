@@ -14,79 +14,37 @@ public static class AlarmSideScreenEvents {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(AlarmSideScreen.OnEndEditName))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void OnEndEditName(AlarmSideScreen __instance) => PatchControl.RunIfEnabled(
-        () => UpdateAlarm?.Invoke(
-            __instance.targetAlarm.GetGridReference(),
-            new AlarmSideScreenEventArgs(
-                __instance.targetAlarm.notificationName,
-                __instance.targetAlarm.notificationTooltip,
-                __instance.targetAlarm.pauseOnNotify,
-                __instance.targetAlarm.zoomOnNotify,
-                __instance.targetAlarm.notificationType
-            )
-        )
-    );
+    private static void OnEndEditName(AlarmSideScreen __instance) => TriggerEvent(__instance);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(AlarmSideScreen.OnEndEditTooltip))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void OnEndEditTooltip(AlarmSideScreen __instance) => PatchControl.RunIfEnabled(
-        () => UpdateAlarm?.Invoke(
-            __instance.targetAlarm.GetGridReference(),
-            new AlarmSideScreenEventArgs(
-                __instance.targetAlarm.notificationName,
-                __instance.targetAlarm.notificationTooltip,
-                __instance.targetAlarm.pauseOnNotify,
-                __instance.targetAlarm.zoomOnNotify,
-                __instance.targetAlarm.notificationType
-            )
-        )
-    );
+    private static void OnEndEditTooltip(AlarmSideScreen __instance) => TriggerEvent(__instance);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(AlarmSideScreen.TogglePause))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void TogglePause(AlarmSideScreen __instance) => PatchControl.RunIfEnabled(
-        () => UpdateAlarm?.Invoke(
-            __instance.targetAlarm.GetGridReference(),
-            new AlarmSideScreenEventArgs(
-                __instance.targetAlarm.notificationName,
-                __instance.targetAlarm.notificationTooltip,
-                __instance.targetAlarm.pauseOnNotify,
-                __instance.targetAlarm.zoomOnNotify,
-                __instance.targetAlarm.notificationType
-            )
-        )
-    );
+    private static void TogglePause(AlarmSideScreen __instance) => TriggerEvent(__instance);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(AlarmSideScreen.ToggleZoom))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void ToggleZoom(AlarmSideScreen __instance) => PatchControl.RunIfEnabled(
-        () => UpdateAlarm?.Invoke(
-            __instance.targetAlarm.GetGridReference(),
-            new AlarmSideScreenEventArgs(
-                __instance.targetAlarm.notificationName,
-                __instance.targetAlarm.notificationTooltip,
-                __instance.targetAlarm.pauseOnNotify,
-                __instance.targetAlarm.zoomOnNotify,
-                __instance.targetAlarm.notificationType
-            )
-        )
-    );
+    private static void ToggleZoom(AlarmSideScreen __instance) => TriggerEvent(__instance);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(AlarmSideScreen.SelectType))]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void SelectType(AlarmSideScreen __instance) => PatchControl.RunIfEnabled(
+    private static void SelectType(AlarmSideScreen __instance) => TriggerEvent(__instance);
+
+    private static void TriggerEvent(AlarmSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateAlarm?.Invoke(
-            __instance.targetAlarm.GetGridReference(),
+            instance.targetAlarm.GetGridReference(),
             new AlarmSideScreenEventArgs(
-                __instance.targetAlarm.notificationName,
-                __instance.targetAlarm.notificationTooltip,
-                __instance.targetAlarm.pauseOnNotify,
-                __instance.targetAlarm.zoomOnNotify,
-                __instance.targetAlarm.notificationType
+                instance.targetAlarm.notificationName,
+                instance.targetAlarm.notificationTooltip,
+                instance.targetAlarm.pauseOnNotify,
+                instance.targetAlarm.zoomOnNotify,
+                instance.targetAlarm.notificationType
             )
         )
     );
