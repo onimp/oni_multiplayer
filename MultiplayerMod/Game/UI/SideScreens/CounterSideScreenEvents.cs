@@ -9,7 +9,7 @@ namespace MultiplayerMod.Game.UI.SideScreens;
 [HarmonyPatch(typeof(CounterSideScreen))]
 public static class CounterSideScreenEvents {
 
-    public static event Action<ComponentReference, CounterSideScreenEventArgs>? UpdateLogicCounter;
+    public static event Action<CounterSideScreenEventArgs>? UpdateLogicCounter;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(CounterSideScreen.SetMaxCount))]
@@ -23,8 +23,8 @@ public static class CounterSideScreenEvents {
 
     private static void TriggerEvent(CounterSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateLogicCounter?.Invoke(
-            instance.targetLogicCounter.GetReference(),
             new CounterSideScreenEventArgs(
+                instance.targetLogicCounter.GetReference(),
                 instance.targetLogicCounter.currentCount,
                 instance.targetLogicCounter.maxCount,
                 instance.targetLogicCounter.advancedMode
@@ -33,5 +33,11 @@ public static class CounterSideScreenEvents {
     );
 
     [Serializable]
-    public record CounterSideScreenEventArgs(int CurrentCount, int MaxCount, bool AdvancedMode);
+    public record CounterSideScreenEventArgs(
+        ComponentReference<LogicCounter> Target,
+        int CurrentCount,
+        int MaxCount,
+        bool AdvancedMode
+    );
+
 }

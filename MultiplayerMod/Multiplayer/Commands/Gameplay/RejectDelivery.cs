@@ -6,12 +6,12 @@ namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 [Serializable]
 public class RejectDelivery : IMultiplayerCommand {
 
-    private GameObjectReference reference;
+    private ComponentReference<Telepad> reference;
 
-    public RejectDelivery(GameObjectReference reference) {
+    public RejectDelivery(ComponentReference<Telepad> reference) {
         this.reference = reference;
     }
 
-    public void Execute() => reference.GetComponent<Telepad>().RejectAll();
+    public void Execute() => reference.GetComponent().RejectAll();
 
 }

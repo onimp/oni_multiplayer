@@ -1,25 +1,21 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.SideScreens;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using static MultiplayerMod.Game.UI.SideScreens.CritterSensorSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
 public class UpdateCritterSensor : IMultiplayerCommand {
-    private readonly ComponentReference target;
-    private readonly CritterSensorSideScreenEvents.CritterSensorSideScreenEventArgs eventArgs;
 
-    public UpdateCritterSensor(
-        ComponentReference target,
-        CritterSensorSideScreenEvents.CritterSensorSideScreenEventArgs eventArgs
-    ) {
-        this.target = target;
-        this.eventArgs = eventArgs;
+    private readonly CritterSensorSideScreenEventArgs args;
+
+    public UpdateCritterSensor(CritterSensorSideScreenEventArgs args) {
+        this.args = args;
     }
 
     public void Execute() {
-        var logicCritterCountSensor = (LogicCritterCountSensor) target.GetComponent();
-        logicCritterCountSensor.countCritters = eventArgs.CountCritters;
-        logicCritterCountSensor.countEggs = eventArgs.CountEggs;
+        var logicCritterCountSensor = args.Target.GetComponent();
+        logicCritterCountSensor.countCritters = args.CountCritters;
+        logicCritterCountSensor.countEggs = args.CountEggs;
     }
+
 }

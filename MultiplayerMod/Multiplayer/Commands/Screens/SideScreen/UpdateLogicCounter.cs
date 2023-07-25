@@ -1,28 +1,27 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.SideScreens;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using static MultiplayerMod.Game.UI.SideScreens.CounterSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
 public class UpdateLogicCounter : IMultiplayerCommand {
-    private readonly ComponentReference target;
-    private readonly CounterSideScreenEvents.CounterSideScreenEventArgs eventArgs;
 
-    public UpdateLogicCounter(ComponentReference target, CounterSideScreenEvents.CounterSideScreenEventArgs eventArgs) {
-        this.target = target;
-        this.eventArgs = eventArgs;
+    private readonly CounterSideScreenEventArgs args;
+
+    public UpdateLogicCounter(CounterSideScreenEventArgs args) {
+        this.args = args;
     }
 
     public void Execute() {
-        var logicCounter = (LogicCounter) target.GetComponent();
-        logicCounter.maxCount = eventArgs.MaxCount;
-        logicCounter.currentCount = eventArgs.CurrentCount;
-        logicCounter.advancedMode = eventArgs.AdvancedMode;
+        var logicCounter = args.Target.GetComponent();
+        logicCounter.maxCount = args.MaxCount;
+        logicCounter.currentCount = args.CurrentCount;
+        logicCounter.advancedMode = args.AdvancedMode;
 
         logicCounter.SetCounterState();
         logicCounter.UpdateLogicCircuit();
         logicCounter.UpdateVisualState(true);
         logicCounter.UpdateMeter();
     }
+
 }

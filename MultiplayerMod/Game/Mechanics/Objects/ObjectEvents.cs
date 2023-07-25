@@ -153,12 +153,12 @@ public static class ObjectEvents {
 
     [HarmonyPostfix]
     // ReSharper disable once UnusedMember.Local
-    private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object[] __args) =>
+    private static void ObjectEventsPostfix(KMonoBehaviour __instance, MethodBase __originalMethod, object[] __args) =>
         PatchControl.RunIfEnabled(
             () => {
                 MethodCalled?.Invoke(
                     new ObjectEventsArgs(
-                        ((KMonoBehaviour) __instance).GetReference(),
+                        __instance.GetReference(),
                         __originalMethod.DeclaringType!,
                         __originalMethod.Name,
                         __args.Select(

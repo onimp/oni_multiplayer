@@ -1,24 +1,23 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.SideScreens;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using static MultiplayerMod.Game.UI.SideScreens.TimerSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
 public class UpdateLogicTimeSensor : IMultiplayerCommand {
-    private readonly ComponentReference target;
-    private readonly TimerSideScreenEvents.TimerSideScreenEventArgs eventArgs;
 
-    public UpdateLogicTimeSensor(ComponentReference target, TimerSideScreenEvents.TimerSideScreenEventArgs eventArgs) {
-        this.target = target;
-        this.eventArgs = eventArgs;
+    private readonly TimerSideScreenEventArgs args;
+
+    public UpdateLogicTimeSensor(TimerSideScreenEventArgs args) {
+        this.args = args;
     }
 
     public void Execute() {
-        var sensor = (LogicTimerSensor) target.GetComponent();
-        sensor.displayCyclesMode = eventArgs.DisplayCyclesMode;
-        sensor.onDuration = eventArgs.OnDuration;
-        sensor.offDuration = eventArgs.OffDuration;
-        sensor.timeElapsedInCurrentState = eventArgs.TimeElapsedInCurrentState;
+        var sensor = args.Target.GetComponent();
+        sensor.displayCyclesMode = args.DisplayCyclesMode;
+        sensor.onDuration = args.OnDuration;
+        sensor.offDuration = args.OffDuration;
+        sensor.timeElapsedInCurrentState = args.TimeElapsedInCurrentState;
     }
+
 }

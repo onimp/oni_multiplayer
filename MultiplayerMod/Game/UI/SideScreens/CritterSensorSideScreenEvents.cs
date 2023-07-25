@@ -9,7 +9,7 @@ namespace MultiplayerMod.Game.UI.SideScreens;
 [HarmonyPatch(typeof(CritterSensorSideScreen))]
 public static class CritterSensorSideScreenEvents {
 
-    public static event Action<ComponentReference, CritterSensorSideScreenEventArgs>? UpdateCritterSensor;
+    public static event Action<CritterSensorSideScreenEventArgs>? UpdateCritterSensor;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(CritterSensorSideScreen.ToggleCritters))]
@@ -23,8 +23,8 @@ public static class CritterSensorSideScreenEvents {
 
     private static void TriggerEvent(CritterSensorSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateCritterSensor?.Invoke(
-            instance.targetSensor.GetReference(),
             new CritterSensorSideScreenEventArgs(
+                instance.targetSensor.GetReference(),
                 instance.targetSensor.countCritters,
                 instance.targetSensor.countEggs
             )
@@ -33,7 +33,9 @@ public static class CritterSensorSideScreenEvents {
 
     [Serializable]
     public record CritterSensorSideScreenEventArgs(
+        ComponentReference<LogicCritterCountSensor> Target,
         bool CountCritters,
         bool CountEggs
     );
+
 }

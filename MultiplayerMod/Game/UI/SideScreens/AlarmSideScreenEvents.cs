@@ -9,7 +9,7 @@ namespace MultiplayerMod.Game.UI.SideScreens;
 [HarmonyPatch(typeof(AlarmSideScreen))]
 public static class AlarmSideScreenEvents {
 
-    public static event Action<ComponentReference, AlarmSideScreenEventArgs>? UpdateAlarm;
+    public static event Action<AlarmSideScreenEventArgs>? UpdateAlarm;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(AlarmSideScreen.OnEndEditName))]
@@ -38,8 +38,8 @@ public static class AlarmSideScreenEvents {
 
     private static void TriggerEvent(AlarmSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateAlarm?.Invoke(
-            instance.targetAlarm.GetReference(),
             new AlarmSideScreenEventArgs(
+                instance.targetAlarm.GetReference(),
                 instance.targetAlarm.notificationName,
                 instance.targetAlarm.notificationTooltip,
                 instance.targetAlarm.pauseOnNotify,
@@ -51,10 +51,12 @@ public static class AlarmSideScreenEvents {
 
     [Serializable]
     public record AlarmSideScreenEventArgs(
+        ComponentReference<LogicAlarm> Target,
         string NotificationName,
         string NotificationTooltip,
         bool PauseOnNotify,
         bool ZoomOnNotify,
         NotificationType NotificationType
     );
+
 }

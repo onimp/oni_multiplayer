@@ -9,7 +9,7 @@ namespace MultiplayerMod.Game.UI.SideScreens;
 [HarmonyPatch(typeof(TimeRangeSideScreen))]
 public static class TimeRangeSideScreenEvents {
 
-    public static event Action<ComponentReference, TimeRangeSideScreenEventArgs>? UpdateLogicTimeOfDaySensor;
+    public static event Action<TimeRangeSideScreenEventArgs>? UpdateLogicTimeOfDaySensor;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(TimeRangeSideScreen.ChangeSetting))]
@@ -17,8 +17,8 @@ public static class TimeRangeSideScreenEvents {
     private static void ChangeSetting(TimeRangeSideScreen __instance) =>
         PatchControl.RunIfEnabled(
             () => UpdateLogicTimeOfDaySensor?.Invoke(
-                __instance.targetTimedSwitch.GetReference(),
                 new TimeRangeSideScreenEventArgs(
+                    __instance.targetTimedSwitch.GetReference(),
                     __instance.targetTimedSwitch.startTime,
                     __instance.targetTimedSwitch.duration
                 )
@@ -27,7 +27,9 @@ public static class TimeRangeSideScreenEvents {
 
     [Serializable]
     public record TimeRangeSideScreenEventArgs(
+        ComponentReference<LogicTimeOfDaySensor> Target,
         float StartTime,
         float Duration
     );
+
 }

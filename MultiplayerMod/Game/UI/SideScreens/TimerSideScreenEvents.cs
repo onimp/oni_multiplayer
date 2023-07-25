@@ -9,7 +9,7 @@ namespace MultiplayerMod.Game.UI.SideScreens;
 [HarmonyPatch(typeof(TimerSideScreen))]
 public static class TimerSideScreenEvents {
 
-    public static event Action<ComponentReference, TimerSideScreenEventArgs>? UpdateLogicTimeSensor;
+    public static event Action<TimerSideScreenEventArgs>? UpdateLogicTimeSensor;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(TimerSideScreen.ChangeSetting))]
@@ -23,8 +23,8 @@ public static class TimerSideScreenEvents {
 
     private static void TriggerEvent(TimerSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateLogicTimeSensor?.Invoke(
-            instance.targetTimedSwitch.GetReference(),
             new TimerSideScreenEventArgs(
+                instance.targetTimedSwitch.GetReference(),
                 instance.targetTimedSwitch.displayCyclesMode,
                 instance.targetTimedSwitch.onDuration,
                 instance.targetTimedSwitch.offDuration,
@@ -35,9 +35,11 @@ public static class TimerSideScreenEvents {
 
     [Serializable]
     public record TimerSideScreenEventArgs(
+        ComponentReference<LogicTimerSensor> Target,
         bool DisplayCyclesMode,
         float OnDuration,
         float OffDuration,
         float TimeElapsedInCurrentState
     );
+
 }

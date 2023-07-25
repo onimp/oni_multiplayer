@@ -1,30 +1,26 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.SideScreens;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using static MultiplayerMod.Game.UI.SideScreens.AlarmSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
 public class UpdateAlarm : IMultiplayerCommand {
-    private readonly ComponentReference target;
-    private readonly AlarmSideScreenEvents.AlarmSideScreenEventArgs alarmSideScreenEventArgs;
 
-    public UpdateAlarm(
-        ComponentReference target,
-        AlarmSideScreenEvents.AlarmSideScreenEventArgs alarmSideScreenEventArgs
-    ) {
-        this.target = target;
-        this.alarmSideScreenEventArgs = alarmSideScreenEventArgs;
+    private readonly AlarmSideScreenEventArgs args;
+
+    public UpdateAlarm(AlarmSideScreenEventArgs args) {
+        this.args = args;
     }
 
     public void Execute() {
-        var alarm = (LogicAlarm) target.GetComponent();
-        alarm.notificationName = alarmSideScreenEventArgs.NotificationName;
-        alarm.notificationTooltip = alarmSideScreenEventArgs.NotificationTooltip;
-        alarm.pauseOnNotify = alarmSideScreenEventArgs.PauseOnNotify;
-        alarm.zoomOnNotify = alarmSideScreenEventArgs.ZoomOnNotify;
-        alarm.notificationType = alarmSideScreenEventArgs.NotificationType;
+        var alarm = args.Target.GetComponent();
+        alarm.notificationName = args.NotificationName;
+        alarm.notificationTooltip = args.NotificationTooltip;
+        alarm.pauseOnNotify = args.PauseOnNotify;
+        alarm.zoomOnNotify = args.ZoomOnNotify;
+        alarm.notificationType = args.NotificationType;
 
         alarm.UpdateNotification(true);
     }
+
 }

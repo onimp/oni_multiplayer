@@ -9,7 +9,7 @@ namespace MultiplayerMod.Game.UI.SideScreens;
 [HarmonyPatch(typeof(TemperatureSwitchSideScreen))]
 public static class TemperatureSwitchSideScreenEvents {
 
-    public static event Action<ComponentReference, TemperatureSwitchSideScreenEventArgs>? UpdateTemperatureSwitch;
+    public static event Action<TemperatureSwitchSideScreenEventArgs>? UpdateTemperatureSwitch;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(TemperatureSwitchSideScreen.OnTargetTemperatureChanged))]
@@ -23,8 +23,8 @@ public static class TemperatureSwitchSideScreenEvents {
 
     private static void TriggerEvent(TemperatureSwitchSideScreen instance) => PatchControl.RunIfEnabled(
         () => UpdateTemperatureSwitch?.Invoke(
-            instance.targetTemperatureSwitch.GetReference(),
             new TemperatureSwitchSideScreenEventArgs(
+                instance.targetTemperatureSwitch.GetReference(),
                 instance.targetTemperatureSwitch.thresholdTemperature,
                 instance.targetTemperatureSwitch.activateOnWarmerThan
             )
@@ -33,7 +33,9 @@ public static class TemperatureSwitchSideScreenEvents {
 
     [Serializable]
     public record TemperatureSwitchSideScreenEventArgs(
+        ComponentReference<TemperatureControlledSwitch> Target,
         float ThresholdTemperature,
         bool ActivateOnWarmerThan
     );
+
 }

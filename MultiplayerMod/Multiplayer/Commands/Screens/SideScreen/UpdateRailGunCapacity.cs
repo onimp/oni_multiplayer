@@ -1,24 +1,20 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.SideScreens;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using static MultiplayerMod.Game.UI.SideScreens.RailGunSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
 public class UpdateRailGunCapacity : IMultiplayerCommand {
-    private readonly ComponentReference target;
-    private readonly RailGunSideScreenEvents.RailGunSideScreenEventArgs eventArgs;
 
-    public UpdateRailGunCapacity(
-        ComponentReference target,
-        RailGunSideScreenEvents.RailGunSideScreenEventArgs eventArgs
-    ) {
-        this.target = target;
-        this.eventArgs = eventArgs;
+    private readonly RailGunSideScreenEventArgs args;
+
+    public UpdateRailGunCapacity(RailGunSideScreenEventArgs args) {
+        this.args = args;
     }
 
     public void Execute() {
-        var railGun = (RailGun) target.GetComponent();
-        railGun.launchMass = eventArgs.LaunchMass;
+        var railGun = args.Target.GetComponent();
+        railGun.launchMass = args.LaunchMass;
     }
+
 }

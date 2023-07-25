@@ -1,25 +1,21 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.SideScreens;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using static MultiplayerMod.Game.UI.SideScreens.TimeRangeSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
 public class UpdateLogicTimeOfDaySensor : IMultiplayerCommand {
-    private readonly ComponentReference target;
-    private readonly TimeRangeSideScreenEvents.TimeRangeSideScreenEventArgs eventArgs;
 
-    public UpdateLogicTimeOfDaySensor(
-        ComponentReference target,
-        TimeRangeSideScreenEvents.TimeRangeSideScreenEventArgs eventArgs
-    ) {
-        this.target = target;
-        this.eventArgs = eventArgs;
+    private readonly TimeRangeSideScreenEventArgs args;
+
+    public UpdateLogicTimeOfDaySensor(TimeRangeSideScreenEventArgs args) {
+        this.args = args;
     }
 
     public void Execute() {
-        var sensor = (LogicTimeOfDaySensor) target.GetComponent();
-        sensor.startTime = eventArgs.StartTime;
-        sensor.duration = eventArgs.Duration;
+        var sensor = args.Target.GetComponent();
+        sensor.startTime = args.StartTime;
+        sensor.duration = args.Duration;
     }
+
 }

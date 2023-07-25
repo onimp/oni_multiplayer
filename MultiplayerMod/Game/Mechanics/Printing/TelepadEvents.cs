@@ -14,7 +14,7 @@ namespace MultiplayerMod.Game.Mechanics.Printing;
 public static class TelepadEvents {
 
     public static event Action<AcceptDeliveryEventArgs>? AcceptDelivery;
-    public static event Action<GameObjectReference>? Reject;
+    public static event Action<ComponentReference<Telepad>>? Reject;
 
     // ReSharper disable once UnusedMember.Local
     [HarmonyTranspiler]
@@ -39,7 +39,7 @@ public static class TelepadEvents {
         PatchControl.RunIfEnabled(
             () => AcceptDelivery?.Invoke(
                 new AcceptDeliveryEventArgs(
-                    telepad.gameObject.GetGridReference(),
+                    telepad.GetReference(),
                     deliverable,
                     gameObject.GetComponent<MultiplayerInstance>().Register(),
                     gameObject.GetComponent<MinionIdentity>().GetMultiplayerInstance().Register()
@@ -51,7 +51,15 @@ public static class TelepadEvents {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(Telepad.RejectAll))]
     private static void OnRejectAll(Telepad __instance) => PatchControl.RunIfEnabled(
-        () => Reject?.Invoke(__instance.gameObject.GetGridReference())
+        () => Reject?.Invoke(__instance.GetReference())
+    );
+
+    [Serializable]
+    public record AcceptDeliveryEventArgs(
+        ComponentReference<Telepad> Target,
+        ITelepadDeliverable Deliverable,
+        MultiplayerId MinionId,
+        MultiplayerId ProxyId
     );
 
 }

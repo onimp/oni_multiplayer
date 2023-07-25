@@ -1,25 +1,21 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.SideScreens;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using static MultiplayerMod.Game.UI.SideScreens.TemperatureSwitchSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
 public class UpdateTemperatureSwitch : IMultiplayerCommand {
-    private readonly ComponentReference target;
-    private readonly TemperatureSwitchSideScreenEvents.TemperatureSwitchSideScreenEventArgs eventArgs;
 
-    public UpdateTemperatureSwitch(
-        ComponentReference target,
-        TemperatureSwitchSideScreenEvents.TemperatureSwitchSideScreenEventArgs eventArgs
-    ) {
-        this.target = target;
-        this.eventArgs = eventArgs;
+    private readonly TemperatureSwitchSideScreenEventArgs args;
+
+    public UpdateTemperatureSwitch(TemperatureSwitchSideScreenEventArgs args) {
+        this.args = args;
     }
 
     public void Execute() {
-        var temperatureControlledSwitch = (TemperatureControlledSwitch) target.GetComponent();
-        temperatureControlledSwitch.thresholdTemperature = eventArgs.ThresholdTemperature;
-        temperatureControlledSwitch.activateOnWarmerThan = eventArgs.ActivateOnWarmerThan;
+        var temperatureControlledSwitch = args.Target.GetComponent();
+        temperatureControlledSwitch.thresholdTemperature = args.ThresholdTemperature;
+        temperatureControlledSwitch.activateOnWarmerThan = args.ActivateOnWarmerThan;
     }
+
 }
