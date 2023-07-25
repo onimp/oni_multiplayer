@@ -2,6 +2,7 @@
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Mechanics.Objects;
 using MultiplayerMod.Game.UI;
+using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
@@ -91,6 +92,10 @@ public class GameEventBindings {
             containers => client.Send(new InitializeImmigration(containers));
         ImmigrantScreenEvents.Proceed += deliverable => client.Send(new ProceedImmigration(deliverable));
         ImmigrantScreenEvents.Reject += () => client.Send(new RejectImmigration());
+        PauseScreenEvents.QuitGame += () => {
+            if (client.State >= MultiplayerClientState.Connecting)
+                client.Disconnect();
+        };
     }
 
     private void BindTools() {

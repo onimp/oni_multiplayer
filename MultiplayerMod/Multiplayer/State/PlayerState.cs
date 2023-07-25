@@ -7,6 +7,7 @@ namespace MultiplayerMod.Multiplayer.State;
 public class PlayerState {
     public IPlayer Player { get; }
     public Vector2 CursorPosition { get; set; }
+    public bool WorldSpawned { get; set; }
 
     public PlayerState(IPlayer player) {
         Player = player;

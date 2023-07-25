@@ -2,7 +2,7 @@
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 
-namespace MultiplayerMod.Game.UI;
+namespace MultiplayerMod.Game.UI.Overlay;
 
 [HarmonyPatch(typeof(DisinfectThresholdDiagram))]
 public static class DiseaseOverlayEvents {
