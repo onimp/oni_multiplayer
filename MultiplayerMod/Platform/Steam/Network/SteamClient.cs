@@ -20,7 +20,7 @@ public class SteamClient : IMultiplayerClient {
 
     public IPlayer Player => playerContainer.Value;
     public MultiplayerClientState State { get; private set; } = MultiplayerClientState.Disconnected;
-    public event Action<ClientStateChangedEventArgs>? StateChanged;
+    public event Action<MultiplayerClientState>? StateChanged;
     public event Action<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
@@ -95,7 +95,7 @@ public class SteamClient : IMultiplayerClient {
 
     private void SetState(MultiplayerClientState status) {
         State = status;
-        StateChanged?.Invoke(new ClientStateChangedEventArgs(status));
+        StateChanged?.Invoke(status);
     }
 
     private void OnLobbyJoin() {

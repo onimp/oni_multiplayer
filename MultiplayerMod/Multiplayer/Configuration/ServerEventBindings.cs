@@ -27,7 +27,7 @@ public class ServerEventBindings {
 
         PauseScreenEvents.QuitGame += server.Stop;
         MultiplayerEvents.PlayerWorldSpawned += player => {
-            MultiplayerGame.State.Players[player].Spawned = true;
+            MultiplayerGame.State.Players[player].WorldSpawned = true;
             server.Send(new SyncMultiplayerState(MultiplayerGame.State));
         };
         WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));

@@ -1,5 +1,6 @@
 using System.IO;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
@@ -16,9 +17,9 @@ public static class WorldManager {
 
     public static void Sync() {
         server.Send(new PauseGame());
-        MultiplayerGame.State.Rebuild();
         MultiplayerGame.Objects.Rebuild();
-        MultiplayerGame.CurrentPlayerState.Spawned = true;
+        MultiplayerGame.State.Players.Values.ForEach(playerState => playerState.WorldSpawned = false);
+        MultiplayerGame.State.Current.WorldSpawned = true;
         server.Send(new SyncMultiplayerState(MultiplayerGame.State));
         server.Send(new ShowLoadOverlay());
         server.Send(new LoadWorld(GetWorldSave()), MultiplayerCommandOptions.SkipHost);

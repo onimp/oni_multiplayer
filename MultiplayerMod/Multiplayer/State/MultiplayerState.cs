@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.State;
 
@@ -8,7 +9,5 @@ namespace MultiplayerMod.Multiplayer.State;
 public class MultiplayerState {
     public Dictionary<IPlayer, PlayerState> Players = new();
 
-    public void Rebuild() {
-        Players.Values.ForEach(playerState => playerState.Spawned = false);
-    }
+    public PlayerState Current => Players[Container.Get<IMultiplayerClient>().Player];
 }

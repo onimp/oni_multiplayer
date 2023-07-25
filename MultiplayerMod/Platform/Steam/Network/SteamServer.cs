@@ -40,8 +40,8 @@ public class SteamServer : IMultiplayerServer {
     public List<IPlayer> Players => new(players.Keys);
 
     public event Action<ServerStateChangedEventArgs>? StateChanged;
-    public event Action<PlayerEventArgs>? PlayerConnected;
-    public event Action<PlayerEventArgs>? PlayerDisconnected;
+    public event Action<IPlayer>? PlayerConnected;
+    public event Action<IPlayer>? PlayerDisconnected;
     public event Action<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamServer>();
@@ -239,7 +239,7 @@ public class SteamServer : IMultiplayerServer {
         switch (state) {
             case k_ESteamNetworkingConnectionState_Connecting:
                 if (TryAcceptConnection(connection, clientSteamId))
-                    PlayerConnected?.Invoke(new PlayerEventArgs(new SteamPlayer(clientSteamId)));
+                    PlayerConnected?.Invoke(new SteamPlayer(clientSteamId));
                 break;
             case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
             case k_ESteamNetworkingConnectionState_ClosedByPeer:
@@ -273,7 +273,7 @@ public class SteamServer : IMultiplayerServer {
     }
 
     private void CloseConnection(HSteamNetConnection connection, CSteamID clientSteamId) {
-        PlayerDisconnected?.Invoke(new PlayerEventArgs(new SteamPlayer(clientSteamId)));
+        PlayerDisconnected?.Invoke(new SteamPlayer(clientSteamId));
         SteamGameServerNetworkingSockets.CloseConnection(
             connection,
             (int) k_ESteamNetConnectionEnd_App_Generic,

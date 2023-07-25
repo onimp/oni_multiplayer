@@ -4,6 +4,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Unity;
+using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
@@ -66,21 +67,21 @@ public class MultiplayerCoordinator {
         PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
     }
 
-    private void OnPlayerConnected(PlayerEventArgs e) {
-        if (!MultiplayerGame.State.Players.ContainsKey(e.Player)) {
-            MultiplayerGame.State.Players.Add(e.Player, new PlayerState(e.Player));
+    private void OnPlayerConnected(IPlayer player) {
+        if (!MultiplayerGame.State.Players.ContainsKey(player)) {
+            MultiplayerGame.State.Players.Add(player, new PlayerState(player));
         }
-        if (e.Player.Equals(client.Player))
+        if (player.Equals(client.Player))
             return;
 
-        log.Debug($"Player {e.Player} connected");
+        log.Debug($"Player {player} connected");
         WorldManager.Sync();
     }
 
-    private void OnPlayerDisconnected(PlayerEventArgs e) {
-        MultiplayerGame.State.Players.Remove(e.Player);
+    private void OnPlayerDisconnected(IPlayer player) {
+        MultiplayerGame.State.Players.Remove(player);
         server.Send(new SyncMultiplayerState(MultiplayerGame.State));
-        log.Debug($"Player {e.Player} disconnected");
+        log.Debug($"Player {player} disconnected");
     }
 
     #endregion
@@ -92,14 +93,14 @@ public class MultiplayerCoordinator {
         client.CommandReceived += ClientOnCommandReceived;
     }
 
-    private void OnClientStateChanged(ClientStateChangedEventArgs e) {
-        switch (e.State) {
+    private void OnClientStateChanged(MultiplayerClientState state) {
+        switch (state) {
             case MultiplayerClientState.Connecting:
                 if (MultiplayerGame.Role != MultiplayerRole.Host) {
                     MultiplayerGame.Role = MultiplayerRole.Client;
-                    ShowLoadOverlay.Show();
+                    MultiplayerGame.State.Players.Add(client.Player, new PlayerState(client.Player));
+                    LoadOverlay.Show();
                 }
-                MultiplayerGame.Player = client.Player;
                 break;
             case MultiplayerClientState.Connected:
                 gameBindings.Bind();
@@ -109,7 +110,7 @@ public class MultiplayerCoordinator {
 
     private void ClientOnCommandReceived(CommandReceivedEventArgs e) {
         var commandType = e.Command.GetType();
-        if (!MultiplayerGame.CurrentPlayerState.Spawned && !unSpawnedWorldCommands.Contains(commandType)) {
+        if (!MultiplayerGame.State.Current.WorldSpawned && !unSpawnedWorldCommands.Contains(commandType)) {
             log.Warning($"Command {commandType.FullName} received, but the world isn't spawned yet");
             return;
         }
@@ -133,6 +134,7 @@ public class MultiplayerCoordinator {
                 return;
             case MultiplayerRole.Host:
                 server.Start();
+                MultiplayerGame.State.Players.Add(client.Player, new PlayerState(client.Player));
                 break;
             case MultiplayerRole.Client:
                 client.Send(
@@ -147,7 +149,6 @@ public class MultiplayerCoordinator {
             WorldDebugSnapshotRunner
         >();
 
-        MultiplayerGame.Player = client.Player;
-        MultiplayerGame.CurrentPlayerState.Spawned = true;
+        MultiplayerGame.State.Current.WorldSpawned = true;
     }
 }

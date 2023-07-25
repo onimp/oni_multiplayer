@@ -17,7 +17,7 @@ public interface IMultiplayerServer {
     void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None);
 
     event Action<ServerStateChangedEventArgs> StateChanged;
-    event Action<PlayerEventArgs> PlayerConnected;
-    event Action<PlayerEventArgs> PlayerDisconnected;
+    event Action<IPlayer> PlayerConnected;
+    event Action<IPlayer> PlayerDisconnected;
     event Action<CommandReceivedEventArgs> CommandReceived;
 }
