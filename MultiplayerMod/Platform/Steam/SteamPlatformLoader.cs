@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿extern alias ValveSockets;
+using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Loader;
 using MultiplayerMod.Core.Logging;
@@ -22,7 +23,7 @@ public class SteamPlatformLoader : IModComponentLoader {
         log.Info("Steam platform detected");
         Container.Register<IMultiplayerOperations, SteamMultiplayerOperations>();
 #if USE_DEV_NET
-        GNS.Sockets.Library.Initialize();
+        Library.Initialize();
         Container.Register<IMultiplayerServer, GNSServer>();
         Container.Register<IMultiplayerClient, GNSClient>();
 #else

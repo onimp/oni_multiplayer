@@ -1,4 +1,6 @@
-﻿using System;
+﻿extern alias ValveSockets;
+using System;
+using System.Text;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
@@ -8,7 +10,7 @@ using MultiplayerMod.Network;
 using MultiplayerMod.Network.Events;
 using MultiplayerMod.Platform.Steam.Network.Components;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
-using GNS.Sockets;
+using ValveSockets::Valve.Sockets;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
@@ -19,7 +21,6 @@ public class GNSClient : BaseClient {
     public static string Identity = "server";
     private readonly Lazy<IPlayer> playerContainer = new(() => new DevPlayer(Identity));
     protected override Lazy<IPlayer> getPlayer() => playerContainer;
-
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
@@ -54,8 +55,8 @@ public class GNSClient : BaseClient {
     }
 
     private StatusCallback status;
-    private void statusCallback(ref StatusInfo info)
-    {
+
+    private void statusCallback(ref StatusInfo info) {
         if (info.connection != devConnection) {
             forwardStatusCallbackToServer(ref info);
             return;
@@ -70,8 +71,9 @@ public class GNSClient : BaseClient {
                 log.Info($"Sending identity '{Identity}' to server");
                 devClient.SendMessageToConnection(
                     info.connection,
-                    System.Text.Encoding.ASCII.GetBytes(Identity),
-                    SendFlags.Reliable);
+                    Encoding.ASCII.GetBytes(Identity),
+                    SendFlags.Reliable
+                );
                 SetState(MultiplayerClientState.Connected);
                 break;
 
@@ -91,9 +93,11 @@ public class GNSClient : BaseClient {
     }
 
     private DebugCallback debug;
-    private void debugCallback (DebugType type, string message) {
+
+    private void debugCallback(DebugType type, string message) {
         if (type > DebugType.Message)
             return;
+
         log.Info($"GNS Debug: {type} - {message}");
     }
 
@@ -103,17 +107,16 @@ public class GNSClient : BaseClient {
 
         devClient = new NetworkingSockets();
 
-
         utils = new NetworkingUtils();
         status = (ref StatusInfo info) => this.statusCallback(ref info);
         utils.SetStatusCallback(status);
         debug = (DebugType type, string message) => this.debugCallback(type, message);
         // utils.SetDebugCallback(DebugType.Message, debug);
-        
+
         SetState(MultiplayerClientState.Connecting);
         connectToServer();
         gameObject = UnityObject.CreateStaticWithComponent<SteamClientComponent>();
-        // Run callbacks immediately so that the client on the server reacts to the 
+        // Run callbacks immediately so that the client on the server reacts to the
         // connection in a timely manner. Otherwise the connection would fail with
         // problem detected locally:
         devClient.RunCallbacks();
@@ -124,12 +127,17 @@ public class GNSClient : BaseClient {
 
         if (State != MultiplayerClientState.Connected)
             return;
+
         ReceiveDevCommands();
     }
 
-    public override void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None) {
+    public override void Send(
+        IMultiplayerCommand command,
+        MultiplayerCommandOptions options = MultiplayerCommandOptions.None
+    ) {
         if (State != MultiplayerClientState.Connected)
             throw new NetworkPlatformException("Client not connected");
+
         log.Info($"Sending {command} to server.");
         messageFactory.Create(command, options).ForEach(
             handle => {
@@ -137,8 +145,9 @@ public class GNSClient : BaseClient {
                     devConnection,
                     handle.Pointer,
                     handle.Size,
-                    SendFlags.Reliable);
-                if (result != Result.OK)
+                    SendFlags.Reliable
+                );
+                if (result != ValveSockets::Valve.Sockets.Result.OK)
                     log.Error($"Failed to send {command}: {result}");
             }
         );
@@ -153,7 +162,10 @@ public class GNSClient : BaseClient {
         for (int i = 0; i < netMessagesCount; i++) {
             ref NetworkingMessage netMessage = ref netMessages[i];
 
-            log.Info("Message received from server - Channel ID: " + netMessage.channel + ", Data length: " + netMessage.length);
+            log.Info(
+                "Message received from server - Channel ID: " + netMessage.channel + ", Data length: " +
+                netMessage.length
+            );
             var message = messageProcessor.Process(
                 devConnection,
                 new NetworkMessageHandle(netMessage.data, (uint) netMessage.length)
