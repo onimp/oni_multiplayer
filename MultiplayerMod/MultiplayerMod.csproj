@@ -9,6 +9,19 @@
       <Nullable>enable</Nullable>
       <WarningsAsErrors>Nullable</WarningsAsErrors>
     </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyName>MultiplayerMod</AssemblyName>
+        <AssemblyTitle>Multiplayer Mod for Oxygen Not Included</AssemblyTitle>
+        <Copyright>MIT License (C) ONIMP Team</Copyright>
+        <Company>ONIMP Team</Company>
+        <RepositoryUrl>https://github.com/onimp/oni_multiplayer</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
+    <PropertyGroup>
+        <OniSupportedContent>VANILLA_ID</OniSupportedContent>
+        <OniMinimumSupportedBuild>537329</OniMinimumSupportedBuild>
+        <OniApiVersion>2</OniApiVersion>
+    </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
             <Link>_logs/Player.log</Link>
