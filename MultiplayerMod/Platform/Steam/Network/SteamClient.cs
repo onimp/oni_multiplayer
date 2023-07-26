@@ -115,9 +115,9 @@ public class SteamClient : IMultiplayerClient {
         log.Debug($"P2P Connect to {serverId}");
 
         SetRichPresence();
-        SetState(MultiplayerClientState.Connected);
 
         gameObject = UnityObject.CreateStaticWithComponent<SteamClientComponent>();
+        SetState(MultiplayerClientState.Connected);
     }
 
     private void SetRichPresence() {
