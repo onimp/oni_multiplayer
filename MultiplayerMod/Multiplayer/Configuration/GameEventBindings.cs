@@ -1,5 +1,6 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Game.Mechanics.Objects;
 using MultiplayerMod.Game.Mechanics.Printing;
 using MultiplayerMod.Game.UI;
@@ -94,6 +95,7 @@ public class GameEventBindings {
         PauseScreenEvents.QuitGame += () => {
             if (client.State >= MultiplayerClientState.Connecting)
                 client.Disconnect();
+            PatchControl.Disabled = true;
         };
     }
 

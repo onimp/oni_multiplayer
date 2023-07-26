@@ -104,6 +104,10 @@ public class MultiplayerCoordinator {
                 break;
             case MultiplayerClientState.Connected:
                 gameBindings.Bind();
+                if (MultiplayerGame.Role == MultiplayerRole.Host) {
+                    // Server initialization happens after world spawn. So world is ready only after server has initialized.
+                    MultiplayerGame.State.Current.WorldSpawned = true;
+                }
                 break;
         }
     }
@@ -129,26 +133,27 @@ public class MultiplayerCoordinator {
     }
 
     private void OnWorldSpawned() {
-        switch (MultiplayerGame.Role) {
-            case MultiplayerRole.None:
-                return;
-            case MultiplayerRole.Host:
-                server.Start();
-                MultiplayerGame.State.Players.Add(client.Player, new PlayerState(client.Player));
-                break;
-            case MultiplayerRole.Client:
-                client.Send(
-                    new MultiplayerEvents.PlayerWorldSpawnedEvent(client.Player),
-                    MultiplayerCommandOptions.ExecuteOnServer
-                );
-                break;
+        if (MultiplayerGame.Role == MultiplayerRole.None)
+            return;
+
+        PatchControl.Disabled = false;
+
+        if (MultiplayerGame.Role == MultiplayerRole.Host) {
+            LoadOverlay.Show();
+            server.Start();
+            MultiplayerGame.State.Players.Add(client.Player, new PlayerState(client.Player));
+        }
+        if (MultiplayerGame.Role == MultiplayerRole.Client) {
+            client.Send(
+                new MultiplayerEvents.PlayerWorldSpawnedEvent(client.Player),
+                MultiplayerCommandOptions.ExecuteOnServer
+            );
+            MultiplayerGame.State.Current.WorldSpawned = true;
         }
 
         UnityObject.CreateWithComponent<
             DrawCursorComponent,
             WorldDebugSnapshotRunner
         >();
-
-        MultiplayerGame.State.Current.WorldSpawned = true;
     }
 }
