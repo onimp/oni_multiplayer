@@ -94,7 +94,7 @@ public static class ObjectEvents {
             new[] { nameof(FlatTagFilterable.ToggleTag) }
         }, {
             typeof(GeneShuffler),
-            new[] { nameof(GeneShuffler.SetWorkTime), nameof(GeneShuffler.RequestRecharge) }
+            new[] { nameof(GeneShuffler.RequestRecharge) }
         }, {
             typeof(GeneticAnalysisStation.StatesInstance),
             new[] { nameof(GeneticAnalysisStation.StatesInstance.SetSeedForbidden) }
