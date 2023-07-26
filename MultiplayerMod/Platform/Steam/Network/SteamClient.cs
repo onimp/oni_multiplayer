@@ -78,9 +78,6 @@ public class SteamClient : IMultiplayerClient {
     }
 
     public void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None) {
-        if (State == MultiplayerClientState.Disconnected)
-            return;
-
         if (State != MultiplayerClientState.Connected)
             throw new NetworkPlatformException("Client not connected");
 

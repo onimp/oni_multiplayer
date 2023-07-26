@@ -8,10 +8,10 @@ namespace MultiplayerMod.Game.UI.Overlay;
 
 public static class LoadOverlay {
     public static void Show() {
+        LoadingOverlay.Load(() => { });
         new TaskFactory(Container.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 // TODO block controls
-                LoadingOverlay.Load(() => { });
                 while (MultiplayerGame.State.Players.Count == 0 ||
                        MultiplayerGame.State.Players.Values.Any(state => !state.WorldSpawned)) {
                     await Task.Delay(100);
