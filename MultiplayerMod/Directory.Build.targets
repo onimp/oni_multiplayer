@@ -1,17 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-    <Target Name="InstallMod" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+
+    <Target Name="SetVersionAttributes" BeforeTargets="InitializeSourceControlInformation">
+        <Exec
+            Command="git describe --long --always --dirty --exclude=* --abbrev=8"
+            ConsoleToMSBuild="True"
+            IgnoreExitCode="False"
+        >
+            <Output PropertyName="GitRevision" TaskParameter="ConsoleOutput"/>
+        </Exec>
+        <Exec Command="git describe --tag --abbrev=0" ConsoleToMSBuild="True" IgnoreExitCode="False">
+            <Output PropertyName="GitVersion" TaskParameter="ConsoleOutput"/>
+        </Exec>
+        <CreateProperty Value="$([System.Text.RegularExpressions.Regex]::Match($(GitVersion), [^v].*))">
+            <Output TaskParameter="Value" PropertyName="GitVersion"/>
+        </CreateProperty>
+        <CreateProperty Value="$([System.Text.RegularExpressions.Regex]::Match($(GitVersion), \d+\.\d+.\d+))">
+            <Output TaskParameter="Value" PropertyName="GitNumericVersion"/>
+        </CreateProperty>
+        <PropertyGroup>
+            <BuildVersion>$(GitVersion)-$(GitRevision)</BuildVersion>
+            <InformationalVersion>$(BuildVersion)</InformationalVersion>
+            <FileVersion>$(GitNumericVersion).0</FileVersion>
+            <AssemblyVersion>$(GitNumericVersion)</AssemblyVersion>
+        </PropertyGroup>
+        <Message Text="Build version = $(InformationalVersion)" Importance="high"/>
+    </Target>
+
+    <Target Name="CopyModDescription" AfterTargets="Build">
+        <Copy SourceFiles="$(SourceDir)mod.yaml" DestinationFolder="$(TargetDir)"/>
+    </Target>
+
+    <Target Name="GenerateModInfo" AfterTargets="Build">
+        <Message Text="Generating mod_info.yaml"/>
+        <ItemGroup>
+            <ModInfoYaml Include="supportedContent: $(OniSupportedContent)"/>
+            <ModInfoYaml Include="minimumSupportedBuild: $(OniMinimumSupportedBuild)"/>
+            <ModInfoYaml Include="version: $(BuildVersion)"/>
+            <ModInfoYaml Include="APIVersion: $(OniApiVersion)"/>
+        </ItemGroup>
+        <WriteLinesToFile
+            File="$(TargetDir)mod_info.yaml"
+            Lines="@(ModInfoYaml)"
+            Overwrite="true"
+            WriteOnlyWhenDifferent="true"
+        />
+    </Target>
+
+    <Target
+        Name="InstallMod"
+        AfterTargets="Build"
+        Condition="'$(Configuration)' == 'Debug'"
+        DependsOnTargets="CopyModDescription; GenerateModInfo"
+    >
         <Message Text="Copy mod files to ONI mods directory"/>
         <ItemGroup>
-            <ModFiles Include="$(TargetDir)*.dll"/>
-            <ModMetadata Include="$(SourceDir)*.yaml"/>
+            <ModFiles Include="$(TargetDir)*.*"/>
         </ItemGroup>
         <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)"/>
-        <Copy SourceFiles="@(ModMetadata)" DestinationFolder="$(ModInstallationPath)"/>
     </Target>
+
     <Target Name="BuildAssemblyExposer" Condition="!Exists('..\$(AssemblyExposer)')">
         <MSBuild Projects="$(AssemblyExposerProject)"/>
     </Target>
+
     <Target Name="ExposeAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
@@ -38,6 +90,7 @@
         </ItemGroup>
         <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
     </Target>
+
     <Target Name="ExposeUnityAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
@@ -55,6 +108,7 @@
         </ItemGroup>
         <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)"/>
     </Target>
+
     <Target Name="ExposeHarmonyAssembly" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <HarmonyAssembly Include="$(ManagedPath)\0Harmony.dll"/>
@@ -66,4 +120,5 @@
         </ItemGroup>
         <ExposeAssembly SourceAssemblies="@(HarmonyAssembly)" Rules="@(HarmonyExposureRules)"/>
     </Target>
+
 </Project>
