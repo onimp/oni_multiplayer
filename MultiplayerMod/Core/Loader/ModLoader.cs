@@ -15,6 +15,8 @@ public class ModLoader : UserMod2 {
     private readonly Logging.Logger log = LoggerFactory.GetLogger<ModLoader>();
 
     public override void OnLoad(Harmony harmony) {
+        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+        log.Info($"Version: {version}");
         PrioritizedPatch(harmony);
         assembly.GetTypes()
             .Where(type => typeof(IModComponentLoader).IsAssignableFrom(type) && type.IsClass)
