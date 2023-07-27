@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.Game.UI.Screens;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
@@ -12,6 +13,9 @@ public class RejectDelivery : IMultiplayerCommand {
         this.reference = reference;
     }
 
-    public void Execute() => reference.GetComponent().RejectAll();
+    public void Execute() {
+        reference.GetComponent().RejectAll();
+        ImmigrantScreenPatch.Deliverables = null;
+    }
 
 }

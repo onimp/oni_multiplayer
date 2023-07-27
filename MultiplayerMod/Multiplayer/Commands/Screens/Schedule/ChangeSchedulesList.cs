@@ -32,7 +32,7 @@ public class ChangeSchedulesList : IMultiplayerCommand {
     private class SerializableSchedule {
         public string name;
         public bool alarmActivated;
-        private List<GameObjectReference> assigned;
+        private List<ComponentReference<Schedulable>> assigned;
         private List<string> blocks;
 
         private static Dictionary<string, ScheduleGroup> groups =
@@ -55,13 +55,20 @@ public class ChangeSchedulesList : IMultiplayerCommand {
             name = schedule.name;
             alarmActivated = schedule.alarmActivated;
             blocks = schedule.blocks.Select(block => block.GroupId).ToList();
-            assigned = schedule.assigned.Select(@ref => @ref.obj.gameObject.GetMultiplayerReference()).ToList();
+            assigned = schedule.assigned.Select(
+                    @ref => @ref
+                        .obj
+                        .gameObject
+                        .GetComponent<Schedulable>()
+                        .GetReference()
+                )
+                .ToList();
         }
 
         public List<ScheduleGroup> Groups => blocks.Select(block => groups[block]).ToList();
 
         public List<Ref<Schedulable>> Assigned =>
-            assigned.Select(reference => new Ref<Schedulable>(reference.GetComponent<Schedulable>())).ToList();
+            assigned.Select(reference => new Ref<Schedulable>(reference.GetComponent())).ToList();
     }
 
 }
