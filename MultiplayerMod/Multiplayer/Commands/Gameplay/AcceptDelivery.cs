@@ -2,6 +2,7 @@
 using MultiplayerMod.Core.Patch.Capture;
 using MultiplayerMod.Game.Mechanics.Minions;
 using MultiplayerMod.Game.Mechanics.Printing;
+using MultiplayerMod.Game.UI.Screens;
 using MultiplayerMod.Multiplayer.Objects;
 using static MultiplayerMod.Game.Mechanics.Printing.TelepadEvents;
 
@@ -29,6 +30,8 @@ public class AcceptDelivery : IMultiplayerCommand {
         var proxyMultiplayer = capture.Instance.GetComponent<MinionIdentity>().GetMultiplayerInstance();
         proxyMultiplayer.Id = args.ProxyId;
         proxyMultiplayer.Register();
+
+        ImmigrantScreenPatch.Deliverables = null;
     }
 
 }
