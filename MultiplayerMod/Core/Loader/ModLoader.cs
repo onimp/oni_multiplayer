@@ -1,11 +1,8 @@
-﻿using System;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using KMod;
-using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Core.Patch;
 
 namespace MultiplayerMod.Core.Loader;
 
@@ -16,40 +13,13 @@ public class ModLoader : UserMod2 {
 
     public override void OnLoad(Harmony harmony) {
         var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-        log.Info($"Version: {version}");
-        PrioritizedPatch(harmony);
-        assembly.GetTypes()
-            .Where(type => typeof(IModComponentLoader).IsAssignableFrom(type) && type.IsClass)
-            .OrderBy(type => type.GetCustomAttribute<ModComponentOrder>()?.Order ?? ModComponentOrder.Default)
-            .ForEach(
-                type => {
-                    var instance = (IModComponentLoader) Activator.CreateInstance(type);
-                    log.Debug($"Running mod component loader {type.FullName}");
-                    instance.OnLoad(harmony);
-                }
-            );
+        log.Info($"Multiplayer mod version: {version}");
+        harmony.CreateClassProcessor(typeof(LaunchInitializerPatch)).Patch();
     }
 
-    private void PrioritizedPatch(Harmony harmony) => AccessTools.GetTypesFromAssembly(assembly)
-        .Select(it => TryCreateClassProcessor(harmony, it))
-        .NotNull()
-        .Where(it => it.containerAttributes != null)
-        .OrderByDescending(it => it.containerAttributes.priority)
-        .ForEach(it => it.Patch());
-
-    private PatchClassProcessor? TryCreateClassProcessor(Harmony harmony, Type type) {
-        var optional = type.GetCustomAttribute<HarmonyOptionalAttribute>() != null;
-        try {
-            return harmony.CreateClassProcessor(type);
-        } catch (Exception exception) {
-            if (optional) {
-                log.Trace(() => $"Unable to create class processor for patch {type.FullName}\n{exception}");
-                log.Info($"Optional patch {type.FullName} is omitted");
-            } else {
-                throw;
-            }
-        }
-        return null;
+    public override void OnAllModsLoaded(Harmony harmony, IReadOnlyList<Mod> mods) {
+        LaunchInitializerPatch.Loader = new DelayedModLoader(harmony, assembly, mods);
+        log.Info("Delayed loader initialized");
     }
 
 }
