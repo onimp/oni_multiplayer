@@ -45,7 +45,7 @@ public static class TelepadEvents {
                         telepad.GetReference(),
                         deliverable,
                         gameObject.GetComponent<MultiplayerInstance>().Register(),
-                        gameObject.GetComponent<MinionIdentity>().GetMultiplayerInstance().Register()
+                        gameObject.GetComponent<MinionIdentity>()?.GetMultiplayerInstance().Register()
                     )
                 );
             }
@@ -65,8 +65,8 @@ public static class TelepadEvents {
     public record AcceptDeliveryEventArgs(
         ComponentReference<Telepad> Target,
         ITelepadDeliverable Deliverable,
-        MultiplayerId MinionId,
-        MultiplayerId ProxyId
+        MultiplayerId GameObjectId,
+        MultiplayerId? ProxyId
     );
 
 }
