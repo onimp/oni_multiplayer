@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.ExceptionServices;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -14,7 +15,8 @@ public class CommandExceptionHandler {
                 log.Warning($"Multiplayer object {e.Reference} not found in command {command.GetType().FullName}");
                 return;
             default:
-                throw exception;
+                ExceptionDispatchInfo.Capture(exception).Throw();
+                return;
         }
     }
 
