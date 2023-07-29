@@ -47,11 +47,28 @@
         />
     </Target>
 
-    <Target
-        Name="InstallMod"
-        AfterTargets="Build"
-        Condition="'$(Configuration)' == 'Debug'"
-        DependsOnTargets="CopyModDescription; GenerateModInfo"
+    <Target Name="CreateReleasePackage"
+            Condition="'$(Configuration)' == 'Publish'"
+            AfterTargets="Build"
+            DependsOnTargets="CopyModDescription; GenerateModInfo"
+    >
+        <ItemGroup>
+            <ModFiles Include="$(TargetDir)*.yaml"/>
+            <ModFiles Include="$(TargetDir)*.dll"/>
+            <Scripts Include="$(SourceDir)..\docs\scripts\*.*"/>
+        </ItemGroup>
+        <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(TargetDir)archive\MultiplayerMod"/>
+        <Copy SourceFiles="@(Scripts)" DestinationFolder="$(TargetDir)archive"/>
+        <ZipDirectory SourceDirectory="$(TargetDir)archive"
+                      DestinationFile="$(TargetDir)multiplayer-mod-$(GitVersion).zip"
+                      Overwrite="true"
+        />
+    </Target>
+
+    <Target Name="InstallMod"
+            AfterTargets="Build"
+            Condition="'$(Configuration)' == 'Debug'"
+            DependsOnTargets="CopyModDescription; GenerateModInfo"
     >
         <Message Text="Copy mod files to ONI mods directory"/>
         <ItemGroup>

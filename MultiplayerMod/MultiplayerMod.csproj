@@ -1,13 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DefineConstants>TRACE;</DefineConstants>
+        <Optimize>false</Optimize>
         <DebugType>full</DebugType>
+        <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <DefineConstants />
+        <DefineConstants/>
+        <Optimize>false</Optimize>
+        <DebugType>portable</DebugType>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Publish' ">
+        <DefineConstants/>
+        <Optimize>true</Optimize>
+        <DebugType>none</DebugType>
     </PropertyGroup>
     <PropertyGroup>
-      <Nullable>enable</Nullable>
-      <WarningsAsErrors>Nullable</WarningsAsErrors>
+        <Nullable>enable</Nullable>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
+        <Configurations>Debug;Release;Publish</Configurations>
+        <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
     <PropertyGroup>
         <AssemblyName>MultiplayerMod</AssemblyName>
