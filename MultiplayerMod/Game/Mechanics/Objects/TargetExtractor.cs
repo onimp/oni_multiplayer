@@ -19,6 +19,16 @@ static class TargetExtractor {
                 type => type.IsClass && (classTypes.Contains(type)
                                          || interfaceTypes.Any(interfaceType => interfaceType.IsAssignableFrom(type)))
             )
+            .Where(
+                type => {
+                    var isAssignableFrom = typeof(KMonoBehaviour).IsAssignableFrom(type) ||
+                                           typeof(StateMachine.Instance).IsAssignableFrom(type);
+                    if (!isAssignableFrom) {
+                        log.Error($"{type} can not be assigned to KMonoBehaviour or StateMachine.Instance.");
+                    }
+                    return isAssignableFrom;
+                }
+            )
             .SelectMany(
                 type => {
                     if (classTypes.Contains(type))

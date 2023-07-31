@@ -14,7 +14,7 @@ public class ComponentReference {
         ComponentType = type;
     }
 
-    public Component GetComponent() => GameObjectReference.GetComponent(ComponentType);
+    public Component? GetComponent() => GameObjectReference.GetComponent(ComponentType);
 
 }
 

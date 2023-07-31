@@ -8,20 +8,34 @@ namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
 public class CallMethod : IMultiplayerCommand {
-    private readonly ObjectEventsArgs eventArgs;
+    private readonly ComponentReference? componentTarget;
+    private readonly StateMachineReference? stateMachineTarget;
+    private readonly Type methodType;
+    private readonly string methodName;
+    private readonly object[] args;
 
-    public CallMethod(ObjectEventsArgs eventArgs) {
-        this.eventArgs = eventArgs;
+    public CallMethod(ComponentEventsArgs eventArgs) {
+        componentTarget = eventArgs.Target;
+        methodType = eventArgs.MethodType;
+        methodName = eventArgs.MethodName;
+        args = eventArgs.Args;
+    }
+
+    public CallMethod(StateMachineEventsArgs eventArgs) {
+        stateMachineTarget = eventArgs.Target;
+        methodType = eventArgs.MethodType;
+        methodName = eventArgs.MethodName;
+        args = eventArgs.Args;
     }
 
     public void Execute() {
-        var method = eventArgs.MethodType
+        var method = methodType
             .GetMethod(
-                eventArgs.MethodName,
+                methodName,
                 BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance |
                 BindingFlags.DeclaredOnly
             );
-        var args = eventArgs.Args.Select(
+        var args = this.args.Select(
             arg =>
                 arg switch {
                     GameObjectReference gameObjectReference => gameObjectReference.GetGameObject(),
@@ -29,9 +43,9 @@ public class CallMethod : IMultiplayerCommand {
                     _ => arg
                 }
         ).ToArray();
-        var component = eventArgs.Target.GetComponent();
-        if (component != null) {
-            method?.Invoke(component, args);
+        object? obj = componentTarget != null ? componentTarget.GetComponent() : stateMachineTarget!.GetInstance();
+        if (obj != null) {
+            method?.Invoke(obj, args);
         }
     }
 }
