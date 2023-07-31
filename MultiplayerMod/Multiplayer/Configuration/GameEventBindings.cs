@@ -140,7 +140,8 @@ public class GameEventBindings {
     }
 
     private void BindMechanics() {
-        ObjectEvents.MethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.ComponentMethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.StateMachineMethodCalled += args => client.Send(new CallMethod(args));
         TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
         TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
     }

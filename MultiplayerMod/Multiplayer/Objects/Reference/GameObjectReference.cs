@@ -10,7 +10,7 @@ public abstract class GameObjectReference {
 
     public T GetComponent<T>() where T : class => GetGameObject().GetComponent<T>();
 
-    public Component GetComponent(Type type) => GetGameObject().GetComponent(type);
+    public Component? GetComponent(Type type) => GetGameObject().GetComponent(type);
 
     protected abstract GameObject? Resolve();
 
