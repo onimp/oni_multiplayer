@@ -19,10 +19,7 @@ public static class PrioritiesScreenEvents {
         // ReSharper disable once UnusedMember.Local
         private static void SetPersonalPriority(ChoreConsumer __instance, ChoreGroup group, int value) =>
             PatchControl.RunIfEnabled(
-                () => {
-                    if (!MinionDeliveryState.Spawning)
-                        Set?.Invoke(__instance, group, value);
-                }
+                () => { Set?.Invoke(__instance, group, value); }
             );
     }
 

@@ -3,6 +3,7 @@ using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
+using MultiplayerMod.Core.Patch.Context;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.World;
@@ -136,7 +137,7 @@ public class MultiplayerCoordinator {
         if (MultiplayerGame.Role == MultiplayerRole.None)
             return;
 
-        PatchControl.Disabled = false;
+        PatchContext.Global = PatchControl.EnablePatches;
 
         if (MultiplayerGame.Role == MultiplayerRole.Host) {
             LoadOverlay.Show();

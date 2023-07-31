@@ -1,27 +1,16 @@
-﻿using System.Threading;
+﻿using MultiplayerMod.Core.Patch.Context;
 
 namespace MultiplayerMod.Core.Patch;
 
 public static class PatchControl {
 
-    private static readonly ThreadLocal<bool> disabled = new(() => false);
+    public static readonly PatchContext DisablePatches = new(patchesEnabled: false);
+    public static readonly PatchContext EnablePatches = new(patchesEnabled: true);
 
-    public static bool Disabled {
-        private get => disabled.Value;
-        set => disabled.Value = value;
-    }
-
-    public static void RunWithDisabledPatches(System.Action action) {
-        Disabled = true;
-        try {
-            action();
-        } finally {
-            Disabled = false;
-        }
-    }
+    public static void RunWithDisabledPatches(System.Action action) => PatchContext.Use(DisablePatches, action);
 
     public static void RunIfEnabled(System.Action action) {
-        if (!Disabled)
+        if (PatchContext.Global.PatchesEnabled && PatchContext.Current.PatchesEnabled)
             action();
     }
 
