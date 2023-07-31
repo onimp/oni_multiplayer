@@ -20,19 +20,11 @@ public class PatchContextGuard {
 
     public void Push(PatchContext context) {
         if (lastPushUpdateCycle < Time.frameCount) {
-            if (stack.Count != 1) {
-                var lastIndex = stack.Count - 1;
-                var contextStack = string.Join(
-                    "\n",
-                    stack.Select((it, i) => $"Context #{lastIndex - i} set {it.Origin.ToString().TrimStart()}")
-                );
+            if (stack.Count != 1)
                 throw new PatchContextIntegrityFailureException(
                     $"Patch context stack contains context from a previous cycle.\n" +
-                    $"============== Context stack ==============\n" +
-                    $"{contextStack}\n" +
-                    $"==========================================="
+                    $"{ExtractContextStack()}"
                 );
-            }
         }
         stack.Push(new TrackedPatchContext(context, new StackTrace(1)));
         lastPushUpdateCycle = Time.frameCount;
@@ -42,6 +34,15 @@ public class PatchContextGuard {
         stack.Pop();
         if (stack.Count == 0)
             throw new PatchContextIntegrityFailureException("Root patch context was evacuated");
+    }
+
+    private string ExtractContextStack() {
+        var lastIndex = stack.Count - 1;
+        var messages = stack.Select((it, i) => $"Context #{lastIndex - i} set {it.Origin.ToString().TrimStart()}");
+        var message = string.Join("\n",messages);
+        return $"============== Context stack ==============\n" +
+               $"{message}\n" +
+               $"===========================================";
     }
 
     private record TrackedPatchContext(PatchContext TargetContext, StackTrace Origin);
