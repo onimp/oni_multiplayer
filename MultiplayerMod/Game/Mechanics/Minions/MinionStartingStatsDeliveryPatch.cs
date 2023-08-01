@@ -6,7 +6,7 @@ namespace MultiplayerMod.Game.Mechanics.Minions;
 
 [HarmonyPatch(typeof(MinionStartingStats))]
 // ReSharper disable once UnusedType.Global
-public static class MinionDeliveryState {
+public static class MinionStartingStatsDeliveryPatch {
 
     // ReSharper disable once UnusedMember.Local
     [HarmonyPrefix]

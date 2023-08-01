@@ -99,6 +99,11 @@
                 <TargetRule>Method</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </ExposureRules>
+            <ExposureRules Include="KMonoBehaviour overriden methods to public">
+                <PatternRule>^(?!.*?KMonoBehaviour).*?::(OnSpawn)</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
             <ExposureRules Include="Protected types and fields to public">
                 <PatternRule>protected</PatternRule>
                 <TargetRule>Type, Field</TargetRule>
