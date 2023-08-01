@@ -4,7 +4,7 @@ using static MultiplayerMod.Game.UI.SideScreens.RailGunSideScreenEvents;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
-public class UpdateRailGunCapacity : IMultiplayerCommand {
+public class UpdateRailGunCapacity : MultiplayerCommand {
 
     private readonly RailGunSideScreenEventArgs args;
 
@@ -12,7 +12,7 @@ public class UpdateRailGunCapacity : IMultiplayerCommand {
         this.args = args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var railGun = args.Target.GetComponent();
         railGun.launchMass = args.LaunchMass;
     }

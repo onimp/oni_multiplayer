@@ -5,7 +5,7 @@ using MultiplayerMod.Core.Extensions;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
 [Serializable]
-public class SetDefaultPriority : IMultiplayerCommand {
+public class SetDefaultPriority : MultiplayerCommand {
 
     private readonly string choreGroupId;
     private readonly int value;
@@ -18,7 +18,7 @@ public class SetDefaultPriority : IMultiplayerCommand {
         this.value = value;
     }
 
-    public void Execute() {
+    public override void Execute() {
         global::Immigration.Instance.SetPersonalPriority(ChoreGroup, value);
         RefreshTable();
     }

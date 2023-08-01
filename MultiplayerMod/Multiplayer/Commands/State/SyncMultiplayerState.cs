@@ -4,7 +4,7 @@ using MultiplayerMod.Multiplayer.State;
 namespace MultiplayerMod.Multiplayer.Commands.State;
 
 [Serializable]
-public class SyncMultiplayerState : IMultiplayerCommand {
+public class SyncMultiplayerState : MultiplayerCommand {
 
     private MultiplayerState state;
 
@@ -12,7 +12,7 @@ public class SyncMultiplayerState : IMultiplayerCommand {
         this.state = state;
     }
 
-    public void Execute() {
+    public override void Execute() {
         MultiplayerGame.State = state;
     }
 

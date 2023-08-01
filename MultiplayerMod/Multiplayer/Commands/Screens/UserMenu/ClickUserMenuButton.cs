@@ -8,7 +8,7 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 
 [Serializable]
-public class ClickUserMenuButton : IMultiplayerCommand {
+public class ClickUserMenuButton : MultiplayerCommand {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(ClickUserMenuButton));
 
@@ -22,7 +22,7 @@ public class ClickUserMenuButton : IMultiplayerCommand {
         actionName = action.Method.Name;
     }
 
-    public void Execute() {
+    public override void Execute() {
         try {
             var methodInfo = actionDeclaringType.GetMethod(
                 actionName,

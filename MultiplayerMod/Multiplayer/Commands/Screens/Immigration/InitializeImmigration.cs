@@ -5,7 +5,7 @@ using MultiplayerMod.Game.UI.Screens;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 
 [Serializable]
-public class InitializeImmigration : IMultiplayerCommand {
+public class InitializeImmigration : MultiplayerCommand {
 
     private List<ITelepadDeliverable?>? deliverables;
 
@@ -13,7 +13,7 @@ public class InitializeImmigration : IMultiplayerCommand {
         this.deliverables = deliverables;
     }
 
-    public void Execute() {
+    public override void Execute() {
         ImmigrantScreenPatch.Deliverables = deliverables;
     }
 }

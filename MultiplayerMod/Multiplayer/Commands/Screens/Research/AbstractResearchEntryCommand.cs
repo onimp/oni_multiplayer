@@ -5,7 +5,7 @@ using MultiplayerMod.Core.Logging;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Research;
 
 [Serializable]
-public abstract class AbstractResearchEntryCommand : IMultiplayerCommand {
+public abstract class AbstractResearchEntryCommand : MultiplayerCommand {
 
     private static Core.Logging.Logger log = LoggerFactory.GetLogger<AbstractResearchEntryCommand>();
 
@@ -17,7 +17,7 @@ public abstract class AbstractResearchEntryCommand : IMultiplayerCommand {
 
     protected abstract void Execute(ResearchEntry researchEntry);
 
-    public void Execute() {
+    public override void Execute() {
         var screen = ManagementMenu.Instance.researchScreen;
         var entry = screen.entryMap.Values.FirstOrDefault(entry => entry.targetTech.Id == techId);
         if (entry == null) {

@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 namespace MultiplayerMod.Multiplayer.Commands.Chores;
 
 [Serializable]
-public class FindNextChore : IMultiplayerCommand {
+public class FindNextChore : MultiplayerCommand {
 
     private static Core.Logging.Logger log = LoggerFactory.GetLogger<FindNextChore>();
 
@@ -33,7 +33,7 @@ public class FindNextChore : IMultiplayerCommand {
         isAttemptingOverride = args.IsAttemptingOverride;
     }
 
-    public void Execute() {
+    public override void Execute() {
         log.Debug(
             $"Received {instanceId} {instanceString} {instanceCell} {choreId} {choreType} {choreCell}"
         );

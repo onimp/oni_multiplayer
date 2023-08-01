@@ -7,7 +7,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 
 [Serializable]
-public class PermitConsumableToMinion : IMultiplayerCommand {
+public class PermitConsumableToMinion : MultiplayerCommand {
 
     private readonly GameObjectReference consumableConsumerReference;
     private readonly string consumableId;
@@ -19,7 +19,7 @@ public class PermitConsumableToMinion : IMultiplayerCommand {
         this.isAllowed = isAllowed;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var consumableConsumer = consumableConsumerReference.GetComponent<ConsumableConsumer>();
         if (consumableConsumer == null) return;
 

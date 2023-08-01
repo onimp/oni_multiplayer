@@ -4,7 +4,7 @@ using static MultiplayerMod.Game.UI.SideScreens.TemperatureSwitchSideScreenEvent
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
-public class UpdateTemperatureSwitch : IMultiplayerCommand {
+public class UpdateTemperatureSwitch : MultiplayerCommand {
 
     private readonly TemperatureSwitchSideScreenEventArgs args;
 
@@ -12,7 +12,7 @@ public class UpdateTemperatureSwitch : IMultiplayerCommand {
         this.args = args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var temperatureControlledSwitch = args.Target.GetComponent();
         temperatureControlledSwitch.thresholdTemperature = args.ThresholdTemperature;
         temperatureControlledSwitch.activateOnWarmerThan = args.ActivateOnWarmerThan;

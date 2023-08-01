@@ -13,17 +13,17 @@ namespace MultiplayerModTests;
 public class CommandTests {
 
     [Serializable]
-    private class Command : IMultiplayerCommand {
+    private class Command : MultiplayerCommand {
         public int Value { set; get; }
 
-        public void Execute() { }
+        public override void Execute() { }
     }
 
     [Serializable]
-    private class DataCommand : IMultiplayerCommand {
+    private class DataCommand : MultiplayerCommand {
         public byte[] Data = new byte[Configuration.MaxMessageSize * 2];
 
-        public void Execute() { }
+        public override void Execute() { }
     }
 
     [Test]

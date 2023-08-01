@@ -3,9 +3,9 @@
 namespace MultiplayerMod.Multiplayer.Commands.Speed;
 
 [Serializable]
-public class ResumeGame : IMultiplayerCommand {
+public class ResumeGame : MultiplayerCommand {
 
-    public void Execute() {
+    public override void Execute() {
         if (SpeedControlScreen.Instance.IsPaused)
             SpeedControlScreen.Instance.Unpause();
     }

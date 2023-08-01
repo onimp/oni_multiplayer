@@ -6,7 +6,7 @@ using MultiplayerMod.Game.UI.Tools.Events;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class Stamp : IMultiplayerCommand {
+public class Stamp : MultiplayerCommand {
 
     private StampEventArgs arguments;
 
@@ -15,7 +15,7 @@ public class Stamp : IMultiplayerCommand {
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
-    public void Execute() {
+    public override void Execute() {
         var tool = new StampTool {
             stampTemplate = arguments.Template,
             ready = true,

@@ -4,6 +4,6 @@ using MultiplayerMod.Game.UI.Overlay;
 namespace MultiplayerMod.Multiplayer.Commands.Overlay;
 
 [Serializable]
-public class ShowLoadOverlay : IMultiplayerCommand {
-    public void Execute() => LoadOverlay.Show();
+public class ShowLoadOverlay : MultiplayerCommand {
+    public override void Execute() => LoadOverlay.Show();
 }

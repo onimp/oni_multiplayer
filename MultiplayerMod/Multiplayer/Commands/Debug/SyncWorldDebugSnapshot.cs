@@ -4,7 +4,7 @@ using MultiplayerMod.Multiplayer.World.Debug;
 namespace MultiplayerMod.Multiplayer.Commands.Debug;
 
 [Serializable]
-public class SyncWorldDebugSnapshot : IMultiplayerCommand {
+public class SyncWorldDebugSnapshot : MultiplayerCommand {
 
     private WorldDebugSnapshot snapshot;
 
@@ -12,7 +12,7 @@ public class SyncWorldDebugSnapshot : IMultiplayerCommand {
         this.snapshot = snapshot;
     }
 
-    public void Execute() {
+    public override void Execute() {
         WorldDebugSnapshotRunner.LastServerInfo = snapshot;
     }
 

@@ -5,7 +5,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 
 [Serializable]
-public class SetHat : IMultiplayerCommand {
+public class SetHat : MultiplayerCommand {
 
     private readonly GameObjectReference minionIdentityReference;
     private readonly string? targetHat;
@@ -15,7 +15,7 @@ public class SetHat : IMultiplayerCommand {
         this.targetHat = targetHat;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var resume = minionIdentityReference.GetComponent<MinionResume>();
         if (resume == null)
             return;

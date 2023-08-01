@@ -4,7 +4,7 @@ using static MultiplayerMod.Game.UI.SideScreens.CounterSideScreenEvents;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
-public class UpdateLogicCounter : IMultiplayerCommand {
+public class UpdateLogicCounter : MultiplayerCommand {
 
     private readonly CounterSideScreenEventArgs args;
 
@@ -12,7 +12,7 @@ public class UpdateLogicCounter : IMultiplayerCommand {
         this.args = args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var logicCounter = args.Target.GetComponent();
         logicCounter.maxCount = args.MaxCount;
         logicCounter.currentCount = args.CurrentCount;

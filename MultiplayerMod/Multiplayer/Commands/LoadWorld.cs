@@ -4,7 +4,7 @@ using MultiplayerMod.Multiplayer.World;
 namespace MultiplayerMod.Multiplayer.Commands;
 
 [Serializable]
-public class LoadWorld : IMultiplayerCommand {
+public class LoadWorld : MultiplayerCommand {
 
     private byte[] data;
 
@@ -12,6 +12,6 @@ public class LoadWorld : IMultiplayerCommand {
         this.data = data;
     }
 
-    public void Execute() => WorldManager.LoadWorldSave(data);
+    public override void Execute() => WorldManager.LoadWorldSave(data);
 
 }

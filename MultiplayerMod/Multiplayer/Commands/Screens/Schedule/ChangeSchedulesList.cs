@@ -7,7 +7,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
 
 [Serializable]
-public class ChangeSchedulesList : IMultiplayerCommand {
+public class ChangeSchedulesList : MultiplayerCommand {
 
     private readonly List<SerializableSchedule> serializableSchedules;
 
@@ -15,7 +15,7 @@ public class ChangeSchedulesList : IMultiplayerCommand {
         serializableSchedules = schedules.Select(schedule => new SerializableSchedule(schedule)).ToList();
     }
 
-    public void Execute() {
+    public override void Execute() {
         ScheduleManager.Instance.schedules.Clear();
         foreach (var serializableSchedule in serializableSchedules) {
             var schedule = ScheduleManager.Instance.AddSchedule(

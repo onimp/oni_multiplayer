@@ -3,7 +3,7 @@
 namespace MultiplayerMod.Multiplayer.Commands.Overlay;
 
 [Serializable]
-public class SetDisinfectSettings : IMultiplayerCommand {
+public class SetDisinfectSettings : MultiplayerCommand {
     private readonly int minGerm;
     private readonly bool enableAutoDisinfect;
 
@@ -12,7 +12,7 @@ public class SetDisinfectSettings : IMultiplayerCommand {
         this.enableAutoDisinfect = enableAutoDisinfect;
     }
 
-    public void Execute() {
+    public override void Execute() {
         SaveGame.Instance.enableAutoDisinfect = enableAutoDisinfect;
         SaveGame.Instance.minGermCountForDisinfect = minGerm;
     }

@@ -1,7 +1,6 @@
 ﻿using System;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
-using MultiplayerMod.Game.Mechanics.Minions;
 
 namespace MultiplayerMod.Game.UI.Screens.Events;
 

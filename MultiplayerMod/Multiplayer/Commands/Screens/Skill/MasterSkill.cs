@@ -5,7 +5,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 
 [Serializable]
-public class MasterSkill : IMultiplayerCommand {
+public class MasterSkill : MultiplayerCommand {
 
     private readonly GameObjectReference minionIdentityReference;
     private readonly string skillId;
@@ -15,7 +15,7 @@ public class MasterSkill : IMultiplayerCommand {
         this.skillId = skillId;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var component = minionIdentityReference.GetComponent<MinionResume>();
         if (component == null) return;
 

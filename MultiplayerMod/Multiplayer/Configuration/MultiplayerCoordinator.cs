@@ -64,7 +64,7 @@ public class MultiplayerCoordinator {
     }
 
     private void ServerOnCommandReceived(CommandReceivedEventArgs e) {
-        log.Trace(() => $"Command {e.Command.GetType().Name} received from player {e.Player}");
+        log.Trace(() => $"{e.Command} received from player {e.Player}");
         PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
     }
 
@@ -114,12 +114,11 @@ public class MultiplayerCoordinator {
     }
 
     private void ClientOnCommandReceived(CommandReceivedEventArgs e) {
-        var commandType = e.Command.GetType();
-        if (!MultiplayerGame.State.Current.WorldSpawned && !unSpawnedWorldCommands.Contains(commandType)) {
-            log.Warning($"Command {commandType.FullName} received, but the world isn't spawned yet");
+        if (!MultiplayerGame.State.Current.WorldSpawned && !unSpawnedWorldCommands.Contains(e.Command.GetType())) {
+            log.Warning($"{e.Command} received, but the world isn't spawned yet");
             return;
         }
-        log.Trace(() => $"Command {commandType.Name} received from server");
+        log.Trace(() => $"{e.Command} received from server");
         PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
     }
 

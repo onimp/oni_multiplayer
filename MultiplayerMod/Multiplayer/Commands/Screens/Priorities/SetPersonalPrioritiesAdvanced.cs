@@ -3,14 +3,14 @@
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
 [Serializable]
-public class SetPersonalPrioritiesAdvanced : IMultiplayerCommand {
+public class SetPersonalPrioritiesAdvanced : MultiplayerCommand {
     private readonly bool value;
 
     public SetPersonalPrioritiesAdvanced(bool value) {
         this.value = value;
     }
 
-    public void Execute() {
+    public override void Execute() {
         global::Game.Instance.advancedPersonalPriorities = value;
         ManagementMenu.Instance.jobsScreen.toggleAdvancedModeButton.fgImage.gameObject.SetActive(value);
     }

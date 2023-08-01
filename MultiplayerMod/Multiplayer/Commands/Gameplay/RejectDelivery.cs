@@ -5,7 +5,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
-public class RejectDelivery : IMultiplayerCommand {
+public class RejectDelivery : MultiplayerCommand {
 
     private ComponentReference<Telepad> reference;
 
@@ -13,7 +13,7 @@ public class RejectDelivery : IMultiplayerCommand {
         this.reference = reference;
     }
 
-    public void Execute() {
+    public override void Execute() {
         reference.GetComponent().RejectAll();
         ImmigrantScreenPatch.Deliverables = null;
     }

@@ -5,14 +5,14 @@ using System.Linq;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 
 [Serializable]
-public class PermitConsumableByDefault : IMultiplayerCommand {
+public class PermitConsumableByDefault : MultiplayerCommand {
     private readonly List<Tag> permittedList;
 
     public PermitConsumableByDefault(List<Tag> permittedList) {
         this.permittedList = permittedList;
     }
 
-    public void Execute() {
+    public override void Execute() {
         ConsumerManager.instance.DefaultForbiddenTagsList.Clear();
         ConsumerManager.instance.DefaultForbiddenTagsList.AddRange(permittedList);
         var screen = ManagementMenu.Instance.consumablesScreen;

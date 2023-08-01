@@ -4,7 +4,7 @@ using static MultiplayerMod.Game.UI.SideScreens.TimeRangeSideScreenEvents;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
-public class UpdateLogicTimeOfDaySensor : IMultiplayerCommand {
+public class UpdateLogicTimeOfDaySensor : MultiplayerCommand {
 
     private readonly TimeRangeSideScreenEventArgs args;
 
@@ -12,7 +12,7 @@ public class UpdateLogicTimeOfDaySensor : IMultiplayerCommand {
         this.args = args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var sensor = args.Target.GetComponent();
         sensor.startTime = args.StartTime;
         sensor.duration = args.Duration;

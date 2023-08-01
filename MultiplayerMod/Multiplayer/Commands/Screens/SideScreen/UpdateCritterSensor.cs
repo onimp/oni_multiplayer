@@ -4,7 +4,7 @@ using static MultiplayerMod.Game.UI.SideScreens.CritterSensorSideScreenEvents;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
-public class UpdateCritterSensor : IMultiplayerCommand {
+public class UpdateCritterSensor : MultiplayerCommand {
 
     private readonly CritterSensorSideScreenEventArgs args;
 
@@ -12,7 +12,7 @@ public class UpdateCritterSensor : IMultiplayerCommand {
         this.args = args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var logicCritterCountSensor = args.Target.GetComponent();
         logicCritterCountSensor.countCritters = args.CountCritters;
         logicCritterCountSensor.countEggs = args.CountEggs;

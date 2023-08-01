@@ -4,7 +4,7 @@ using static MultiplayerMod.Game.UI.SideScreens.AlarmSideScreenEvents;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 
 [Serializable]
-public class UpdateAlarm : IMultiplayerCommand {
+public class UpdateAlarm : MultiplayerCommand {
 
     private readonly AlarmSideScreenEventArgs args;
 
@@ -12,7 +12,7 @@ public class UpdateAlarm : IMultiplayerCommand {
         this.args = args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var alarm = args.Target.GetComponent();
         alarm.notificationName = args.NotificationName;
         alarm.notificationTooltip = args.NotificationTooltip;

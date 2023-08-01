@@ -7,7 +7,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
-public class CallMethod : IMultiplayerCommand {
+public class CallMethod : MultiplayerCommand {
     private readonly ComponentReference? componentTarget;
     private readonly StateMachineReference? stateMachineTarget;
     private readonly Type methodType;
@@ -28,7 +28,7 @@ public class CallMethod : IMultiplayerCommand {
         args = eventArgs.Args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var method = methodType
             .GetMethod(
                 methodName,
@@ -48,4 +48,7 @@ public class CallMethod : IMultiplayerCommand {
             method?.Invoke(obj, args);
         }
     }
+
+    public override string ToString() => $"{base.ToString()} (Type = {methodType.FullName}, Method = {methodName})";
+
 }

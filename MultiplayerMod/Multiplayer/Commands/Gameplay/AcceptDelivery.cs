@@ -9,7 +9,7 @@ using static MultiplayerMod.Game.Mechanics.Printing.TelepadEvents;
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
-public class AcceptDelivery : IMultiplayerCommand {
+public class AcceptDelivery : MultiplayerCommand {
 
     private AcceptDeliveryEventArgs args;
 
@@ -17,7 +17,7 @@ public class AcceptDelivery : IMultiplayerCommand {
         this.args = args;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var telepad = args.Target.GetComponent();
         var capture = LocalCaptor.Capture<TelepadAcceptDeliveryCapture>(
             () => telepad.OnAcceptDelivery(args.Deliverable)

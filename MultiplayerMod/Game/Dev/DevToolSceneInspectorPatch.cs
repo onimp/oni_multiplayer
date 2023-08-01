@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using System;
+using HarmonyLib;
 using ImGuiNET;
 using MultiplayerMod.Core.Patch;
 
@@ -12,7 +13,7 @@ public class DevToolSceneInspectorPatch {
     // ReSharper disable once UnusedMember.Local
     [HarmonyPrefix]
     [HarmonyPatch(nameof(DevToolSceneInspector.DisplayField))]
-    private static bool DisplayFieldPrefix(ref bool __result, string name, System.Type ft, ref object obj) {
+    private static bool DisplayFieldPrefix(ref bool __result, string name, Type ft, ref object obj) {
         var longType = ft == typeof(long) || ft == typeof(ulong);
         if (!longType)
             return true;

@@ -7,7 +7,7 @@ using MultiplayerMod.Game.UI.Tools.Events;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class CopySettings : IMultiplayerCommand {
+public class CopySettings : MultiplayerCommand {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<CopySettings>();
 
@@ -17,7 +17,7 @@ public class CopySettings : IMultiplayerCommand {
         this.arguments = arguments;
     }
 
-    public void Execute() {
+    public override void Execute() {
         GameContext.Override(new DisablePopUpEffects(), DoExecute);
     }
 

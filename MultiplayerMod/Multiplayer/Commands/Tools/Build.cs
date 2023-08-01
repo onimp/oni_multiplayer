@@ -9,7 +9,7 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class Build : IMultiplayerCommand {
+public class Build : MultiplayerCommand {
 
     private BuildEventArgs arguments;
 
@@ -17,7 +17,7 @@ public class Build : IMultiplayerCommand {
         this.arguments = arguments;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var definition = Assets.GetBuildingDef(arguments.PrefabId);
         var cbcPosition = Grid.CellToPosCBC(arguments.Cell, Grid.SceneLayer.Building);
         GameContext.Override(new DisableBuildingValidation(), () => Execute(definition, cbcPosition));

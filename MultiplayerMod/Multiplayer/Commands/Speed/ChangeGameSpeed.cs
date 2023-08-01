@@ -3,7 +3,7 @@
 namespace MultiplayerMod.Multiplayer.Commands.Speed;
 
 [Serializable]
-public class ChangeGameSpeed : IMultiplayerCommand {
+public class ChangeGameSpeed : MultiplayerCommand {
 
     private int speed;
 
@@ -11,7 +11,7 @@ public class ChangeGameSpeed : IMultiplayerCommand {
         this.speed = speed;
     }
 
-    public void Execute() {
+    public override void Execute() {
         SpeedControlScreen.Instance.SetSpeed(speed);
     }
 

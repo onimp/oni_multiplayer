@@ -7,7 +7,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
 [Serializable]
-public class SetPersonalPriority : IMultiplayerCommand {
+public class SetPersonalPriority : MultiplayerCommand {
 
     private readonly GameObjectReference choreConsumerReference;
     private readonly string choreGroupId;
@@ -22,7 +22,7 @@ public class SetPersonalPriority : IMultiplayerCommand {
         this.value = value;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var choreConsumer = choreConsumerReference.GetComponent<ChoreConsumer>();
         if (choreConsumer == null) return;
 
