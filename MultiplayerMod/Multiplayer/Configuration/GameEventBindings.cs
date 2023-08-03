@@ -98,6 +98,8 @@ public class GameEventBindings {
                 client.Disconnect();
             PatchContext.Global = PatchControl.DisablePatches;
         };
+
+        UserMenuScreenEvents.PriorityChanged += (target, priority) => client.Send(new ChangePriority(target, priority));
     }
 
     private void BindTools() {
