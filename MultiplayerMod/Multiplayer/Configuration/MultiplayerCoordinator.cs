@@ -5,6 +5,7 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Patch.Context;
 using MultiplayerMod.Core.Unity;
+using MultiplayerMod.Game;
 using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands;
@@ -39,7 +40,7 @@ public class MultiplayerCoordinator {
     public MultiplayerCoordinator() {
         ConfigureServer();
         ConfigureClient();
-        WorldGenSpawnerEvents.Spawned += OnWorldSpawned;
+        GameEvents.GameStarted += OnWorldSpawned;
     }
 
     #region Server configuration

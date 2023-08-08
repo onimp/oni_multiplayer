@@ -7,11 +7,7 @@ public class MultiplayerIdentityProvider {
 
     public long NextObjectId { get; set; }
 
-    private readonly IMultiplayerClient client;
-
-    public MultiplayerIdentityProvider() {
-        client = Container.Get<IMultiplayerClient>();
-    }
+    private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();
 
     public MultiplayerId GetNextId() => new(client.Player, NextObjectId++);
 
