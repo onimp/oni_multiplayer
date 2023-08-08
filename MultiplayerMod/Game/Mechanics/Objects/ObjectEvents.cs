@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
+using MultiplayerMod.Core.Patch.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using UnityEngine;
 
@@ -15,146 +16,119 @@ public static class ObjectEvents {
     public static event Action<ComponentEventsArgs>? ComponentMethodCalled;
     public static event Action<StateMachineEventsArgs>? StateMachineMethodCalled;
 
-    private static readonly Dictionary<Type, string[]> methodsForPatch = new() {
-        {
-            typeof(Filterable),
-            new[] { nameof(Filterable.SelectedTag) }
-        }, {
+    private static readonly PatchTargetResolver targets = new PatchTargetResolver.Builder()
+        .AddMethods(typeof(Filterable), nameof(Filterable.SelectedTag))
+        .AddMethods(
             typeof(TreeFilterable),
-            new[] { nameof(TreeFilterable.AddTagToFilter), nameof(TreeFilterable.RemoveTagFromFilter) }
-        },
-        { typeof(Storage), new[] { nameof(Storage.SetOnlyFetchMarkedItems) } }, {
-            typeof(Door),
-            new[] { nameof(Door.QueueStateChange), nameof(Door.OrderUnseal) }
-        }, {
+            nameof(TreeFilterable.AddTagToFilter),
+            nameof(TreeFilterable.RemoveTagFromFilter)
+        )
+        .AddMethods(typeof(Storage), nameof(Storage.SetOnlyFetchMarkedItems))
+        .AddMethods(typeof(Door), nameof(Door.QueueStateChange), nameof(Door.OrderUnseal))
+        .AddMethods(
             typeof(ComplexFabricator),
-            new[] {
-                nameof(ComplexFabricator.IncrementRecipeQueueCount),
-                nameof(ComplexFabricator.DecrementRecipeQueueCount),
-                nameof(ComplexFabricator.SetRecipeQueueCount)
-            }
-        }, {
-            typeof(PassengerRocketModule),
-            new[] { nameof(PassengerRocketModule.RequestCrewBoard) }
-        }, {
-            typeof(RocketControlStation),
-            new[] { nameof(RocketControlStation.RestrictWhenGrounded) }
-        }, {
-            typeof(ICheckboxControl),
-            new[] { nameof(ICheckboxControl.SetCheckboxValue) }
-        }, {
-            typeof(SuitLocker),
-            new[] { nameof(SuitLocker.ConfigNoSuit), nameof(SuitLocker.ConfigRequestSuit) }
-        }, {
+            nameof(ComplexFabricator.IncrementRecipeQueueCount),
+            nameof(ComplexFabricator.DecrementRecipeQueueCount),
+            nameof(ComplexFabricator.SetRecipeQueueCount)
+        )
+        .AddMethods(typeof(PassengerRocketModule), nameof(PassengerRocketModule.RequestCrewBoard))
+        .AddMethods(typeof(RocketControlStation), nameof(RocketControlStation.RestrictWhenGrounded))
+        .AddMethods(typeof(ICheckboxControl), nameof(ICheckboxControl.SetCheckboxValue))
+        .AddMethods(typeof(SuitLocker), nameof(SuitLocker.ConfigNoSuit), nameof(SuitLocker.ConfigRequestSuit))
+        .AddMethods(
             typeof(IThresholdSwitch),
-            new[] { nameof(IThresholdSwitch.Threshold), nameof(IThresholdSwitch.ActivateAboveThreshold) }
-        }, {
-            typeof(ISliderControl),
-            new[] { nameof(ISingleSliderControl.SetSliderValue) }
-        }, {
-            typeof(Valve),
-            new[] { nameof(Valve.ChangeFlow) }
-        }, {
+            nameof(IThresholdSwitch.Threshold),
+            nameof(IThresholdSwitch.ActivateAboveThreshold)
+        )
+        .AddMethods(typeof(ISliderControl), nameof(ISingleSliderControl.SetSliderValue))
+        .AddMethods(typeof(Valve), nameof(Valve.ChangeFlow))
+        .AddMethods(
             typeof(SingleEntityReceptacle),
-            new[] {
-                nameof(SingleEntityReceptacle.OrderRemoveOccupant),
-                nameof(SingleEntityReceptacle.CancelActiveRequest),
-                nameof(SingleEntityReceptacle.CreateOrder),
-                nameof(SingleEntityReceptacle.SetPreview)
-            }
-        }, {
-            typeof(LimitValve),
-            new[] { nameof(LimitValve.Limit), nameof(LimitValve.ResetAmount) }
-        }, {
+            nameof(SingleEntityReceptacle.OrderRemoveOccupant),
+            nameof(SingleEntityReceptacle.CancelActiveRequest),
+            nameof(SingleEntityReceptacle.CreateOrder),
+            nameof(SingleEntityReceptacle.SetPreview)
+        )
+        .AddMethods(typeof(LimitValve), nameof(LimitValve.Limit), nameof(LimitValve.ResetAmount))
+        .AddMethods(
             typeof(ILogicRibbonBitSelector),
-            new[] { nameof(ILogicRibbonBitSelector.SetBitSelection), nameof(ILogicRibbonBitSelector.UpdateVisuals) }
-        }, {
-            typeof(CreatureLure),
-            new[] { nameof(CreatureLure.ChangeBaitSetting) }
-        }, {
-            typeof(MonumentPart),
-            new[] { nameof(MonumentPart.SetState) }
-        }, {
-            typeof(INToggleSideScreenControl),
-            new[] { nameof(INToggleSideScreenControl.QueueSelectedOption) }
-        }, {
-            typeof(Artable),
-            new[] { nameof(Artable.SetUserChosenTargetState), nameof(Artable.SetDefault) }
-        }, {
-            typeof(Automatable),
-            new[] { nameof(Automatable.SetAutomationOnly) }
-        }, {
+            nameof(ILogicRibbonBitSelector.SetBitSelection),
+            nameof(ILogicRibbonBitSelector.UpdateVisuals)
+        )
+        .AddMethods(typeof(CreatureLure), nameof(CreatureLure.ChangeBaitSetting))
+        .AddMethods(typeof(MonumentPart), nameof(MonumentPart.SetState))
+        .AddMethods(typeof(INToggleSideScreenControl), nameof(INToggleSideScreenControl.QueueSelectedOption))
+        .AddMethods(typeof(Artable), nameof(Artable.SetUserChosenTargetState), nameof(Artable.SetDefault))
+        .AddMethods(typeof(Automatable), nameof(Automatable.SetAutomationOnly))
+        .AddMethods(
             typeof(IDispenser),
-            new[] {
-                nameof(IDispenser.OnCancelDispense),
-                nameof(IDispenser.OnOrderDispense),
-                nameof(IDispenser.SelectItem)
-            }
-        }, {
-            typeof(FlatTagFilterable),
-            new[] { nameof(FlatTagFilterable.ToggleTag) }
-        }, {
-            typeof(GeneShuffler),
-            new[] { nameof(GeneShuffler.RequestRecharge) }
-        }, {
+            nameof(IDispenser.OnCancelDispense),
+            nameof(IDispenser.OnOrderDispense),
+            nameof(IDispenser.SelectItem)
+        )
+        .AddMethods(typeof(FlatTagFilterable), nameof(FlatTagFilterable.ToggleTag))
+        .AddMethods(typeof(GeneShuffler), nameof(GeneShuffler.RequestRecharge))
+        .AddMethods(
             typeof(GeneticAnalysisStation.StatesInstance),
-            new[] { nameof(GeneticAnalysisStation.StatesInstance.SetSeedForbidden) }
-        }, {
-            typeof(IHighEnergyParticleDirection),
-            new[] { nameof(IHighEnergyParticleDirection.Direction) }
-        }, {
+            nameof(GeneticAnalysisStation.StatesInstance.SetSeedForbidden)
+        )
+        .AddMethods(typeof(IHighEnergyParticleDirection), nameof(IHighEnergyParticleDirection.Direction))
+        .AddMethods(
             typeof(CraftModuleInterface),
-            new[] { nameof(CraftModuleInterface.CancelLaunch), nameof(CraftModuleInterface.TriggerLaunch) }
-        }, {
+            nameof(CraftModuleInterface.CancelLaunch),
+            nameof(CraftModuleInterface.TriggerLaunch)
+        )
+        .AddMethods(
             typeof(IActivationRangeTarget),
-            new[] { nameof(IActivationRangeTarget.ActivateValue), nameof(IActivationRangeTarget.DeactivateValue) }
-        }, {
-            typeof(ISidescreenButtonControl),
-            new[] { nameof(ISidescreenButtonControl.OnSidescreenButtonPressed) }
-        }, {
-            typeof(IUserControlledCapacity),
-            new[] { nameof(IUserControlledCapacity.UserMaxCapacity) }
-        },
-        { typeof(Assignable), new[] { nameof(Assignable.Assign), nameof(Assignable.Unassign) } }, {
+            nameof(IActivationRangeTarget.ActivateValue),
+            nameof(IActivationRangeTarget.DeactivateValue)
+        )
+        .AddMethods(typeof(ISidescreenButtonControl), nameof(ISidescreenButtonControl.OnSidescreenButtonPressed))
+        .AddMethods(typeof(IUserControlledCapacity), nameof(IUserControlledCapacity.UserMaxCapacity))
+        .AddMethods(typeof(Assignable), nameof(Assignable.Assign), nameof(Assignable.Unassign)).AddMethods(
             typeof(AccessControl),
-            new[] {
-                nameof(AccessControl.SetPermission),
-                nameof(AccessControl.ClearPermission),
-                nameof(AccessControl.DefaultPermission)
-            }
-        },
-        { typeof(LogicBroadcastReceiver), new[] { nameof(LogicBroadcastReceiver.SetChannel) } },
-        { typeof(LaunchConditionManager), new[] { nameof(LaunchConditionManager.Launch) } },
-        { typeof(GeoTuner.Instance), new[] { nameof(GeoTuner.Instance.AssignFutureGeyser) } },
-        { typeof(IConfigurableConsumer), new[] { nameof(IConfigurableConsumer.SetSelectedOption) } },
-        { typeof(LogicTimerSensor), new[] { nameof(LogicTimerSensor.ResetTimer) } }, {
+            nameof(AccessControl.SetPermission),
+            nameof(AccessControl.ClearPermission),
+            nameof(AccessControl.DefaultPermission)
+        )
+        .AddMethods(typeof(LogicBroadcastReceiver), nameof(LogicBroadcastReceiver.SetChannel))
+        .AddMethods(typeof(LaunchConditionManager), nameof(LaunchConditionManager.Launch))
+        .AddMethods(typeof(GeoTuner.Instance), nameof(GeoTuner.Instance.AssignFutureGeyser))
+        .AddMethods(typeof(IConfigurableConsumer), nameof(IConfigurableConsumer.SetSelectedOption))
+        .AddMethods(typeof(LogicTimerSensor), nameof(LogicTimerSensor.ResetTimer))
+        .AddMethods(
             typeof(IEmptyableCargo),
-            new[] {
-                nameof(IEmptyableCargo.AutoDeploy),
-                nameof(IEmptyableCargo.EmptyCargo),
-                nameof(IEmptyableCargo.ChosenDuplicant)
-            }
-        }, {
+            nameof(IEmptyableCargo.AutoDeploy),
+            nameof(IEmptyableCargo.EmptyCargo),
+            nameof(IEmptyableCargo.ChosenDuplicant)
+        )
+        .AddMethods(
             typeof(IPlayerControlledToggle),
-            new[] { nameof(IPlayerControlledToggle.ToggleRequested), nameof(IPlayerControlledToggle.ToggledByPlayer) }
-        }
+            nameof(IPlayerControlledToggle.ToggleRequested),
+            nameof(IPlayerControlledToggle.ToggledByPlayer)
+        )
         // TODO decide how to proper patch KMonoBehaviour#Trigger
-        // {
+        // .AddMethods(
         //     typeof(ReorderableBuilding),
-        //     new[] {
-        //         nameof(ReorderableBuilding.SwapWithAbove),
-        //         nameof(ReorderableBuilding.SwapWithBelow),
-        //         nameof(ReorderableBuilding.Trigger)
-        //     }
-        // }
-    };
+        //     nameof(ReorderableBuilding.SwapWithAbove),
+        //     nameof(ReorderableBuilding.SwapWithBelow),
+        //     nameof(ReorderableBuilding.Trigger)
+        // )
+        .AddBaseType(typeof(KMonoBehaviour))
+        .AddBaseType(typeof(StateMachine.Instance))
+        .Build();
 
     // ReSharper disable once UnusedMember.Local
-    private static IEnumerable<MethodBase> TargetMethods() => TargetExtractor.GetTargetMethods(methodsForPatch);
+    private static IEnumerable<MethodBase> TargetMethods() => targets.Resolve();
+
+    [HarmonyPrefix]
+    // ReSharper disable once UnusedMember.Local
+    private static void ObjectEventsPrefix() => PatchContext.Enter(PatchControl.DisablePatches);
 
     [HarmonyPostfix]
     // ReSharper disable once UnusedMember.Local
-    private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object[] __args) =>
+    private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object[] __args) {
+        PatchContext.Leave();
         PatchControl.RunIfEnabled(
             () => {
                 var args = __args.Select(
@@ -191,5 +165,6 @@ public static class ObjectEvents {
                 }
             }
         );
+    }
 
 }
