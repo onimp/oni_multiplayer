@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using UnityEngine;
 
@@ -26,13 +25,15 @@ public class MultiplayerObjects {
         }
     }
 
-    public void Clear() => objects = new Dictionary<MultiplayerId, GameObject>();
-
-    public void Rebuild() {
-        objects = KPrefabIDTracker.Get().prefabIdMap.ToDictionary(
-            entry => new MultiplayerId(null, entry.Key),
-            entry => entry.Value.gameObject
-        );
+    public void SynchronizeWithTracker() {
+        objects = new Dictionary<MultiplayerId, GameObject>();
+        var kPrefabIds = KPrefabIDTracker.Get().prefabIdMap.Values;
+        foreach (var kPrefabId in kPrefabIds) {
+            var gameObject = kPrefabId.gameObject;
+            var instance = gameObject.GetComponent<MultiplayerInstance>();
+            instance.Id = new MultiplayerId(null, kPrefabId.InstanceID);
+            Register(instance);
+        }
     }
 
 }

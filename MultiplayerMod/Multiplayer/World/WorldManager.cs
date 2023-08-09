@@ -17,7 +17,7 @@ public static class WorldManager {
 
     public static void Sync() {
         server.Send(new PauseGame());
-        MultiplayerGame.Objects.Rebuild();
+        MultiplayerGame.Objects.SynchronizeWithTracker();
         MultiplayerGame.State.Players.Values.ForEach(playerState => playerState.WorldSpawned = false);
         MultiplayerGame.State.Current.WorldSpawned = true;
         server.Send(new SyncMultiplayerState(MultiplayerGame.State));
@@ -26,7 +26,6 @@ public static class WorldManager {
     }
 
     public static void LoadWorldSave(byte[] data) {
-        MultiplayerGame.Objects.Clear();
         var path = Path.GetTempFileName();
         using (var writer = new BinaryWriter(File.OpenWrite(path))) {
             writer.Write(data);
@@ -39,4 +38,5 @@ public static class WorldManager {
         PatchControl.RunWithDisabledPatches(() => SaveLoader.Instance.Save(path));
         return File.ReadAllBytes(path);
     }
+
 }

@@ -40,7 +40,7 @@ public class MultiplayerCoordinator {
     public MultiplayerCoordinator() {
         ConfigureServer();
         ConfigureClient();
-        GameEvents.GameStarted += OnWorldSpawned;
+        GameEvents.GameStarted += OnGameStarted;
     }
 
     #region Server configuration
@@ -133,7 +133,7 @@ public class MultiplayerCoordinator {
         }
     }
 
-    private void OnWorldSpawned() {
+    private void OnGameStarted() {
         if (MultiplayerGame.Role == MultiplayerRole.None)
             return;
 
