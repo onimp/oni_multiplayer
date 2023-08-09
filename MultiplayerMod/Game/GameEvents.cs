@@ -1,4 +1,6 @@
 ﻿using HarmonyLib;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Scheduling;
 
 namespace MultiplayerMod.Game;
 
@@ -10,6 +12,8 @@ public static class GameEvents {
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
     [HarmonyPatch(nameof(global::Game.SetGameStarted))]
-    private static void Started() => GameStarted?.Invoke();
+    private static void SetGameStarted() => Container.Get<UnityTaskScheduler>().Run(() => {
+        GameStarted?.Invoke();
+    });
 
 }
