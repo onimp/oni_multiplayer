@@ -4,7 +4,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Patch.Context;
 
-namespace MultiplayerMod.Game.Mechanics;
+namespace MultiplayerMod.Game.Configuration;
 
 [HarmonyPatch]
 // ReSharper disable once UnusedType.Global
@@ -13,6 +13,7 @@ public static class MethodPatchesDisabler {
     private static readonly PatchTargetResolver targets = new PatchTargetResolver.Builder()
         .AddMethods(typeof(MinionIdentity), nameof(MinionIdentity.OnSpawn))
         .AddMethods(typeof(MinionStartingStats), nameof(MinionStartingStats.Deliver))
+        .AddMethods(typeof(SaveLoader), nameof(SaveLoader.InitialSave))
         .Build();
 
     // ReSharper disable once UnusedMember.Local
