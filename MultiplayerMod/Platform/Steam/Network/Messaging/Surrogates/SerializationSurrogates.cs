@@ -17,6 +17,7 @@ public static class SerializationSurrogates {
         Selector.Add(new CarePackageInstanceDataSurrogate());
         Selector.Add(new ComplexRecipeSurrogate());
         Selector.Add(new MinionStartingStatsSurrogate());
+        Selector.Add(new RoomSurrogate());
         Selector.Add(new SpaceDestinationSurrogate());
         Selector.Add(new SpiceGrinderSurrogate());
     }

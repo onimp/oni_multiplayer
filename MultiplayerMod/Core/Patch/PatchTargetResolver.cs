@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Platform.Steam.Network.Messaging.Surrogates;
+using UnityEngine;
 
 namespace MultiplayerMod.Core.Patch;
 
@@ -13,10 +16,16 @@ public class PatchTargetResolver {
     private readonly Dictionary<Type, List<string>> targets;
     private readonly IEnumerable<Type> baseTypes;
     private readonly Assembly assembly = Assembly.GetAssembly(typeof(global::Game));
+    private bool checkArgumentsSerializable;
 
-    public PatchTargetResolver(Dictionary<Type, List<string>> targets, IEnumerable<Type> baseTypes) {
+    private PatchTargetResolver(
+        Dictionary<Type, List<string>> targets,
+        IEnumerable<Type> baseTypes,
+        bool checkArgumentsSerializable
+    ) {
         this.targets = targets;
         this.baseTypes = baseTypes;
+        this.checkArgumentsSerializable = checkArgumentsSerializable;
     }
 
     public IEnumerable<MethodBase> Resolve() {
@@ -58,8 +67,11 @@ public class PatchTargetResolver {
 
     private MethodBase GetMethodOrSetter(Type type, string methodName, Type? interfaceType) {
         var methodInfo = GetMethod(type, methodName, interfaceType);
-        if (methodInfo != null)
+        if (methodInfo != null) {
+            if (checkArgumentsSerializable)
+                ValidateArguments(methodInfo);
             return methodInfo;
+        }
 
         var property = GetSetter(type, methodName, interfaceType);
         if (property != null)
@@ -112,10 +124,50 @@ public class PatchTargetResolver {
         .Where(interfaceType => interfaceType.IsAssignableFrom(type))
         .ToList();
 
+    private void ValidateArguments(MethodBase? methodBase) {
+        if (methodBase == null) return;
+
+        var parameters = methodBase.GetParameters();
+        foreach (var parameterInfo in parameters) {
+            var paramType = parameterInfo.ParameterType;
+            ValidateTypeIsSerializable(methodBase, paramType);
+        }
+    }
+
+    private void ValidateTypeIsSerializable(MethodBase methodBase, Type checkType) {
+        if (checkType.IsInterface) {
+            var implementations = assembly.GetTypes()
+                .Where(
+                    type => type.IsClass && checkType.IsAssignableFrom(type)
+                ).ToList();
+            foreach (var implementation in implementations) {
+                ValidateTypeIsSerializable(methodBase, implementation);
+            }
+            return;
+        }
+        if (checkType.IsEnum) {
+            return;
+        }
+        var isTypeSerializable = checkType.IsDefined(typeof(SerializableAttribute), false);
+        var isSurrogateExists = SerializationSurrogates.Selector.GetSurrogate(
+            checkType,
+            new StreamingContext(StreamingContextStates.All),
+            out ISurrogateSelector _
+        ) != null;
+        var gameObjectOrKMono =
+            checkType.IsSubclassOf(typeof(GameObject)) || checkType.IsSubclassOf(typeof(KMonoBehaviour));
+        if (isTypeSerializable || isSurrogateExists || gameObjectOrKMono) return;
+
+        var message = $"{checkType} is not serializable (method {methodBase}.";
+        log.Error(message);
+        throw new Exception(message);
+    }
+
     public class Builder {
 
         private readonly Dictionary<Type, List<string>> targets = new();
         private readonly List<Type> baseTypes = new();
+        private bool checkArgumentsSerializable;
 
         private List<string> GetTargets(Type type) {
             if (targets.TryGetValue(type, out var methods))
@@ -136,7 +188,12 @@ public class PatchTargetResolver {
             return this;
         }
 
-        public PatchTargetResolver Build() => new(targets, baseTypes);
+        public Builder CheckArgumentsSerializable(bool check) {
+            checkArgumentsSerializable = check;
+            return this;
+        }
+
+        public PatchTargetResolver Build() => new(targets, baseTypes, checkArgumentsSerializable);
 
     }
 
