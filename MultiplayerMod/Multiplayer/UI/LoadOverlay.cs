@@ -4,7 +4,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Multiplayer.State;
 
-namespace MultiplayerMod.Game.UI.Overlay;
+namespace MultiplayerMod.Multiplayer.UI;
 
 public static class LoadOverlay {
     public static void Show() {

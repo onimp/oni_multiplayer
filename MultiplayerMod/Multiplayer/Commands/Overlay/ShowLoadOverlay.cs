@@ -1,5 +1,5 @@
 ﻿using System;
-using MultiplayerMod.Game.UI.Overlay;
+using MultiplayerMod.Multiplayer.UI;
 
 namespace MultiplayerMod.Multiplayer.Commands.Overlay;
 

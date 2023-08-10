@@ -1,6 +1,7 @@
 ﻿using System;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Game.UI;
 using MultiplayerMod.Network;
 using Steamworks;
 using UnityEngine;
@@ -17,6 +18,11 @@ public class LobbyJoinRequestComponent : MonoBehaviour {
     private void Awake() {
         client = (SteamClient) Container.Get<IMultiplayerClient>();
         lobbyJoinRequestedCallback = Callback<GameLobbyJoinRequested_t>.Create(OnLobbyJoinRequested);
+        MainMenuEvents.Initialized += OnMainMenuInitialized;
+    }
+
+    private void OnMainMenuInitialized() {
+        MainMenuEvents.Initialized -= OnMainMenuInitialized;
         ProcessCommandLine();
     }
 
