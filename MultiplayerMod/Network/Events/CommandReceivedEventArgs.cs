@@ -2,4 +2,4 @@
 
 namespace MultiplayerMod.Network.Events;
 
-public record CommandReceivedEventArgs(IPlayer? Player, IMultiplayerCommand Command);
+public record CommandReceivedEventArgs(IPlayerIdentity? Player, IMultiplayerCommand Command);

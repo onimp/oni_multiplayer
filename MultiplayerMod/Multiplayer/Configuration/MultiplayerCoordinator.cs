@@ -68,7 +68,7 @@ public class MultiplayerCoordinator {
         PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
     }
 
-    private void OnPlayerConnected(IPlayer player) {
+    private void OnPlayerConnected(IPlayerIdentity player) {
         if (!MultiplayerGame.State.Players.ContainsKey(player)) {
             MultiplayerGame.State.Players.Add(player, new PlayerState(player));
         }
@@ -79,7 +79,7 @@ public class MultiplayerCoordinator {
         WorldManager.Sync();
     }
 
-    private void OnPlayerDisconnected(IPlayer player) {
+    private void OnPlayerDisconnected(IPlayerIdentity player) {
         MultiplayerGame.State.Players.Remove(player);
         server.Send(new SyncMultiplayerState(MultiplayerGame.State));
         log.Debug($"Player {player} disconnected");

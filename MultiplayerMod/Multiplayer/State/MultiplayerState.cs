@@ -7,7 +7,7 @@ namespace MultiplayerMod.Multiplayer.State;
 
 [Serializable]
 public class MultiplayerState {
-    public Dictionary<IPlayer, PlayerState> Players = new();
+    public Dictionary<IPlayerIdentity, PlayerState> Players = new();
 
     public PlayerState Current => Players[Container.Get<IMultiplayerClient>().Player];
 }

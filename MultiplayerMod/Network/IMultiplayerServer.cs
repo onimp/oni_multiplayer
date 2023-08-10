@@ -11,13 +11,13 @@ public interface IMultiplayerServer {
 
     MultiplayerServerState State { get; }
     IMultiplayerEndpoint Endpoint { get; }
-    List<IPlayer> Players { get; }
+    List<IPlayerIdentity> Players { get; }
 
-    void Send(IPlayer player, IMultiplayerCommand command);
+    void Send(IPlayerIdentity player, IMultiplayerCommand command);
     void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None);
 
     event Action<ServerStateChangedEventArgs> StateChanged;
-    event Action<IPlayer> PlayerConnected;
-    event Action<IPlayer> PlayerDisconnected;
+    event Action<IPlayerIdentity> PlayerConnected;
+    event Action<IPlayerIdentity> PlayerDisconnected;
     event Action<CommandReceivedEventArgs> CommandReceived;
 }

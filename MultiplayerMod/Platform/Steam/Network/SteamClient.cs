@@ -18,14 +18,14 @@ namespace MultiplayerMod.Platform.Steam.Network;
 
 public class SteamClient : IMultiplayerClient {
 
-    public IPlayer Player => playerContainer.Value;
+    public IPlayerIdentity Player => playerContainer.Value;
     public MultiplayerClientState State { get; private set; } = MultiplayerClientState.Disconnected;
     public event Action<MultiplayerClientState>? StateChanged;
     public event Action<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
     private readonly SteamLobby lobby = Container.Get<SteamLobby>();
-    private readonly Lazy<IPlayer> playerContainer = new(() => new SteamPlayer(SteamUser.GetSteamID()));
+    private readonly Lazy<IPlayerIdentity> playerContainer = new(() => new SteamPlayerIdentity(SteamUser.GetSteamID()));
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
