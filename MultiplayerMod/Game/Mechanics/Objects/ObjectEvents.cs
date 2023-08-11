@@ -85,7 +85,8 @@ public static class ObjectEvents {
         )
         .AddMethods(typeof(ISidescreenButtonControl), nameof(ISidescreenButtonControl.OnSidescreenButtonPressed))
         .AddMethods(typeof(IUserControlledCapacity), nameof(IUserControlledCapacity.UserMaxCapacity))
-        .AddMethods(typeof(Assignable), nameof(Assignable.Assign), nameof(Assignable.Unassign)).AddMethods(
+        .AddMethods(typeof(Assignable), nameof(Assignable.Assign), nameof(Assignable.Unassign))
+        .AddMethods(
             typeof(AccessControl),
             nameof(AccessControl.SetPermission),
             nameof(AccessControl.ClearPermission),
@@ -116,6 +117,7 @@ public static class ObjectEvents {
         // )
         .AddBaseType(typeof(KMonoBehaviour))
         .AddBaseType(typeof(StateMachine.Instance))
+        .CheckArgumentsSerializable(true)
         .Build();
 
     // ReSharper disable once UnusedMember.Local
