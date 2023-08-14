@@ -8,7 +8,7 @@ public static class Container {
     private static readonly ConcurrentDictionary<Type, Lazy<object>> instances = new();
 
     public static T Get<T>() where T : notnull {
-        var singleton = instances[typeof(T)];
+        instances.TryGetValue(typeof(T), out var singleton);
         if (singleton == null)
             throw new ContainerException($"Type {typeof(T).FullName} not registered");
 
