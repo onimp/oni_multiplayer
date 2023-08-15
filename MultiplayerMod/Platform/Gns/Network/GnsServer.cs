@@ -1,9 +1,8 @@
+extern alias ValveSockets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using GNS.Sockets;
-using HarmonyLib;
 using MultiplayerMod.Core.Collections;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
@@ -12,7 +11,7 @@ using MultiplayerMod.Network;
 using MultiplayerMod.Network.Events;
 using MultiplayerMod.Platform.Base.Network;
 using MultiplayerMod.Platform.Base.Network.Messaging;
-using Configuration = GNS.Sockets.Configuration;
+using ValveSockets::Valve.Sockets;
 
 namespace MultiplayerMod.Platform.Gns.Network;
 
@@ -21,7 +20,7 @@ public class GnsServer : BaseServer {
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
-    private readonly Dictionary<IPlayer, UInt32> players = new();
+    private readonly Dictionary<IPlayer, uint> players = new();
     protected override List<IPlayer> getPlayers() => new(players.Keys);
     protected override IMultiplayerEndpoint getEndpoint() => new DevServerEndpoint();
 
@@ -166,7 +165,7 @@ public class GnsServer : BaseServer {
             handle.Size,
             SendFlags.Reliable
         );
-        if (result != GNS.Sockets.Result.OK)
+        if (result != ValveSockets::Valve.Sockets.Result.OK)
             log.Error($"Failed to send message, result: {result}");
     }
 
@@ -179,24 +178,24 @@ public class GnsServer : BaseServer {
         unidentifiedPollGroup = devServer.CreatePollGroup();
         Address serverAddress = new Address();
         serverAddress.SetAddress("127.0.0.1", 8081);
-        var configuration = new Configuration {
-            data = new Configuration.ConfigurationData { Int32 = 10485760 }, // 10 MiB
+        var configuration = new ValveSockets::Valve.Sockets.Configuration {
+            data = new ValveSockets::Valve.Sockets.Configuration.ConfigurationData { Int32 = 10485760 }, // 10 MiB
             value = ConfigurationValue.SendBufferSize,
             dataType = ConfigurationDataType.Int32
         };
-        var timeoutInitial = new Configuration {
-            data = new Configuration.ConfigurationData { Int32 = 10000000 },
+        var timeoutInitial = new ValveSockets::Valve.Sockets.Configuration {
+            data = new ValveSockets::Valve.Sockets.Configuration.ConfigurationData { Int32 = 10000000 },
             value = ConfigurationValue.TimeoutInitial,
             dataType = ConfigurationDataType.Int32,
         };
-        var timeoutConnect = new Configuration {
-            data = new Configuration.ConfigurationData { Int32 = 10000000 },
+        var timeoutConnect = new ValveSockets::Valve.Sockets.Configuration {
+            data = new ValveSockets::Valve.Sockets.Configuration.ConfigurationData { Int32 = 10000000 },
             value = ConfigurationValue.TimeoutConnected,
             dataType = ConfigurationDataType.Int32,
         };
         devListenSocket = devServer.CreateListenSocket(
             ref serverAddress,
-            new Configuration[3] {
+            new[] {
                 configuration, timeoutInitial, timeoutConnect
             }
         );

@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿extern alias ValveSockets;
+using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Loader;
 using MultiplayerMod.Core.Logging;

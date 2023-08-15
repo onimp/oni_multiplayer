@@ -1,4 +1,4 @@
-﻿using GNS.Sockets;
+﻿extern alias ValveSockets;
 using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Loader;
@@ -6,6 +6,7 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Gns.Network;
+using ValveSockets::Valve.Sockets;
 
 namespace MultiplayerMod.Platform.Gns;
 

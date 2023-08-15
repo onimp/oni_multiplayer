@@ -1,4 +1,5 @@
-﻿using System;
+﻿extern alias ValveSockets;
+using System;
 using System.Runtime.InteropServices;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;

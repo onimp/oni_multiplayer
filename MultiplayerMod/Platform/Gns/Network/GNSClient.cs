@@ -1,6 +1,6 @@
-﻿using System;
+﻿extern alias ValveSockets;
+using System;
 using System.Text;
-using GNS.Sockets;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
@@ -11,6 +11,7 @@ using MultiplayerMod.Network.Events;
 using MultiplayerMod.Platform.Base.Network;
 using MultiplayerMod.Platform.Base.Network.Components;
 using MultiplayerMod.Platform.Base.Network.Messaging;
+using ValveSockets::Valve.Sockets;
 
 namespace MultiplayerMod.Platform.Gns.Network;
 
@@ -147,7 +148,7 @@ public class GNSClient : BaseClient {
                     handle.Size,
                     SendFlags.Reliable
                 );
-                if (result != GNS.Sockets.Result.OK)
+                if (result != ValveSockets::Valve.Sockets.Result.OK)
                     log.Error($"Failed to send {command}: {result}");
             }
         );
