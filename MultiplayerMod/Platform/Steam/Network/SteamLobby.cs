@@ -1,4 +1,5 @@
 ﻿using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Platform.Base.Network;
 using Steamworks;
 
 namespace MultiplayerMod.Platform.Steam.Network;

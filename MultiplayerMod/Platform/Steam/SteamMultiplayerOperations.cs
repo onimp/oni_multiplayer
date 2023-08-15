@@ -1,19 +1,12 @@
-﻿using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Multiplayer;
-using MultiplayerMod.Network;
+﻿using MultiplayerMod.Multiplayer;
 using Steamworks;
 
 namespace MultiplayerMod.Platform.Steam;
 
 public class SteamMultiplayerOperations : IMultiplayerOperations {
 
-    public void Join()
-    {
-#if !USE_DEV_NET
+    public void Join() {
         SteamFriends.ActivateGameOverlay("friends");
-#else
-        Container.Get<IMultiplayerClient>().Connect(null);
-#endif
     }
 
 }

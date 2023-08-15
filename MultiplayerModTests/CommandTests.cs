@@ -3,8 +3,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
-using MultiplayerMod.Platform.Steam.Network;
-using MultiplayerMod.Platform.Steam.Network.Messaging;
+using MultiplayerMod.Platform.Base.Network;
+using MultiplayerMod.Platform.Base.Network.Messaging;
 using NUnit.Framework;
 
 namespace MultiplayerModTests;
@@ -53,10 +53,12 @@ public class CommandTests {
 
         var fragmentsCount = 0;
         var message = factory.Create(command, MultiplayerCommandOptions.None)
-            .Select(fragment => {
-                fragmentsCount++;
-                return processor.Process(0, fragment);
-            })
+            .Select(
+                fragment => {
+                    fragmentsCount++;
+                    return processor.Process(0, fragment);
+                }
+            )
             .FirstOrDefault(it => it != null);
 
         Assert.AreEqual(4, fragmentsCount);
