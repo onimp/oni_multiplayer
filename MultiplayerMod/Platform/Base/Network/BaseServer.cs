@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
@@ -27,25 +28,42 @@ public abstract class BaseServer : IMultiplayerServer {
 
     public List<IPlayer> Players => getPlayers();
 
-    public event EventHandler<ServerStateChangedEventArgs> StateChanged;
-    public event EventHandler<PlayerConnectedEventArgs> PlayerConnected;
-    public event EventHandler<CommandReceivedEventArgs> CommandReceived;
+    public event Action<ServerStateChangedEventArgs>? StateChanged;
+    public event Action<IPlayer>? PlayerConnected;
+    public event Action<IPlayer>? PlayerDisconnected;
+    public event Action<CommandReceivedEventArgs>? CommandReceived;
 
-    protected void OnPlayerConnected(PlayerConnectedEventArgs args) {
-        PlayerConnected?.Invoke(this, args);
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<BaseServer>();
+
+    protected void OnPlayerConnected(IPlayer player) {
+        PlayerConnected?.Invoke(player);
+    }
+
+    protected void OnPlayerDisconnected(IPlayer player) {
+        PlayerDisconnected?.Invoke(player);
     }
 
     protected void OnCommandReceived(CommandReceivedEventArgs args) {
-        CommandReceived?.Invoke(this, args);
+        CommandReceived?.Invoke(args);
     }
 
-    private GameObject gameObject;
+    private GameObject? gameObject;
 
     protected abstract void doStart();
 
     public void Start() {
+        if (!SteamManager.Initialized)
+            throw new NetworkPlatformException("Steam API is not initialized");
+
+        log.Debug("Starting...");
         SetState(MultiplayerServerState.Preparing);
-        doStart();
+        try {
+            doStart();
+        } catch (Exception) {
+            Reset();
+            SetState(MultiplayerServerState.Error);
+            throw;
+        }
         gameObject = UnityObject.CreateStaticWithComponent<ServerComponent>();
     }
 
@@ -53,7 +71,9 @@ public abstract class BaseServer : IMultiplayerServer {
         if (State <= MultiplayerServerState.Stopped)
             throw new NetworkPlatformException("Server isn't started");
 
-        UnityObject.Destroy(gameObject);
+        log.Debug("Stopping...");
+        if (gameObject != null)
+            UnityObject.Destroy(gameObject);
         Reset();
         SetState(MultiplayerServerState.Stopped);
     }
@@ -66,7 +86,7 @@ public abstract class BaseServer : IMultiplayerServer {
 
     protected void SetState(MultiplayerServerState state) {
         State = state;
-        StateChanged?.Invoke(this, new ServerStateChangedEventArgs(state));
+        StateChanged?.Invoke(new ServerStateChangedEventArgs(state));
     }
 
     protected abstract void doReset();

@@ -5,7 +5,7 @@ using MultiplayerMod.Game.UI.Tools.Events;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class Modify : IMultiplayerCommand {
+public class Modify : MultiplayerCommand {
 
     private ModifyEventArgs arguments;
 
@@ -14,7 +14,7 @@ public class Modify : IMultiplayerCommand {
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
-    public void Execute() {
+    public override void Execute() {
         var tool = new DebugTool {
             type = arguments.Type
         };

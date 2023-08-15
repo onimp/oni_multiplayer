@@ -4,7 +4,7 @@ using UnityEngine;
 namespace MultiplayerMod.Game.UI.Tools.Events;
 
 [Serializable]
-public class StampEventArgs {
-    public TemplateContainer Template { set; get; }
-    public Vector2 Location { set; get; }
-}
+public record StampEventArgs(
+    TemplateContainer Template,
+    Vector2 Location
+);

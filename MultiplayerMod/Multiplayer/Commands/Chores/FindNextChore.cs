@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.World;
@@ -10,7 +9,7 @@ using Object = UnityEngine.Object;
 namespace MultiplayerMod.Multiplayer.Commands.Chores;
 
 [Serializable]
-public class FindNextChore : IMultiplayerCommand {
+public class FindNextChore : MultiplayerCommand {
 
     private static Core.Logging.Logger log = LoggerFactory.GetLogger<FindNextChore>();
 
@@ -34,17 +33,17 @@ public class FindNextChore : IMultiplayerCommand {
         isAttemptingOverride = args.IsAttemptingOverride;
     }
 
-    public void Execute() {
+    public override void Execute() {
         log.Debug(
             $"Received {instanceId} {instanceString} {instanceCell} {choreId} {choreType} {choreCell}"
         );
         var choreContext = FindContext();
-        if (choreContext != null) {
-            if (!HostChores.Index.ContainsKey(instanceId)) {
-                HostChores.Index[instanceId] = new Queue<Chore.Precondition.Context>();
-            }
-            HostChores.Index[instanceId].Enqueue(choreContext.Value);
-        }
+        if (choreContext == null)
+            return;
+
+        if (!HostChores.Index.ContainsKey(instanceId))
+            HostChores.Index[instanceId] = new Queue<Chore.Precondition.Context>();
+        HostChores.Index[instanceId].Enqueue(choreContext.Value);
     }
 
     private Chore.Precondition.Context? FindContext() {
@@ -83,7 +82,7 @@ public class FindNextChore : IMultiplayerCommand {
         string serverChoreType,
         bool isAttemptingOverride
     ) {
-        Chore choreWithIdCollision = null;
+        Chore? choreWithIdCollision = null;
         var chore = FindInInstance(
                         instance,
                         choreId,
@@ -121,12 +120,12 @@ public class FindNextChore : IMultiplayerCommand {
         return new Chore.Precondition.Context(chore, instance.consumerState, isAttemptingOverride);
     }
 
-    private static Chore FindInInstance(
+    private static Chore? FindInInstance(
         ChoreConsumer instance,
         int choreId,
         int cell,
         string serverChoreType,
-        ref Chore choreWithIdCollision
+        ref Chore? choreWithIdCollision
     ) {
         var chores = instance.GetProviders()
             .SelectMany(provider => provider.choreWorldMap.Values.SelectMany(x => x))
@@ -140,12 +139,12 @@ public class FindNextChore : IMultiplayerCommand {
         ) ?? FindByTypeAndCell(chores, cell, serverChoreType);
     }
 
-    private static Chore FindInGlobal(
+    private static Chore? FindInGlobal(
         ChoreConsumer instance,
         int choreId,
         int cell,
         string serverChoreType,
-        ref Chore choreWithIdCollision
+        ref Chore? choreWithIdCollision
     ) {
         var globalChores =
             Object.FindObjectsOfType<ChoreConsumer>()
@@ -167,13 +166,12 @@ public class FindNextChore : IMultiplayerCommand {
         return chore;
     }
 
-    [CanBeNull]
-    private static Chore FindFullMatch(
+    private static Chore? FindFullMatch(
         Chore[] chores,
         int choreId,
         int choreCell,
         string choreType,
-        ref Chore choreWithIdCollision
+        ref Chore? choreWithIdCollision
     ) {
         var result = chores.FirstOrDefault(
             chore => chore.id == choreId
@@ -189,17 +187,17 @@ public class FindNextChore : IMultiplayerCommand {
             choreWithIdCollision = result;
             return null;
         }
-        if (result.GetType().ToString() != choreType) {
-            log.Warning(
-                $"Chore type is not equal client: {result.GetType()} != server {choreType}"
-            );
-            choreWithIdCollision = result;
-            return null;
-        }
-        return result;
+        if (result.GetType().ToString() == choreType)
+            return result;
+
+        log.Warning(
+            $"Chore type is not equal client: {result.GetType()} != server {choreType}"
+        );
+        choreWithIdCollision = result;
+        return null;
     }
 
-    private static Chore FindByTypeAndCell(Chore[] chores, int choreCell, string choreType) {
+    private static Chore? FindByTypeAndCell(Chore[] chores, int choreCell, string choreType) {
         var choreOfType = chores.Where(chore => chore.GetType().ToString() == choreType).ToList();
         var results = choreOfType.Where(
             chore => DependsOnConsumerCell(choreType) ||
@@ -233,7 +231,7 @@ public class FindNextChore : IMultiplayerCommand {
     /// <summary>
     /// This chores depends only on consumer position.
     ///
-    /// If consumer position is off due to any reason chore must be taken regardless of its positon.
+    /// If consumer position is off due to any reason chore must be taken regardless of its position.
     /// </summary>
     /// <returns></returns>
     private static bool DependsOnConsumerCell(string choreType) {

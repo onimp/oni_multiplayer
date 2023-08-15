@@ -8,7 +8,7 @@ public static class CopySettingsEvents {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(CopySettingsEvents));
 
-    public static event EventHandler<CopySettingsEventArgs> Copy;
+    public static event Action<CopySettingsEventArgs>? Copy;
 
     static CopySettingsEvents() => DragToolEvents.DragComplete += OnDragComplete;
 
@@ -17,6 +17,9 @@ public static class CopySettingsEvents {
             return;
 
         var lastSelection = GameState.LastSelectedObject;
+        if (lastSelection == null)
+            return;
+
         var cell = Grid.PosToCell(lastSelection.GetComponent<Transform>().GetPosition());
 
         var component = lastSelection.GetComponent<BuildingComplete>();
@@ -27,7 +30,7 @@ public static class CopySettingsEvents {
 
         var layer = component.Def.ObjectLayer;
 
-        Copy?.Invoke(sender, new CopySettingsEventArgs { DragEvent = e, SourceCell = cell, SourceLayer = layer });
+        Copy?.Invoke( new CopySettingsEventArgs(e, cell, layer));
     }
 
 }

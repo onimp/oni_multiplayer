@@ -6,11 +6,12 @@ namespace MultiplayerMod.Game;
 [HarmonyPatch]
 public static class GameState {
 
-    public static GameObject LastSelectedObject { get; private set; }
+    public static GameObject? LastSelectedObject { get; private set; }
     public static PrioritySetting BuildToolPriority => GetBuildToolPriority();
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(global::Game), nameof(global::Game.OnPrefabInit))]
+    // ReSharper disable once UnusedMember.Local
     private static void OnGamePrefabInit(global::Game __instance) {
         __instance.Subscribe(
             (int) GameHashes.SelectObject,

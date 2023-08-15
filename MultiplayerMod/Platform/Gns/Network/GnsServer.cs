@@ -12,6 +12,7 @@ using MultiplayerMod.Network.Events;
 using MultiplayerMod.Platform.Base.Network;
 using MultiplayerMod.Platform.Base.Network.Messaging;
 using ValveSockets::Valve.Sockets;
+using Configuration = ValveSockets::Valve.Sockets.Configuration;
 
 namespace MultiplayerMod.Platform.Gns.Network;
 
@@ -24,8 +25,8 @@ public class GnsServer : BaseServer {
     protected override List<IPlayer> getPlayers() => new(players.Keys);
     protected override IMultiplayerEndpoint getEndpoint() => new DevServerEndpoint();
 
-    private IPlayer currentPlayer;
-    private NetworkingSockets devServer;
+    private IPlayer currentPlayer = null!;
+    private NetworkingSockets devServer = null!;
     private uint devPollGroup;
     private uint unidentifiedPollGroup;
     private uint devListenSocket;
@@ -82,11 +83,11 @@ public class GnsServer : BaseServer {
 
     private void IdentifyClients() {
         const int maxMessages = 20;
-        NetworkingMessage[] netMessages = new NetworkingMessage[maxMessages];
-        int count = devServer.ReceiveMessagesOnPollGroup(unidentifiedPollGroup, netMessages, maxMessages);
+        var netMessages = new NetworkingMessage[maxMessages];
+        var count = devServer.ReceiveMessagesOnPollGroup(unidentifiedPollGroup, netMessages, maxMessages);
 
-        for (int i = 0; i < count; ++i) {
-            ref NetworkingMessage netMessage = ref netMessages[i];
+        for (var i = 0; i < count; ++i) {
+            ref var netMessage = ref netMessages[i];
             log.Info(
                 "IdentifyClients(): Message received from - ID: " + netMessage.connection
                                                                   + ", Channel ID: " + netMessage.channel
@@ -94,9 +95,9 @@ public class GnsServer : BaseServer {
             );
             var connection = netMessage.connection;
             try {
-                byte[] buffer = new byte[64];
+                var buffer = new byte[64];
                 netMessage.CopyTo(buffer);
-                int pos = Array.IndexOf(buffer, (byte) 0);
+                var pos = Array.IndexOf(buffer, (byte) 0);
                 if (pos < 0)
                     pos = buffer.Length;
                 var identity = Encoding.ASCII.GetString(buffer, 0, pos);
@@ -106,7 +107,7 @@ public class GnsServer : BaseServer {
                     currentPlayer = connectedPlayer;
                 devServer.SetConnectionPollGroup(devPollGroup, connection);
                 players[connectedPlayer] = connection;
-                OnPlayerConnected(new PlayerConnectedEventArgs(connectedPlayer));
+                OnPlayerConnected(connectedPlayer);
             } catch (Exception) {
                 devServer.CloseConnection(connection);
                 log.Info($"Failed to identify client - disconnecting {connection}");
@@ -117,11 +118,11 @@ public class GnsServer : BaseServer {
     private void ReceiveDevMessages() {
         const int maxMessages = 20;
 
-        NetworkingMessage[] netMessages = new NetworkingMessage[maxMessages];
+        var netMessages = new NetworkingMessage[maxMessages];
 
-        int netMessagesCount = devServer.ReceiveMessagesOnPollGroup(devPollGroup, netMessages, maxMessages);
-        for (int i = 0; i < netMessagesCount; i++) {
-            ref NetworkingMessage netMessage = ref netMessages[i];
+        var netMessagesCount = devServer.ReceiveMessagesOnPollGroup(devPollGroup, netMessages, maxMessages);
+        for (var i = 0; i < netMessagesCount; i++) {
+            ref var netMessage = ref netMessages[i];
 
             log.Info(
                 "Message received from - ID: " + netMessage.connection + ", Channel ID: " + netMessage.channel +
@@ -135,7 +136,7 @@ public class GnsServer : BaseServer {
                 log.Info($"Received message {message}");
 
                 var connection = netMessage.connection;
-                IPlayer player = players.Where(it => it.Value.Equals(connection)).Select(it => it.Key).First();
+                var player = players.Where(it => it.Value.Equals(connection)).Select(it => it.Key).First();
 
                 if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
                     OnCommandReceived(new CommandReceivedEventArgs(player, message.Command));
@@ -176,20 +177,20 @@ public class GnsServer : BaseServer {
         devServer = new NetworkingSockets();
         devPollGroup = devServer.CreatePollGroup();
         unidentifiedPollGroup = devServer.CreatePollGroup();
-        Address serverAddress = new Address();
+        var serverAddress = new Address();
         serverAddress.SetAddress("127.0.0.1", 8081);
-        var configuration = new ValveSockets::Valve.Sockets.Configuration {
-            data = new ValveSockets::Valve.Sockets.Configuration.ConfigurationData { Int32 = 10485760 }, // 10 MiB
+        var configuration = new Configuration {
+            data = new Configuration.ConfigurationData { Int32 = 10485760 }, // 10 MiB
             value = ConfigurationValue.SendBufferSize,
             dataType = ConfigurationDataType.Int32
         };
-        var timeoutInitial = new ValveSockets::Valve.Sockets.Configuration {
-            data = new ValveSockets::Valve.Sockets.Configuration.ConfigurationData { Int32 = 10000000 },
+        var timeoutInitial = new Configuration {
+            data = new Configuration.ConfigurationData { Int32 = 10000000 },
             value = ConfigurationValue.TimeoutInitial,
             dataType = ConfigurationDataType.Int32,
         };
-        var timeoutConnect = new ValveSockets::Valve.Sockets.Configuration {
-            data = new ValveSockets::Valve.Sockets.Configuration.ConfigurationData { Int32 = 10000000 },
+        var timeoutConnect = new Configuration {
+            data = new Configuration.ConfigurationData { Int32 = 10000000 },
             value = ConfigurationValue.TimeoutConnected,
             dataType = ConfigurationDataType.Int32,
         };

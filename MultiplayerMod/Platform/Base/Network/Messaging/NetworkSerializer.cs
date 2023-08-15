@@ -10,11 +10,10 @@ public static class NetworkSerializer {
         return new SerializedNetworkMessage(message);
     }
 
-    public static unsafe INetworkMessage Deserialize(INetworkMessageHandle message) {
-        return (INetworkMessage) new BinaryFormatter { SurrogateSelector = SerializationSurrogates.Selector }
+    public static unsafe INetworkMessage Deserialize(INetworkMessageHandle message) =>
+        (INetworkMessage) new BinaryFormatter { SurrogateSelector = SerializationSurrogates.Selector }
             .Deserialize(
                 new UnmanagedMemoryStream((byte*) message.Pointer.ToPointer(), message.Size)
             );
-    }
 
 }

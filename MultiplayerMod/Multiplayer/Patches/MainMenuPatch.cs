@@ -11,8 +11,9 @@ internal class MainMenuPatch {
 
     [HarmonyPrefix]
     [HarmonyPatch("OnPrefabInit")]
+    // ReSharper disable once UnusedMember.Local
     private static void OnPrefabInit(MainMenu __instance) {
-        MultiplayerState.Reset();
+        MultiplayerGame.Reset();
         var operations = Container.Get<IMultiplayerOperations>();
         __instance.AddButton("NEW MULTIPLAYER", highlight: true, CreateHostWrapper(__instance.NewGame));
         __instance.AddButton("LOAD MULTIPLAYER", highlight: false, CreateHostWrapper(__instance.LoadGame));
@@ -21,7 +22,7 @@ internal class MainMenuPatch {
 
     // TODO: Reset multiplayer role to none in case of button action cancellation
     private static System.Action CreateHostWrapper(System.Action action) => () => {
-        MultiplayerState.Role = MultiplayerRole.Host;
+        MultiplayerGame.Role = MultiplayerRole.Host;
         action();
     };
 

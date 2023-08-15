@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
 
 [Serializable]
-public class ChangeSchedulesList : IMultiplayerCommand {
+public class ChangeSchedulesList : MultiplayerCommand {
+
+    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ChangeSchedulesList>();
 
     private readonly List<SerializableSchedule> serializableSchedules;
 
@@ -13,27 +18,42 @@ public class ChangeSchedulesList : IMultiplayerCommand {
         serializableSchedules = schedules.Select(schedule => new SerializableSchedule(schedule)).ToList();
     }
 
-    public void Execute() {
-        ScheduleManager.Instance.schedules.Clear();
-        foreach (var serializableSchedule in serializableSchedules) {
-            var schedule = ScheduleManager.Instance.AddSchedule(
-                serializableSchedule.Groups,
-                serializableSchedule.name,
-                serializableSchedule.alarmActivated
-            );
-            schedule.assigned = serializableSchedule.Assigned;
+    public override void Execute() {
+        var manager = ScheduleManager.Instance;
+        var schedules = manager.schedules;
+
+        for (var i = 0; i < Math.Min(serializableSchedules.Count, schedules.Count); i++) {
+            var schedule = schedules[i];
+            var changedSchedule = serializableSchedules[i];
+            schedule.name = changedSchedule.Name;
+            schedule.alarmActivated = changedSchedule.AlarmActivated;
+            schedule.assigned = changedSchedule.Assigned;
+            schedule.SetBlocksToGroupDefaults(changedSchedule.Groups); // Triggers "Changed"
+        }
+
+        if (Math.Abs(serializableSchedules.Count - schedules.Count) > 1)
+            log.Warning("Schedules update contains more than one schedule addition / removal");
+
+        if (serializableSchedules.Count > schedules.Count) {
+            // New schedules was added
+            var newSchedule = serializableSchedules.Last();
+            var schedule = manager.AddSchedule(newSchedule.Groups, newSchedule.Name, newSchedule.AlarmActivated);
+            schedule.assigned = newSchedule.Assigned;
             schedule.Changed();
+        } else if (schedules.Count > serializableSchedules.Count) {
+            // A schedule was removed
+            manager.DeleteSchedule(schedules.Last());
         }
     }
 
     [Serializable]
     private class SerializableSchedule {
-        public string name;
-        public bool alarmActivated;
-        private List<int> assigned;
+        public string Name { get; }
+        public bool AlarmActivated { get; }
+        private List<ComponentReference<Schedulable>> assigned;
         private List<string> blocks;
 
-        private static Dictionary<String, ScheduleGroup> groups =
+        private static Dictionary<string, ScheduleGroup> groups =
             Db.Get().ScheduleGroups.allGroups.ToDictionary(
                 a => a.Id,
                 // It is a group for 1 hour, so it's important to change defaultSegments value to '1' from the default.
@@ -50,19 +70,18 @@ public class ChangeSchedulesList : IMultiplayerCommand {
             );
 
         public SerializableSchedule(global::Schedule schedule) {
-            name = schedule.name;
-            alarmActivated = schedule.alarmActivated;
+            Name = schedule.name;
+            AlarmActivated = schedule.alarmActivated;
             blocks = schedule.blocks.Select(block => block.GroupId).ToList();
-            assigned = schedule.assigned.Select(@ref => @ref.id).ToList();
+            assigned = schedule.assigned
+                .Select(@ref => @ref.obj.gameObject.GetComponent<Schedulable>().GetReference())
+                .ToList();
         }
 
         public List<ScheduleGroup> Groups => blocks.Select(block => groups[block]).ToList();
-        public List<Ref<Schedulable>> Assigned => assigned.Select(id => new Ref<Schedulable>(Get(id))).ToList();
 
-        public Schedulable Get(int id) {
-            var instance = KPrefabIDTracker.Get().GetInstance(id);
-            return instance?.GetComponent<Schedulable>();
-        }
+        public List<Ref<Schedulable>> Assigned =>
+            assigned.Select(reference => new Ref<Schedulable>(reference.GetComponent())).ToList();
     }
 
 }

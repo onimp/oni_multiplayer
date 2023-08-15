@@ -6,6 +6,7 @@ using MultiplayerMod.Core.Unity;
 
 namespace MultiplayerMod.Core.Scheduling;
 
+// ReSharper disable once UnusedType.Global
 public class UnityTaskSchedulerLoader : IModComponentLoader {
 
     private readonly Logging.Logger log = LoggerFactory.GetLogger<UnityTaskSchedulerLoader>();

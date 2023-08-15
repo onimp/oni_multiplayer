@@ -1,23 +1,24 @@
 ﻿using System;
-using MultiplayerMod.Multiplayer.Extensions;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 
 [Serializable]
-public class MasterSkill : IMultiplayerCommand {
+public class MasterSkill : MultiplayerCommand {
 
-    private readonly string properName;
+    private readonly GameObjectReference minionIdentityReference;
     private readonly string skillId;
 
-    public MasterSkill(string properName, string skillId) {
-        this.properName = properName;
+    public MasterSkill(MinionIdentity minionIdentity, string skillId) {
+        minionIdentityReference = minionIdentity.gameObject.GetMultiplayerReference();
         this.skillId = skillId;
     }
 
-    public void Execute() {
-        var minionIdentity = MinionIdentityUtils.GetLiveMinion(properName);
+    public override void Execute() {
+        var component = minionIdentityReference.GetComponent<MinionResume>();
+        if (component == null) return;
 
-        var component = minionIdentity.GetComponent<MinionResume>();
         if (DebugHandler.InstantBuildMode && component.AvailableSkillpoints < 1)
             component.ForceAddSkillPoint();
         var masteryConditions = component.GetSkillMasteryConditions(skillId);

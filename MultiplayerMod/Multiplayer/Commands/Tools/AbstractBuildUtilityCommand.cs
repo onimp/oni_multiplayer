@@ -6,7 +6,7 @@ using MultiplayerMod.Game.UI.Tools.Events;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class AbstractBuildUtilityCommand<T> : IMultiplayerCommand where T : BaseUtilityBuildTool, new() {
+public class AbstractBuildUtilityCommand<T> : MultiplayerCommand where T : BaseUtilityBuildTool, new() {
 
     protected UtilityBuildEventArgs Arguments;
 
@@ -15,7 +15,7 @@ public class AbstractBuildUtilityCommand<T> : IMultiplayerCommand where T : Base
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
-    public void Execute() {
+    public override void Execute() {
         var definition = Assets.GetBuildingDef(Arguments.PrefabId);
         var tool = new T {
             def = definition,

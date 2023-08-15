@@ -22,21 +22,21 @@ using static Steamworks.ESteamNetworkingConnectionState;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
-
 public class SteamServer : BaseServer {
+
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamServer>();
 
-    private Callback<SteamServersConnected_t> steamServersConnectedCallback;
-    private TaskCompletionSource<bool> lobbyCompletionSource;
-    private TaskCompletionSource<bool> steamServersCompletionSource;
-    private CancellationTokenSource callbacksCancellationTokenSource;
+    private Callback<SteamServersConnected_t> steamServersConnectedCallback = null!;
+    private TaskCompletionSource<bool> lobbyCompletionSource = null!;
+    private TaskCompletionSource<bool> steamServersCompletionSource = null!;
+    private CancellationTokenSource callbacksCancellationTokenSource = null!;
 
     private HSteamNetPollGroup pollGroup;
     private HSteamListenSocket listenSocket;
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { SteamConfiguration.SendBufferSize() };
-    private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback;
+    private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback = null!;
 
     private readonly Dictionary<IPlayer, HSteamNetConnection> players = new();
     protected override IMultiplayerEndpoint getEndpoint() => new SteamServerEndpoint(lobby.Id);
@@ -137,14 +137,9 @@ public class SteamServer : BaseServer {
         GameServer.Shutdown();
         steamServersConnectedCallback.Unregister();
 
-        ResetTaskCompletionSource(ref lobbyCompletionSource);
-        ResetTaskCompletionSource(ref steamServersCompletionSource);
+        lobbyCompletionSource.TrySetCanceled();
+        steamServersCompletionSource.TrySetCanceled();
         callbacksCancellationTokenSource.Cancel();
-    }
-
-    private void ResetTaskCompletionSource<T>(ref TaskCompletionSource<T> source) {
-        source.TrySetCanceled();
-        source = null;
     }
 
     private void OnServerStarted() {
@@ -156,7 +151,7 @@ public class SteamServer : BaseServer {
 
     private void ConnectedToSteamCallback() => steamServersCompletionSource.SetResult(true);
 
-    public void ReceiveMessages() {
+    private void ReceiveMessages() {
         var messages = new IntPtr[128];
         var messagesCount = SteamGameServerNetworkingSockets.ReceiveMessagesOnPollGroup(pollGroup, messages, 128);
         for (var i = 0; i < messagesCount; i++) {
@@ -206,7 +201,7 @@ public class SteamServer : BaseServer {
         switch (state) {
             case k_ESteamNetworkingConnectionState_Connecting:
                 if (TryAcceptConnection(connection, clientSteamId))
-                    OnPlayerConnected(new PlayerConnectedEventArgs(new SteamPlayer(clientSteamId)));
+                    OnPlayerConnected(new SteamPlayer(clientSteamId));
                 break;
             case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
             case k_ESteamNetworkingConnectionState_ClosedByPeer:
@@ -240,11 +235,12 @@ public class SteamServer : BaseServer {
     }
 
     private void CloseConnection(HSteamNetConnection connection, CSteamID clientSteamId) {
+        OnPlayerDisconnected(new SteamPlayer(clientSteamId));
         SteamGameServerNetworkingSockets.CloseConnection(
             connection,
-            nReason: (int) k_ESteamNetConnectionEnd_App_Generic,
-            pszDebug: null,
-            bEnableLinger: false
+            (int) k_ESteamNetConnectionEnd_App_Generic,
+            null,
+            false
         );
         players.Remove(new SteamPlayer(clientSteamId));
         Debug.Log($"Connection closed for {clientSteamId}");

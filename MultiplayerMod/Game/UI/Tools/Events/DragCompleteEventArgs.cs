@@ -5,10 +5,10 @@ using UnityEngine;
 namespace MultiplayerMod.Game.UI.Tools.Events;
 
 [Serializable]
-public class DragCompleteEventArgs : EventArgs {
-    public List<int> Cells { get; set; }
-    public Vector3 CursorDown { get; set; }
-    public Vector3 CursorUp { get; set; }
-    public PrioritySetting Priority { get; set; }
-    public string[] Parameters { get; set; }
-}
+public record DragCompleteEventArgs(
+    List<int> Cells,
+    Vector3 CursorDown,
+    Vector3 CursorUp,
+    PrioritySetting Priority,
+    string[]? Parameters
+);

@@ -8,7 +8,7 @@ using MultiplayerMod.Game.UI.Tools.Events;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class AbstractDragToolCommand<T> : IMultiplayerCommand where T : DragTool, new() {
+public class AbstractDragToolCommand<T> : MultiplayerCommand where T : DragTool, new() {
 
     protected DragCompleteEventArgs Arguments;
 
@@ -17,11 +17,13 @@ public class AbstractDragToolCommand<T> : IMultiplayerCommand where T : DragTool
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
-    public void Execute() {
+    public override void Execute() {
         var tool = new T();
         InitializeTool(tool);
-        GameContext.Override(new PrioritySettingsContext(Arguments.Priority), () => InvokeTool(tool));
+        GameContext.Override(CreateContext(), () => InvokeTool(tool));
     }
+
+    protected virtual IGameContext CreateContext() => new PrioritySettingsContext(Arguments.Priority);
 
     protected virtual void InitializeTool(T tool) {
         tool.downPos = Arguments.CursorDown;

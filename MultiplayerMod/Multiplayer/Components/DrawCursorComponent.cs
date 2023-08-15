@@ -9,16 +9,18 @@ namespace MultiplayerMod.Multiplayer.Components;
 public class DrawCursorComponent : MonoBehaviour {
 
     private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();
-    private Texture2D cursorTexture;
-    private Camera mainCamera;
+    private Texture2D cursorTexture = null!;
+    private Camera mainCamera = null!;
+    private bool initialized;
 
     private void OnEnable() {
         cursorTexture = Assets.GetTexture("cursor_arrow");
-        mainCamera = Camera.main;
+        mainCamera = Camera.main!;
+        initialized = true;
     }
 
     private void OnGUI() {
-        foreach (var (player, state) in MultiplayerState.Shared.Players) {
+        foreach (var (player, state) in MultiplayerGame.State.Players) {
             if (player.Equals(client.Player))
                 continue;
 
@@ -27,6 +29,8 @@ public class DrawCursorComponent : MonoBehaviour {
     }
 
     private void RenderCursor(Vector2 position) {
+        if (!initialized) return;
+
         var worldPos = new Vector3(position.x, position.y, 0);
         var screenPoint = mainCamera.WorldToScreenPoint(worldPos);
 

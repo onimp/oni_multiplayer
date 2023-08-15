@@ -5,7 +5,7 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Commands.State;
 
 [Serializable]
-public class UpdateCursorPosition : IMultiplayerCommand {
+public class UpdateCursorPosition : MultiplayerCommand {
 
     private IPlayer player;
     private Vector2 position;
@@ -15,8 +15,8 @@ public class UpdateCursorPosition : IMultiplayerCommand {
         this.position = position;
     }
 
-    public void Execute() {
-        MultiplayerState.Shared.Players.TryGetValue(player, out var state);
+    public override void Execute() {
+        MultiplayerGame.State.Players.TryGetValue(player, out var state);
         if (state == null)
             return;
 

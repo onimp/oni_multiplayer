@@ -1,8 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DefineConstants>TRACE;</DefineConstants>
+        <Optimize>false</Optimize>
         <DebugType>full</DebugType>
+        <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants/>
+        <Optimize>false</Optimize>
+        <DebugType>portable</DebugType>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Publish' ">
+        <DefineConstants/>
+        <Optimize>true</Optimize>
+        <DebugType>none</DebugType>
+    </PropertyGroup>
+    <PropertyGroup>
+        <Nullable>enable</Nullable>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
+        <Configurations>Debug;Release;Publish</Configurations>
+        <Platforms>AnyCPU</Platforms>
+    </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyName>MultiplayerMod</AssemblyName>
+        <AssemblyTitle>Multiplayer Mod for Oxygen Not Included</AssemblyTitle>
+        <Copyright>MIT License (C) ONIMP Team</Copyright>
+        <Company>ONIMP Team</Company>
+        <RepositoryUrl>https://github.com/onimp/oni_multiplayer</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
+    <PropertyGroup>
+        <OniSupportedContent>VANILLA_ID</OniSupportedContent>
+        <OniMinimumSupportedBuild>537329</OniMinimumSupportedBuild>
+        <OniApiVersion>2</OniApiVersion>
     </PropertyGroup>
     <ItemGroup>
         <Content Include="$(UserProfile)\AppData\LocalLow\Klei\Oxygen Not Included\Player.log">
@@ -17,17 +47,18 @@
         <Reference Include="Assembly-CSharp-firstpass" HintPath="lib\exposed\Assembly-CSharp-firstpass.dll" Private="false" />
         <Reference Include="UnityEngine.CoreModule" HintPath="lib\exposed\UnityEngine.CoreModule.dll" Private="false" />
         <Reference Include="UnityEngine.UI" HintPath="lib\exposed\UnityEngine.UI.dll" Private="false" />
+        <Reference Include="0Harmony" HintPath="lib\exposed\0Harmony.dll" Private="false" />
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="0Harmony" HintPath="$(ManagedPath)\0Harmony.dll" Private="false" />
         <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedPath)\com.rlabrecque.steamworks.net.dll" Private="false" />
         <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" Private="false" />
         <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedPath)\Unity.TextMeshPro.dll" Private="false" />
         <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
         <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(ManagedPath)\UnityEngine.ImageConversionModule.dll" Private="false" />
         <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedPath)\UnityEngine.IMGUIModule.dll" Private="false" />
+        <Reference Include="ImGui.NET" HintPath="$(ManagedPath)\ImGui.NET.dll" Private="false" />
     </ItemGroup>
     <ItemGroup>
-      <PackageReference Include="ValveSockets-CSharp" Aliases="ValveSockets" Version="1.2.0" />
+        <PackageReference Include="ValveSockets-CSharp" Aliases="ValveSockets" Version="1.2.0" />
     </ItemGroup>
 </Project>

@@ -1,34 +1,28 @@
 ﻿using System;
-using System.Linq;
 using System.Reflection;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 
 [Serializable]
-public class ClickUserMenuButton : IMultiplayerCommand {
+public class ClickUserMenuButton : MultiplayerCommand {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(ClickUserMenuButton));
 
-    private int instanceId;
+    private GameObjectReference reference;
     private Type actionDeclaringType;
     private string actionName;
 
     public ClickUserMenuButton(GameObject gameObject, System.Action action) {
-        instanceId = gameObject.GetComponent<KPrefabID>().InstanceID;
-        actionDeclaringType = action.Method.DeclaringType;
+        reference = gameObject.GetMultiplayerReference();
+        actionDeclaringType = action.Method.DeclaringType!;
         actionName = action.Method.Name;
     }
 
-    public void Execute() {
-        var kPrefabID = Object.FindObjectsOfType<KPrefabID>().FirstOrDefault(a => a.InstanceID == instanceId);
-        if (kPrefabID == null) return;
-
-        var actionObject = kPrefabID.GetComponent(actionDeclaringType);
-        if (actionObject == null) return;
-
+    public override void Execute() {
         try {
             var methodInfo = actionDeclaringType.GetMethod(
                 actionName,
@@ -37,9 +31,9 @@ public class ClickUserMenuButton : IMultiplayerCommand {
                 new Type[] { },
                 new ParameterModifier[] { }
             );
-            methodInfo?.Invoke(actionObject, new object[] { });
+            methodInfo?.Invoke(reference.GetComponent(actionDeclaringType), new object[] { });
         } catch (Exception e) {
-            log.Error(e.ToString);
+            log.Error(e.ToString());
         }
     }
 }

@@ -9,7 +9,7 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class Build : IMultiplayerCommand {
+public class Build : MultiplayerCommand {
 
     private BuildEventArgs arguments;
 
@@ -17,7 +17,7 @@ public class Build : IMultiplayerCommand {
         this.arguments = arguments;
     }
 
-    public void Execute() {
+    public override void Execute() {
         var definition = Assets.GetBuildingDef(arguments.PrefabId);
         var cbcPosition = Grid.CellToPosCBC(arguments.Cell, Grid.SceneLayer.Building);
         GameContext.Override(new DisableBuildingValidation(), () => Execute(definition, cbcPosition));
@@ -35,7 +35,7 @@ public class Build : IMultiplayerCommand {
             : definition.TryPlace(null, cbcPosition, arguments.Orientation, arguments.Materials, arguments.FacadeId);
     }
 
-    private GameObject DoUpgrade(BuildingDef definition, Vector3 cbcPosition) {
+    private GameObject? DoUpgrade(BuildingDef definition, Vector3 cbcPosition) {
         if (arguments.InstantBuild) {
             var candidate = definition.GetReplacementCandidate(arguments.Cell);
             return InstantUpgrade(definition, candidate);
@@ -45,7 +45,7 @@ public class Build : IMultiplayerCommand {
         return item;
     }
 
-    public GameObject InstantUpgrade(BuildingDef definition, GameObject candidate) {
+    public GameObject? InstantUpgrade(BuildingDef definition, GameObject candidate) {
         if (candidate.GetComponent<SimCellOccupier>() == null) {
             UnityObject.Destroy(candidate);
             return DoInstantBuild(definition);

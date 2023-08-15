@@ -4,10 +4,10 @@ namespace MultiplayerMod.Multiplayer;
 
 public static class MultiplayerEvents {
 
-    public static PlayerWorldSpawnedEventHandler PlayerWorldSpawned;
+    public static Action<IPlayer>? PlayerWorldSpawned;
 
     [Serializable]
-    public class PlayerWorldSpawnedEvent : IMultiplayerCommand {
+    public class PlayerWorldSpawnedEvent : MultiplayerCommand {
 
         private IPlayer player;
 
@@ -15,13 +15,9 @@ public static class MultiplayerEvents {
             this.player = player;
         }
 
-        public void Execute() {
+        public override void Execute() {
             PlayerWorldSpawned?.Invoke(player);
         }
 
     }
-
-    public delegate void PlayerWorldSpawnedEventHandler(IPlayer player);
-
-
 }

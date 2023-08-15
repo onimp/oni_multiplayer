@@ -26,19 +26,15 @@ public class GNSClient : BaseClient {
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
 
-    private NetworkingSockets devClient;
+    private NetworkingSockets devClient = null!;
     private uint devConnection;
 
-    private NetworkingUtils utils;
+    private NetworkingUtils utils = null!;
 
     private int reconnectAttempts = 0;
 
     private GnsServer getServer() {
-        try {
-            return (GnsServer) Container.Get<IMultiplayerServer>();
-        } catch {
-            return null;
-        }
+        return (GnsServer) Container.Get<IMultiplayerServer>();
     }
 
     private void forwardStatusCallbackToServer(ref StatusInfo info) {
@@ -55,7 +51,7 @@ public class GNSClient : BaseClient {
         log.Info($"New devConnection {devConnection}");
     }
 
-    private StatusCallback status;
+    private StatusCallback status = null!;
 
     private void statusCallback(ref StatusInfo info) {
         if (info.connection != devConnection) {
@@ -93,7 +89,7 @@ public class GNSClient : BaseClient {
         }
     }
 
-    private DebugCallback debug;
+    private DebugCallback debug = null!;
 
     private void debugCallback(DebugType type, string message) {
         if (type > DebugType.Message)

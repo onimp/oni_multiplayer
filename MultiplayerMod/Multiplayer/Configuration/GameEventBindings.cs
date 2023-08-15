@@ -1,12 +1,22 @@
 ﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Core.Patch;
+using MultiplayerMod.Core.Patch.Context;
+using MultiplayerMod.Game.Mechanics.Objects;
+using MultiplayerMod.Game.Mechanics.Printing;
 using MultiplayerMod.Game.UI;
-using MultiplayerMod.Game.UI.Screens;
+using MultiplayerMod.Game.UI.Overlay;
+using MultiplayerMod.Game.UI.Screens.Events;
+using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.Multiplayer.Commands.Gameplay;
+using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
+using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 using MultiplayerMod.Multiplayer.Commands.Screens.Research;
 using MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
+using MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 using MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
@@ -35,9 +45,11 @@ public class GameEventBindings {
 
         BindSpeedControl();
         BindMouse();
-        BingColonyControls();
-        BindUserMenu();
+        BindScreens();
+        BindSideScreens();
         BindTools();
+        BindOverlays();
+        BindMechanics();
 
         bound = true;
     }
@@ -56,29 +68,38 @@ public class GameEventBindings {
         );
     }
 
-    private void BingColonyControls() {
-        ResearchEvents.ResearchCanceled += techId => client.Send(new CancelResearch(techId));
-        ResearchEvents.ResearchSelected += techId => client.Send(new SelectResearch(techId));
+    private void BindScreens() {
+        ResearchScreenEvents.Cancel += techId => client.Send(new CancelResearch(techId));
+        ResearchScreenEvents.Select += techId => client.Send(new SelectResearch(techId));
 
-        ConsumableEvents.PermittedByDefault +=
+        ConsumableScreenEvents.PermitByDefault +=
             permittedList => client.Send(new PermitConsumableByDefault(permittedList));
-        ConsumableEvents.PermittedToMinion += (properName, consumableId, isAllowed) =>
-            client.Send(new PermitConsumableToMinion(properName, consumableId, isAllowed));
+        ConsumableScreenEvents.PermitToMinion += (consumableConsumer, consumableId, isAllowed) =>
+            client.Send(new PermitConsumableToMinion(consumableConsumer, consumableId, isAllowed));
 
-        ScheduleScreenEvents.SchedulesChanged += schedules => client.Send(new ChangeSchedulesList(schedules));
+        ScheduleScreenEvents.Changed += schedules => client.Send(new ChangeSchedulesList(schedules));
 
-        PrioritiesScreenEvents.PersonalPrioritySet += (properName, choreGroup, value) =>
-            client.Send(new SetPersonalPriority(properName, choreGroup, value));
-        PrioritiesScreenEvents.PersonalPrioritiesAdvancedSet += (value) =>
-            client.Send(new SetPersonalPrioritiesAdvanced(value));
+        PrioritiesScreenEvents.Set += (choreConsumer, choreGroup, value) =>
+            client.Send(new SetPersonalPriority(choreConsumer, choreGroup, value));
+        PrioritiesScreenEvents.DefaultSet +=
+            (choreGroup, value) => client.Send(new SetDefaultPriority(choreGroup, value));
+        PrioritiesScreenEvents.AdvancedSet += value => client.Send(new SetPersonalPrioritiesAdvanced(value));
 
-        SkillScreenEvents.HatSet += (properName, hat) => client.Send(new SetHat(properName, hat));
-        SkillScreenEvents.SkillMastered += (properName, skillId) => client.Send(new MasterSkill(properName, skillId));
-    }
+        SkillScreenEvents.SetHat += (minionIdentity, hat) => client.Send(new SetHat(minionIdentity, hat));
+        SkillScreenEvents.MasterSkill += (minionIdentity, skillId) =>
+            client.Send(new MasterSkill(minionIdentity, skillId));
 
-    private void BindUserMenu() {
-        UserMenuButtonEvents.UserMenuButtonClicked +=
-            (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
+        UserMenuButtonEvents.Click += (gameObject, action) => client.Send(new ClickUserMenuButton(gameObject, action));
+
+        ImmigrantScreenEvents.Initialize +=
+            containers => client.Send(new InitializeImmigration(containers));
+        PauseScreenEvents.QuitGame += () => {
+            if (client.State >= MultiplayerClientState.Connecting)
+                client.Disconnect();
+            PatchContext.Global = PatchControl.DisablePatches;
+        };
+
+        UserMenuScreenEvents.PriorityChanged += (target, priority) => client.Send(new ChangePriority(target, priority));
     }
 
     private void BindTools() {
@@ -110,10 +131,34 @@ public class GameEventBindings {
             // @formatter:on
         };
 
-        BuildEvents.Build += (_, args) => client.Send(new Build(args));
-        CopySettingsEvents.Copy += (_, args) => client.Send(new CopySettings(args));
-        DebugToolEvents.Modify += (_, args) => client.Send(new Modify(args));
-        StampToolEvents.Stamp += (_, args) => client.Send(new Stamp(args));
+        BuildEvents.Build += args => client.Send(new Build(args));
+        CopySettingsEvents.Copy += args => client.Send(new CopySettings(args));
+        DebugToolEvents.Modify += args => client.Send(new Modify(args));
+        StampToolEvents.Stamp += args => client.Send(new Stamp(args));
+    }
+
+    private void BindOverlays() {
+        DiseaseOverlayEvents.DiseaseSettingsChanged += (minGerm, enableAutoDisinfect) =>
+            client.Send(new SetDisinfectSettings(minGerm, enableAutoDisinfect));
+    }
+
+    private void BindMechanics() {
+        ObjectEvents.ComponentMethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.StateMachineMethodCalled += args => client.Send(new CallMethod(args));
+        TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
+        TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
+    }
+
+    private void BindSideScreens() {
+        AlarmSideScreenEvents.UpdateAlarm += args => client.Send(new UpdateAlarm(args));
+        CounterSideScreenEvents.UpdateLogicCounter += args => client.Send(new UpdateLogicCounter(args));
+        CritterSensorSideScreenEvents.UpdateCritterSensor += args => client.Send(new UpdateCritterSensor(args));
+        RailGunSideScreenEvents.UpdateRailGunCapacity += args => client.Send(new UpdateRailGunCapacity(args));
+        TemperatureSwitchSideScreenEvents.UpdateTemperatureSwitch +=
+            args => client.Send(new UpdateTemperatureSwitch(args));
+        TimeRangeSideScreenEvents.UpdateLogicTimeOfDaySensor +=
+            args => client.Send(new UpdateLogicTimeOfDaySensor(args));
+        TimerSideScreenEvents.UpdateLogicTimeSensor += args => client.Send(new UpdateLogicTimeSensor(args));
     }
 
 }

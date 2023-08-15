@@ -8,6 +8,7 @@ using UnityEngine;
 namespace MultiplayerMod.Game.UI.Tools.Context;
 
 [HarmonyPatch]
+[HarmonyPriority(Priority.Low)]
 public class StampCompletionOverride : IGameContext {
 
     private static bool enabled;
@@ -20,9 +21,9 @@ public class StampCompletionOverride : IGameContext {
         enabled = false;
     }
 
-    [HarmonyPriority(Priority.Low)]
     [HarmonyTranspiler]
     [HarmonyPatch(typeof(StampTool), nameof(StampTool.Stamp))]
+    // ReSharper disable once UnusedMember.Local
     private static IEnumerable<CodeInstruction> StampTranspiler(
         IEnumerable<CodeInstruction> instructions,
         ILGenerator generator

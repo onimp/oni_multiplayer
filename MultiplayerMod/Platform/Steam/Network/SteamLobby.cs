@@ -4,8 +4,6 @@ using Steamworks;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
-public delegate void LobbyEventHandler();
-
 public class SteamLobby {
 
     public CSteamID Id { get; private set; } = CSteamID.Nil;
@@ -15,6 +13,7 @@ public class SteamLobby {
         get {
             if (!Connected)
                 return CSteamID.Nil;
+
             return !SteamMatchmaking.GetLobbyGameServer(Id, out _, out _, out var serverId) ? CSteamID.Nil : serverId;
         }
         set {
@@ -23,9 +22,9 @@ public class SteamLobby {
         }
     }
 
-    public event LobbyEventHandler OnCreate;
-    public event LobbyEventHandler OnLeave;
-    public event LobbyEventHandler OnJoin;
+    public event System.Action? OnCreate;
+    public event System.Action? OnLeave;
+    public event System.Action? OnJoin;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamLobby>();
     private readonly CallResult<LobbyCreated_t> lobbyCreatedCallback;

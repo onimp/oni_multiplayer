@@ -13,6 +13,13 @@ public static class SerializationSurrogates {
         Selector.Add(new PrioritySettingSurrogate());
         Selector.Add(new TagSurrogate());
         Selector.Add(new PathNodeSurrogate());
+        Selector.Add(new AssignmentGroupSurrogate());
+        Selector.Add(new CarePackageInstanceDataSurrogate());
+        Selector.Add(new ComplexRecipeSurrogate());
+        Selector.Add(new MinionStartingStatsSurrogate());
+        Selector.Add(new RoomSurrogate());
+        Selector.Add(new SpaceDestinationSurrogate());
+        Selector.Add(new SpiceGrinderSurrogate());
     }
 
     private static void Add<T>(this SurrogateSelector selector, T surrogate)

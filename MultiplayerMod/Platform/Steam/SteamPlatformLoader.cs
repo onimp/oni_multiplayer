@@ -11,6 +11,7 @@ using MultiplayerMod.Platform.Steam.Network.Components;
 
 namespace MultiplayerMod.Platform.Steam;
 
+// ReSharper disable once UnusedType.Global
 public class SteamPlatformLoader : IModComponentLoader {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamPlatformLoader>();

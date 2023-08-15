@@ -13,17 +13,17 @@ namespace MultiplayerModTests;
 public class CommandTests {
 
     [Serializable]
-    class Command : IMultiplayerCommand {
+    private class Command : MultiplayerCommand {
         public int Value { set; get; }
 
-        public void Execute() { }
+        public override void Execute() { }
     }
 
     [Serializable]
-    class DataCommand : IMultiplayerCommand {
+    private class DataCommand : MultiplayerCommand {
         public byte[] Data = new byte[Configuration.MaxMessageSize * 2];
 
-        public void Execute() { }
+        public override void Execute() { }
     }
 
     [Test]
@@ -31,7 +31,7 @@ public class CommandTests {
         var command = new Command { Value = 42 };
         using var serialized = NetworkSerializer.Serialize(new NetworkMessage(command, MultiplayerCommandOptions.None));
 
-        byte[] data = new byte[serialized.Size];
+        var data = new byte[serialized.Size];
         Marshal.Copy(serialized.Pointer, data, 0, (int) serialized.Size);
 
         serialized.Dispose();

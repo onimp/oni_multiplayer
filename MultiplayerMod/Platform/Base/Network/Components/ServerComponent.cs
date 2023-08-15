@@ -5,7 +5,7 @@ using UnityEngine;
 namespace MultiplayerMod.Platform.Base.Network.Components;
 
 public class ServerComponent : MonoBehaviour {
-    private BaseServer server;
+    private BaseServer server = null!;
     private void Awake() => server = (BaseServer) Container.Get<IMultiplayerServer>();
     private void Update() => server.Tick();
 }

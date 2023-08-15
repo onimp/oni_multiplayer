@@ -11,10 +11,11 @@ namespace MultiplayerMod.Game.UI.Tools.Events;
 [HarmonyPatch(typeof(BuildTool))]
 public static class BuildEvents {
 
-    public static event EventHandler<BuildEventArgs> Build;
+    public static event Action<BuildEventArgs>? Build;
 
     [HarmonyTranspiler]
     [HarmonyPatch(nameof(BuildTool.TryBuild))]
+    // ReSharper disable once UnusedMember.Local
     private static IEnumerable<CodeInstruction> TryBuildTranspiler(
         IEnumerable<CodeInstruction> instructions,
         ILGenerator generator
@@ -77,17 +78,16 @@ public static class BuildEvents {
 
     private static void BuildComplete(BuildTool tool, int cell, bool instantBuild, bool replaced) {
         Build?.Invoke(
-            tool,
-            new BuildEventArgs {
-                Cell = cell,
-                InstantBuild = instantBuild,
-                Upgrade = replaced,
-                FacadeId = tool.facadeID,
-                Materials = tool.selectedElements.ToArray(),
-                Orientation = tool.buildingOrientation,
-                Priority = GameState.BuildToolPriority,
-                PrefabId = tool.def.PrefabID
-            }
+            new BuildEventArgs(
+                cell,
+                tool.def.PrefabID,
+                instantBuild,
+                replaced,
+                tool.buildingOrientation,
+                tool.selectedElements.ToArray(),
+                tool.facadeID,
+                GameState.BuildToolPriority
+            )
         );
     }
 

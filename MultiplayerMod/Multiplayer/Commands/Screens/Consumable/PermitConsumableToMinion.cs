@@ -1,27 +1,29 @@
 ﻿using System;
 using System.Linq;
-using MultiplayerMod.Multiplayer.Extensions;
+using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 
 [Serializable]
-public class PermitConsumableToMinion : IMultiplayerCommand {
+public class PermitConsumableToMinion : MultiplayerCommand {
 
-    private string properName;
-    private string consumableId;
-    private bool isAllowed;
+    private readonly GameObjectReference consumableConsumerReference;
+    private readonly string consumableId;
+    private readonly bool isAllowed;
 
-    public PermitConsumableToMinion(string properName, string consumableId, bool isAllowed) {
-        this.properName = properName;
+    public PermitConsumableToMinion(ConsumableConsumer consumableConsumer, string consumableId, bool isAllowed) {
+        consumableConsumerReference = consumableConsumer.gameObject.GetMultiplayerReference();
         this.consumableId = consumableId;
         this.isAllowed = isAllowed;
     }
 
-    public void Execute() {
-        var minionIdentity = MinionIdentityUtils.GetLiveMinion(properName);
-        var consumableConsumer = minionIdentity.GetComponent<ConsumableConsumer>();
-        consumableConsumer.SetPermitted(consumableId, isAllowed);
+    public override void Execute() {
+        var consumableConsumer = consumableConsumerReference.GetComponent<ConsumableConsumer>();
+        if (consumableConsumer == null) return;
 
+        consumableConsumer.SetPermitted(consumableId, isAllowed);
         RefreshTable();
     }
 
@@ -29,10 +31,10 @@ public class PermitConsumableToMinion : IMultiplayerCommand {
         var screen = ManagementMenu.Instance.consumablesScreen;
         foreach (var row in screen.rows) {
             var minion = row.GetIdentity();
-            foreach (var widget in row.widgets.Where(entry => entry.Key is ConsumableInfoTableColumn)
-                         .Select(entry => entry.Value)) {
-                screen.on_load_consumable_info(minion, widget);
-            }
+            row.widgets.Where(entry => entry.Key is ConsumableInfoTableColumn)
+                .Select(entry => entry.Value).ForEach(
+                    widget => screen.on_load_consumable_info(minion, widget)
+                );
         }
     }
 }

@@ -12,7 +12,7 @@ public class NetworkMessageProcessor {
     private readonly ConcurrentDictionary<uint, ConcurrentDictionary<int, FragmentsBuffer>> fragments = new();
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<NetworkMessageProcessor>();
 
-    public NetworkMessage Process(uint clientId, INetworkMessageHandle handle) =>
+    public NetworkMessage? Process(uint clientId, INetworkMessageHandle handle) =>
         NetworkSerializer.Deserialize(handle) switch {
             NetworkMessage message => message,
             NetworkMessageFragmentsHeader header => ProcessFragmentsHeader(clientId, header),
@@ -20,14 +20,14 @@ public class NetworkMessageProcessor {
             _ => null
         };
 
-    private NetworkMessage ProcessFragmentsHeader(uint clientId, NetworkMessageFragmentsHeader header) {
+    private NetworkMessage? ProcessFragmentsHeader(uint clientId, NetworkMessageFragmentsHeader header) {
         fragments.TryGetValue(clientId, out var index);
         if (index == null) {
             index = new ConcurrentDictionary<int, FragmentsBuffer>();
             fragments[clientId] = index;
         }
         var buffer = new FragmentsBuffer(header.FragmentsCount);
-        buffer.Timeout += (_, _) => {
+        buffer.Timeout += () => {
             log.Warning($"Fragments buffer timed out (message id: {header.MessageId})");
             index.TryRemove(header.MessageId, out _);
         };
@@ -35,7 +35,7 @@ public class NetworkMessageProcessor {
         return null;
     }
 
-    private NetworkMessage ProcessMessageFragment(uint clientId, NetworkMessageFragment fragment) {
+    private NetworkMessage? ProcessMessageFragment(uint clientId, NetworkMessageFragment fragment) {
         string ExceptionMessage() =>
             $"Message (id: {fragment.MessageId}) fragment received, but no fragments buffer found";
 
@@ -57,13 +57,13 @@ public class NetworkMessageProcessor {
     }
 
     private class FragmentsBuffer {
-        private static readonly int watchdogIntervalMs = 5000;
+        private const int watchdogIntervalMs = 5000;
 
         private int index;
         private readonly int count;
         private readonly byte[] buffer;
 
-        public event EventHandler Timeout;
+        public event System.Action? Timeout;
 
         private readonly System.Timers.Timer watchdog = new(watchdogIntervalMs) {
             Enabled = true,
@@ -73,10 +73,10 @@ public class NetworkMessageProcessor {
         public FragmentsBuffer(int count) {
             this.count = count;
             buffer = new byte[count * MaxFragmentDataSize];
-            watchdog.Elapsed += (_, _) => Timeout?.Invoke(this, EventArgs.Empty);
+            watchdog.Elapsed += (_, _) => Timeout?.Invoke();
         }
 
-        public NetworkMessage Append(NetworkMessageFragment fragment) {
+        public NetworkMessage? Append(NetworkMessageFragment fragment) {
             if (index >= count)
                 throw new NetworkPlatformException("Invalid fragmentation: more fragments than expected.");
 

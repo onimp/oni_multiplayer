@@ -2,4 +2,4 @@
 
 namespace MultiplayerMod.Platform.Gns.Network;
 
-public record DevServerEndpoint() : IMultiplayerEndpoint;
+public record DevServerEndpoint : IMultiplayerEndpoint;

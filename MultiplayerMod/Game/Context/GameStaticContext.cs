@@ -7,18 +7,28 @@ namespace MultiplayerMod.Game.Context;
 
 public class GameStaticContext {
 
-    public ToolMenu ToolMenu { get; set; }
-    public BuildMenu BuildMenu { get; set; }
-    public PlanScreen PlanScreen { get; set; }
-    public DebugPaintElementScreen DebugPaintElementScreen { get; set; }
+    public ToolMenu ToolMenu { get; }
+    public BuildMenu BuildMenu { get; }
+    public PlanScreen PlanScreen { get; }
+    public DebugPaintElementScreen DebugPaintElementScreen { get; }
 
-    public PriorityScreen PriorityScreen { get; set; }
-    public ProductInfoScreen ProductInfoScreen { get; set; }
-    public MaterialSelectionPanel MaterialSelectionPanel { get; set; }
+    public PriorityScreen? PriorityScreen { get; private init; }
+    public ProductInfoScreen? ProductInfoScreen { get; init; }
+    public MaterialSelectionPanel? MaterialSelectionPanel { get; init; }
 
-    private GameStaticContext() { }
+    private GameStaticContext(
+        ToolMenu toolMenu,
+        BuildMenu buildMenu,
+        PlanScreen planScreen,
+        DebugPaintElementScreen debugPaintElementScreen
+    ) {
+        ToolMenu = toolMenu;
+        BuildMenu = buildMenu;
+        PlanScreen = planScreen;
+        DebugPaintElementScreen = debugPaintElementScreen;
+    }
 
-    private static GameStaticContext originalContext;
+    private static GameStaticContext? originalContext;
     private static readonly GameStaticContext overridden = Create();
 
     public static GameStaticContext Current => originalContext != null ? overridden : GetCurrent();
@@ -26,6 +36,7 @@ public class GameStaticContext {
     public static void Override() {
         if (originalContext != null)
             throw new Exception("Unable to override already overridden static context");
+
         originalContext = GetCurrent();
         overridden.Switch();
     }
@@ -33,28 +44,29 @@ public class GameStaticContext {
     public static void Restore() {
         if (originalContext == null)
             throw new Exception("Unable to restore non-overridden static context");
+
         originalContext.Switch();
         originalContext = null;
     }
 
-    private static GameStaticContext GetCurrent() => new() {
-        ToolMenu = ToolMenu.Instance,
-        BuildMenu = BuildMenu.Instance,
-        PlanScreen = PlanScreen.Instance,
-        DebugPaintElementScreen = DebugPaintElementScreen.Instance,
-    };
+    private static GameStaticContext GetCurrent() => new(
+        ToolMenu.Instance,
+        BuildMenu.Instance,
+        PlanScreen.Instance,
+        DebugPaintElementScreen.Instance
+    );
 
     [SuppressMessage("ReSharper", "Unity.IncorrectMonoBehaviourInstantiation")]
     private static GameStaticContext Create() {
-        var context = new GameStaticContext {
-            ToolMenu = UnityObject.CreateStub<ToolMenu>(),
-            BuildMenu = UnityObject.CreateStub<BuildMenu>(),
-            PlanScreen = UnityObject.CreateStub<PlanScreen>(),
-
+        var context = new GameStaticContext(
+            UnityObject.CreateStub<ToolMenu>(),
+            UnityObject.CreateStub<BuildMenu>(),
+            UnityObject.CreateStub<PlanScreen>(),
+            UnityObject.CreateStub<DebugPaintElementScreen>()
+        ) {
             PriorityScreen = UnityObject.CreateStub<PriorityScreen>(),
             ProductInfoScreen = UnityObject.CreateStub<ProductInfoScreen>(),
-            MaterialSelectionPanel = UnityObject.CreateStub<MaterialSelectionPanel>(),
-            DebugPaintElementScreen = UnityObject.CreateStub<DebugPaintElementScreen>()
+            MaterialSelectionPanel = UnityObject.CreateStub<MaterialSelectionPanel>()
         };
         context.ToolMenu.priorityScreen = context.PriorityScreen;
         context.BuildMenu.productInfoScreen = context.ProductInfoScreen;

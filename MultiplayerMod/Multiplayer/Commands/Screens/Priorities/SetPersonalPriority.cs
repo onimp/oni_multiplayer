@@ -1,29 +1,32 @@
 ﻿using System;
 using System.Linq;
-using MultiplayerMod.Multiplayer.Extensions;
+using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
 [Serializable]
-public class SetPersonalPriority : IMultiplayerCommand {
+public class SetPersonalPriority : MultiplayerCommand {
 
-    private readonly string properName;
-    private readonly string choreGroup;
-
+    private readonly GameObjectReference choreConsumerReference;
+    private readonly string choreGroupId;
     private readonly int value;
 
-    private ChoreGroup ChoreGroup =>
-        Db.Get().ChoreGroups.resources.FirstOrDefault(resource => resource.Id == choreGroup);
+    private ChoreGroup? ChoreGroup =>
+        Db.Get().ChoreGroups.resources.FirstOrDefault(resource => resource.Id == choreGroupId);
 
-    public SetPersonalPriority(string properName, string choreGroup, int value) {
-        this.properName = properName;
-        this.choreGroup = choreGroup;
+    public SetPersonalPriority(ChoreConsumer choreConsumer, ChoreGroup choreGroup, int value) {
+        choreConsumerReference = choreConsumer.gameObject.GetMultiplayerReference();
+        choreGroupId = choreGroup.Id;
         this.value = value;
     }
 
-    public void Execute() {
-        var identity = MinionIdentityUtils.GetLiveMinion(properName);
-        identity.GetComponent<ChoreConsumer>().SetPersonalPriority(ChoreGroup, value);
+    public override void Execute() {
+        var choreConsumer = choreConsumerReference.GetComponent<ChoreConsumer>();
+        if (choreConsumer == null) return;
+
+        choreConsumer.SetPersonalPriority(ChoreGroup, value);
         RefreshTable();
     }
 
@@ -31,10 +34,10 @@ public class SetPersonalPriority : IMultiplayerCommand {
         var screen = ManagementMenu.Instance.jobsScreen;
         foreach (var row in screen.rows) {
             var minion = row.GetIdentity();
-            foreach (var widget in row.widgets.Where(entry => entry.Key is PrioritizationGroupTableColumn)
-                         .Select(entry => entry.Value)) {
-                screen.LoadValue(minion, widget);
-            }
+            row.widgets.Where(entry => entry.Key is PrioritizationGroupTableColumn)
+                .Select(entry => entry.Value).ForEach(
+                    widget => screen.LoadValue(minion, widget)
+                );
         }
     }
 }

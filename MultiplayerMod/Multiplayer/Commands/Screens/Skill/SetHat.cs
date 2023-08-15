@@ -1,22 +1,22 @@
 ﻿using System;
-using MultiplayerMod.Multiplayer.Extensions;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 
 [Serializable]
-public class SetHat : IMultiplayerCommand {
+public class SetHat : MultiplayerCommand {
 
-    private string properName;
-    private string targetHat;
+    private readonly GameObjectReference minionIdentityReference;
+    private readonly string? targetHat;
 
-    public SetHat(string properName, string targetHat) {
-        this.properName = properName;
+    public SetHat(MinionIdentity minionIdentity, string? targetHat) {
+        minionIdentityReference = minionIdentity.gameObject.GetMultiplayerReference();
         this.targetHat = targetHat;
     }
 
-    public void Execute() {
-        var minion = MinionIdentityUtils.GetLiveMinion(properName);
-        var resume = minion.GetComponent<MinionResume>();
+    public override void Execute() {
+        var resume = minionIdentityReference.GetComponent<MinionResume>();
         if (resume == null)
             return;
 

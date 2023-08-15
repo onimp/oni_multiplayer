@@ -12,6 +12,7 @@ using MultiplayerMod.Platform.Base.Network;
 using MultiplayerMod.Platform.Base.Network.Components;
 using MultiplayerMod.Platform.Base.Network.Messaging;
 using Steamworks;
+using UnityEngine;
 using static Steamworks.Constants;
 using static Steamworks.ESteamNetConnectionEnd;
 
@@ -48,13 +49,20 @@ public class SteamClient : BaseClient {
         }
 
         lobby.OnJoin += OnLobbyJoin;
+        lobby.OnLeave += Disconnect;
         lobby.Join(steamServerEndpoint.LobbyID);
     }
 
     protected override void doDisconnect() {
+        if (State <= MultiplayerClientState.Disconnected)
+            throw new NetworkPlatformException("Client not connected");
+
+        SetState(MultiplayerClientState.Disconnected);
+        UnityObject.Destroy(gameObject);
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
         SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
+        SteamFriends.ClearRichPresence();
     }
 
     public override void Tick() {
@@ -101,9 +109,9 @@ public class SteamClient : BaseClient {
         log.Debug($"P2P Connect to {serverId}");
 
         SetRichPresence();
-        SetState(MultiplayerClientState.Connected);
 
         gameObject = UnityObject.CreateStaticWithComponent<ClientComponent>();
+        SetState(MultiplayerClientState.Connected);
     }
 
     private void SetRichPresence() {
