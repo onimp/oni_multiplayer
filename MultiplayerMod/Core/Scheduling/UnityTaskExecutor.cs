@@ -1,10 +1,15 @@
 ﻿using MultiplayerMod.Core.Dependency;
-using UnityEngine;
+using MultiplayerMod.Core.Unity;
+
+// ReSharper disable FieldCanBeMadeReadOnly.Local
 
 namespace MultiplayerMod.Core.Scheduling;
 
-public class UnityTaskExecutor : MonoBehaviour {
+public class UnityTaskExecutor : MultiplayerMonoBehaviour {
 
-    private void LateUpdate() => Container.Get<UnityTaskScheduler>().Tick();
+    [Dependency]
+    private UnityTaskScheduler scheduler = null!;
+
+    private void LateUpdate() => scheduler.Tick();
 
 }

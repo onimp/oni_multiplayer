@@ -13,7 +13,7 @@ namespace MultiplayerMod.Multiplayer.World;
 
 public static class WorldManager {
 
-    private static readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
+    private static readonly IMultiplayerServer server = Dependencies.Get<IMultiplayerServer>();
 
     public static void Sync() {
         server.Send(new PauseGame());

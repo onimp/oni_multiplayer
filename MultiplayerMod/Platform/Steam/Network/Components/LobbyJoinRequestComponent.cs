@@ -1,22 +1,25 @@
 ﻿using System;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game.UI;
-using MultiplayerMod.Network;
 using Steamworks;
-using UnityEngine;
+
+// ReSharper disable FieldCanBeMadeReadOnly.Local
 
 namespace MultiplayerMod.Platform.Steam.Network.Components;
 
-public class LobbyJoinRequestComponent : MonoBehaviour {
+public class LobbyJoinRequestComponent : MultiplayerMonoBehaviour {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<LobbyJoinRequestComponent>();
 
+    [Dependency]
     private SteamClient client = null!;
+
     private Callback<GameLobbyJoinRequested_t> lobbyJoinRequestedCallback = null!;
 
-    private void Awake() {
-        client = (SteamClient) Container.Get<IMultiplayerClient>();
+    protected override void Awake() {
+        base.Awake();
         lobbyJoinRequestedCallback = Callback<GameLobbyJoinRequested_t>.Create(OnLobbyJoinRequested);
         MainMenuEvents.Initialized += OnMainMenuInitialized;
     }

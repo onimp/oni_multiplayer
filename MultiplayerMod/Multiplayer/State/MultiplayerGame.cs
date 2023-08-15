@@ -1,17 +1,18 @@
-﻿using MultiplayerMod.Multiplayer.Objects;
+﻿using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Multiplayer.State;
 
 public static class MultiplayerGame {
 
-    public static MultiplayerRole Role { get; set; }
-    public static MultiplayerState State { get; set; } = new();
-    public static MultiplayerObjects Objects { get; private set; } = new();
+    public static MultiplayerRole Role { get; set; } = MultiplayerRole.None;
+    public static MultiplayerState State { get; set; } = null!;
+    public static MultiplayerObjects Objects { get; private set; } = null!;
 
     public static void Reset() {
         Role = MultiplayerRole.None;
         State = new MultiplayerState();
-        Objects = new MultiplayerObjects();
+        Objects = Dependencies.Resolve<MultiplayerObjects>();
     }
 
 }

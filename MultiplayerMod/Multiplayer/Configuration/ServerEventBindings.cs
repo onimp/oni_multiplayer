@@ -1,5 +1,4 @@
-﻿using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Logging;
+﻿using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.World;
@@ -13,11 +12,16 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Configuration;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class ServerEventBindings {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ServerEventBindings>();
-    private readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
+    private readonly IMultiplayerServer server;
     private bool bound;
+
+    public ServerEventBindings(IMultiplayerServer server) {
+        this.server = server;
+    }
 
     public void Bind() {
         if (bound)

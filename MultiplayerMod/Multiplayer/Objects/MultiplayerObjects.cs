@@ -1,14 +1,18 @@
 ﻿using System.Collections.Generic;
-using MultiplayerMod.Core.Dependency;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class MultiplayerObjects {
 
-    private readonly MultiplayerIdentityProvider provider = Container.Get<MultiplayerIdentityProvider>();
+    private readonly MultiplayerIdentityProvider provider;
 
     private Dictionary<MultiplayerId, GameObject> objects = new();
+
+    public MultiplayerObjects(MultiplayerIdentityProvider provider) {
+        this.provider = provider;
+    }
 
     public MultiplayerId Register(MultiplayerInstance instance) {
         instance.Id ??= provider.GetNextId();

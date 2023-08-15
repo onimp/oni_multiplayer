@@ -9,5 +9,5 @@ namespace MultiplayerMod.Multiplayer.State;
 public class MultiplayerState {
     public Dictionary<IPlayerIdentity, PlayerState> Players = new();
 
-    public PlayerState Current => Players[Container.Get<IMultiplayerClient>().Player];
+    public PlayerState Current => Players[Dependencies.Get<IMultiplayerClient>().Player];
 }

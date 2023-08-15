@@ -23,11 +23,11 @@ public class MultiplayerCoordinator {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<MultiplayerCoordinator>();
 
-    private readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
-    private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();
+    private readonly IMultiplayerServer server;
+    private readonly IMultiplayerClient client;
 
-    private readonly GameEventBindings gameBindings = new();
-    private readonly ServerEventBindings serverBindings = new();
+    private readonly GameEventBindings gameBindings;
+    private readonly ServerEventBindings serverBindings;
 
     private readonly CommandExceptionHandler exceptionHandler = new();
 
@@ -36,7 +36,17 @@ public class MultiplayerCoordinator {
         typeof(ShowLoadOverlay)
     };
 
-    public MultiplayerCoordinator() {
+    public MultiplayerCoordinator(
+        IMultiplayerServer server,
+        IMultiplayerClient client,
+        GameEventBindings gameBindings,
+        ServerEventBindings serverBindings
+    ) {
+        this.server = server;
+        this.client = client;
+        this.gameBindings = gameBindings;
+        this.serverBindings = serverBindings;
+
         ConfigureServer();
         ConfigureClient();
         GameEvents.GameStarted += OnGameStarted;

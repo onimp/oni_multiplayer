@@ -16,6 +16,7 @@ using static Steamworks.ESteamNetConnectionEnd;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class SteamClient : IMultiplayerClient {
 
     public IPlayerIdentity Player => playerContainer.Value;
@@ -24,7 +25,7 @@ public class SteamClient : IMultiplayerClient {
     public event Action<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
-    private readonly SteamLobby lobby = Container.Get<SteamLobby>();
+    private readonly SteamLobby lobby;
     private readonly Lazy<IPlayerIdentity> playerContainer = new(() => new SteamPlayerIdentity(SteamUser.GetSteamID()));
 
     private readonly NetworkMessageProcessor messageProcessor = new();
@@ -34,6 +35,10 @@ public class SteamClient : IMultiplayerClient {
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
 
     private GameObject gameObject = null!;
+
+    public SteamClient(SteamLobby lobby) {
+        this.lobby = lobby;
+    }
 
     public void Connect(IMultiplayerEndpoint endpoint) {
         if (!SteamManager.Initialized)

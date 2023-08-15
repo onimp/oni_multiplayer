@@ -11,9 +11,9 @@ namespace MultiplayerMod.Multiplayer;
 public class MultiplayerLoader : IModComponentLoader {
 
     public void OnLoad(Harmony harmony) {
-        Container.Register(new MultiplayerIdentityProvider());
-        Container.Register(new MultiplayerObjectsConfigurator());
-        Container.Register(new MultiplayerCoordinator());
+        Dependencies.Register<MultiplayerIdentityProvider>();
+        Dependencies.Register(new MultiplayerObjectsConfigurator());
+        Dependencies.Register(Dependencies.Resolve<MultiplayerCoordinator>());
     }
 
 }

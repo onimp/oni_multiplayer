@@ -9,7 +9,7 @@ namespace MultiplayerMod.Multiplayer.UI;
 public static class LoadOverlay {
     public static void Show() {
         LoadingOverlay.Load(() => { });
-        new TaskFactory(Container.Get<UnityTaskScheduler>()).StartNew(
+        new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 // TODO block controls
                 while (MultiplayerGame.State.Players.Count == 0 ||

@@ -14,7 +14,7 @@ internal class MainMenuPatch {
     // ReSharper disable once UnusedMember.Local
     private static void OnPrefabInit(MainMenu __instance) {
         MultiplayerGame.Reset();
-        var operations = Container.Get<IMultiplayerOperations>();
+        var operations = Dependencies.Get<IMultiplayerOperations>();
         __instance.AddButton("NEW MULTIPLAYER", highlight: true, CreateHostWrapper(__instance.NewGame));
         __instance.AddButton("LOAD MULTIPLAYER", highlight: false, CreateHostWrapper(__instance.LoadGame));
         __instance.AddButton("JOIN MULTIPLAYER", highlight: false, operations.Join);

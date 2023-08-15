@@ -3,6 +3,11 @@
     <PropertyGroup>
         <Configurations>Debug;Release;Publish</Configurations>
         <Platforms>AnyCPU</Platforms>
+        <Nullable>enable</Nullable>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DebugType>full</DebugType>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="NUnit" Version="3.13.3" />

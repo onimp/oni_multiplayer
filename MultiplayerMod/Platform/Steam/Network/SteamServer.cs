@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using MultiplayerMod.Core.Collections;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Scheduling;
@@ -61,9 +60,15 @@ public class SteamServer : IMultiplayerServer {
     private readonly Dictionary<IPlayerIdentity, HSteamNetConnection> players = new();
     private readonly IPlayerIdentity currentPlayer = new SteamPlayerIdentity(SteamUser.GetSteamID());
 
-    private readonly SteamLobby lobby = Container.Get<SteamLobby>();
+    private readonly UnityTaskScheduler scheduler;
+    private readonly SteamLobby lobby;
 
     private GameObject? gameObject;
+
+    public SteamServer(SteamLobby lobby, UnityTaskScheduler scheduler) {
+        this.lobby = lobby;
+        this.scheduler = scheduler;
+    }
 
     public void Start() {
         if (!SteamManager.Initialized)
@@ -133,7 +138,7 @@ public class SteamServer : IMultiplayerServer {
                 _ => OnServerStarted(),
                 callbacksCancellationTokenSource.Token,
                 TaskContinuationOptions.None,
-                Container.Get<UnityTaskScheduler>()
+                scheduler
             );
 
         lobby.OnCreate += OnLobbyCreated;

@@ -15,7 +15,8 @@ public static class GameEvents {
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
     [HarmonyPatch(typeof(global::Game), nameof(global::Game.SetGameStarted))]
-    private static void SetGameStarted() => Container.Get<UnityTaskScheduler>().Run(() => { GameStarted?.Invoke(); });
+    private static void SetGameStarted() => Dependencies.Get<UnityTaskScheduler>()
+        .Run(() => { GameStarted?.Invoke(); });
 
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
