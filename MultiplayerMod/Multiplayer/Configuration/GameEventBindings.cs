@@ -22,6 +22,7 @@ using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
+using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
@@ -143,10 +144,15 @@ public class GameEventBindings {
     }
 
     private void BindMechanics() {
-        ObjectEvents.ComponentMethodCalled += args => client.Send(new CallMethod(args));
-        ObjectEvents.StateMachineMethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.ComponentMethodCalled += args => SendIfSpawned(new CallMethod(args));
+        ObjectEvents.StateMachineMethodCalled += args => SendIfSpawned(new CallMethod(args));
         TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
         TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
+    }
+
+    private void SendIfSpawned(IMultiplayerCommand command) {
+        if (MultiplayerGame.State.Current.WorldSpawned)
+            client.Send(command);
     }
 
     private void BindSideScreens() {
