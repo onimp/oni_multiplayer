@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;

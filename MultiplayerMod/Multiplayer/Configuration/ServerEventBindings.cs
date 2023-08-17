@@ -17,10 +17,12 @@ public class ServerEventBindings {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ServerEventBindings>();
     private readonly IMultiplayerServer server;
+    private readonly MultiplayerGame multiplayer;
     private bool bound;
 
-    public ServerEventBindings(IMultiplayerServer server) {
+    public ServerEventBindings(IMultiplayerServer server, MultiplayerGame multiplayer) {
         this.server = server;
+        this.multiplayer = multiplayer;
     }
 
     public void Bind() {
@@ -31,8 +33,8 @@ public class ServerEventBindings {
 
         PauseScreenEvents.QuitGame += server.Stop;
         MultiplayerEvents.PlayerWorldSpawned += player => {
-            MultiplayerGame.State.Players[player].WorldSpawned = true;
-            server.Send(new SyncMultiplayerState(MultiplayerGame.State));
+            multiplayer.State.Players[player].WorldSpawned = true;
+            server.Send(new SyncMultiplayerState(multiplayer.State));
         };
         WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));
         SaveLoaderEvents.WorldSaved += WorldManager.Sync;

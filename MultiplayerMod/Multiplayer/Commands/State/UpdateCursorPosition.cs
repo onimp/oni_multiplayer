@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Multiplayer.State;
 using UnityEngine;
 
@@ -16,7 +17,7 @@ public class UpdateCursorPosition : MultiplayerCommand {
     }
 
     public override void Execute() {
-        MultiplayerGame.State.Players.TryGetValue(player, out var state);
+        Dependencies.Get<MultiplayerGame>().State.Players.TryGetValue(player, out var state);
         if (state == null)
             return;
 

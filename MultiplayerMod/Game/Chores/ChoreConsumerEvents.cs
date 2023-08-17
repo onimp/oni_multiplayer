@@ -1,4 +1,5 @@
 using System;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.State;
 
@@ -12,7 +13,7 @@ public class ChoreConsumerEvents {
 
     // ReSharper disable once InconsistentNaming, UnusedMember.Global
     public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, ref bool __result) {
-        if (MultiplayerGame.Role != MultiplayerRole.Host)
+        if (Dependencies.Get<MultiplayerGame>().Role != MultiplayerRole.Host)
             return;
 
         if (!__result)

@@ -12,6 +12,9 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
     [Dependency]
     private readonly IMultiplayerClient client = null!;
 
+    [Dependency]
+    private readonly MultiplayerGame multiplayer = null!;
+
     private Texture2D cursorTexture = null!;
     private Camera mainCamera = null!;
     private bool initialized;
@@ -23,7 +26,7 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
     }
 
     private void OnGUI() {
-        foreach (var (player, state) in MultiplayerGame.State.Players) {
+        foreach (var (player, state) in multiplayer.State.Players) {
             if (player.Equals(client.Player))
                 continue;
 

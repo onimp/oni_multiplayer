@@ -1,4 +1,5 @@
 using HarmonyLib;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
@@ -11,7 +12,7 @@ public class ColonyDiagnosticScreenPatch {
     [HarmonyPatch(nameof(ColonyDiagnosticScreen.SpawnTrackerLines))]
     // ReSharper disable once UnusedMember.Global
     public static void SpawnTrackerLines(ColonyDiagnosticScreen __instance, int world) {
-        if (MultiplayerGame.Role == MultiplayerRole.None)
+        if (Dependencies.Get<MultiplayerGame>().Role == MultiplayerRole.None)
             return;
 
         __instance.AddDiagnostic<MultiplayerColonyDiagnostic>(

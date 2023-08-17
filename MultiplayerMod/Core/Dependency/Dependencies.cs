@@ -1,10 +1,11 @@
 ﻿using System;
+using JetBrains.Annotations;
 
 namespace MultiplayerMod.Core.Dependency;
 
 public static class Dependencies {
 
-    // ReSharper disable once FieldCanBeMadeReadOnly.Local
+    [UsedImplicitly]
     private static DependencyContainer container = new();
 
     public static void Register<T>() where T : class => container.Register<T>();
