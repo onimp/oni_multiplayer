@@ -1,16 +1,23 @@
-﻿using MultiplayerMod.Multiplayer.State;
+﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Unity;
+using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-public class MultiplayerInstance : KMonoBehaviour {
+public class MultiplayerInstance : MultiplayerKMonoBehaviour {
+
+    [Dependency]
+    [UsedImplicitly]
+    private MultiplayerGame multiplayer = null!;
 
     public MultiplayerId? Id { get; set; }
 
     protected override void OnCleanUp() {
         if (Id != null)
-            MultiplayerGame.Objects.Remove(Id);
+            multiplayer.Objects.Remove(Id);
     }
 
-    public MultiplayerId Register() => MultiplayerGame.Objects.Register(this);
+    public MultiplayerId Register() => multiplayer.Objects.Register(this);
 
 }

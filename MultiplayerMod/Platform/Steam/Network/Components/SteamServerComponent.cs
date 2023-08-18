@@ -1,11 +1,14 @@
 ﻿using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Network;
-using UnityEngine;
+using MultiplayerMod.Core.Unity;
+
+// ReSharper disable FieldCanBeMadeReadOnly.Local
 
 namespace MultiplayerMod.Platform.Steam.Network.Components;
 
-public class SteamServerComponent : MonoBehaviour {
+public class SteamServerComponent : MultiplayerMonoBehaviour {
+
+    [Dependency]
     private SteamServer server = null!;
-    private void Awake() => server = (SteamServer) Container.Get<IMultiplayerServer>();
+
     private void Update() => server.Tick();
 }

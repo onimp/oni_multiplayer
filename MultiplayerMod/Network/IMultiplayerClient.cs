@@ -6,7 +6,7 @@ namespace MultiplayerMod.Network;
 
 public interface IMultiplayerClient {
     MultiplayerClientState State { get; }
-    IPlayer Player { get; }
+    IPlayerIdentity Player { get; }
 
     void Connect(IMultiplayerEndpoint endpoint);
     void Disconnect();

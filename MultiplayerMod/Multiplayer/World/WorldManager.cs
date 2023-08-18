@@ -13,14 +13,15 @@ namespace MultiplayerMod.Multiplayer.World;
 
 public static class WorldManager {
 
-    private static readonly IMultiplayerServer server = Container.Get<IMultiplayerServer>();
+    private static readonly IMultiplayerServer server = Dependencies.Get<IMultiplayerServer>();
+    private static readonly MultiplayerGame multiplayer = Dependencies.Get<MultiplayerGame>();
 
     public static void Sync() {
         server.Send(new PauseGame());
-        MultiplayerGame.Objects.SynchronizeWithTracker();
-        MultiplayerGame.State.Players.Values.ForEach(playerState => playerState.WorldSpawned = false);
-        MultiplayerGame.State.Current.WorldSpawned = true;
-        server.Send(new SyncMultiplayerState(MultiplayerGame.State));
+        multiplayer.Objects.SynchronizeWithTracker();
+        multiplayer.State.Players.Values.ForEach(playerState => playerState.WorldSpawned = false);
+        multiplayer.State.Current.WorldSpawned = true;
+        server.Send(new SyncMultiplayerState(multiplayer.State));
         server.Send(new ShowLoadOverlay());
         server.Send(new LoadWorld(GetWorldSave()), MultiplayerCommandOptions.SkipHost);
     }

@@ -1,5 +1,4 @@
-﻿using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Logging;
+﻿using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Patch.Context;
 using MultiplayerMod.Game.Mechanics.Objects;
@@ -28,15 +27,20 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Configuration;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class GameEventBindings {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameEventBindings>();
 
-    private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();
+    private readonly IMultiplayerClient client;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
     private bool bound;
+
+    public GameEventBindings(IMultiplayerClient client) {
+        this.client = client;
+    }
 
     public void Bind() {
         if (bound)

@@ -17,7 +17,7 @@ public static class ImmigrantScreenEvents {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
     private static void InitializePatch(ImmigrantScreen __instance) => PatchControl.RunIfEnabled(
-        () => new TaskFactory(Container.Get<UnityTaskScheduler>()).StartNew(
+        () => new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 if (ImmigrantScreenPatch.Deliverables != null) return;
 

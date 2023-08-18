@@ -18,7 +18,7 @@ public static class ImmigrantScreenPatch {
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
     // ReSharper disable once UnusedMember.Local
     private static void Initialize(ImmigrantScreen __instance) => PatchControl.RunIfEnabled(
-        () => new TaskFactory(Container.Get<UnityTaskScheduler>()).StartNew(
+        () => new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 if (Deliverables == null) return;
 

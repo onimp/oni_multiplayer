@@ -5,11 +5,11 @@ namespace MultiplayerMod.Multiplayer.State;
 
 [Serializable]
 public class PlayerState {
-    public IPlayer Player { get; }
+    public IPlayerIdentity Player { get; }
     public Vector2 CursorPosition { get; set; }
     public bool WorldSpawned { get; set; }
 
-    public PlayerState(IPlayer player) {
+    public PlayerState(IPlayerIdentity player) {
         Player = player;
     }
 }

@@ -4,14 +4,14 @@ namespace MultiplayerMod.Multiplayer;
 
 public static class MultiplayerEvents {
 
-    public static Action<IPlayer>? PlayerWorldSpawned;
+    public static Action<IPlayerIdentity>? PlayerWorldSpawned;
 
     [Serializable]
     public class PlayerWorldSpawnedEvent : MultiplayerCommand {
 
-        private IPlayer player;
+        private IPlayerIdentity player;
 
-        public PlayerWorldSpawnedEvent(IPlayer player) {
+        public PlayerWorldSpawnedEvent(IPlayerIdentity player) {
             this.player = player;
         }
 
@@ -20,4 +20,5 @@ public static class MultiplayerEvents {
         }
 
     }
+
 }

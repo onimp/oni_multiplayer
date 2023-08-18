@@ -1,15 +1,17 @@
+using JetBrains.Annotations;
 using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
+[UsedImplicitly]
 public class MultiplayerObjectsConfigurator {
 
-    public MultiplayerObjectsConfigurator() {
+    public MultiplayerObjectsConfigurator(MultiplayerGame multiplayer) {
         GameEvents.GameObjectCreated += it => it.AddComponent<MultiplayerInstance>();
         GameEvents.GameStarted += () => {
-            if (MultiplayerGame.Role != MultiplayerRole.None)
-                MultiplayerGame.Objects.SynchronizeWithTracker();
+            if (multiplayer.Role != MultiplayerRole.None)
+                multiplayer.Objects.SynchronizeWithTracker();
         };
     }
 

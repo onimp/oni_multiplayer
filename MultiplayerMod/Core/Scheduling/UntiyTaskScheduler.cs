@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace MultiplayerMod.Core.Scheduling;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class UnityTaskScheduler : TaskScheduler {
 
     private const int maxTasksPerTick = 1000;

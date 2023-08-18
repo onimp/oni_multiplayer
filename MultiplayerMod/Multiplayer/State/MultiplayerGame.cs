@@ -1,17 +1,27 @@
-﻿using MultiplayerMod.Multiplayer.Objects;
+﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Multiplayer.State;
 
-public static class MultiplayerGame {
+[UsedImplicitly]
+public class MultiplayerGame {
 
-    public static MultiplayerRole Role { get; set; }
-    public static MultiplayerState State { get; set; } = new();
-    public static MultiplayerObjects Objects { get; private set; } = new();
+    public MultiplayerRole Role { get; set; } = MultiplayerRole.None;
+    public MultiplayerState State { get; set; } = null!;
+    public MultiplayerObjects Objects { get; private set; } = null!;
 
-    public static void Reset() {
+    private readonly DependencyContainer container;
+
+    public MultiplayerGame(DependencyContainer container) {
+        this.container = container;
+        Refresh();
+    }
+
+    public void Refresh() {
         Role = MultiplayerRole.None;
-        State = new MultiplayerState();
-        Objects = new MultiplayerObjects();
+        State = container.Resolve<MultiplayerState>();
+        Objects = container.Resolve<MultiplayerObjects>();
     }
 
 }

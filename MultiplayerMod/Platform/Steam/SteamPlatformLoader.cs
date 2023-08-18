@@ -21,10 +21,10 @@ public class SteamPlatformLoader : IModComponentLoader {
             return;
 
         log.Info("Steam platform detected");
-        Container.Register<IMultiplayerOperations, SteamMultiplayerOperations>();
-        Container.Register<IMultiplayerServer, SteamServer>();
-        Container.Register<IMultiplayerClient, SteamClient>();
-        Container.Register<SteamLobby>();
+        Dependencies.Register<IMultiplayerOperations, SteamMultiplayerOperations>();
+        Dependencies.Register<IMultiplayerServer, SteamServer>();
+        Dependencies.Register<IMultiplayerClient, SteamClient>();
+        Dependencies.Register<SteamLobby>();
         UnityObject.CreateStaticWithComponent<LobbyJoinRequestComponent>();
     }
 

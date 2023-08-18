@@ -13,7 +13,7 @@ public class UnityTaskSchedulerLoader : IModComponentLoader {
 
     public void OnLoad(Harmony harmony) {
         log.Debug("Creating task scheduler...");
-        Container.Register<UnityTaskScheduler>();
+        Dependencies.Register<UnityTaskScheduler>();
         UnityObject.CreateStaticWithComponent<UnityTaskExecutor>();
     }
 

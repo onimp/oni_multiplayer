@@ -3,6 +3,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Loader;
 using MultiplayerMod.Multiplayer.Configuration;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer;
 
@@ -11,9 +12,10 @@ namespace MultiplayerMod.Multiplayer;
 public class MultiplayerLoader : IModComponentLoader {
 
     public void OnLoad(Harmony harmony) {
-        Container.Register(new MultiplayerIdentityProvider());
-        Container.Register(new MultiplayerObjectsConfigurator());
-        Container.Register(new MultiplayerCoordinator());
+        Dependencies.Register<MultiplayerIdentityProvider>();
+        Dependencies.Register<MultiplayerGame>();
+        Dependencies.Register(Dependencies.Resolve<MultiplayerObjectsConfigurator>);
+        Dependencies.Register(Dependencies.Resolve<MultiplayerCoordinator>());
     }
 
 }

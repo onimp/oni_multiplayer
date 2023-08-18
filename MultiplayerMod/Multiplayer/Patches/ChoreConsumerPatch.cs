@@ -1,4 +1,5 @@
 using HarmonyLib;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Multiplayer.World;
 
@@ -11,7 +12,7 @@ public class ChoreConsumerPatch {
     // ReSharper disable once InconsistentNaming
     // ReSharper disable once UnusedMember.Global
     public static bool Prefix(ChoreConsumer __instance, ref Chore.Precondition.Context out_context, ref bool __result) {
-        if (MultiplayerGame.Role != MultiplayerRole.Client)
+        if (Dependencies.Get<MultiplayerGame>().Role != MultiplayerRole.Client)
             return true;
 
         var instanceId = __instance.gameObject.GetComponent<KPrefabID>().InstanceID;

@@ -1,13 +1,36 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
+
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Configurations>Debug;Release;Publish</Configurations>
         <Platforms>AnyCPU</Platforms>
+        <Nullable>enable</Nullable>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DebugType>full</DebugType>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="NUnit" Version="3.13.3" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\MultiplayerMod\MultiplayerMod.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="Assembly-CSharp" HintPath="..\MultiplayerMod\lib\exposed\Assembly-CSharp.dll" />
+        <Reference Include="Assembly-CSharp-firstpass"
+                   HintPath="..\MultiplayerMod\lib\exposed\Assembly-CSharp-firstpass.dll" />
+        <Reference Include="UnityEngine.CoreModule" HintPath="..\MultiplayerMod\lib\exposed\UnityEngine.CoreModule.dll" />
+        <Reference Include="UnityEngine.UI" HintPath="..\MultiplayerMod\lib\exposed\UnityEngine.UI.dll" />
+        <Reference Include="0Harmony" HintPath="..\MultiplayerMod\lib\exposed\0Harmony.dll" />
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedPath)\com.rlabrecque.steamworks.net.dll" />
+        <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" />
+        <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedPath)\Unity.TextMeshPro.dll" />
+        <Reference Include="UnityEngine.ImageConversionModule"
+                   HintPath="$(ManagedPath)\UnityEngine.ImageConversionModule.dll" />
+        <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedPath)\UnityEngine.IMGUIModule.dll" />
+        <Reference Include="ImGui.NET" HintPath="$(ManagedPath)\ImGui.NET.dll" />
     </ItemGroup>
 </Project>

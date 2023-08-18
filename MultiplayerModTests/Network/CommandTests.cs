@@ -7,7 +7,7 @@ using MultiplayerMod.Platform.Steam.Network;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using NUnit.Framework;
 
-namespace MultiplayerModTests;
+namespace MultiplayerModTests.Network;
 
 [TestFixture]
 public class CommandTests {
@@ -33,8 +33,6 @@ public class CommandTests {
 
         var data = new byte[serialized.Size];
         Marshal.Copy(serialized.Pointer, data, 0, (int) serialized.Size);
-
-        serialized.Dispose();
 
         var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
         var messageHandle = new NetworkMessageHandle(dataHandle.AddrOfPinnedObject(), (uint) data.Length);

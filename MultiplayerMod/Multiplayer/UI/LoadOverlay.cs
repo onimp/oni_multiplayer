@@ -9,11 +9,12 @@ namespace MultiplayerMod.Multiplayer.UI;
 public static class LoadOverlay {
     public static void Show() {
         LoadingOverlay.Load(() => { });
-        new TaskFactory(Container.Get<UnityTaskScheduler>()).StartNew(
+        var multiplayer = Dependencies.Get<MultiplayerGame>();
+        new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 // TODO block controls
-                while (MultiplayerGame.State.Players.Count == 0 ||
-                       MultiplayerGame.State.Players.Values.Any(state => !state.WorldSpawned)) {
+                while (multiplayer.State.Players.Count == 0 ||
+                       multiplayer.State.Players.Values.Any(state => !state.WorldSpawned)) {
                     await Task.Delay(100);
                 }
                 LoadingOverlay.Clear();

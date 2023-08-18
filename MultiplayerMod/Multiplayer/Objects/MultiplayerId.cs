@@ -3,4 +3,4 @@
 namespace MultiplayerMod.Multiplayer.Objects;
 
 [Serializable]
-public record MultiplayerId(IPlayer? Player, long ObjectId);
+public record MultiplayerId(IPlayerIdentity? Player, long ObjectId);
