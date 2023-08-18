@@ -3,29 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Multiplayer.Objects.Reference;
 using MultiplayerMod.Multiplayer.World;
 using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Multiplayer.Commands.Chores;
 
 [Serializable]
-public class FindNextChore : MultiplayerCommand {
+public class SetHostChore : MultiplayerCommand {
 
-    private static Core.Logging.Logger log = LoggerFactory.GetLogger<FindNextChore>();
+    private static Core.Logging.Logger log = LoggerFactory.GetLogger<SetHostChore>();
 
-    private int instanceId;
-    private string instanceString;
+    private ComponentReference<ChoreConsumer> reference;
     private int instanceCell;
     private int choreId;
     private string choreType;
     private int choreCell;
     private bool isAttemptingOverride;
 
-    public FindNextChore(FindNextChoreEventArgs args) {
+    public SetHostChore(FindNextChoreEventArgs args) {
         log.Level = LogLevel.Debug;
 
-        instanceId = args.InstanceId;
-        instanceString = args.InstanceString;
+        reference = args.Reference;
         instanceCell = args.InstanceCell;
         choreId = args.ChoreId;
         choreType = args.ChoreType.ToString();
@@ -35,38 +34,19 @@ public class FindNextChore : MultiplayerCommand {
 
     public override void Execute() {
         log.Debug(
-            $"Received {instanceId} {instanceString} {instanceCell} {choreId} {choreType} {choreCell}"
+            $"Received {reference} {instanceCell} {choreId} {choreType} {choreCell}"
         );
-        var choreContext = FindContext();
-        if (choreContext == null)
-            return;
 
-        if (!HostChores.Index.ContainsKey(instanceId))
-            HostChores.Index[instanceId] = new Queue<Chore.Precondition.Context>();
-        HostChores.Index[instanceId].Enqueue(choreContext.Value);
+        if (!HostChores.Index.ContainsKey(reference))
+            HostChores.Index[reference] = new Queue<Func<Chore.Precondition.Context?>>();
+        HostChores.Index[reference].Enqueue(FindContext);
     }
 
     private Chore.Precondition.Context? FindContext() {
-        var prefabID = Object.FindObjectsOfType<KPrefabID>().FirstOrDefault(a => a.InstanceID == instanceId);
-        if (prefabID == null) {
-            log.Warning($"Multiplayer: KPrefabID not found {instanceId}");
-            return null;
-        }
-        var consumer = prefabID.GetComponent<ChoreConsumer>();
-        if (consumer == null) {
-            log.Warning(
-                $"Multiplayer: Consumer does not exists at KPrefabId with desired ID {instanceId}. Id collision??"
-            );
-            return null;
-        }
-        if (instanceString != consumer.ToString()) {
-            log.Warning(
-                $"Multiplayer: Consumer type {consumer.GetType()} is not equal to the server {instanceString}."
-            );
-            return null;
-        }
+        var consumer = reference.GetComponent();
         var localCell = Grid.PosToCell(consumer.transform.position);
         if (instanceCell != localCell) {
+            // TODO add warning/sync on too big difference only.
             log.Warning(
                 $"Multiplayer: Consumer {consumer}-{choreType} found but in different cell. Server {instanceCell} - local {localCell}."
             );
@@ -173,9 +153,7 @@ public class FindNextChore : MultiplayerCommand {
         string choreType,
         ref Chore? choreWithIdCollision
     ) {
-        var result = chores.FirstOrDefault(
-            chore => chore.id == choreId
-        );
+        var result = chores.FirstOrDefault(chore => chore.id == choreId);
 
         if (result == null) return null;
 

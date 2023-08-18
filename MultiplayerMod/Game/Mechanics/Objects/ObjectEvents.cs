@@ -130,41 +130,45 @@ public static class ObjectEvents {
     [HarmonyPostfix]
     // ReSharper disable once UnusedMember.Local
     private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object[] __args) {
-        PatchContext.Leave();
-        PatchControl.RunIfEnabled(
+        PatchControl.RunIfSpawned(
             () => {
-                var args = __args.Select(
-                    obj =>
-                        obj switch {
-                            GameObject gameObject => gameObject.GetGridReference(),
-                            KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
-                            _ => obj
+                PatchContext.Leave();
+                PatchControl.RunIfEnabled(
+                    () => {
+                        var args = __args.Select(
+                            obj =>
+                                obj switch {
+                                    GameObject gameObject => gameObject.GetGridReference(),
+                                    KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
+                                    _ => obj
+                                }
+                        ).ToArray();
+                        switch (__instance) {
+                            case KMonoBehaviour kMonoBehaviour:
+                                ComponentMethodCalled?.Invoke(
+                                    new ComponentEventsArgs(
+                                        kMonoBehaviour.GetReference(),
+                                        __originalMethod.DeclaringType!,
+                                        __originalMethod.Name,
+                                        args
+                                    )
+                                );
+                                return;
+                            case StateMachine.Instance stateMachine:
+                                StateMachineMethodCalled?.Invoke(
+                                    new StateMachineEventsArgs(
+                                        stateMachine.GetReference(),
+                                        __originalMethod.DeclaringType!,
+                                        __originalMethod.Name,
+                                        args
+                                    )
+                                );
+                                return;
+                            default:
+                                throw new NotSupportedException($"{__instance} has un supported type");
                         }
-                ).ToArray();
-                switch (__instance) {
-                    case KMonoBehaviour kMonoBehaviour:
-                        ComponentMethodCalled?.Invoke(
-                            new ComponentEventsArgs(
-                                kMonoBehaviour.GetReference(),
-                                __originalMethod.DeclaringType!,
-                                __originalMethod.Name,
-                                args
-                            )
-                        );
-                        return;
-                    case StateMachine.Instance stateMachine:
-                        StateMachineMethodCalled?.Invoke(
-                            new StateMachineEventsArgs(
-                                stateMachine.GetReference(),
-                                __originalMethod.DeclaringType!,
-                                __originalMethod.Name,
-                                args
-                            )
-                        );
-                        return;
-                    default:
-                        throw new NotSupportedException($"{__instance} has un supported type");
-                }
+                    }
+                );
             }
         );
     }

@@ -39,7 +39,7 @@ public class ServerEventBindings {
         WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));
         SaveLoaderEvents.WorldSaved += WorldManager.Sync;
 
-        ChoreConsumerEvents.FindNextChore += p => server.Send(new FindNextChore(p), MultiplayerCommandOptions.SkipHost);
+        ChoreConsumerEvents.FindNextChore += args => server.Send(new SetHostChore(args), MultiplayerCommandOptions.SkipHost);
 
         bound = true;
     }

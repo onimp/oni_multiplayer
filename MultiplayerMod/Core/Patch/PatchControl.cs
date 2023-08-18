@@ -1,4 +1,6 @@
-﻿using MultiplayerMod.Core.Patch.Context;
+﻿using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Patch.Context;
+using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Core.Patch;
 
@@ -11,6 +13,12 @@ public static class PatchControl {
 
     public static void RunIfEnabled(System.Action action) {
         if (PatchContext.Global.PatchesEnabled && PatchContext.Current.PatchesEnabled)
+            action();
+    }
+
+    public static void RunIfSpawned(System.Action action) {
+        var multiplayerState = Dependencies.Get<MultiplayerGame>().State;
+        if (multiplayerState.Players.Count > 0 && multiplayerState.Current.WorldSpawned)
             action();
     }
 
