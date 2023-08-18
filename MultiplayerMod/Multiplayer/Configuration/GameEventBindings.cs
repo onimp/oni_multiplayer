@@ -33,13 +33,15 @@ public class GameEventBindings {
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameEventBindings>();
 
     private readonly IMultiplayerClient client;
+    private readonly MultiplayerGame multiplayer;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
     private bool bound;
 
-    public GameEventBindings(IMultiplayerClient client) {
+    public GameEventBindings(IMultiplayerClient client, MultiplayerGame multiplayer) {
         this.client = client;
+        this.multiplayer = multiplayer;
     }
 
     public void Bind() {
@@ -155,7 +157,7 @@ public class GameEventBindings {
     }
 
     private void SendIfSpawned(IMultiplayerCommand command) {
-        if (MultiplayerGame.State.Current.WorldSpawned)
+        if (multiplayer.State.Current.WorldSpawned)
             client.Send(command);
     }
 
