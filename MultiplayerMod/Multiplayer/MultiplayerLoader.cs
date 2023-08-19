@@ -14,8 +14,8 @@ public class MultiplayerLoader : IModComponentLoader {
     public void OnLoad(Harmony harmony) {
         Dependencies.Register<MultiplayerIdentityProvider>();
         Dependencies.Register<MultiplayerGame>();
-        Dependencies.Register(Dependencies.Resolve<MultiplayerObjectsConfigurator>());
-        Dependencies.Register(Dependencies.Resolve<MultiplayerCoordinator>());
+        Dependencies.Register<MultiplayerObjectsConfigurator>(DependencyOptions.AutoResolve);
+        Dependencies.Register<MultiplayerCoordinator>(DependencyOptions.AutoResolve);
     }
 
 }

@@ -9,7 +9,7 @@ namespace MultiplayerMod.Game;
 public class GameComponentLoader : IModComponentLoader {
 
     public void OnLoad(Harmony harmony) {
-        Dependencies.Register(new GameExtensionsConfigurator());
+        Dependencies.Register<GameExtensionsConfigurator>(DependencyOptions.AutoResolve);
     }
 
 }

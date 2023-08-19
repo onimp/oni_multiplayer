@@ -16,10 +16,22 @@ public class DependencyContainer {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Register<T>() where T : class => TryRegister<T>();
+    public void Register<T>(DependencyOptions options = DependencyOptions.Default) where T : class {
+        if (options.HasFlag(DependencyOptions.AutoResolve)) {
+            TryRegister(Resolve<T>());
+            return;
+        }
+        TryRegister<T>();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Register<I, T>() where T : class, I => TryRegister<I, T>();
+    public void Register<I, T>(DependencyOptions options = DependencyOptions.Default) where T : class, I {
+        if (options.HasFlag(DependencyOptions.AutoResolve)) {
+            TryRegister<I, T>(Resolve<T>());
+            return;
+        }
+        TryRegister<I, T>();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Register<T>(T instance) where T : notnull => TryRegister(instance);
