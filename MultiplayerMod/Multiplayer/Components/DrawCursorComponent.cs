@@ -17,6 +17,8 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
 
     private Texture2D cursorTexture = null!;
     private Camera mainCamera = null!;
+    private PlayerCursor? prevCursor;
+    private PlayerCursor? currentCursor;
     private bool initialized;
 
     private void OnEnable() {
@@ -30,7 +32,19 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
             if (player.Equals(client.Player))
                 continue;
 
-            RenderCursor(state.CursorPosition);
+            prevCursor ??= state.Cursor;
+            currentCursor ??= state.Cursor;
+
+            if (currentCursor.LastUpdate != state.Cursor.LastUpdate) {
+                prevCursor = currentCursor;
+                currentCursor = state.Cursor;
+            }
+
+            float updateDelta = currentCursor.LastUpdate - prevCursor.LastUpdate;
+            var timeDiff = (System.DateTime.Now.Ticks - currentCursor.LastUpdate) / updateDelta;
+            var position = Vector2.Lerp(prevCursor.Position, currentCursor.Position, timeDiff);
+
+            RenderCursor(position);
         }
     }
 

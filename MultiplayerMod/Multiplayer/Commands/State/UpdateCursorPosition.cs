@@ -21,7 +21,7 @@ public class UpdateCursorPosition : MultiplayerCommand {
         if (state == null)
             return;
 
-        state.CursorPosition = position;
+        state.Cursor = new PlayerCursor(position, System.DateTime.Now.Ticks);
     }
 
 }
