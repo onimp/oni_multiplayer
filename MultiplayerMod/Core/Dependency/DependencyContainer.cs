@@ -18,7 +18,6 @@ public class DependencyContainer {
         Register(this);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Register<T>(DependencyOptions options = DependencyOptions.Default) where T : class {
         if (options.HasFlag(DependencyOptions.AutoResolve)) {
             TryRegister(Resolve<T>());
@@ -27,7 +26,6 @@ public class DependencyContainer {
         TryRegister<T>();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Register<I, T>(DependencyOptions options = DependencyOptions.Default) where T : class, I {
         if (options.HasFlag(DependencyOptions.AutoResolve)) {
             TryRegister<I, T>(Resolve<T>());
