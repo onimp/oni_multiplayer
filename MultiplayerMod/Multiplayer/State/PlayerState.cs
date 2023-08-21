@@ -7,10 +7,7 @@ namespace MultiplayerMod.Multiplayer.State;
 public class PlayerState {
     public IPlayerIdentity Player { get; }
 
-    public Vector2 PrevCursorLocation;
-    public Vector2 NewCursorLocation;
-    public float PrevCursorTime;
-    public float NewCursorTime;
+    public PlayerCursor Cursor { get; set; } = new(new Vector2(), System.DateTime.Now.Ticks);
 
     public bool WorldSpawned { get; set; }
 
