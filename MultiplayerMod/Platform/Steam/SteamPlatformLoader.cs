@@ -1,8 +1,8 @@
-﻿using HarmonyLib;
-using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Loader;
+﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
+using MultiplayerMod.ModRuntime;
+using MultiplayerMod.ModRuntime.Loader;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network;
@@ -10,22 +10,25 @@ using MultiplayerMod.Platform.Steam.Network.Components;
 
 namespace MultiplayerMod.Platform.Steam;
 
-// ReSharper disable once UnusedType.Global
+[UsedImplicitly]
 [ModComponentOrder(ModComponentOrder.Platform)]
 public class SteamPlatformLoader : IModComponentLoader {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamPlatformLoader>();
 
-    public void OnLoad(Harmony harmony) {
+    public void Load(Runtime runtime) {
         var steam = DistributionPlatform.Inst.Platform == "Steam";
         if (!steam)
             return;
 
         log.Info("Steam platform detected");
-        Dependencies.Register<IMultiplayerOperations, SteamMultiplayerOperations>();
-        Dependencies.Register<IMultiplayerServer, SteamServer>();
-        Dependencies.Register<IMultiplayerClient, SteamClient>();
-        Dependencies.Register<SteamLobby>();
+
+        var dependencies = runtime.Dependencies;
+        dependencies.Register<IMultiplayerOperations, SteamMultiplayerOperations>();
+        dependencies.Register<IMultiplayerServer, SteamServer>();
+        dependencies.Register<IMultiplayerClient, SteamClient>();
+        dependencies.Register<SteamLobby>();
+
         UnityObject.CreateStaticWithComponent<LobbyJoinRequestComponent>();
     }
 

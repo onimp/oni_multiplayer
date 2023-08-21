@@ -1,6 +1,6 @@
 ﻿using HarmonyLib;
 
-namespace MultiplayerMod.Core.Loader;
+namespace MultiplayerMod.ModRuntime.Loader;
 
 [HarmonyPatch(typeof(LaunchInitializer))]
 public static class LaunchInitializerPatch {

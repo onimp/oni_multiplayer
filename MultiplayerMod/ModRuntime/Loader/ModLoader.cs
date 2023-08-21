@@ -4,12 +4,12 @@ using HarmonyLib;
 using KMod;
 using MultiplayerMod.Core.Logging;
 
-namespace MultiplayerMod.Core.Loader;
+namespace MultiplayerMod.ModRuntime.Loader;
 
 // ReSharper disable once UnusedType.Global
 public class ModLoader : UserMod2 {
 
-    private readonly Logging.Logger log = LoggerFactory.GetLogger<ModLoader>();
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ModLoader>();
 
     public override void OnLoad(Harmony harmony) {
         var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;

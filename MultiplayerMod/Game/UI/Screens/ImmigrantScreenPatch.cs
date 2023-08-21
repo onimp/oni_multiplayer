@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using HarmonyLib;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.ModRuntime;
 using UnityEngine;
 
 namespace MultiplayerMod.Game.UI.Screens;
@@ -18,7 +18,7 @@ public static class ImmigrantScreenPatch {
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
     // ReSharper disable once UnusedMember.Local
     private static void Initialize(ImmigrantScreen __instance) => PatchControl.RunIfEnabled(
-        () => new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
+        () => new TaskFactory(Runtime.Instance.Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 if (Deliverables == null) return;
 

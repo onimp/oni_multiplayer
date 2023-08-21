@@ -1,21 +1,23 @@
-﻿using HarmonyLib;
+﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Loader;
+using MultiplayerMod.ModRuntime;
+using MultiplayerMod.ModRuntime.Loader;
 using MultiplayerMod.Multiplayer.Configuration;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer;
 
-// ReSharper disable once UnusedType.Global
+[UsedImplicitly]
 [ModComponentOrder(ModComponentOrder.Configuration)]
 public class MultiplayerLoader : IModComponentLoader {
 
-    public void OnLoad(Harmony harmony) {
-        Dependencies.Register<MultiplayerIdentityProvider>();
-        Dependencies.Register<MultiplayerGame>();
-        Dependencies.Register<MultiplayerObjectsConfigurator>(DependencyOptions.AutoResolve);
-        Dependencies.Register<MultiplayerCoordinator>(DependencyOptions.AutoResolve);
+    public void Load(Runtime runtime) {
+        var dependencies = runtime.Dependencies;
+        dependencies.Register<MultiplayerIdentityProvider>();
+        dependencies.Register<MultiplayerGame>();
+        dependencies.Register<MultiplayerObjectsConfigurator>(DependencyOptions.AutoResolve);
+        dependencies.Register<MultiplayerCoordinator>(DependencyOptions.AutoResolve);
     }
 
 }

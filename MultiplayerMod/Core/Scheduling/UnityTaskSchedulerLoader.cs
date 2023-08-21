@@ -1,19 +1,19 @@
-﻿using HarmonyLib;
-using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Loader;
+﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
+using MultiplayerMod.ModRuntime;
+using MultiplayerMod.ModRuntime.Loader;
 
 namespace MultiplayerMod.Core.Scheduling;
 
-// ReSharper disable once UnusedType.Global
+[UsedImplicitly]
 public class UnityTaskSchedulerLoader : IModComponentLoader {
 
     private readonly Logging.Logger log = LoggerFactory.GetLogger<UnityTaskSchedulerLoader>();
 
-    public void OnLoad(Harmony harmony) {
+    public void Load(Runtime runtime) {
         log.Debug("Creating task scheduler...");
-        Dependencies.Register<UnityTaskScheduler>();
+        runtime.Dependencies.Register<UnityTaskScheduler>();
         UnityObject.CreateStaticWithComponent<UnityTaskExecutor>();
     }
 

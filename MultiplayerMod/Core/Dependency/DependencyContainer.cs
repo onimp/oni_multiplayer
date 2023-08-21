@@ -4,10 +4,13 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.Core.Dependency;
 
 public class DependencyContainer {
+
+    private static readonly Logging.Logger log = LoggerFactory.GetLogger<DependencyContainer>();
 
     private readonly ConcurrentDictionary<Type, Lazy<object>> instances = new();
 
@@ -84,6 +87,7 @@ public class DependencyContainer {
     private void RegisterInitializer(Type type, Lazy<object> initializer) {
         if (!instances.TryAdd(type, initializer))
             throw new TypeAlreadyRegisteredException(type);
+        log.Trace(() => $"Type {type.FullName} is registered.");
     }
 
     private object Instantiate(Type type) {

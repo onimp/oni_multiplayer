@@ -1,7 +1,7 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using UnityEngine;
 
 namespace MultiplayerMod.Game;
