@@ -21,7 +21,10 @@ public class UpdateCursorPosition : MultiplayerCommand {
         if (state == null)
             return;
 
-        state.CursorPosition = position;
+        state.PrevCursorLocation = state.PrevCursorLocation;
+        state.PrevCursorTime = state.NewCursorTime;
+        state.NewCursorLocation = position;
+        state.NewCursorTime = Time.time;
     }
 
 }

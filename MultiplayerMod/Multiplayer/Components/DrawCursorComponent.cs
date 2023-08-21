@@ -30,7 +30,10 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
             if (player.Equals(client.Player))
                 continue;
 
-            RenderCursor(state.CursorPosition);
+            var updateDelta = state.NewCursorTime - state.PrevCursorTime;
+            var timeDiff = (Time.time - state.NewCursorTime) / updateDelta;
+            var position = Vector2.Lerp(state.PrevCursorLocation, state.NewCursorLocation, timeDiff);
+            RenderCursor(position);
         }
     }
 
