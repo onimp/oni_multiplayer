@@ -29,21 +29,19 @@ public class ComponentReference<T> where T : KMonoBehaviour {
 
     public T GetComponent() => GameObjectReference.GetComponent<T>();
 
-    protected bool Equals(ComponentReference<T> other)
-    {
+    protected bool Equals(ComponentReference<T> other) {
         return GameObjectReference.Equals(other.GameObjectReference);
     }
 
-    public override bool Equals(object? obj)
-    {
+    public override bool Equals(object? obj) {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;
         if (obj.GetType() != this.GetType()) return false;
-        return Equals((ComponentReference<T>)obj);
+
+        return Equals((ComponentReference<T>) obj);
     }
 
-    public override int GetHashCode()
-    {
+    public override int GetHashCode() {
         return GameObjectReference.GetHashCode();
     }
 
