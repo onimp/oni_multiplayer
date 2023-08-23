@@ -139,8 +139,7 @@ public static class ObjectEvents {
     private static void ProcessObjectEvent(object __instance, MethodBase __originalMethod, object[] __args) {
         var args = __args.Select(
             obj =>
-                obj switch
-                {
+                obj switch {
                     GameObject gameObject => gameObject.GetGridReference(),
                     KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
                     _ => obj

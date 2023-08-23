@@ -25,4 +25,25 @@ public class GridReference : GameObjectReference {
 
     public override string ToString() => $"{{ Cell = {Cell}, Layer = {Layer} }}";
 
+    protected bool Equals(GridReference other)
+    {
+        return Cell == other.Cell && Layer == other.Layer;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != this.GetType()) return false;
+        return Equals((GridReference)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            return (Cell * 397) ^ Layer;
+        }
+    }
+
 }
