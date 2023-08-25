@@ -1,4 +1,4 @@
-namespace MultiplayerModTests.Environment.Unity;
+namespace MultiplayerMod.Test.Environment.Unity;
 
 public class UnityEvent {
 

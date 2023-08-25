@@ -7,7 +7,7 @@ using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Scheduling;
 using UnityEngine;
 
-namespace MultiplayerModTests.Environment.Unity;
+namespace MultiplayerMod.Test.Environment.Unity;
 
 public static class UnityTestRuntime {
 

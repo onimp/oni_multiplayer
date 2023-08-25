@@ -1,9 +1,9 @@
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.ModRuntime.Context;
-using MultiplayerModTests.Environment.Unity;
+using MultiplayerMod.Test.Environment.Unity;
 using NUnit.Framework;
 
-namespace MultiplayerModTests.ModRuntime;
+namespace MultiplayerMod.Test.ModRuntime;
 
 [TestFixture]
 public class ExecutionContextManagerTests {

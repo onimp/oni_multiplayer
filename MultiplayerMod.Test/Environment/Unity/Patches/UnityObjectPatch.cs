@@ -4,7 +4,7 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using UnityEngine;
 
-namespace MultiplayerModTests.Environment.Unity.Patches;
+namespace MultiplayerMod.Test.Environment.Unity.Patches;
 
 [UsedImplicitly]
 [HarmonyPatch(typeof(Object))]

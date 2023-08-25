@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 // ReSharper disable ClassNeverInstantiated.Global
 
-namespace MultiplayerModTests.Core.Dependency;
+namespace MultiplayerMod.Test.Core.Dependency;
 
 [TestFixture]
 public class DependencyContainerTests {
