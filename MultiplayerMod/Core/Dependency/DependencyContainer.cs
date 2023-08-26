@@ -4,10 +4,13 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.Core.Dependency;
 
 public class DependencyContainer {
+
+    private static readonly Logging.Logger log = LoggerFactory.GetLogger<DependencyContainer>();
 
     private readonly ConcurrentDictionary<Type, Lazy<object>> instances = new();
 
@@ -15,11 +18,21 @@ public class DependencyContainer {
         Register(this);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Register<T>() where T : class => TryRegister<T>();
+    public void Register<T>(DependencyOptions options = DependencyOptions.Default) where T : class {
+        if (options.HasFlag(DependencyOptions.AutoResolve)) {
+            TryRegister(Resolve<T>());
+            return;
+        }
+        TryRegister<T>();
+    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Register<I, T>() where T : class, I => TryRegister<I, T>();
+    public void Register<I, T>(DependencyOptions options = DependencyOptions.Default) where T : class, I {
+        if (options.HasFlag(DependencyOptions.AutoResolve)) {
+            TryRegister<I, T>(Resolve<T>());
+            return;
+        }
+        TryRegister<I, T>();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Register<T>(T instance) where T : notnull => TryRegister(instance);
@@ -72,6 +85,7 @@ public class DependencyContainer {
     private void RegisterInitializer(Type type, Lazy<object> initializer) {
         if (!instances.TryAdd(type, initializer))
             throw new TypeAlreadyRegisteredException(type);
+        log.Trace(() => $"Type {type.FullName} is registered.");
     }
 
     private object Instantiate(Type type) {

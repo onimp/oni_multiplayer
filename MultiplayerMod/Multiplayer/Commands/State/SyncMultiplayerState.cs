@@ -1,5 +1,5 @@
 ﻿using System;
-using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Commands.State;

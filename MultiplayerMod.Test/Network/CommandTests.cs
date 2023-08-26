@@ -7,7 +7,7 @@ using MultiplayerMod.Platform.Steam.Network;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using NUnit.Framework;
 
-namespace MultiplayerModTests.Network;
+namespace MultiplayerMod.Test.Network;
 
 [TestFixture]
 public class CommandTests {

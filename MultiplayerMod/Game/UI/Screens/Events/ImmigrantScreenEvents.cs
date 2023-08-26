@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using HarmonyLib;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 
 namespace MultiplayerMod.Game.UI.Screens.Events;
 

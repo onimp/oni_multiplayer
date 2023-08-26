@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using HarmonyLib;
-using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
