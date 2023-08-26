@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.UI.Screens.Events;
 
@@ -9,6 +10,7 @@ public static class PauseScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(PauseScreen.TriggerQuitGame))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once UnusedMember.Local
     private static void TriggerQuitGame() => QuitGame?.Invoke();
 

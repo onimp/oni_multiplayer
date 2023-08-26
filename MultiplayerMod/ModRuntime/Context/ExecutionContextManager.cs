@@ -6,23 +6,14 @@ namespace MultiplayerMod.ModRuntime.Context;
 [UsedImplicitly]
 public class ExecutionContextManager {
 
-    public ExecutionContext MainContext { get; set; } = new(ExecutionLevel.System);
+    public ExecutionContext Context => stack.Value.Current;
 
-    private readonly ThreadLocal<ExecutionContextOverrides> overrides = new(() => new ExecutionContextOverrides());
+    private readonly ThreadLocal<ExecutionContextStack> stack = new(() => new ExecutionContextStack());
 
-    public ExecutionContext EffectiveContext => overrides.Value.Current ?? MainContext;
+    public void Push(ExecutionContext context) => stack.Value.Push(context);
 
-    public void UsingContext(ExecutionContext context, System.Action action) {
-        OverrideContext(context);
-        try {
-            action();
-        } finally {
-            RestoreContext();
-        }
-    }
+    public void Pop() => stack.Value.Pop();
 
-    public void OverrideContext(ExecutionContext context) => overrides.Value.Push(context);
-
-    public void RestoreContext() => overrides.Value.Pop();
+    public void Replace(ExecutionContext context) => stack.Value.Replace(context);
 
 }

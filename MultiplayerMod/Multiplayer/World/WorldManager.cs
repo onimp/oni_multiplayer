@@ -1,6 +1,6 @@
 using System.IO;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
@@ -36,7 +36,7 @@ public static class WorldManager {
 
     private static byte[] GetWorldSave() {
         var path = SaveLoader.GetActiveSaveFilePath();
-        PatchControl.RunWithDisabledPatches(() => SaveLoader.Instance.Save(path));
+        Execution.RunUsingLevel(ExecutionLevel.Multiplayer, () => SaveLoader.Instance.Save(path));
         return File.ReadAllBytes(path);
     }
 

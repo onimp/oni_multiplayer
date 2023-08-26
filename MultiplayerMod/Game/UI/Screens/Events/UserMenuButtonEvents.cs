@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using UnityEngine;
 
 namespace MultiplayerMod.Game.UI.Screens.Events;
@@ -22,6 +23,7 @@ public static class UserMenuButtonEvents {
     [HarmonyPatch(typeof(UserMenu))]
     // ReSharper disable once UnusedType.Local
     private static class UserMenuEvents {
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(UserMenu.AddButton))]
         // ReSharper disable once UnusedMember.Local
@@ -33,11 +35,9 @@ public static class UserMenuButtonEvents {
 
             button.onClick = () => {
                 original.Invoke();
-                PatchControl.RunIfEnabled(
-                    () => Click?.Invoke(
-                        go,
-                        original
-                    )
+                Execution.RunIfPossible(
+                    ExecutionLevel.Runtime,
+                    () => Click?.Invoke(go, original)
                 );
             };
         }

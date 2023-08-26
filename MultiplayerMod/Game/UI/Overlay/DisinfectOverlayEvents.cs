@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.UI.Overlay;
 
@@ -29,12 +29,12 @@ public static class DiseaseOverlayEvents {
     // ReSharper disable once UnusedMember.Local
     private static void OnClickToggle() => TriggerEvent();
 
-    private static void TriggerEvent() => PatchControl.RunIfEnabled(
-        () => {
-            DiseaseSettingsChanged?.Invoke(
-                SaveGame.Instance.minGermCountForDisinfect,
-                SaveGame.Instance.enableAutoDisinfect
-            );
-        }
-    );
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void TriggerEvent() {
+        DiseaseSettingsChanged?.Invoke(
+            SaveGame.Instance.minGermCountForDisinfect,
+            SaveGame.Instance.enableAutoDisinfect
+        );
+    }
+
 }

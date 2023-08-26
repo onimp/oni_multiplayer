@@ -1,6 +1,6 @@
 using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.UI;
 
@@ -13,18 +13,21 @@ public static class GameSpeedControlEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SpeedControlScreen.SetSpeed))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once InconsistentNaming
     // ReSharper disable once UnusedMember.Local
-    private static void SetSpeedPostfix(int Speed) => PatchControl.RunIfEnabled(() => { SpeedChanged?.Invoke(Speed); });
+    private static void SetSpeedPostfix(int Speed) => SpeedChanged?.Invoke(Speed);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SpeedControlScreen.OnPause))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once UnusedMember.Local
-    private static void OnPausePostfix() => PatchControl.RunIfEnabled(() => GamePaused?.Invoke());
+    private static void OnPausePostfix() => GamePaused?.Invoke();
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SpeedControlScreen.OnPlay))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once UnusedMember.Local
-    private static void OnPlayPostfix() => PatchControl.RunIfEnabled(() => GameResumed?.Invoke());
+    private static void OnPlayPostfix() => GameResumed?.Invoke();
 
 }

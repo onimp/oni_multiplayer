@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.UI.Screens.Events;
 
@@ -12,13 +12,16 @@ public static class ResearchScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ResearchEntry.OnResearchCanceled))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once UnusedMember.Local
     private static void OnResearchCanceledPatch(ResearchEntry __instance) =>
-        PatchControl.RunIfEnabled(() => Cancel?.Invoke(__instance.targetTech.Id));
+        Cancel?.Invoke(__instance.targetTech.Id);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ResearchEntry.OnResearchClicked))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once UnusedMember.Local
     private static void OnResearchClickedPatch(ResearchEntry __instance) =>
-        PatchControl.RunIfEnabled(() => Select?.Invoke(__instance.targetTech.Id));
+        Select?.Invoke(__instance.targetTech.Id);
+
 }

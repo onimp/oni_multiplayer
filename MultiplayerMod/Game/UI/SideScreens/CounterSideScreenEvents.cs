@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -21,14 +21,13 @@ public static class CounterSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void ToggleAdvanced(CounterSideScreen __instance) => TriggerEvent(__instance);
 
-    private static void TriggerEvent(CounterSideScreen instance) => PatchControl.RunIfEnabled(
-        () => UpdateLogicCounter?.Invoke(
-            new CounterSideScreenEventArgs(
-                instance.targetLogicCounter.GetReference(),
-                instance.targetLogicCounter.currentCount,
-                instance.targetLogicCounter.maxCount,
-                instance.targetLogicCounter.advancedMode
-            )
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void TriggerEvent(CounterSideScreen instance) => UpdateLogicCounter?.Invoke(
+        new CounterSideScreenEventArgs(
+            instance.targetLogicCounter.GetReference(),
+            instance.targetLogicCounter.currentCount,
+            instance.targetLogicCounter.maxCount,
+            instance.targetLogicCounter.advancedMode
         )
     );
 

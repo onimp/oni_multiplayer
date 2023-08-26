@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -36,16 +36,15 @@ public static class AlarmSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void SelectType(AlarmSideScreen __instance) => TriggerEvent(__instance);
 
-    private static void TriggerEvent(AlarmSideScreen instance) => PatchControl.RunIfEnabled(
-        () => UpdateAlarm?.Invoke(
-            new AlarmSideScreenEventArgs(
-                instance.targetAlarm.GetReference(),
-                instance.targetAlarm.notificationName,
-                instance.targetAlarm.notificationTooltip,
-                instance.targetAlarm.pauseOnNotify,
-                instance.targetAlarm.zoomOnNotify,
-                instance.targetAlarm.notificationType
-            )
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void TriggerEvent(AlarmSideScreen instance) => UpdateAlarm?.Invoke(
+        new AlarmSideScreenEventArgs(
+            instance.targetAlarm.GetReference(),
+            instance.targetAlarm.notificationName,
+            instance.targetAlarm.notificationTooltip,
+            instance.targetAlarm.pauseOnNotify,
+            instance.targetAlarm.zoomOnNotify,
+            instance.targetAlarm.notificationType
         )
     );
 

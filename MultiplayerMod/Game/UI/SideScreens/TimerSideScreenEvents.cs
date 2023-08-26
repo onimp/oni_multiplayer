@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -21,15 +21,14 @@ public static class TimerSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void UpdateMaxCapacity(TimerSideScreen __instance) => TriggerEvent(__instance);
 
-    private static void TriggerEvent(TimerSideScreen instance) => PatchControl.RunIfEnabled(
-        () => UpdateLogicTimeSensor?.Invoke(
-            new TimerSideScreenEventArgs(
-                instance.targetTimedSwitch.GetReference(),
-                instance.targetTimedSwitch.displayCyclesMode,
-                instance.targetTimedSwitch.onDuration,
-                instance.targetTimedSwitch.offDuration,
-                instance.targetTimedSwitch.timeElapsedInCurrentState
-            )
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void TriggerEvent(TimerSideScreen instance) => UpdateLogicTimeSensor?.Invoke(
+        new TimerSideScreenEventArgs(
+            instance.targetTimedSwitch.GetReference(),
+            instance.targetTimedSwitch.displayCyclesMode,
+            instance.targetTimedSwitch.onDuration,
+            instance.targetTimedSwitch.offDuration,
+            instance.targetTimedSwitch.timeElapsedInCurrentState
         )
     );
 

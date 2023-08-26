@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using UnityEngine;
 
 namespace MultiplayerMod.Game.UI.Tools.Events;
@@ -33,15 +34,9 @@ public static class StampToolEvents {
         return result;
     }
 
-    private static void OnStamp(StampTool instance, Vector2 location) => PatchControl.RunIfEnabled(
-        () => {
-            Stamp?.Invoke(
-                new StampEventArgs(
-                    instance.stampTemplate,
-                    location
-                )
-            );
-        }
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void OnStamp(StampTool instance, Vector2 location) => Stamp?.Invoke(
+        new StampEventArgs(instance.stampTemplate, location)
     );
 
 }

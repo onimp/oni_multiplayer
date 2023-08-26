@@ -15,41 +15,42 @@ public class ExecutionContextManagerTests {
     public static void TearDown() => UnityTestRuntime.Uninstall();
 
     [Test]
-    public void MainContextChange() {
+    public void RootContextChange() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
 
-        Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.EffectiveContext.Level);
-        manager.MainContext = new ExecutionContext(ExecutionLevel.Runtime);
-        Assert.AreEqual(expected: ExecutionLevel.Runtime, actual: manager.EffectiveContext.Level);
+        Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);
+        manager.Replace(new ExecutionContext(ExecutionLevel.Runtime));
+        Assert.AreEqual(expected: ExecutionLevel.Runtime, actual: manager.Context.Level);
     }
 
     [Test]
     public void BasicOverride() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        manager.UsingLevel(
+        var levelManager = container.Get<ExecutionLevelManager>();
+        levelManager.RunUsingLevel(
             ExecutionLevel.Command,
-            () => { Assert.AreEqual(expected: ExecutionLevel.Command, actual: manager.EffectiveContext.Level); }
+            () => { Assert.AreEqual(expected: ExecutionLevel.Command, actual: manager.Context.Level); }
         );
-        Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.EffectiveContext.Level);
+        Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);
     }
 
     [Test]
     public void RestoreEmptyContextException() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        Assert.Throws<ExecutionContextIntegrityFailureException>(() => manager.RestoreContext());
+        Assert.Throws<ExecutionContextIntegrityFailureException>(() => manager.Pop());
     }
 
     [Test]
     public void ManualGuardedOverrideStaleContextException() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        manager.OverrideContext(new ExecutionContext(ExecutionLevel.Runtime));
+        manager.Push(new ExecutionContext(ExecutionLevel.Runtime));
         UnityTestRuntime.NextFrame();
         Assert.Throws<ExecutionContextIntegrityFailureException>(
-            () => manager.OverrideContext(new ExecutionContext(ExecutionLevel.Runtime))
+            () => manager.Push(new ExecutionContext(ExecutionLevel.Runtime))
         );
     }
 
@@ -57,16 +58,17 @@ public class ExecutionContextManagerTests {
     public void ManualGuardedOverride() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        manager.OverrideContext(new ExecutionContext(ExecutionLevel.Runtime));
-        Assert.AreEqual(expected: ExecutionLevel.Runtime, actual: manager.EffectiveContext.Level);
-        manager.RestoreContext();
+        manager.Push(new ExecutionContext(ExecutionLevel.Runtime));
+        Assert.AreEqual(expected: ExecutionLevel.Runtime, actual: manager.Context.Level);
+        manager.Pop();
         UnityTestRuntime.NextFrame();
-        Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.EffectiveContext.Level);
+        Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);
     }
 
     private static DependencyContainer CreateContainer() {
         var container = new DependencyContainer();
         container.Register<ExecutionContextManager>();
+        container.Register<ExecutionLevelManager>();
         return container;
     }
 

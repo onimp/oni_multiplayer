@@ -1,5 +1,5 @@
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.World;
 
@@ -10,7 +10,8 @@ public static class SaveLoaderEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SaveLoader.Save), typeof(string), typeof(bool), typeof(bool))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once UnusedMember.Global
-    public static void SavePostfix() => PatchControl.RunIfEnabled(() => { WorldSaved?.Invoke(); });
+    public static void SavePostfix() => WorldSaved?.Invoke();
 
 }

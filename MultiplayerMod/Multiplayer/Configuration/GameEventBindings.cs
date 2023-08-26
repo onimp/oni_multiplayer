@@ -1,6 +1,4 @@
 ﻿using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Core.Patch;
-using MultiplayerMod.Core.Patch.Context;
 using MultiplayerMod.Game.Mechanics.Objects;
 using MultiplayerMod.Game.Mechanics.Printing;
 using MultiplayerMod.Game.UI;
@@ -8,6 +6,7 @@ using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
@@ -34,14 +33,20 @@ public class GameEventBindings {
 
     private readonly IMultiplayerClient client;
     private readonly MultiplayerGame multiplayer;
+    private readonly ExecutionLevelManager levelManager;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
     private bool bound;
 
-    public GameEventBindings(IMultiplayerClient client, MultiplayerGame multiplayer) {
+    public GameEventBindings(
+        IMultiplayerClient client,
+        MultiplayerGame multiplayer,
+        ExecutionLevelManager levelManager
+    ) {
         this.client = client;
         this.multiplayer = multiplayer;
+        this.levelManager = levelManager;
     }
 
     public void Bind() {
@@ -103,7 +108,7 @@ public class GameEventBindings {
         PauseScreenEvents.QuitGame += () => {
             if (client.State >= MultiplayerClientState.Connecting)
                 client.Disconnect();
-            PatchContext.Global = PatchControl.DisablePatches;
+            levelManager.ReplaceLevel(ExecutionLevel.System);
         };
 
         UserMenuScreenEvents.PriorityChanged += (target, priority) => client.Send(new ChangePriority(target, priority));

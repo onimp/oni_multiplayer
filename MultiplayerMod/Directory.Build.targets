@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
 
     <Target Name="SetVersionAttributes" BeforeTargets="InitializeSourceControlInformation">
@@ -67,7 +68,7 @@
     </Target>
 
     <Target Name="InstallMod"
-            AfterTargets="Build"
+            AfterTargets="AfterBuild"
             Condition="'$(Configuration)' == 'Debug'"
             DependsOnTargets="CopyModDescription; GenerateModInfo"
     >
@@ -139,4 +140,9 @@
         </ItemGroup>
         <ExposeAssembly SourceAssemblies="@(HarmonyAssembly)" Rules="@(HarmonyExposureRules)"/>
     </Target>
+
+    <Target Name="ProcessAttributes" DependsOnTargets="BuildAttributeProcessor" AfterTargets="PostBuildEvent">
+        <ProcessAttributes AssemblyPath="$(TargetPath)"/>
+    </Target>
+
 </Project>

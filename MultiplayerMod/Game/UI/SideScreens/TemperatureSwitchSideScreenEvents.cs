@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -21,13 +21,12 @@ public static class TemperatureSwitchSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void OnConditionButtonClicked(TemperatureSwitchSideScreen __instance) => TriggerEvent(__instance);
 
-    private static void TriggerEvent(TemperatureSwitchSideScreen instance) => PatchControl.RunIfEnabled(
-        () => UpdateTemperatureSwitch?.Invoke(
-            new TemperatureSwitchSideScreenEventArgs(
-                instance.targetTemperatureSwitch.GetReference(),
-                instance.targetTemperatureSwitch.thresholdTemperature,
-                instance.targetTemperatureSwitch.activateOnWarmerThan
-            )
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void TriggerEvent(TemperatureSwitchSideScreen instance) => UpdateTemperatureSwitch?.Invoke(
+        new TemperatureSwitchSideScreenEventArgs(
+            instance.targetTemperatureSwitch.GetReference(),
+            instance.targetTemperatureSwitch.thresholdTemperature,
+            instance.targetTemperatureSwitch.activateOnWarmerThan
         )
     );
 

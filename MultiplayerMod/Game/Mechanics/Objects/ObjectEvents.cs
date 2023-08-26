@@ -4,7 +4,8 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
-using MultiplayerMod.Core.Patch.Context;
+using MultiplayerMod.ModRuntime.Context;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Objects;
 using UnityEngine;
 
@@ -125,48 +126,50 @@ public static class ObjectEvents {
 
     [HarmonyPrefix]
     // ReSharper disable once UnusedMember.Local
-    private static void ObjectEventsPrefix() => PatchContext.Enter(PatchControl.DisablePatches);
+    private static void ObjectEventsPrefix() => Execution.EnterLevelSection(ExecutionLevel.Component);
 
     [HarmonyPostfix]
     // ReSharper disable once UnusedMember.Local
     private static void ObjectEventsPostfix(object __instance, MethodBase __originalMethod, object[] __args) {
-        PatchContext.Leave();
-        PatchControl.RunIfEnabled(
-            () => {
-                var args = __args.Select(
-                    obj =>
-                        obj switch {
-                            GameObject gameObject => gameObject.GetGridReference(),
-                            KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
-                            _ => obj
-                        }
-                ).ToArray();
-                switch (__instance) {
-                    case KMonoBehaviour kMonoBehaviour:
-                        ComponentMethodCalled?.Invoke(
-                            new ComponentEventsArgs(
-                                kMonoBehaviour.GetReference(),
-                                __originalMethod.DeclaringType!,
-                                __originalMethod.Name,
-                                args
-                            )
-                        );
-                        return;
-                    case StateMachine.Instance stateMachine:
-                        StateMachineMethodCalled?.Invoke(
-                            new StateMachineEventsArgs(
-                                stateMachine.GetReference(),
-                                __originalMethod.DeclaringType!,
-                                __originalMethod.Name,
-                                args
-                            )
-                        );
-                        return;
-                    default:
-                        throw new NotSupportedException($"{__instance} has un supported type");
+        Execution.LeaveLevelSection();
+        ProcessObjectEvent(__instance, __originalMethod, __args);
+    }
+
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void ProcessObjectEvent(object __instance, MethodBase __originalMethod, object[] __args) {
+        var args = __args.Select(
+            obj =>
+                obj switch
+                {
+                    GameObject gameObject => gameObject.GetGridReference(),
+                    KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
+                    _ => obj
                 }
-            }
-        );
+        ).ToArray();
+        switch (__instance) {
+            case KMonoBehaviour kMonoBehaviour:
+                ComponentMethodCalled?.Invoke(
+                    new ComponentEventsArgs(
+                        kMonoBehaviour.GetReference(),
+                        __originalMethod.DeclaringType!,
+                        __originalMethod.Name,
+                        args
+                    )
+                );
+                return;
+            case StateMachine.Instance stateMachine:
+                StateMachineMethodCalled?.Invoke(
+                    new StateMachineEventsArgs(
+                        stateMachine.GetReference(),
+                        __originalMethod.DeclaringType!,
+                        __originalMethod.Name,
+                        args
+                    )
+                );
+                return;
+            default:
+                throw new NotSupportedException($"{__instance} has un supported type");
+        }
     }
 
 }

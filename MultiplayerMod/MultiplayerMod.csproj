@@ -57,4 +57,7 @@
         <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedPath)\UnityEngine.IMGUIModule.dll" Private="false" />
         <Reference Include="ImGui.NET" HintPath="$(ManagedPath)\ImGui.NET.dll" Private="false" />
     </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\MultiplayerMod.AttributeProcessor\MultiplayerMod.AttributeProcessor.csproj" Private="false"/>
+    </ItemGroup>
 </Project>

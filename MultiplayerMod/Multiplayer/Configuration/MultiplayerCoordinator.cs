@@ -2,10 +2,9 @@
 using System.Linq;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Core.Patch;
-using MultiplayerMod.Core.Patch.Context;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.State;
@@ -31,6 +30,7 @@ public class MultiplayerCoordinator {
     private readonly ServerEventBindings serverBindings;
 
     private readonly MultiplayerGame multiplayer;
+    private readonly ExecutionLevelManager executionLevelManager;
 
     private readonly CommandExceptionHandler exceptionHandler = new();
 
@@ -44,13 +44,15 @@ public class MultiplayerCoordinator {
         IMultiplayerClient client,
         GameEventBindings gameBindings,
         ServerEventBindings serverBindings,
-        MultiplayerGame multiplayer
+        MultiplayerGame multiplayer,
+        ExecutionLevelManager executionLevelManager
     ) {
         this.server = server;
         this.client = client;
         this.gameBindings = gameBindings;
         this.serverBindings = serverBindings;
         this.multiplayer = multiplayer;
+        this.executionLevelManager = executionLevelManager;
 
         ConfigureServer();
         ConfigureClient();
@@ -80,7 +82,7 @@ public class MultiplayerCoordinator {
 
     private void ServerOnCommandReceived(CommandReceivedEventArgs e) {
         log.Trace(() => $"{e.Command} received from player {e.Player}");
-        PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
+        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(e.Command));
     }
 
     private void OnPlayerConnected(IPlayerIdentity player) {
@@ -113,6 +115,7 @@ public class MultiplayerCoordinator {
         switch (state) {
             case MultiplayerClientState.Connecting:
                 if (multiplayer.Role != MultiplayerRole.Host) {
+                    executionLevelManager.ReplaceLevel(ExecutionLevel.Multiplayer);
                     multiplayer.Role = MultiplayerRole.Client;
                     multiplayer.State.Players.Add(client.Player, new PlayerState(client.Player));
                     LoadOverlay.Show();
@@ -134,7 +137,7 @@ public class MultiplayerCoordinator {
             return;
         }
         log.Trace(() => $"{e.Command} received from server");
-        PatchControl.RunWithDisabledPatches(() => ExecuteCommand(e.Command));
+        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(e.Command));
     }
 
     #endregion
@@ -151,7 +154,7 @@ public class MultiplayerCoordinator {
         if (multiplayer.Role == MultiplayerRole.None)
             return;
 
-        PatchContext.Global = PatchControl.EnablePatches;
+        executionLevelManager.ReplaceLevel(ExecutionLevel.Runtime);
 
         if (multiplayer.Role == MultiplayerRole.Host) {
             LoadOverlay.Show();

@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -13,17 +13,15 @@ public static class TimeRangeSideScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(TimeRangeSideScreen.ChangeSetting))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void ChangeSetting(TimeRangeSideScreen __instance) =>
-        PatchControl.RunIfEnabled(
-            () => UpdateLogicTimeOfDaySensor?.Invoke(
-                new TimeRangeSideScreenEventArgs(
-                    __instance.targetTimedSwitch.GetReference(),
-                    __instance.targetTimedSwitch.startTime,
-                    __instance.targetTimedSwitch.duration
-                )
-            )
-        );
+    private static void ChangeSetting(TimeRangeSideScreen __instance) => UpdateLogicTimeOfDaySensor?.Invoke(
+        new TimeRangeSideScreenEventArgs(
+            __instance.targetTimedSwitch.GetReference(),
+            __instance.targetTimedSwitch.startTime,
+            __instance.targetTimedSwitch.duration
+        )
+    );
 
     [Serializable]
     public record TimeRangeSideScreenEventArgs(

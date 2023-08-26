@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -13,12 +13,10 @@ public static class RailGunSideScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(RailGunSideScreen.UpdateMaxCapacity))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
-    private static void UpdateMaxCapacity(RailGunSideScreen __instance, float newValue) => PatchControl.RunIfEnabled(
-        () => UpdateRailGunCapacity?.Invoke(
-            new RailGunSideScreenEventArgs(__instance.selectedGun.GetReference(), newValue)
-        )
-    );
+    private static void UpdateMaxCapacity(RailGunSideScreen __instance, float newValue) =>
+        UpdateRailGunCapacity?.Invoke(new RailGunSideScreenEventArgs(__instance.selectedGun.GetReference(), newValue));
 
     [Serializable]
     public record RailGunSideScreenEventArgs(ComponentReference<RailGun> Target, float LaunchMass);

@@ -5,6 +5,7 @@ using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Game.Mechanics.Minions;
 using MultiplayerMod.Game.UI.Screens;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
@@ -36,30 +37,27 @@ public static class TelepadEvents {
         return result;
     }
 
-    private static void OnAcceptDelivery(Telepad telepad, ITelepadDeliverable deliverable, GameObject gameObject) =>
-        PatchControl.RunIfEnabled(
-            () => {
-                ImmigrantScreenPatch.Deliverables = null;
-                AcceptDelivery?.Invoke(
-                    new AcceptDeliveryEventArgs(
-                        telepad.GetReference(),
-                        deliverable,
-                        gameObject.GetComponent<MultiplayerInstance>().Register(),
-                        gameObject.GetComponent<MinionIdentity>()?.GetMultiplayerInstance().Register()
-                    )
-                );
-            }
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void OnAcceptDelivery(Telepad telepad, ITelepadDeliverable deliverable, GameObject gameObject) {
+        ImmigrantScreenPatch.Deliverables = null;
+        AcceptDelivery?.Invoke(
+            new AcceptDeliveryEventArgs(
+                telepad.GetReference(),
+                deliverable,
+                gameObject.GetComponent<MultiplayerInstance>().Register(),
+                gameObject.GetComponent<MinionIdentity>()?.GetMultiplayerInstance().Register()
+            )
         );
+    }
 
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
     [HarmonyPatch(nameof(Telepad.RejectAll))]
-    private static void OnRejectAll(Telepad __instance) => PatchControl.RunIfEnabled(
-        () => {
-            ImmigrantScreenPatch.Deliverables = null;
-            Reject?.Invoke(__instance.GetReference());
-        }
-    );
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void OnRejectAll(Telepad __instance) {
+        ImmigrantScreenPatch.Deliverables = null;
+        Reject?.Invoke(__instance.GetReference());
+    }
 
     [Serializable]
     public record AcceptDeliveryEventArgs(

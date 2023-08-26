@@ -4,11 +4,9 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using KMod;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
-using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.ModRuntime.Loader;
 
@@ -43,23 +41,15 @@ public class DelayedModLoader {
         log.Info("Mod runtime is ready");
     }
 
-    private Runtime InitializeRuntime() {
-        var container = new DependencyContainer();
-        container.Register(harmony);
-        container.Register<ExecutionContextManager>();
-        container.Register<Runtime>(DependencyOptions.AutoResolve);
-        return container.Get<Runtime>();
-    }
-
     private void PrioritizedPatch() => AccessTools.GetTypesFromAssembly(assembly)
         .Where(it => it != typeof(LaunchInitializerPatch))
-        .Select(it => TryCreateClassProcessor(harmony, it))
+        .Select(TryCreateClassProcessor)
         .NotNull()
         .Where(it => it.containerAttributes != null)
         .OrderByDescending(it => it.containerAttributes.priority)
         .ForEach(it => it.Patch());
 
-    private PatchClassProcessor? TryCreateClassProcessor(Harmony harmony, Type type) {
+    private PatchClassProcessor? TryCreateClassProcessor(Type type) {
         var optional = type.GetCustomAttribute<HarmonyOptionalAttribute>() != null;
         try {
             return harmony.CreateClassProcessor(type);

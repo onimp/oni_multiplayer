@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using UnityEngine;
 
 namespace MultiplayerMod.Game.UI.Tools.Events;
@@ -13,6 +13,7 @@ public static class InterfaceToolEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     [HarmonyPrefix]
     [HarmonyPatch(nameof(InterfaceTool.OnMouseMove))]
-    private static void OnMouseMove(Vector3 cursor_pos) =>
-        PatchControl.RunIfEnabled(() => MouseMoved?.Invoke(new Vector2(cursor_pos.x, cursor_pos.y)));
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void OnMouseMove(Vector3 cursor_pos) => MouseMoved?.Invoke(new Vector2(cursor_pos.x, cursor_pos.y));
+
 }

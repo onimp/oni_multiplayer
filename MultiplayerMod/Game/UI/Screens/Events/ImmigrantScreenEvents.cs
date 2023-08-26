@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 
 namespace MultiplayerMod.Game.UI.Screens.Events;
@@ -16,8 +16,9 @@ public static class ImmigrantScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
-    private static void InitializePatch(ImmigrantScreen __instance) => PatchControl.RunIfEnabled(
-        () => new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void InitializePatch(ImmigrantScreen __instance) =>
+        new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 if (ImmigrantScreenPatch.Deliverables != null) return;
 
@@ -27,7 +28,6 @@ public static class ImmigrantScreenEvents {
                     ImmigrantScreenPatch.Deliverables = readyDeliverables;
                 }
             }
-        )
-    );
+        );
 
 }

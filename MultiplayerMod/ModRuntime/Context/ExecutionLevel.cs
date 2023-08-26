@@ -1,9 +1,9 @@
 ﻿namespace MultiplayerMod.ModRuntime.Context;
 
 public enum ExecutionLevel {
-    Runtime,
-    Command,
-    Component,
+    System,
     Multiplayer,
-    System
+    Component,
+    Command,
+    Runtime
 }

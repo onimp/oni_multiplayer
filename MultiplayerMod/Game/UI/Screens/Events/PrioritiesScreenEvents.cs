@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.UI.Screens.Events;
 
@@ -13,34 +13,39 @@ public static class PrioritiesScreenEvents {
     [HarmonyPatch(typeof(ChoreConsumer))]
     // ReSharper disable once UnusedType.Local
     private static class ChoreConsumerEvents {
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ChoreConsumer.SetPersonalPriority))]
+        [RequireExecutionLevel(ExecutionLevel.Runtime)]
         // ReSharper disable once UnusedMember.Local
         private static void SetPersonalPriority(ChoreConsumer __instance, ChoreGroup group, int value) =>
-            PatchControl.RunIfEnabled(() => Set?.Invoke(__instance, group, value));
+            Set?.Invoke(__instance, group, value);
     }
 
     [HarmonyPatch(typeof(Immigration))]
     // ReSharper disable once UnusedType.Local
     private static class ImmigrationEvents {
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Immigration.SetPersonalPriority))]
+        [RequireExecutionLevel(ExecutionLevel.Runtime)]
         // ReSharper disable once UnusedMember.Local
         private static void SetPersonalPriority(ChoreGroup group, int value) =>
-            PatchControl.RunIfEnabled(() => DefaultSet?.Invoke(group, value));
+            DefaultSet?.Invoke(group, value);
 
     }
 
     [HarmonyPatch(typeof(JobsTableScreen))]
     // ReSharper disable once UnusedType.Local
     private static class JobsTableScreenEvents {
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(JobsTableScreen.OnAdvancedModeToggleClicked))]
+        [RequireExecutionLevel(ExecutionLevel.Runtime)]
         // ReSharper disable once UnusedMember.Local
         private static void OnAdvancedModeToggleClicked() =>
-            PatchControl.RunIfEnabled(
-                () => AdvancedSet?.Invoke(global::Game.Instance.advancedPersonalPriorities)
-            );
+            AdvancedSet?.Invoke(global::Game.Instance.advancedPersonalPriorities);
 
     }
+
 }

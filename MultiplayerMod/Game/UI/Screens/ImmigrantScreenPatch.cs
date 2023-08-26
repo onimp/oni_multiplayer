@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime;
+using MultiplayerMod.ModRuntime.Context;
 using UnityEngine;
 
 namespace MultiplayerMod.Game.UI.Screens;
@@ -16,9 +16,10 @@ public static class ImmigrantScreenPatch {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
     // ReSharper disable once UnusedMember.Local
-    private static void Initialize(ImmigrantScreen __instance) => PatchControl.RunIfEnabled(
-        () => new TaskFactory(Runtime.Instance.Dependencies.Get<UnityTaskScheduler>()).StartNew(
+    private static void Initialize(ImmigrantScreen __instance) =>
+        new TaskFactory(Runtime.Instance.Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 if (Deliverables == null) return;
 
@@ -31,8 +32,7 @@ public static class ImmigrantScreenPatch {
 
                 SetDeliverablesData(Deliverables, __instance);
             }
-        )
-    );
+        );
 
     private static void InitializeContainers(
         List<ITelepadDeliverable?> telepadDeliverables,

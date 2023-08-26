@@ -1,6 +1,6 @@
 ﻿using System;
 using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -21,13 +21,12 @@ public static class CritterSensorSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void ToggleEggs(CritterSensorSideScreen __instance) => TriggerEvent(__instance);
 
-    private static void TriggerEvent(CritterSensorSideScreen instance) => PatchControl.RunIfEnabled(
-        () => UpdateCritterSensor?.Invoke(
-            new CritterSensorSideScreenEventArgs(
-                instance.targetSensor.GetReference(),
-                instance.targetSensor.countCritters,
-                instance.targetSensor.countEggs
-            )
+    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    private static void TriggerEvent(CritterSensorSideScreen instance) => UpdateCritterSensor?.Invoke(
+        new CritterSensorSideScreenEventArgs(
+            instance.targetSensor.GetReference(),
+            instance.targetSensor.countCritters,
+            instance.targetSensor.countEggs
         )
     );
 

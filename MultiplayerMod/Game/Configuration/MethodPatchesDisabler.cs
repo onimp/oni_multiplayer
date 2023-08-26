@@ -2,7 +2,8 @@
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
-using MultiplayerMod.Core.Patch.Context;
+using MultiplayerMod.ModRuntime.Context;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 
 namespace MultiplayerMod.Game.Configuration;
 
@@ -22,10 +23,12 @@ public static class MethodPatchesDisabler {
 
     // ReSharper disable once UnusedMember.Local
     [HarmonyPrefix]
-    private static void BeforeMethod() => PatchContext.Enter(PatchControl.DisablePatches);
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
+    private static void BeforeMethod() => Execution.EnterLevelSection(ExecutionLevel.Component);
 
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
-    private static void AfterMethod() => PatchContext.Leave();
+    [RequireExecutionLevel(ExecutionLevel.Component)]
+    private static void AfterMethod() => Execution.LeaveLevelSection();
 
 }
