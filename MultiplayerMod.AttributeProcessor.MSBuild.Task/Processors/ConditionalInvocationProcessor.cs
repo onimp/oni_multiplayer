@@ -92,13 +92,13 @@ public class ConditionalInvocationProcessor : IAttributeProcessor {
         instructions.Add(OpCodes.Call.ToInstruction(condition).WithSequencePoint(beginning));
         instructions.Add(OpCodes.Ldc_I4_0.ToInstruction().WithSequencePoint(beginning));
         instructions.Add(OpCodes.Ceq.ToInstruction().WithSequencePoint(beginning));
-        instructions.Add(OpCodes.Brfalse_S.ToInstruction(source.First()).WithSequencePoint(beginning));
+        instructions.Add(OpCodes.Brfalse.ToInstruction(source.First()).WithSequencePoint(beginning));
 
         Instruction? retInstruction = null;
         if (source.Last().OpCode.Code != Code.Ret)
             retInstruction = OpCodes.Ret.ToInstruction().WithSequencePoint(beginning);
 
-        instructions.Add(OpCodes.Br_S.ToInstruction(retInstruction ?? source.Last()).WithSequencePoint(beginning));
+        instructions.Add(OpCodes.Br.ToInstruction(retInstruction ?? source.Last()).WithSequencePoint(beginning));
         instructions.AddRange(source);
         if (retInstruction != null)
             instructions.Add(retInstruction);
@@ -109,6 +109,8 @@ public class ConditionalInvocationProcessor : IAttributeProcessor {
             method.Body.ExceptionHandlers,
             method.Body.Variables
         );
+
+        method.Body.OptimizeBranches();
     }
 
     private void AssertTargetMethodContract(MethodDef method) {
