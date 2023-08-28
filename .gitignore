@@ -1,9 +1,8 @@
 *.user
 /.idea
 /packages
-/Assembly-CSharp-firstpass
-/Assembly-CSharp
-/*/bin/
-/*/obj/
-/*/lib/
-
+src/Assembly-CSharp-firstpass
+src/Assembly-CSharp
+src/*/bin/
+src/*/obj/
+src/*/lib/
