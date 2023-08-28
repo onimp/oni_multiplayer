@@ -21,7 +21,7 @@ public static class CounterSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void ToggleAdvanced(CounterSideScreen __instance) => TriggerEvent(__instance);
 
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     private static void TriggerEvent(CounterSideScreen instance) => UpdateLogicCounter?.Invoke(
         new CounterSideScreenEventArgs(
             instance.targetLogicCounter.GetReference(),

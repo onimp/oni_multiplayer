@@ -16,7 +16,7 @@ public static class ImmigrantScreenPatch {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     // ReSharper disable once UnusedMember.Local
     private static void Initialize(ImmigrantScreen __instance) =>
         new TaskFactory(Runtime.Instance.Dependencies.Get<UnityTaskScheduler>()).StartNew(

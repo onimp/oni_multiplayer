@@ -10,7 +10,7 @@ public static class PauseScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(PauseScreen.TriggerQuitGame))]
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     // ReSharper disable once UnusedMember.Local
     private static void TriggerQuitGame() => QuitGame?.Invoke();
 

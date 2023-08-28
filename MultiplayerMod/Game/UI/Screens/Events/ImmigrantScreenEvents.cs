@@ -16,7 +16,7 @@ public static class ImmigrantScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ImmigrantScreen.Initialize))]
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     private static void InitializePatch(ImmigrantScreen __instance) =>
         new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {

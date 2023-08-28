@@ -21,7 +21,7 @@ public static class TemperatureSwitchSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void OnConditionButtonClicked(TemperatureSwitchSideScreen __instance) => TriggerEvent(__instance);
 
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     private static void TriggerEvent(TemperatureSwitchSideScreen instance) => UpdateTemperatureSwitch?.Invoke(
         new TemperatureSwitchSideScreenEventArgs(
             instance.targetTemperatureSwitch.GetReference(),

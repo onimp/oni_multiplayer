@@ -37,7 +37,7 @@ public static class TelepadEvents {
         return result;
     }
 
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     private static void OnAcceptDelivery(Telepad telepad, ITelepadDeliverable deliverable, GameObject gameObject) {
         ImmigrantScreenPatch.Deliverables = null;
         AcceptDelivery?.Invoke(
@@ -53,7 +53,7 @@ public static class TelepadEvents {
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
     [HarmonyPatch(nameof(Telepad.RejectAll))]
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     private static void OnRejectAll(Telepad __instance) {
         ImmigrantScreenPatch.Deliverables = null;
         Reject?.Invoke(__instance.GetReference());

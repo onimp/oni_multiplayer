@@ -22,7 +22,7 @@ public class ExecutionLevelTests {
         manager.Replace(new ExecutionContext(ExecutionLevel.Multiplayer));
 
         var executed = false;
-        Execution.RunIfPossible(ExecutionLevel.Runtime, () => executed = true);
+        Execution.RunIfPossible(ExecutionLevel.Gameplay, () => executed = true);
 
         Assert.IsFalse(executed);
     }
@@ -31,10 +31,10 @@ public class ExecutionLevelTests {
     public void RequiredLevelEqualsToCurrent() {
         var runtime = new Runtime();
         var manager = runtime.Dependencies.Get<ExecutionContextManager>();
-        manager.Replace(new ExecutionContext(ExecutionLevel.Runtime));
+        manager.Replace(new ExecutionContext(ExecutionLevel.Gameplay));
 
         var executed = false;
-        Execution.RunIfPossible(ExecutionLevel.Runtime, () => executed = true);
+        Execution.RunIfPossible(ExecutionLevel.Gameplay, () => executed = true);
 
         Assert.IsTrue(executed);
     }
@@ -43,7 +43,7 @@ public class ExecutionLevelTests {
     public void RequiredLevelLowerThanCurrent() {
         var runtime = new Runtime();
         var manager = runtime.Dependencies.Get<ExecutionContextManager>();
-        manager.Replace(new ExecutionContext(ExecutionLevel.Runtime));
+        manager.Replace(new ExecutionContext(ExecutionLevel.Gameplay));
 
         var executed = false;
         Execution.RunIfPossible(ExecutionLevel.Multiplayer, () => executed = true);

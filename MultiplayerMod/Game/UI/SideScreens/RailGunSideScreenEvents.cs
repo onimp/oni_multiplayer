@@ -13,7 +13,7 @@ public static class RailGunSideScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(RailGunSideScreen.UpdateMaxCapacity))]
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void UpdateMaxCapacity(RailGunSideScreen __instance, float newValue) =>
         UpdateRailGunCapacity?.Invoke(new RailGunSideScreenEventArgs(__instance.selectedGun.GetReference(), newValue));

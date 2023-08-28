@@ -21,7 +21,7 @@ public static class CritterSensorSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void ToggleEggs(CritterSensorSideScreen __instance) => TriggerEvent(__instance);
 
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     private static void TriggerEvent(CritterSensorSideScreen instance) => UpdateCritterSensor?.Invoke(
         new CritterSensorSideScreenEventArgs(
             instance.targetSensor.GetReference(),

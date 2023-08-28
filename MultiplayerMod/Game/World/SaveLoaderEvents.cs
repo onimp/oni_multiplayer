@@ -10,7 +10,7 @@ public static class SaveLoaderEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SaveLoader.Save), typeof(string), typeof(bool), typeof(bool))]
-    [RequireExecutionLevel(ExecutionLevel.Runtime)]
+    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
     // ReSharper disable once UnusedMember.Global
     public static void SavePostfix() => WorldSaved?.Invoke();
 

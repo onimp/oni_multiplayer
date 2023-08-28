@@ -154,7 +154,7 @@ public class MultiplayerCoordinator {
         if (multiplayer.Role == MultiplayerRole.None)
             return;
 
-        executionLevelManager.ReplaceLevel(ExecutionLevel.Runtime);
+        executionLevelManager.ReplaceLevel(ExecutionLevel.Gameplay);
 
         if (multiplayer.Role == MultiplayerRole.Host) {
             LoadOverlay.Show();
