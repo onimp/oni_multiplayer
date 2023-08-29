@@ -9,7 +9,7 @@ Project("{C0999D99-C6B1-4F7D-84EF-280F85768CD7}") = "Assembly-CSharp-firstpass",
 EndProject
 Project("{20A232E7-7449-4BDC-8C56-E1ED6AE24F2A}") = "Assembly-CSharp", "src\Assembly-CSharp\Assembly-CSharp.csproj", "{CBFB9C4F-74EA-4D63-ADA1-80A1C21B41E3}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E643528F-7D08-43AF-8D51-60C6AB5D49EF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "root", "root", "{E643528F-7D08-43AF-8D51-60C6AB5D49EF}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
@@ -28,23 +28,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{3D14A142-7
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyExposer.MSBuild.Task", "src\AssemblyExposer.MSBuild.Task\AssemblyExposer.MSBuild.Task.csproj", "{80DD29DB-6127-4F8B-845E-A04420FE22AB}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "steamworkshop", "steamworkshop", "{ED0C3369-C9E5-496C-9585-9014AAE83B8A}"
-	ProjectSection(SolutionItems) = preProject
-		docs\steamworkshop\STEAMWORSHOP_DESCRIPTION.md = docs\steamworkshop\STEAMWORSHOP_DESCRIPTION.md
-		docs\steamworkshop\preview.png = docs\steamworkshop\preview.png
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{46DE418C-9423-4A42-8B00-9499C65D7932}"
-	ProjectSection(SolutionItems) = preProject
-		docs\scripts\install.bat = docs\scripts\install.bat
-		docs\scripts\install.sh = docs\scripts\install.sh
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiplayerMod.AttributeProcessor.MSBuild.Task", "src\MultiplayerMod.AttributeProcessor.MSBuild.Task\MultiplayerMod.AttributeProcessor.MSBuild.Task.csproj", "{4E847723-EA84-41A5-B9E7-503E5FF1D501}"
 EndProject
 Project("{7582E52A-F9D4-4C1C-9C30-1DB3D27EF986}") = "MultiplayerMod.AttributeProcessor", "src\MultiplayerMod.AttributeProcessor\MultiplayerMod.AttributeProcessor.csproj", "{AD124BC6-64AE-4731-816B-2546D54BCA40}"
 EndProject
 Project("{41C8A68D-8077-44C3-A83B-55E4527EA189}") = "MultiplayerMod.AttributeProcessor.Test", "src\MultiplayerMod.AttributeProcessor.Test\MultiplayerMod.AttributeProcessor.Test.csproj", "{649CD3D0-39C9-412A-A42D-4826FD443B5F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{518908C5-74DD-4F86-B62F-985ABBD320D6}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\install.bat = scripts\install.bat
+		scripts\install.sh = scripts\install.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "steamworkshop", "steamworkshop", "{1A260408-1A77-475B-AEF2-C5A9735DA112}"
+	ProjectSection(SolutionItems) = preProject
+		steamworkshop\preview.png = steamworkshop\preview.png
+		steamworkshop\STEAMWORSHOP_DESCRIPTION.md = steamworkshop\STEAMWORSHOP_DESCRIPTION.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -65,9 +65,15 @@ Global
 		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
+		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Publish|Any CPU.Build.0 = Publish|Any CPU
+		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Publish|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Publish|Any CPU.Build.0 = Debug|Any CPU
+		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Publish|Any CPU.ActiveCfg = Debug|Any CPU
@@ -85,7 +91,5 @@ Global
 		SolutionGuid = {B532045A-7A46-4262-AE5F-F663106A26E5}
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{ED0C3369-C9E5-496C-9585-9014AAE83B8A} = {3D14A142-7EA5-4D30-B6D9-9DDB1998D450}
-		{46DE418C-9423-4A42-8B00-9499C65D7932} = {3D14A142-7EA5-4D30-B6D9-9DDB1998D450}
 	EndGlobalSection
 EndGlobal

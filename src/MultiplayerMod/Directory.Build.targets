@@ -57,7 +57,7 @@
         <ItemGroup>
             <ModFiles Include="$(TargetDir)*.yaml"/>
             <ModFiles Include="$(TargetDir)*.dll"/>
-            <Scripts Include="$(SourceDir)..\docs\scripts\*.*"/>
+            <Scripts Include="$(SourceDir)..\..\scripts\*.*"/>
         </ItemGroup>
         <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(TargetDir)archive\MultiplayerMod"/>
         <Copy SourceFiles="@(Scripts)" DestinationFolder="$(TargetDir)archive"/>
