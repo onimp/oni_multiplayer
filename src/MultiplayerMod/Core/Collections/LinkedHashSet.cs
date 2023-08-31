@@ -36,6 +36,7 @@ public class LinkedHashSet<T> : ICollection<T>, IReadOnlyCollection<T> {
         if (!dictionary.TryGetValue(item, out var node))
             return false;
 
+        dictionary.Remove(item);
         list.Remove(node);
         return true;
     }
