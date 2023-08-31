@@ -1,6 +1,8 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime.Context;
+using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.ModRuntime;
 
@@ -11,6 +13,8 @@ public class Runtime {
 
     public DependencyContainer Dependencies { get; }
     public ExecutionContext ExecutionContext => executionContextManager.Context;
+    public EventDispatcher EventDispatcher => Dependencies.Get<EventDispatcher>();
+    public MultiplayerGame Multiplayer => Dependencies.Get<MultiplayerGame>();
 
     private readonly ExecutionContextManager executionContextManager = new();
 
@@ -18,6 +22,8 @@ public class Runtime {
         Dependencies = new DependencyContainer();
         Dependencies.Register(executionContextManager);
         Dependencies.Register<ExecutionLevelManager>();
+        Dependencies.Register<EventDispatcher>();
+        Dependencies.Register(this);
         Instance = this;
     }
 
