@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using MultiplayerMod.Game.UI.Screens;
+using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 
@@ -13,7 +14,7 @@ public class InitializeImmigration : MultiplayerCommand {
         this.deliverables = deliverables;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         ImmigrantScreenPatch.Deliverables = deliverables;
     }
 }

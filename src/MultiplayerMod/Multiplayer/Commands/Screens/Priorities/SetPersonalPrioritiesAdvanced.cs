@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
@@ -10,7 +11,7 @@ public class SetPersonalPrioritiesAdvanced : MultiplayerCommand {
         this.value = value;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         global::Game.Instance.advancedPersonalPriorities = value;
         ManagementMenu.Instance.jobsScreen.toggleAdvancedModeButton.fgImage.gameObject.SetActive(value);
     }

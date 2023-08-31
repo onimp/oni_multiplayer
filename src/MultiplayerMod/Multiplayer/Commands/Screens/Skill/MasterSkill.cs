@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -15,7 +16,7 @@ public class MasterSkill : MultiplayerCommand {
         this.skillId = skillId;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var component = minionIdentityReference.GetComponent<MinionResume>();
         if (component == null) return;
 

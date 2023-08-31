@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.World;
 using Object = UnityEngine.Object;
 
@@ -33,7 +34,7 @@ public class FindNextChore : MultiplayerCommand {
         isAttemptingOverride = args.IsAttemptingOverride;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         log.Debug(
             $"Received {instanceId} {instanceString} {instanceCell} {choreId} {choreType} {choreCell}"
         );

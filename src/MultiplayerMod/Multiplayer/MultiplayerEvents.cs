@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer;
 
@@ -15,7 +16,7 @@ public static class MultiplayerEvents {
             this.player = player;
         }
 
-        public override void Execute() {
+        public override void Execute(Runtime runtime) {
             PlayerWorldSpawned?.Invoke(player);
         }
 

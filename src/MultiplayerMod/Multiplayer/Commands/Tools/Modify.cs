@@ -1,6 +1,7 @@
 ﻿using System;
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
@@ -14,7 +15,7 @@ public class Modify : MultiplayerCommand {
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var tool = new DebugTool {
             type = arguments.Type
         };

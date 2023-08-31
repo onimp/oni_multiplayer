@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.ModRuntime;
 using static MultiplayerMod.Game.UI.SideScreens.TemperatureSwitchSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
@@ -12,7 +13,7 @@ public class UpdateTemperatureSwitch : MultiplayerCommand {
         this.args = args;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var temperatureControlledSwitch = args.Target.GetComponent();
         temperatureControlledSwitch.thresholdTemperature = args.ThresholdTemperature;
         temperatureControlledSwitch.activateOnWarmerThan = args.ActivateOnWarmerThan;

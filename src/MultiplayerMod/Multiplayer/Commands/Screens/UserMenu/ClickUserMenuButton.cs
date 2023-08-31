@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
@@ -22,7 +23,7 @@ public class ClickUserMenuButton : MultiplayerCommand {
         actionName = action.Method.Name;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         try {
             var methodInfo = actionDeclaringType.GetMethod(
                 actionName,

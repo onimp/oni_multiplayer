@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -15,7 +16,7 @@ public class SetHat : MultiplayerCommand {
         this.targetHat = targetHat;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var resume = minionIdentityReference.GetComponent<MinionResume>();
         if (resume == null)
             return;

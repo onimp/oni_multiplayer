@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.World;
 
 namespace MultiplayerMod.Multiplayer.Commands;
@@ -12,6 +13,6 @@ public class LoadWorld : MultiplayerCommand {
         this.data = data;
     }
 
-    public override void Execute() => WorldManager.LoadWorldSave(data);
+    public override void Execute(Runtime runtime) => WorldManager.LoadWorldSave(data);
 
 }

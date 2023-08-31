@@ -1,5 +1,10 @@
-﻿using MultiplayerMod.Core.Dependency;
+﻿using System.Collections.Generic;
+using System.Linq;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Unity;
+using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Network;
 using UnityEngine;
@@ -15,41 +20,53 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
     [Dependency]
     private readonly MultiplayerGame multiplayer = null!;
 
+    [Dependency]
+    private readonly EventDispatcher eventDispatcher = null!;
+
+    private readonly Dictionary<IPlayerIdentity, TemporalCursor> cursors = new();
     private Texture2D cursorTexture = null!;
     private Camera mainCamera = null!;
-    private PlayerCursor? prevCursor;
-    private PlayerCursor? currentCursor;
     private bool initialized;
+    private EventSubscription cursorUpdateSubscription = null!;
 
     private void OnEnable() {
+        cursorUpdateSubscription = eventDispatcher.Subscribe<UpdateCursorPositionEvent>(OnCursorUpdated);
         cursorTexture = Assets.GetTexture("cursor_arrow");
         mainCamera = Camera.main!;
         initialized = true;
     }
 
-    private void OnGUI() {
-        foreach (var (player, state) in multiplayer.State.Players) {
-            if (player.Equals(client.Player))
-                continue;
+    private void OnDisable() {
+        cursorUpdateSubscription.Cancel();
+    }
 
-            prevCursor ??= state.Cursor;
-            currentCursor ??= state.Cursor;
+    private void OnCursorUpdated(UpdateCursorPositionEvent @event) {
+        if (@event.Player.Equals(client.Player))
+            return;
 
-            if (currentCursor.LastUpdate != state.Cursor.LastUpdate) {
-                prevCursor = currentCursor;
-                currentCursor = state.Cursor;
-            }
-
-            float updateDelta = currentCursor.LastUpdate - prevCursor.LastUpdate;
-            var timeDiff = (System.DateTime.Now.Ticks - currentCursor.LastUpdate) / updateDelta;
-            var position = Vector2.Lerp(prevCursor.Position, currentCursor.Position, timeDiff);
-
-            RenderCursor(position);
+        if (!cursors.TryGetValue(@event.Player, out var cursor)) {
+            cursor = new TemporalCursor(@event.Position);
+            cursors[@event.Player] = cursor;
+            return;
         }
+        cursor.Trace(@event.Position);
+    }
+
+    private void OnGUI() {
+        // TODO: Replace alive check with player events when ready
+        CheckAlive();
+        cursors.ForEach(it => RenderCursor(it.Value.Position));
+    }
+
+    private void CheckAlive() {
+        new List<IPlayerIdentity>(cursors.Keys)
+            .Where(player => !multiplayer.State.Players.ContainsKey(player))
+            .ForEach(player => cursors.Remove(player));
     }
 
     private void RenderCursor(Vector2 position) {
-        if (!initialized) return;
+        if (!initialized)
+            return;
 
         var worldPos = new Vector3(position.x, position.y, 0);
         var screenPoint = mainCamera.WorldToScreenPoint(worldPos);
@@ -80,6 +97,34 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
             borderWidth: 0,
             borderRadius: 0
         );
+    }
+
+    private record TimedCursor(Vector2 Position, long Time);
+
+    private class TemporalCursor {
+
+        public Vector2 Position => GetCurrentPosition();
+
+        private TimedCursor previous;
+        private TimedCursor current;
+
+        public TemporalCursor(Vector2 position) {
+            var ticks = System.DateTime.Now.Ticks;
+            previous = new TimedCursor(position, ticks);
+            current = new TimedCursor(position, ticks);
+        }
+
+        public void Trace(Vector2 position) {
+            previous = current;
+            current = new TimedCursor(position, System.DateTime.Now.Ticks);
+        }
+
+        private Vector2 GetCurrentPosition() {
+            float updateDelta = current.Time - previous.Time;
+            var timeDiff = (System.DateTime.Now.Ticks - current.Time) / updateDelta;
+            return Vector2.Lerp(previous.Position, current.Position, timeDiff);
+        }
+
     }
 
 }

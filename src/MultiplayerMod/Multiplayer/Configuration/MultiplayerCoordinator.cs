@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
@@ -31,6 +32,7 @@ public class MultiplayerCoordinator {
 
     private readonly MultiplayerGame multiplayer;
     private readonly ExecutionLevelManager executionLevelManager;
+    private readonly Runtime runtime;
 
     private readonly CommandExceptionHandler exceptionHandler = new();
 
@@ -45,7 +47,8 @@ public class MultiplayerCoordinator {
         GameEventBindings gameBindings,
         ServerEventBindings serverBindings,
         MultiplayerGame multiplayer,
-        ExecutionLevelManager executionLevelManager
+        ExecutionLevelManager executionLevelManager,
+        Runtime runtime
     ) {
         this.server = server;
         this.client = client;
@@ -53,6 +56,7 @@ public class MultiplayerCoordinator {
         this.serverBindings = serverBindings;
         this.multiplayer = multiplayer;
         this.executionLevelManager = executionLevelManager;
+        this.runtime = runtime;
 
         ConfigureServer();
         ConfigureClient();
@@ -144,7 +148,7 @@ public class MultiplayerCoordinator {
 
     private void ExecuteCommand(IMultiplayerCommand command) {
         try {
-            command.Execute();
+            command.Execute(runtime);
         } catch (Exception exception) {
             exceptionHandler.Handle(command, exception);
         }

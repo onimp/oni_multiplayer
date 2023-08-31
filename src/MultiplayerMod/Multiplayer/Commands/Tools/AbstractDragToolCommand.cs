@@ -4,6 +4,7 @@ using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.UI.Tools.Context;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
@@ -17,7 +18,7 @@ public class AbstractDragToolCommand<T> : MultiplayerCommand where T : DragTool,
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var tool = new T();
         InitializeTool(tool);
         GameContext.Override(CreateContext(), () => InvokeTool(tool));

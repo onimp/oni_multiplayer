@@ -4,4 +4,4 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.State;
 
 [Serializable]
-public record PlayerCursor(Vector2 Position, long LastUpdate);
+public record PlayerCursor(Vector2 Position);

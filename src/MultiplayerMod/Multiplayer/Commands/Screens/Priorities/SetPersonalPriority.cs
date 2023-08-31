@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -22,7 +23,7 @@ public class SetPersonalPriority : MultiplayerCommand {
         this.value = value;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var choreConsumer = choreConsumerReference.GetComponent<ChoreConsumer>();
         if (choreConsumer == null) return;
 

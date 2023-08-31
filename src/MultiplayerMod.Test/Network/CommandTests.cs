@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.InteropServices;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network;
@@ -16,14 +17,14 @@ public class CommandTests {
     private class Command : MultiplayerCommand {
         public int Value { set; get; }
 
-        public override void Execute() { }
+        public override void Execute(Runtime runtime) { }
     }
 
     [Serializable]
     private class DataCommand : MultiplayerCommand {
         public byte[] Data = new byte[Configuration.MaxMessageSize * 2];
 
-        public override void Execute() { }
+        public override void Execute(Runtime runtime) { }
     }
 
     [Test]

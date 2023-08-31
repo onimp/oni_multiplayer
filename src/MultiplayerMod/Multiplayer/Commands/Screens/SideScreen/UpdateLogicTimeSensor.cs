@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.ModRuntime;
 using static MultiplayerMod.Game.UI.SideScreens.TimerSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
@@ -12,7 +13,7 @@ public class UpdateLogicTimeSensor : MultiplayerCommand {
         this.args = args;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var sensor = args.Target.GetComponent();
         sensor.displayCyclesMode = args.DisplayCyclesMode;
         sensor.onDuration = args.OnDuration;

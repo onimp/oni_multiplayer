@@ -3,6 +3,7 @@ using MultiplayerMod.Core.Patch.Capture;
 using MultiplayerMod.Game.Mechanics.Minions;
 using MultiplayerMod.Game.Mechanics.Printing;
 using MultiplayerMod.Game.UI.Screens;
+using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects;
 using static MultiplayerMod.Game.Mechanics.Printing.TelepadEvents;
 
@@ -17,7 +18,7 @@ public class AcceptDelivery : MultiplayerCommand {
         this.args = args;
     }
 
-    public override void Execute() {
+    public override void Execute(Runtime runtime) {
         var telepad = args.Target.GetComponent();
         var capture = LocalCaptor.Capture<TelepadAcceptDeliveryCapture>(
             () => telepad.OnAcceptDelivery(args.Deliverable)
