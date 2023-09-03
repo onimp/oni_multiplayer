@@ -1,18 +1,19 @@
 ﻿using System;
 using MultiplayerMod.ModRuntime;
+using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer;
 
 public static class MultiplayerEvents {
 
-    public static Action<IPlayerIdentity>? PlayerWorldSpawned;
+    public static Action<IMultiplayerClientId>? PlayerWorldSpawned;
 
     [Serializable]
     public class PlayerWorldSpawnedEvent : MultiplayerCommand {
 
-        private IPlayerIdentity player;
+        private IMultiplayerClientId player;
 
-        public PlayerWorldSpawnedEvent(IPlayerIdentity player) {
+        public PlayerWorldSpawnedEvent(IMultiplayerClientId player) {
             this.player = player;
         }
 

@@ -1,12 +1,11 @@
 ﻿using System;
 using MultiplayerMod.Multiplayer;
-using MultiplayerMod.Network.Events;
 
 namespace MultiplayerMod.Network;
 
 public interface IMultiplayerClient {
     MultiplayerClientState State { get; }
-    IPlayerIdentity Player { get; }
+    IMultiplayerClientId Id { get; }
 
     void Connect(IMultiplayerEndpoint endpoint);
     void Disconnect();
@@ -14,5 +13,5 @@ public interface IMultiplayerClient {
     void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None);
 
     event Action<MultiplayerClientState> StateChanged;
-    event Action<CommandReceivedEventArgs> CommandReceived;
+    event Action<IMultiplayerCommand> CommandReceived;
 }

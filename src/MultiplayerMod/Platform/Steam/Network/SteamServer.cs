@@ -11,7 +11,6 @@ using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
-using MultiplayerMod.Network.Events;
 using MultiplayerMod.Platform.Steam.Network.Components;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using Steamworks;
@@ -36,12 +35,10 @@ public class SteamServer : IMultiplayerServer {
         }
     }
 
-    public List<IPlayerIdentity> Players => new(players.Keys);
-
-    public event Action<ServerStateChangedEventArgs>? StateChanged;
-    public event Action<IPlayerIdentity>? PlayerConnected;
-    public event Action<IPlayerIdentity>? PlayerDisconnected;
-    public event Action<CommandReceivedEventArgs>? CommandReceived;
+    public event Action<MultiplayerServerState>? StateChanged;
+    public event Action<IMultiplayerClientId>? ClientConnected;
+    public event Action<IMultiplayerClientId>? ClientDisconnected;
+    public event Action<IMultiplayerClientId, IMultiplayerCommand>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamServer>();
 
@@ -57,8 +54,8 @@ public class SteamServer : IMultiplayerServer {
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
     private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback = null!;
 
-    private readonly Dictionary<IPlayerIdentity, HSteamNetConnection> players = new();
-    private readonly IPlayerIdentity currentPlayer = new SteamPlayerIdentity(SteamUser.GetSteamID());
+    private readonly Dictionary<IMultiplayerClientId, HSteamNetConnection> clients = new();
+    private readonly IMultiplayerClientId currentPlayer = new SteamMultiplayerClientId(SteamUser.GetSteamID());
 
     private readonly UnityTaskScheduler scheduler;
     private readonly SteamLobby lobby;
@@ -108,13 +105,13 @@ public class SteamServer : IMultiplayerServer {
         }
     }
 
-    public void Send(IPlayerIdentity player, IMultiplayerCommand command) {
-        var connections = new SingletonCollection<HSteamNetConnection>(players[player]);
+    public void Send(IMultiplayerClientId clientId, IMultiplayerCommand command) {
+        var connections = new SingletonCollection<HSteamNetConnection>(clients[clientId]);
         SendCommand(command, MultiplayerCommandOptions.None, connections);
     }
 
     public void Send(IMultiplayerCommand command, MultiplayerCommandOptions options) {
-        IEnumerable<KeyValuePair<IPlayerIdentity, HSteamNetConnection>> recipients = players;
+        IEnumerable<KeyValuePair<IMultiplayerClientId, HSteamNetConnection>> recipients = clients;
         if (options.HasFlag(MultiplayerCommandOptions.SkipHost))
             recipients = recipients.Where(entry => !entry.Key.Equals(currentPlayer));
 
@@ -123,7 +120,7 @@ public class SteamServer : IMultiplayerServer {
 
     private void SetState(MultiplayerServerState state) {
         State = state;
-        StateChanged?.Invoke(new ServerStateChangedEventArgs(state));
+        StateChanged?.Invoke(state);
     }
 
     private void Initialize() {
@@ -204,11 +201,11 @@ public class SteamServer : IMultiplayerServer {
                 steamMessage.GetNetworkMessageHandle()
             );
             if (message != null) {
-                IPlayerIdentity player = new SteamPlayerIdentity(steamMessage.m_identityPeer.GetSteamID());
+                IMultiplayerClientId id = new SteamMultiplayerClientId(steamMessage.m_identityPeer.GetSteamID());
                 if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
-                    CommandReceived?.Invoke(new CommandReceivedEventArgs(player, message.Command));
+                    CommandReceived?.Invoke(id, message.Command);
                 } else {
-                    var connections = players.Where(it => !it.Key.Equals(player)).Select(it => it.Value);
+                    var connections = clients.Where(it => !it.Key.Equals(id)).Select(it => it.Value);
                     SendCommand(message.Command, message.Options, connections);
                 }
             }
@@ -244,7 +241,7 @@ public class SteamServer : IMultiplayerServer {
         switch (state) {
             case k_ESteamNetworkingConnectionState_Connecting:
                 if (TryAcceptConnection(connection, clientSteamId))
-                    PlayerConnected?.Invoke(new SteamPlayerIdentity(clientSteamId));
+                    ClientConnected?.Invoke(new SteamMultiplayerClientId(clientSteamId));
                 break;
             case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
             case k_ESteamNetworkingConnectionState_ClosedByPeer:
@@ -272,20 +269,20 @@ public class SteamServer : IMultiplayerServer {
             return false;
         }
         SteamGameServerNetworkingSockets.SetConnectionPollGroup(connection, pollGroup);
-        players[new SteamPlayerIdentity(clientSteamId)] = connection;
+        clients[new SteamMultiplayerClientId(clientSteamId)] = connection;
         log.Debug($"Connection accepted from {clientSteamId}");
         return true;
     }
 
     private void CloseConnection(HSteamNetConnection connection, CSteamID clientSteamId) {
-        PlayerDisconnected?.Invoke(new SteamPlayerIdentity(clientSteamId));
+        ClientDisconnected?.Invoke(new SteamMultiplayerClientId(clientSteamId));
         SteamGameServerNetworkingSockets.CloseConnection(
             connection,
             (int) k_ESteamNetConnectionEnd_App_Generic,
             null,
             false
         );
-        players.Remove(new SteamPlayerIdentity(clientSteamId));
+        clients.Remove(new SteamMultiplayerClientId(clientSteamId));
         Debug.Log($"Connection closed for {clientSteamId}");
     }
 

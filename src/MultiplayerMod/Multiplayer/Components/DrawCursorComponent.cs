@@ -23,7 +23,7 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
     [Dependency]
     private readonly EventDispatcher eventDispatcher = null!;
 
-    private readonly Dictionary<IPlayerIdentity, TemporalCursor> cursors = new();
+    private readonly Dictionary<IMultiplayerClientId, TemporalCursor> cursors = new();
     private Texture2D cursorTexture = null!;
     private Camera mainCamera = null!;
     private bool initialized;
@@ -41,7 +41,7 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
     }
 
     private void OnCursorUpdated(UpdateCursorPositionEvent @event) {
-        if (@event.Player.Equals(client.Player))
+        if (@event.Player.Equals(client.Id))
             return;
 
         if (!cursors.TryGetValue(@event.Player, out var cursor)) {
@@ -59,7 +59,7 @@ public class DrawCursorComponent : MultiplayerMonoBehaviour {
     }
 
     private void CheckAlive() {
-        new List<IPlayerIdentity>(cursors.Keys)
+        new List<IMultiplayerClientId>(cursors.Keys)
             .Where(player => !multiplayer.State.Players.ContainsKey(player))
             .ForEach(player => cursors.Remove(player));
     }

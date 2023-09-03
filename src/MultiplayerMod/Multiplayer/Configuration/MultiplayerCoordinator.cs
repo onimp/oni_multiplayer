@@ -15,7 +15,6 @@ using MultiplayerMod.Multiplayer.UI;
 using MultiplayerMod.Multiplayer.World;
 using MultiplayerMod.Multiplayer.World.Debug;
 using MultiplayerMod.Network;
-using MultiplayerMod.Network.Events;
 
 namespace MultiplayerMod.Multiplayer.Configuration;
 
@@ -67,14 +66,14 @@ public class MultiplayerCoordinator {
 
     private void ConfigureServer() {
         server.StateChanged += OnServerStateChanged;
-        server.PlayerConnected += OnPlayerConnected;
-        server.PlayerDisconnected += OnPlayerDisconnected;
+        server.ClientConnected += OnClientConnected;
+        server.ClientDisconnected += OnClientDisconnected;
         server.CommandReceived += ServerOnCommandReceived;
     }
 
-    private void OnServerStateChanged(ServerStateChangedEventArgs e) {
-        log.Debug($"Server state changed: {e.State}");
-        switch (e.State) {
+    private void OnServerStateChanged(MultiplayerServerState state) {
+        log.Debug($"Server state changed: {state}");
+        switch (state) {
             case MultiplayerServerState.Starting:
                 serverBindings.Bind();
                 break;
@@ -84,23 +83,23 @@ public class MultiplayerCoordinator {
         }
     }
 
-    private void ServerOnCommandReceived(CommandReceivedEventArgs e) {
-        log.Trace(() => $"{e.Command} received from player {e.Player}");
-        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(e.Command));
+    private void ServerOnCommandReceived(IMultiplayerClientId clientId, IMultiplayerCommand command) {
+        log.Trace(() => $"{command} received from {clientId}");
+        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(command));
     }
 
-    private void OnPlayerConnected(IPlayerIdentity player) {
+    private void OnClientConnected(IMultiplayerClientId player) {
         if (!multiplayer.State.Players.ContainsKey(player)) {
             multiplayer.State.Players.Add(player, new PlayerState(player));
         }
-        if (player.Equals(client.Player))
+        if (player.Equals(client.Id))
             return;
 
         log.Debug($"Player {player} connected");
         WorldManager.Sync();
     }
 
-    private void OnPlayerDisconnected(IPlayerIdentity player) {
+    private void OnClientDisconnected(IMultiplayerClientId player) {
         multiplayer.State.Players.Remove(player);
         server.Send(new SyncMultiplayerState(multiplayer.State));
         log.Debug($"Player {player} disconnected");
@@ -121,7 +120,7 @@ public class MultiplayerCoordinator {
                 if (multiplayer.Role != MultiplayerRole.Host) {
                     executionLevelManager.ReplaceLevel(ExecutionLevel.Multiplayer);
                     multiplayer.Role = MultiplayerRole.Client;
-                    multiplayer.State.Players.Add(client.Player, new PlayerState(client.Player));
+                    multiplayer.State.Players.Add(client.Id, new PlayerState(client.Id));
                     LoadOverlay.Show();
                 }
                 break;
@@ -135,13 +134,13 @@ public class MultiplayerCoordinator {
         }
     }
 
-    private void ClientOnCommandReceived(CommandReceivedEventArgs e) {
-        if (!multiplayer.State.Current.WorldSpawned && !unSpawnedWorldCommands.Contains(e.Command.GetType())) {
-            log.Warning($"{e.Command} received, but the world isn't spawned yet");
+    private void ClientOnCommandReceived(IMultiplayerCommand command) {
+        if (!multiplayer.State.Current.WorldSpawned && !unSpawnedWorldCommands.Contains(command.GetType())) {
+            log.Warning($"{command} received, but the world isn't spawned yet");
             return;
         }
-        log.Trace(() => $"{e.Command} received from server");
-        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(e.Command));
+        log.Trace(() => $"{command} received from server");
+        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(command));
     }
 
     #endregion
@@ -163,11 +162,11 @@ public class MultiplayerCoordinator {
         if (multiplayer.Role == MultiplayerRole.Host) {
             LoadOverlay.Show();
             server.Start();
-            multiplayer.State.Players.Add(client.Player, new PlayerState(client.Player));
+            multiplayer.State.Players.Add(client.Id, new PlayerState(client.Id));
         }
         if (multiplayer.Role == MultiplayerRole.Client) {
             client.Send(
-                new MultiplayerEvents.PlayerWorldSpawnedEvent(client.Player),
+                new MultiplayerEvents.PlayerWorldSpawnedEvent(client.Id),
                 MultiplayerCommandOptions.ExecuteOnServer
             );
             multiplayer.State.Current.WorldSpawned = true;

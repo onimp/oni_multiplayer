@@ -13,6 +13,6 @@ public class MultiplayerIdentityProvider {
         this.client = client;
     }
 
-    public MultiplayerId GetNextId() => new(client.Player, NextObjectId++);
+    public MultiplayerId GetNextId() => new(client.Id, NextObjectId++);
 
 }

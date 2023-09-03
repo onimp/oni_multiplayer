@@ -10,7 +10,7 @@ namespace MultiplayerMod.Multiplayer.State;
 [UsedImplicitly]
 public class MultiplayerState  {
 
-    public Dictionary<IPlayerIdentity, PlayerState> Players = new();
+    public Dictionary<IMultiplayerClientId, PlayerState> Players = new();
 
     [Dependency]
     [NonSerialized]
@@ -20,6 +20,6 @@ public class MultiplayerState  {
         this.client = client;
     }
 
-    public PlayerState Current => Players[client.Player];
+    public PlayerState Current => Players[client.Id];
 
 }

@@ -5,7 +5,6 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Network;
-using MultiplayerMod.Network.Events;
 using MultiplayerMod.Platform.Steam.Network.Components;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using Steamworks;
@@ -18,14 +17,16 @@ namespace MultiplayerMod.Platform.Steam.Network;
 // ReSharper disable once ClassNeverInstantiated.Global
 public class SteamClient : IMultiplayerClient {
 
-    public IPlayerIdentity Player => playerContainer.Value;
+    public IMultiplayerClientId Id => playerContainer.Value;
     public MultiplayerClientState State { get; private set; } = MultiplayerClientState.Disconnected;
     public event Action<MultiplayerClientState>? StateChanged;
-    public event Action<CommandReceivedEventArgs>? CommandReceived;
+    public event Action<IMultiplayerCommand>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
     private readonly SteamLobby lobby;
-    private readonly Lazy<IPlayerIdentity> playerContainer = new(() => new SteamPlayerIdentity(SteamUser.GetSteamID()));
+
+    private readonly Lazy<IMultiplayerClientId> playerContainer =
+        new(() => new SteamMultiplayerClientId(SteamUser.GetSteamID()));
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
@@ -144,7 +145,7 @@ public class SteamClient : IMultiplayerClient {
                 steamMessage.GetNetworkMessageHandle()
             );
             if (message != null)
-                CommandReceived?.Invoke(new CommandReceivedEventArgs(null, message.Command));
+                CommandReceived?.Invoke(message.Command);
             SteamNetworkingMessage_t.Release(messages[i]);
         }
     }

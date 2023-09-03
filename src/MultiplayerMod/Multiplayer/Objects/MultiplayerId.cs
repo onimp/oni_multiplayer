@@ -1,6 +1,7 @@
 ﻿using System;
+using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
 [Serializable]
-public record MultiplayerId(IPlayerIdentity? Player, long ObjectId);
+public record MultiplayerId(IMultiplayerClientId? Player, long ObjectId);
