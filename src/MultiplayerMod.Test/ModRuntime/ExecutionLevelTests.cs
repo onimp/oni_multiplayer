@@ -18,11 +18,11 @@ public class ExecutionLevelTests {
     [Test]
     public void RequiredLevelHigherThanCurrent() {
         var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionContextManager>();
-        manager.Replace(new ExecutionContext(ExecutionLevel.Multiplayer));
+        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        manager.ReplaceLevel(ExecutionLevel.Multiplayer);
 
         var executed = false;
-        Execution.RunIfPossible(ExecutionLevel.Gameplay, () => executed = true);
+        manager.RunIfPossible(ExecutionLevel.Gameplay, () => executed = true);
 
         Assert.IsFalse(executed);
     }
@@ -30,11 +30,11 @@ public class ExecutionLevelTests {
     [Test]
     public void RequiredLevelEqualsToCurrent() {
         var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionContextManager>();
-        manager.Replace(new ExecutionContext(ExecutionLevel.Gameplay));
+        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        manager.ReplaceLevel(ExecutionLevel.Gameplay);
 
         var executed = false;
-        Execution.RunIfPossible(ExecutionLevel.Gameplay, () => executed = true);
+        manager.RunIfPossible(ExecutionLevel.Gameplay, () => executed = true);
 
         Assert.IsTrue(executed);
     }
@@ -42,13 +42,29 @@ public class ExecutionLevelTests {
     [Test]
     public void RequiredLevelLowerThanCurrent() {
         var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionContextManager>();
-        manager.Replace(new ExecutionContext(ExecutionLevel.Gameplay));
+        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        manager.ReplaceLevel(ExecutionLevel.Gameplay);
 
         var executed = false;
-        Execution.RunIfPossible(ExecutionLevel.Multiplayer, () => executed = true);
+        manager.RunIfPossible(ExecutionLevel.Multiplayer, () => executed = true);
 
         Assert.IsTrue(executed);
+    }
+
+    [Test]
+    public void RunActionWithTargetExecutionLevel() {
+        var runtime = new Runtime();
+        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        manager.ReplaceLevel(ExecutionLevel.Gameplay);
+
+        var executedLevel = ExecutionLevel.System;
+        manager.RunIfPossible(
+            ExecutionLevel.Multiplayer,
+            ExecutionLevel.Command,
+            () => executedLevel = runtime.ExecutionContext.Level
+        );
+
+        Assert.AreEqual(expected: ExecutionLevel.Command, actual: executedLevel);
     }
 
 }

@@ -18,9 +18,7 @@ public static class Execution {
     public static void RunUsingLevel(ExecutionLevel level, System.Action action) =>
         Dependencies.Get<ExecutionLevelManager>().RunUsingLevel(level, action);
 
-    public static void RunIfPossible(ExecutionLevel requiredLevel, System.Action action) {
-        if (ExecutionLevelMatcher.Matches(Context.Level, requiredLevel))
-            action();
-    }
+    public static void RunIfPossible(ExecutionLevel requiredLevel, System.Action action) =>
+        Dependencies.Get<ExecutionLevelManager>().RunIfPossible(requiredLevel, action);
 
 }
