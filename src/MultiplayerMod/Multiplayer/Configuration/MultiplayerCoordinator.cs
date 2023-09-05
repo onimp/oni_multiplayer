@@ -85,7 +85,7 @@ public class MultiplayerCoordinator {
 
     private void ServerOnCommandReceived(IMultiplayerClientId clientId, IMultiplayerCommand command) {
         log.Trace(() => $"{command} received from {clientId}");
-        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(command));
+        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(clientId, command));
     }
 
     private void OnClientConnected(IMultiplayerClientId player) {
@@ -140,14 +140,14 @@ public class MultiplayerCoordinator {
             return;
         }
         log.Trace(() => $"{command} received from server");
-        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(command));
+        executionLevelManager.RunUsingLevel(ExecutionLevel.Command, () => ExecuteCommand(null, command));
     }
 
     #endregion
 
-    private void ExecuteCommand(IMultiplayerCommand command) {
+    private void ExecuteCommand(IMultiplayerClientId? clientId, IMultiplayerCommand command) {
         try {
-            command.Execute(runtime);
+            command.Execute(new MultiplayerCommandContext(clientId, runtime));
         } catch (Exception exception) {
             exceptionHandler.Handle(command, exception);
         }

@@ -1,5 +1,4 @@
 ﻿using System;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
@@ -15,6 +14,6 @@ public class ChangePriority : MultiplayerCommand {
         this.priority = priority;
     }
 
-    public override void Execute(Runtime runtime) => target.GetComponent().SetMasterPriority(priority);
+    public override void Execute(MultiplayerCommandContext context) => target.GetComponent().SetMasterPriority(priority);
 
 }

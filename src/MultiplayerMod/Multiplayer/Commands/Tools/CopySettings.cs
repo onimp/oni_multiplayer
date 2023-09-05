@@ -3,7 +3,6 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.Effects;
 using MultiplayerMod.Game.UI.Tools.Events;
-using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
@@ -18,7 +17,7 @@ public class CopySettings : MultiplayerCommand {
         this.arguments = arguments;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         GameContext.Override(new DisablePopUpEffects(), DoExecute);
     }
 

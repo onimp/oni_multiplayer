@@ -1,5 +1,4 @@
 ﻿using System;
-using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Speed;
 
@@ -12,7 +11,7 @@ public class ChangeGameSpeed : MultiplayerCommand {
         this.speed = speed;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         SpeedControlScreen.Instance.SetSpeed(speed);
     }
 

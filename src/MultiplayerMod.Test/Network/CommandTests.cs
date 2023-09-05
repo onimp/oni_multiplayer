@@ -17,14 +17,14 @@ public class CommandTests {
     private class Command : MultiplayerCommand {
         public int Value { set; get; }
 
-        public override void Execute(Runtime runtime) { }
+        public override void Execute(MultiplayerCommandContext context) { }
     }
 
     [Serializable]
     private class DataCommand : MultiplayerCommand {
         public byte[] Data = new byte[Configuration.MaxMessageSize * 2];
 
-        public override void Execute(Runtime runtime) { }
+        public override void Execute(MultiplayerCommandContext context) { }
     }
 
     [Test]

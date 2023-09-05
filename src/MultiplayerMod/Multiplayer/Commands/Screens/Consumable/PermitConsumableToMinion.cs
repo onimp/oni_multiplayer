@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -20,7 +19,7 @@ public class PermitConsumableToMinion : MultiplayerCommand {
         this.isAllowed = isAllowed;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         var consumableConsumer = consumableConsumerReference.GetComponent<ConsumableConsumer>();
         if (consumableConsumer == null) return;
 

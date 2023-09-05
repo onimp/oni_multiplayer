@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reflection;
 using MultiplayerMod.Game.Mechanics.Objects;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
@@ -29,7 +28,7 @@ public class CallMethod : MultiplayerCommand {
         args = eventArgs.Args;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         var method = methodType
             .GetMethod(
                 methodName,

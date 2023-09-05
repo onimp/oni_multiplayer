@@ -2,7 +2,6 @@
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.UI.Tools.Context;
 using MultiplayerMod.Game.UI.Tools.Events;
-using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
@@ -16,7 +15,7 @@ public class Stamp : MultiplayerCommand {
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         var tool = new StampTool {
             stampTemplate = arguments.Template,
             ready = true,

@@ -1,5 +1,4 @@
 ﻿using System;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.State;
 
@@ -14,7 +13,7 @@ public class SyncMultiplayerState : MultiplayerCommand {
         this.state = state;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         Dependencies.Get<MultiplayerGame>().State = Dependencies.Inject(state);
     }
 

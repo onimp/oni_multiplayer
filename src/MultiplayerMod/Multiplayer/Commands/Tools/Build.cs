@@ -4,7 +4,6 @@ using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.UI.Tools.Context;
 using MultiplayerMod.Game.UI.Tools.Events;
-using MultiplayerMod.ModRuntime;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
@@ -18,7 +17,7 @@ public class Build : MultiplayerCommand {
         this.arguments = arguments;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         var definition = Assets.GetBuildingDef(arguments.PrefabId);
         var cbcPosition = Grid.CellToPosCBC(arguments.Cell, Grid.SceneLayer.Building);
         GameContext.Override(new DisableBuildingValidation(), () => Execute(definition, cbcPosition));

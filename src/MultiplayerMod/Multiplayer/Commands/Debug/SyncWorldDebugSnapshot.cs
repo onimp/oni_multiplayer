@@ -1,5 +1,4 @@
 ﻿using System;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.World.Debug;
 
 namespace MultiplayerMod.Multiplayer.Commands.Debug;
@@ -13,7 +12,7 @@ public class SyncWorldDebugSnapshot : MultiplayerCommand {
         this.snapshot = snapshot;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         WorldDebugSnapshotRunner.LastServerInfo = snapshot;
     }
 

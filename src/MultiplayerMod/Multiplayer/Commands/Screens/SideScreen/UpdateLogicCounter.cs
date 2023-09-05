@@ -1,5 +1,4 @@
 ﻿using System;
-using MultiplayerMod.ModRuntime;
 using static MultiplayerMod.Game.UI.SideScreens.CounterSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
@@ -13,7 +12,7 @@ public class UpdateLogicCounter : MultiplayerCommand {
         this.args = args;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         var logicCounter = args.Target.GetComponent();
         logicCounter.maxCount = args.MaxCount;
         logicCounter.currentCount = args.CurrentCount;

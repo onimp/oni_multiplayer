@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 
@@ -13,7 +12,7 @@ public class PermitConsumableByDefault : MultiplayerCommand {
         this.permittedList = permittedList;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         ConsumerManager.instance.DefaultForbiddenTagsList.Clear();
         ConsumerManager.instance.DefaultForbiddenTagsList.AddRange(permittedList);
         var screen = ManagementMenu.Instance.consumablesScreen;

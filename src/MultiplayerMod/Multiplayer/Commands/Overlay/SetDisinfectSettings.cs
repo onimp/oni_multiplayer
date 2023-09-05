@@ -1,5 +1,4 @@
 ﻿using System;
-using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Overlay;
 
@@ -13,7 +12,7 @@ public class SetDisinfectSettings : MultiplayerCommand {
         this.enableAutoDisinfect = enableAutoDisinfect;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         SaveGame.Instance.enableAutoDisinfect = enableAutoDisinfect;
         SaveGame.Instance.minGermCountForDisinfect = minGerm;
     }

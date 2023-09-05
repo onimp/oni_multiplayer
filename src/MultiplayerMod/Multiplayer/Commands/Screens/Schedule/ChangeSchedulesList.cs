@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -19,7 +18,7 @@ public class ChangeSchedulesList : MultiplayerCommand {
         serializableSchedules = schedules.Select(schedule => new SerializableSchedule(schedule)).ToList();
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         var manager = ScheduleManager.Instance;
         var schedules = manager.schedules;
 

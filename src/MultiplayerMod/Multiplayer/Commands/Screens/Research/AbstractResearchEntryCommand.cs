@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Research;
 
@@ -18,7 +17,7 @@ public abstract class AbstractResearchEntryCommand : MultiplayerCommand {
 
     protected abstract void Execute(ResearchEntry researchEntry);
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         var screen = ManagementMenu.Instance.researchScreen;
         var entry = screen.entryMap.Values.FirstOrDefault(entry => entry.targetTech.Id == techId);
         if (entry == null) {

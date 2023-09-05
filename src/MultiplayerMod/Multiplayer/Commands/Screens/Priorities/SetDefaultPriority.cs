@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
 
@@ -19,7 +18,7 @@ public class SetDefaultPriority : MultiplayerCommand {
         this.value = value;
     }
 
-    public override void Execute(Runtime runtime) {
+    public override void Execute(MultiplayerCommandContext context) {
         global::Immigration.Instance.SetPersonalPriority(ChoreGroup, value);
         RefreshTable();
     }
