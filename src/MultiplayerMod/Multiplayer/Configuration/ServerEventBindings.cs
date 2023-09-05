@@ -4,7 +4,6 @@ using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands.Chores;
 using MultiplayerMod.Multiplayer.Commands.Debug;
-using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Multiplayer.World;
 using MultiplayerMod.Multiplayer.World.Debug;
@@ -18,11 +17,13 @@ public class ServerEventBindings {
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ServerEventBindings>();
     private readonly IMultiplayerServer server;
     private readonly MultiplayerGame multiplayer;
+    private readonly WorldManager worldManager;
     private bool bound;
 
-    public ServerEventBindings(IMultiplayerServer server, MultiplayerGame multiplayer) {
+    public ServerEventBindings(IMultiplayerServer server, MultiplayerGame multiplayer, WorldManager worldManager) {
         this.server = server;
         this.multiplayer = multiplayer;
+        this.worldManager = worldManager;
     }
 
     public void Bind() {
@@ -32,12 +33,8 @@ public class ServerEventBindings {
         log.Debug("Binding server events");
 
         PauseScreenEvents.QuitGame += server.Stop;
-        MultiplayerEvents.PlayerWorldSpawned += player => {
-            multiplayer.State.Players[player].WorldSpawned = true;
-            server.Send(new SyncMultiplayerState(multiplayer.State));
-        };
         WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));
-        SaveLoaderEvents.WorldSaved += WorldManager.Sync;
+        SaveLoaderEvents.WorldSaved += worldManager.Sync;
 
         ChoreConsumerEvents.FindNextChore += p => server.Send(new FindNextChore(p), MultiplayerCommandOptions.SkipHost);
 

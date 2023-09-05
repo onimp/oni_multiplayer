@@ -5,23 +5,28 @@ using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Speed;
-using MultiplayerMod.Multiplayer.Commands.State;
+using MultiplayerMod.Multiplayer.Players;
+using MultiplayerMod.Multiplayer.Players.Commands;
 using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.World;
 
-public static class WorldManager {
+public class WorldManager {
 
-    private static readonly IMultiplayerServer server = Dependencies.Get<IMultiplayerServer>();
-    private static readonly MultiplayerGame multiplayer = Dependencies.Get<MultiplayerGame>();
+    private readonly IMultiplayerServer server;
+    private readonly MultiplayerGame multiplayer;
 
-    public static void Sync() {
+    public WorldManager(IMultiplayerServer server, MultiplayerGame multiplayer) {
+        this.server = server;
+        this.multiplayer = multiplayer;
+    }
+
+    public void Sync() {
         server.Send(new PauseGame());
         multiplayer.Objects.SynchronizeWithTracker();
-        multiplayer.State.Players.Values.ForEach(playerState => playerState.WorldSpawned = false);
-        multiplayer.State.Current.WorldSpawned = true;
-        server.Send(new SyncMultiplayerState(multiplayer.State));
+        multiplayer.Players.ForEach(it => server.Send(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
+        server.Send(new ChangePlayerStateCommand(multiplayer.Players.Current.Id, PlayerState.Ready));
         server.Send(new ShowLoadOverlay());
         server.Send(new LoadWorld(GetWorldSave()), MultiplayerCommandOptions.SkipHost);
     }

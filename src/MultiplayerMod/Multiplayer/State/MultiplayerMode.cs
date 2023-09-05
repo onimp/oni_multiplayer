@@ -1,6 +1,6 @@
 ﻿namespace MultiplayerMod.Multiplayer.State;
 
-public enum MultiplayerRole {
+public enum MultiplayerMode {
     None,
     Host,
     Client

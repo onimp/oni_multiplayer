@@ -10,7 +10,7 @@ public class MultiplayerObjectsConfigurator {
     public MultiplayerObjectsConfigurator(MultiplayerGame multiplayer) {
         GameEvents.GameObjectCreated += it => it.AddComponent<MultiplayerInstance>();
         GameEvents.GameStarted += () => {
-            if (multiplayer.Role != MultiplayerRole.None)
+            if (multiplayer.Mode != MultiplayerMode.None)
                 multiplayer.Objects.SynchronizeWithTracker();
         };
     }

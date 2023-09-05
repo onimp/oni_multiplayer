@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.State;
@@ -13,8 +12,7 @@ public static class LoadOverlay {
         new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
             async () => {
                 // TODO block controls
-                while (multiplayer.State.Players.Count == 0 ||
-                       multiplayer.State.Players.Values.Any(state => !state.WorldSpawned)) {
+                while (!multiplayer.Players.Ready) {
                     await Task.Delay(100);
                 }
                 LoadingOverlay.Clear();

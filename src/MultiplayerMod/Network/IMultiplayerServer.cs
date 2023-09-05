@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using MultiplayerMod.Multiplayer;
 
 namespace MultiplayerMod.Network;
@@ -9,6 +10,7 @@ public interface IMultiplayerServer {
 
     MultiplayerServerState State { get; }
     IMultiplayerEndpoint Endpoint { get; }
+    List<IMultiplayerClientId> Clients { get; }
 
     void Send(IMultiplayerClientId clientId, IMultiplayerCommand command);
     void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None);

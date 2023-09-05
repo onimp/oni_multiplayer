@@ -12,7 +12,7 @@ public class ChoreConsumerPatch {
     // ReSharper disable once InconsistentNaming
     // ReSharper disable once UnusedMember.Global
     public static bool Prefix(ChoreConsumer __instance, ref Chore.Precondition.Context out_context, ref bool __result) {
-        if (Dependencies.Get<MultiplayerGame>().Role != MultiplayerRole.Client)
+        if (Dependencies.Get<MultiplayerGame>().Mode != MultiplayerMode.Client)
             return true;
 
         var instanceId = __instance.gameObject.GetComponent<KPrefabID>().InstanceID;

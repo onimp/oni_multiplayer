@@ -1,12 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Unity;
-using MultiplayerMod.Multiplayer.Commands.State;
-using MultiplayerMod.Multiplayer.State;
-using MultiplayerMod.Network;
+using MultiplayerMod.Multiplayer.Players;
+using MultiplayerMod.Multiplayer.Players.Events;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Components;
@@ -15,54 +13,37 @@ namespace MultiplayerMod.Multiplayer.Components;
 public class DrawCursorComponent : MultiplayerMonoBehaviour {
 
     [Dependency]
-    private readonly IMultiplayerClient client = null!;
-
-    [Dependency]
-    private readonly MultiplayerGame multiplayer = null!;
-
-    [Dependency]
     private readonly EventDispatcher eventDispatcher = null!;
 
-    private readonly Dictionary<IMultiplayerClientId, TemporalCursor> cursors = new();
+    private readonly Dictionary<MultiplayerPlayer, TemporalCursor> cursors = new();
     private Texture2D cursorTexture = null!;
     private Camera mainCamera = null!;
     private bool initialized;
-    private EventSubscription cursorUpdateSubscription = null!;
+    private EventSubscriptions subscriptions = null!;
 
     private void OnEnable() {
-        cursorUpdateSubscription = eventDispatcher.Subscribe<UpdateCursorPositionEvent>(OnCursorUpdated);
+        subscriptions = new EventSubscriptions()
+            .Add(eventDispatcher.Subscribe<PlayerCursorPositionUpdatedEvent>(OnCursorUpdated))
+            .Add(eventDispatcher.Subscribe<PlayerLeftEvent>(OnPlayerLeft));
         cursorTexture = Assets.GetTexture("cursor_arrow");
         mainCamera = Camera.main!;
         initialized = true;
     }
 
-    private void OnDisable() {
-        cursorUpdateSubscription.Cancel();
-    }
+    private void OnPlayerLeft(PlayerLeftEvent @event) => cursors.Remove(@event.Player);
 
-    private void OnCursorUpdated(UpdateCursorPositionEvent @event) {
-        if (@event.Player.Equals(client.Id))
-            return;
+    private void OnDisable() => subscriptions.Cancel();
 
-        if (!cursors.TryGetValue(@event.Player, out var cursor)) {
-            cursor = new TemporalCursor(@event.Position);
-            cursors[@event.Player] = cursor;
+    private void OnCursorUpdated(PlayerCursorPositionUpdatedEvent updatedEvent) {
+        if (!cursors.TryGetValue(updatedEvent.Player, out var cursor)) {
+            cursor = new TemporalCursor(updatedEvent.Position);
+            cursors[updatedEvent.Player] = cursor;
             return;
         }
-        cursor.Trace(@event.Position);
+        cursor.Trace(updatedEvent.Position);
     }
 
-    private void OnGUI() {
-        // TODO: Replace alive check with player events when ready
-        CheckAlive();
-        cursors.ForEach(it => RenderCursor(it.Value.Position));
-    }
-
-    private void CheckAlive() {
-        new List<IMultiplayerClientId>(cursors.Keys)
-            .Where(player => !multiplayer.State.Players.ContainsKey(player))
-            .ForEach(player => cursors.Remove(player));
-    }
+    private void OnGUI() => cursors.ForEach(it => RenderCursor(it.Value.Position));
 
     private void RenderCursor(Vector2 position) {
         if (!initialized)

@@ -9,6 +9,8 @@ public class EventDispatcher {
 
     private readonly Dictionary<Type, LinkedHashSet<Delegate>> handlers = new();
 
+    public event Action<object>? EventDispatching;
+
     public EventSubscription Subscribe<T>(Action<T> action) {
         var type = typeof(T);
         if (!handlers.TryGetValue(type, out var delegates)) {
@@ -16,7 +18,7 @@ public class EventDispatcher {
             handlers[type] = delegates;
         }
         delegates.Add(action);
-        return new EventSubscription(this, action, typeof(T));
+        return new EventSubscription(this, action, type);
     }
 
     public void Unsubscribe<T>(Action<T> action) => Unsubscribe(typeof(T), action);
@@ -29,6 +31,7 @@ public class EventDispatcher {
     }
 
     public void Dispatch<T>(T @event) where T : notnull {
+        EventDispatching?.Invoke(@event);
         if (!handlers.TryGetValue(typeof(T), out var delegates))
             return;
 
@@ -51,7 +54,7 @@ public class EventDispatcher<T> where T : notnull {
         delegates.Remove(action);
     }
 
-    public void Dispatch(T @event)  {
+    public void Dispatch(T @event) {
         var arguments = new object[] { @event };
         delegates.ForEach(it => it.Method.Invoke(it.Target, arguments));
     }

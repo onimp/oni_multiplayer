@@ -22,7 +22,7 @@ internal class MainMenuPatch {
 
     // TODO: Reset multiplayer role to none in case of button action cancellation
     private static System.Action CreateHostWrapper(System.Action action) => () => {
-        Dependencies.Get<MultiplayerGame>().Role = MultiplayerRole.Host;
+        Dependencies.Get<MultiplayerGame>().Mode = MultiplayerMode.Host;
         action();
     };
 

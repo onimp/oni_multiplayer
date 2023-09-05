@@ -4,6 +4,7 @@ using MultiplayerMod.Multiplayer.World;
 namespace MultiplayerMod.Multiplayer.Commands;
 
 [Serializable]
+[MultiplayerCommand(Type = MultiplayerCommandType.System)]
 public class LoadWorld : MultiplayerCommand {
 
     private byte[] data;

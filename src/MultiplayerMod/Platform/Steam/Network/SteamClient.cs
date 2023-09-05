@@ -66,11 +66,11 @@ public class SteamClient : IMultiplayerClient {
         if (State <= MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
-        SetState(MultiplayerClientState.Disconnected);
         UnityObject.Destroy(gameObject);
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
         SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
+        SetState(MultiplayerClientState.Disconnected);
         SteamFriends.ClearRichPresence();
     }
 

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
-using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.Test.Environment.Patches;
 using UnityEngine;
 
 namespace MultiplayerMod.Test.Environment.Unity;
@@ -27,7 +27,8 @@ public static class UnityTestRuntime {
     public static int FrameCount { get; private set; }
 
     private static readonly HashSet<Type> supportedComponents = new() {
-        typeof(UnityTaskExecutor)
+        typeof(UnityTaskExecutor),
+        typeof(LoadingOverlay)
     };
 
     public static void Register(GameObject gameObject) {
@@ -67,20 +68,16 @@ public static class UnityTestRuntime {
         EnabledComponents.ForEach(it => Trigger(it, UnityEvent.LateUpdate));
     }
 
-    public static void Install() => unityPatches.ForEach(it => harmony.CreateClassProcessor(it).Patch());
+    public static void Install() => PatchesSetup.Install(harmony, unityPatches);
 
     public static void Uninstall() {
-        foreach (var methodBase in harmony.GetPatchedMethods()) {
-            if (!methodBase.HasMethodBody())
-                continue;
-            var patches = Harmony.GetPatchInfo(methodBase);
-            patches.Prefixes
-                .Union(patches.Postfixes)
-                .Union(patches.Transpilers)
-                .Union(patches.Finalizers)
-                .Where(it => it.owner == harmony.Id)
-                .ForEach(it => harmony.Unpatch(methodBase, it.PatchMethod));
-        }
+        PatchesSetup.Uninstall(harmony);
+        FrameCount = 0;
+        Components.Clear();
+        EnabledComponents.Clear();
+        StartAwaitingComponents.Clear();
+        NewComponents.Clear();
+        Objects.Clear();
     }
 
     private static void Trigger(Component component, UnityEvent @event) {

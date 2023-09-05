@@ -4,6 +4,7 @@ using MultiplayerMod.Core.Unity;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Loader;
 using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network;
 using MultiplayerMod.Platform.Steam.Network.Components;
@@ -24,6 +25,7 @@ public class SteamPlatformLoader : IModComponentLoader {
         log.Info("Steam platform detected");
 
         var dependencies = runtime.Dependencies;
+        dependencies.Register<IPlayerProfileProvider, SteamPlayerProfileProvider>();
         dependencies.Register<IMultiplayerOperations, SteamMultiplayerOperations>();
         dependencies.Register<IMultiplayerServer, SteamServer>();
         dependencies.Register<IMultiplayerClient, SteamClient>();

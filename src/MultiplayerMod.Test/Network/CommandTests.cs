@@ -11,6 +11,7 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Network;
 
 [TestFixture]
+[Parallelizable]
 public class CommandTests {
 
     [Serializable]

@@ -13,7 +13,7 @@ public class ChoreConsumerEvents {
 
     // ReSharper disable once InconsistentNaming, UnusedMember.Global
     public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, ref bool __result) {
-        if (Dependencies.Get<MultiplayerGame>().Role != MultiplayerRole.Host)
+        if (Dependencies.Get<MultiplayerGame>().Mode != MultiplayerMode.Host)
             return;
 
         if (!__result)

@@ -35,6 +35,8 @@ public class SteamServer : IMultiplayerServer {
         }
     }
 
+    public List<IMultiplayerClientId> Clients => new(clients.Select(it => it.Key));
+
     public event Action<MultiplayerServerState>? StateChanged;
     public event Action<IMultiplayerClientId>? ClientConnected;
     public event Action<IMultiplayerClientId>? ClientDisconnected;

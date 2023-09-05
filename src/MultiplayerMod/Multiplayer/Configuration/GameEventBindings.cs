@@ -18,8 +18,9 @@ using MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
 using MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
-using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
+using MultiplayerMod.Multiplayer.Players;
+using MultiplayerMod.Multiplayer.Players.Commands;
 using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
@@ -34,6 +35,7 @@ public class GameEventBindings {
     private readonly IMultiplayerClient client;
     private readonly MultiplayerGame multiplayer;
     private readonly ExecutionLevelManager levelManager;
+    private readonly PlayerConnectionManager playerConnectionManager;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
@@ -42,11 +44,13 @@ public class GameEventBindings {
     public GameEventBindings(
         IMultiplayerClient client,
         MultiplayerGame multiplayer,
-        ExecutionLevelManager levelManager
+        ExecutionLevelManager levelManager,
+        PlayerConnectionManager playerConnectionManager
     ) {
         this.client = client;
         this.multiplayer = multiplayer;
         this.levelManager = levelManager;
+        this.playerConnectionManager = playerConnectionManager;
     }
 
     public void Bind() {
@@ -75,8 +79,8 @@ public class GameEventBindings {
     private void BindMouse() {
         // TODO: Cursor update may be ignored if MouseMoved isn't triggered after the rate period.
         // TODO: Will be changed later (probably with current / last sent positions check).
-        InterfaceToolEvents.MouseMoved += position => throttle10Hz.Run<UpdateCursorPosition>(
-            () => client.Send(new UpdateCursorPosition(new UpdateCursorPositionEvent(client.Id, position)))
+        InterfaceToolEvents.MouseMoved += position => throttle10Hz.Run<UpdatePlayerCursorPosition>(
+            () => client.Send(new UpdatePlayerCursorPosition(multiplayer.Players.Current.Id, position))
         );
     }
 
@@ -107,7 +111,7 @@ public class GameEventBindings {
             containers => client.Send(new InitializeImmigration(containers));
         PauseScreenEvents.QuitGame += () => {
             if (client.State >= MultiplayerClientState.Connecting)
-                client.Disconnect();
+                playerConnectionManager.LeaveGame();
             levelManager.ReplaceLevel(ExecutionLevel.System);
         };
 
@@ -155,15 +159,10 @@ public class GameEventBindings {
     }
 
     private void BindMechanics() {
-        ObjectEvents.ComponentMethodCalled += args => SendIfSpawned(new CallMethod(args));
-        ObjectEvents.StateMachineMethodCalled += args => SendIfSpawned(new CallMethod(args));
+        ObjectEvents.ComponentMethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.StateMachineMethodCalled += args => client.Send(new CallMethod(args));
         TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
         TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
-    }
-
-    private void SendIfSpawned(IMultiplayerCommand command) {
-        if (multiplayer.State.Current.WorldSpawned)
-            client.Send(command);
     }
 
     private void BindSideScreens() {
