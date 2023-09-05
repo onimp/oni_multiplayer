@@ -6,6 +6,7 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Core.Dependency;
 
 [TestFixture]
+[Parallelizable]
 public class DependencyContainerTests {
 
     [Test]

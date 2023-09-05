@@ -4,6 +4,7 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Core.Collections;
 
 [TestFixture]
+[Parallelizable]
 public class LinkedHashSetTests {
 
     [Test]

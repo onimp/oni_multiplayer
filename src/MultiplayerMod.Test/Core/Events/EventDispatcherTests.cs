@@ -5,6 +5,7 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Core.Events;
 
 [TestFixture]
+[Parallelizable]
 public class EventDispatcherTests {
 
     [Test]
