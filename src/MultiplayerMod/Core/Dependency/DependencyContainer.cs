@@ -51,12 +51,15 @@ public class DependencyContainer {
         return instance == null ? Instantiate(type) : instance.Value;
     }
 
-    public T Get<T>() where T : notnull {
-        instances.TryGetValue(typeof(T), out var singleton);
-        if (singleton == null)
-            throw new MissingDependencyException($"Type {typeof(T)} is not registered");
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T Get<T>() where T : notnull => (T) Get(typeof(T));
 
-        return (T) singleton.Value;
+    public object Get(Type type) {
+        instances.TryGetValue(type, out var singleton);
+        if (singleton == null)
+            throw new MissingDependencyException($"Type {type} is not registered");
+
+        return singleton.Value;
     }
 
     private void TryRegister<T>() where T : notnull {
@@ -85,6 +88,7 @@ public class DependencyContainer {
     private void RegisterInitializer(Type type, Lazy<object> initializer) {
         if (!instances.TryAdd(type, initializer))
             throw new TypeAlreadyRegisteredException(type);
+
         log.Trace(() => $"Type {type.FullName} is registered.");
     }
 
