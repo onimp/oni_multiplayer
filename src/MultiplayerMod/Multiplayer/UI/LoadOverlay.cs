@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
-using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.UI;
 

@@ -4,6 +4,7 @@ using System.Linq;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Test.Environment.Network;

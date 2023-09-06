@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MultiplayerMod.Multiplayer;
+namespace MultiplayerMod.Multiplayer.Commands;
 
 [AttributeUsage(AttributeTargets.Class)]
 public class MultiplayerCommandAttribute : Attribute {

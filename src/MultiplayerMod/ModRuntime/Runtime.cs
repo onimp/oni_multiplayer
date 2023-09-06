@@ -2,7 +2,7 @@
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime.Context;
-using MultiplayerMod.Multiplayer.State;
+using MultiplayerMod.Multiplayer;
 
 namespace MultiplayerMod.ModRuntime;
 

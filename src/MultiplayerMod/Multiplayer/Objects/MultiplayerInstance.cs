@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Unity;
-using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MultiplayerMod.Multiplayer;
+namespace MultiplayerMod.Multiplayer.Commands;
 
 public interface IMultiplayerCommand {
     Guid Id { get; }

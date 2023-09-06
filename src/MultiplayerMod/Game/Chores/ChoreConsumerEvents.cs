@@ -1,7 +1,7 @@
 using System;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
-using MultiplayerMod.Multiplayer.State;
+using MultiplayerMod.Multiplayer;
 
 namespace MultiplayerMod.Game.Chores;
 

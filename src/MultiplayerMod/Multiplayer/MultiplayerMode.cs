@@ -1,4 +1,4 @@
-﻿namespace MultiplayerMod.Multiplayer.State;
+﻿namespace MultiplayerMod.Multiplayer;
 
 public enum MultiplayerMode {
     None,

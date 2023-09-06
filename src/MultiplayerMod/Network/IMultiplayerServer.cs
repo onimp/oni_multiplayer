@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands;
 
 namespace MultiplayerMod.Network;
 

@@ -2,10 +2,9 @@ using System;
 using System.Threading;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime;
-using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Network;
 
-namespace MultiplayerMod.Multiplayer;
+namespace MultiplayerMod.Multiplayer.Commands;
 
 public class MultiplayerCommandContext {
 

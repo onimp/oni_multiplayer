@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Network;
 using static MultiplayerMod.Platform.Steam.Network.Configuration;
 

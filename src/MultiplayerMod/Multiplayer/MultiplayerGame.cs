@@ -3,7 +3,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
 
-namespace MultiplayerMod.Multiplayer.State;
+namespace MultiplayerMod.Multiplayer;
 
 [UsedImplicitly]
 public class MultiplayerGame {

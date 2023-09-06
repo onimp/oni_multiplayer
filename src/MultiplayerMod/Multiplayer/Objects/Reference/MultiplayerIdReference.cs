@@ -1,6 +1,5 @@
 ﻿using System;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
-using MultiplayerMod.Multiplayer.State;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects.Reference;

@@ -1,6 +1,5 @@
 using JetBrains.Annotations;
 using MultiplayerMod.Game;
-using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
-using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Components;
 using MultiplayerMod.Platform.Steam.Network.Messaging;

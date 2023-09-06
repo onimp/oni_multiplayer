@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Configuration;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
-using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Network;
 using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Network;

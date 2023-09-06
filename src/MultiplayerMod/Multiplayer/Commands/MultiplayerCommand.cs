@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MultiplayerMod.Multiplayer;
+namespace MultiplayerMod.Multiplayer.Commands;
 
 [Serializable]
 public abstract class MultiplayerCommand : IMultiplayerCommand {

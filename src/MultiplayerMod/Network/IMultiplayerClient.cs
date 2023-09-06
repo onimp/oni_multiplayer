@@ -1,5 +1,5 @@
 ﻿using System;
-using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands;
 
 namespace MultiplayerMod.Network;
 

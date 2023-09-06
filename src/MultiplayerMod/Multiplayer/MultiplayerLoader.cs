@@ -5,7 +5,6 @@ using MultiplayerMod.ModRuntime.Loader;
 using MultiplayerMod.Multiplayer.Configuration;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
-using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer;
 

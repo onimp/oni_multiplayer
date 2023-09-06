@@ -1,4 +1,4 @@
-﻿namespace MultiplayerMod.Multiplayer;
+﻿namespace MultiplayerMod.Multiplayer.Commands;
 
 public enum MultiplayerCommandType {
 

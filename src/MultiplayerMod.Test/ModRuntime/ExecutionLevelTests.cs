@@ -1,6 +1,5 @@
 ﻿using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Test.Environment.Unity;
 using NUnit.Framework;
 

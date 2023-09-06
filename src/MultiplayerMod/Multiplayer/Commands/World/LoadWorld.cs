@@ -1,7 +1,7 @@
 ﻿using System;
 using MultiplayerMod.Multiplayer.World;
 
-namespace MultiplayerMod.Multiplayer.Commands;
+namespace MultiplayerMod.Multiplayer.Commands.World;
 
 [Serializable]
 [MultiplayerCommand(Type = MultiplayerCommandType.System)]

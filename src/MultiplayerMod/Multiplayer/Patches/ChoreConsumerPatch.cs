@@ -1,6 +1,5 @@
 using HarmonyLib;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
-using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Multiplayer.World;
 
 namespace MultiplayerMod.Multiplayer.Patches;

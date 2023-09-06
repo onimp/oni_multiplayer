@@ -1,5 +1,6 @@
 ﻿using System;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Players.Events;
 
 namespace MultiplayerMod.Multiplayer.Players.Commands;
