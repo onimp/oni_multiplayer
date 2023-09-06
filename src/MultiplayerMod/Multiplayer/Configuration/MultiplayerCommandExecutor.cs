@@ -16,7 +16,7 @@ public class MultiplayerCommandExecutor {
     private readonly ExecutionLevelManager executionLevelManager;
     private readonly CommandExceptionHandler exceptionHandler = new();
 
-    private readonly Dictionary<Type, Configuration> commandMetadata = new();
+    private readonly Dictionary<Type, Configuration> configurationCache = new();
 
     public MultiplayerCommandExecutor(Runtime runtime, ExecutionLevelManager executionLevelManager) {
         this.runtime = runtime;
@@ -51,12 +51,12 @@ public class MultiplayerCommandExecutor {
 
     private Configuration GetCommandConfiguration(IMultiplayerCommand command) {
         var type = command.GetType();
-        if (commandMetadata.TryGetValue(type, out var metadata))
-            return metadata;
+        if (configurationCache.TryGetValue(type, out var configuration))
+            return configuration;
 
-        metadata = new Configuration(type.GetCustomAttribute<MultiplayerCommandAttribute>());
-        commandMetadata[type] = metadata;
-        return metadata;
+        configuration = new Configuration(type.GetCustomAttribute<MultiplayerCommandAttribute>());
+        configurationCache[type] = configuration;
+        return configuration;
     }
 
     private class Configuration {
