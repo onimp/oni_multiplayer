@@ -5,20 +5,20 @@ namespace MultiplayerMod.ModRuntime.StaticCompatibility;
 
 public static class Execution {
 
-    public static ExecutionContext Context => Runtime.Instance.ExecutionContext;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void EnterLevelSection(ExecutionLevel level) =>
-        Dependencies.Get<ExecutionLevelManager>().EnterSection(level);
+        Dependencies.Get<ExecutionLevelManager>().EnterOverrideSection(level);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LeaveLevelSection() =>
-        Dependencies.Get<ExecutionLevelManager>().LeaveSection();
+        Dependencies.Get<ExecutionLevelManager>().LeaveOverrideSection();
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void RunUsingLevel(ExecutionLevel level, System.Action action) =>
         Dependencies.Get<ExecutionLevelManager>().RunUsingLevel(level, action);
 
-    public static void RunIfPossible(ExecutionLevel requiredLevel, System.Action action) =>
-        Dependencies.Get<ExecutionLevelManager>().RunIfPossible(requiredLevel, action);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void RunIfLevelIsActive(ExecutionLevel requiredLevel, System.Action action) =>
+        Dependencies.Get<ExecutionLevelManager>().RunIfLevelIsActive(requiredLevel, action);
 
 }

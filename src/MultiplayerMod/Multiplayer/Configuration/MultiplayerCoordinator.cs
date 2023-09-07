@@ -72,7 +72,7 @@ public class MultiplayerCoordinator {
         if (multiplayer.Players.Current != @event.Player)
             return;
         if (multiplayer.Players.Current.State == PlayerState.Ready)
-            executionLevelManager.ReplaceLevel(ExecutionLevel.Gameplay);
+            executionLevelManager.BaseLevel = ExecutionLevel.Gameplay;
     }
 
     private void OnServerStateChanged(MultiplayerServerState state) {
@@ -103,7 +103,7 @@ public class MultiplayerCoordinator {
         switch (state) {
             case MultiplayerClientState.Connecting:
                 if (multiplayer.Mode == MultiplayerMode.Client)
-                    executionLevelManager.ReplaceLevel(ExecutionLevel.Multiplayer);
+                    executionLevelManager.BaseLevel = ExecutionLevel.Multiplayer;
                 break;
         }
     }

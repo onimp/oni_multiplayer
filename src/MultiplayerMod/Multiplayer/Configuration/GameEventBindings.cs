@@ -110,7 +110,7 @@ public class GameEventBindings {
         PauseScreenEvents.QuitGame += () => {
             if (client.State >= MultiplayerClientState.Connecting)
                 playerConnectionManager.LeaveGame();
-            levelManager.ReplaceLevel(ExecutionLevel.System);
+            levelManager.BaseLevel = ExecutionLevel.System;
         };
 
         UserMenuScreenEvents.PriorityChanged += (target, priority) => client.Send(new ChangePriority(target, priority));

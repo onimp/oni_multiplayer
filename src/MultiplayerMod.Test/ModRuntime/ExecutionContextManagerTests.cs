@@ -15,12 +15,12 @@ public class ExecutionContextManagerTests {
     public static void TearDown() => UnityTestRuntime.Uninstall();
 
     [Test]
-    public void RootContextChange() {
+    public void BaseContextChange() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
 
         Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);
-        manager.Replace(new ExecutionContext(ExecutionLevel.Gameplay));
+        manager.BaseContext = new ExecutionContext(ExecutionLevel.Gameplay);
         Assert.AreEqual(expected: ExecutionLevel.Gameplay, actual: manager.Context.Level);
     }
 
@@ -40,17 +40,17 @@ public class ExecutionContextManagerTests {
     public void RestoreEmptyContextException() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        Assert.Throws<ExecutionContextIntegrityFailureException>(() => manager.Pop());
+        Assert.Throws<ExecutionContextIntegrityFailureException>(() => manager.LeaveOverrideSection());
     }
 
     [Test]
     public void ManualGuardedOverrideStaleContextException() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        manager.Push(new ExecutionContext(ExecutionLevel.Gameplay));
+        manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Gameplay));
         UnityTestRuntime.NextFrame();
         Assert.Throws<ExecutionContextIntegrityFailureException>(
-            () => manager.Push(new ExecutionContext(ExecutionLevel.Gameplay))
+            () => manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Gameplay))
         );
     }
 
@@ -58,9 +58,9 @@ public class ExecutionContextManagerTests {
     public void ManualGuardedOverride() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        manager.Push(new ExecutionContext(ExecutionLevel.Gameplay));
+        manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Gameplay));
         Assert.AreEqual(expected: ExecutionLevel.Gameplay, actual: manager.Context.Level);
-        manager.Pop();
+        manager.LeaveOverrideSection();
         UnityTestRuntime.NextFrame();
         Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);
     }

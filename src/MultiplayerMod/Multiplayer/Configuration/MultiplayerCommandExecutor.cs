@@ -30,7 +30,7 @@ public class MultiplayerCommandExecutor {
                 command.Execute(new MultiplayerCommandContext(clientId, runtime));
                 break;
             case MultiplayerCommandType.Gameplay:
-                executionLevelManager.RunIfPossible(
+                executionLevelManager.RunIfLevelIsActive(
                     ExecutionLevel.Gameplay,
                     ExecutionLevel.Command,
                     () => RunCatching(clientId, command)

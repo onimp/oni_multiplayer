@@ -1,6 +1,6 @@
 using System;
+using JetBrains.Annotations;
 using MultiplayerMod.AttributeProcessor;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
 
 namespace MultiplayerMod.ModRuntime.Context;
 
@@ -8,6 +8,7 @@ namespace MultiplayerMod.ModRuntime.Context;
 [ConditionalInvocation(typeof(RequireExecutionLevelAttribute), nameof(ExecutionLevelCheck))]
 public class RequireExecutionLevelAttribute : Attribute {
 
+    [UsedImplicitly]
     public ExecutionLevel Level { get; }
 
     public RequireExecutionLevelAttribute(ExecutionLevel level) {
@@ -15,6 +16,6 @@ public class RequireExecutionLevelAttribute : Attribute {
     }
 
     private static bool ExecutionLevelCheck(ExecutionLevel level) =>
-        ExecutionLevelMatcher.Matches(Execution.Context.Level, level);
+        Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().LevelIsActive(level);
 
 }

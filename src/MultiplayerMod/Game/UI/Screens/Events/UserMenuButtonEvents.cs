@@ -35,7 +35,7 @@ public static class UserMenuButtonEvents {
 
             button.onClick = () => {
                 original.Invoke();
-                Execution.RunIfPossible(
+                Execution.RunIfLevelIsActive(
                     ExecutionLevel.Gameplay,
                     () => Click?.Invoke(go, original)
                 );

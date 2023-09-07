@@ -5,10 +5,10 @@ namespace MultiplayerMod.ModRuntime.Context;
 /// <summary>
 /// Represents a level of current execution.
 /// This helps to isolate different functions by binding them to a specific level
-/// using <see cref="RequireExecutionLevelAttribute"/> or <see cref="Execution.RunIfPossible"/>.<br/>
+/// using <see cref="RequireExecutionLevelAttribute"/> or <see cref="Execution.RunIfLevelIsActive"/>.<br/>
 /// The level is contained in a thread bounded stackable <see cref="ExecutionContext"/> and can be changed
 /// using <see cref="ExecutionLevelManager"/> ot its wrapper in <see cref="Execution"/>.<br/>
-/// Each next level "includes" previous (<see cref="ExecutionLevelMatcher.Matches"/>),
+/// Each next level "includes" previous (<see cref="ExecutionLevelManager.LevelIsActive"/>),
 /// e.g. <see cref="Multiplayer"/> include <see cref="System"/>
 /// and the top level <see cref="Gameplay"/> include all levels. <br/><br/>
 /// </summary>
