@@ -15,7 +15,7 @@ public static class UserMenuScreenEvents {
     [UsedImplicitly]
     [HarmonyPostfix]
     [HarmonyPatch(nameof(UserMenuScreen.OnPriorityClicked))]
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void OnPriorityClicked(UserMenuScreen __instance, PrioritySetting priority) {
         if (__instance.selected == null)
             return;

@@ -13,7 +13,7 @@ public static class TimeRangeSideScreenEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(TimeRangeSideScreen.ChangeSetting))]
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void ChangeSetting(TimeRangeSideScreen __instance) => UpdateLogicTimeOfDaySensor?.Invoke(
         new TimeRangeSideScreenEventArgs(

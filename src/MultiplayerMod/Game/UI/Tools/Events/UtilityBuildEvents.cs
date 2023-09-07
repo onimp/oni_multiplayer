@@ -12,7 +12,7 @@ public static class UtilityBuildEvents {
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(BaseUtilityBuildTool.BuildPath))]
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     // ReSharper disable once UnusedMember.Local
     private static void BuildPathPrefix(BaseUtilityBuildTool __instance) => Build?.Invoke(
         __instance,

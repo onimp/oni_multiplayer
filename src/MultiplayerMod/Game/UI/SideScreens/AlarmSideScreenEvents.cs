@@ -36,7 +36,7 @@ public static class AlarmSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void SelectType(AlarmSideScreen __instance) => TriggerEvent(__instance);
 
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void TriggerEvent(AlarmSideScreen instance) => UpdateAlarm?.Invoke(
         new AlarmSideScreenEventArgs(
             instance.targetAlarm.GetReference(),

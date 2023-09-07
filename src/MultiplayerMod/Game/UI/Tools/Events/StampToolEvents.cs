@@ -34,7 +34,7 @@ public static class StampToolEvents {
         return result;
     }
 
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void OnStamp(StampTool instance, Vector2 location) => Stamp?.Invoke(
         new StampEventArgs(instance.stampTemplate, location)
     );

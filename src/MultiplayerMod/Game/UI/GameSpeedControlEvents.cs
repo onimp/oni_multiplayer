@@ -13,20 +13,20 @@ public static class GameSpeedControlEvents {
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SpeedControlScreen.SetSpeed))]
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     // ReSharper disable once InconsistentNaming
     // ReSharper disable once UnusedMember.Local
     private static void SetSpeedPostfix(int Speed) => SpeedChanged?.Invoke(Speed);
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SpeedControlScreen.OnPause))]
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     // ReSharper disable once UnusedMember.Local
     private static void OnPausePostfix() => GamePaused?.Invoke();
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SpeedControlScreen.OnPlay))]
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     // ReSharper disable once UnusedMember.Local
     private static void OnPlayPostfix() => GameResumed?.Invoke();
 

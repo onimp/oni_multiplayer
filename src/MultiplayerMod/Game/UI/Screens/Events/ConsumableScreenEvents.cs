@@ -19,7 +19,7 @@ public static class ConsumableScreenEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ConsumableConsumer.SetPermitted))]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void SetPermittedPatch(ConsumableConsumer __instance, string consumable_id, bool is_allowed) =>
             PermitToMinion?.Invoke(__instance, consumable_id, is_allowed);
@@ -33,7 +33,7 @@ public static class ConsumableScreenEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ConsumablesTableScreen.set_value_consumable_info))]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void SetPermittedPatch(ConsumablesTableScreen __instance, GameObject widget_go) {
             var widgetRow = __instance.rows.FirstOrDefault(

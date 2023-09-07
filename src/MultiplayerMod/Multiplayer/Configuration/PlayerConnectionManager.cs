@@ -98,7 +98,7 @@ public class PlayerConnectionManager {
         var command = new RequestPlayerStateChangeCommand(currentPlayer.Id, PlayerState.Ready);
         client.Send(command, MultiplayerCommandOptions.ExecuteOnServer);
 
-        executionLevelManager.BaseLevel = ExecutionLevel.Gameplay;
+        executionLevelManager.BaseLevel = ExecutionLevel.Game;
     }
 
     private void OnClientInitializationRequested(ClientInitializationRequestEvent @event) {

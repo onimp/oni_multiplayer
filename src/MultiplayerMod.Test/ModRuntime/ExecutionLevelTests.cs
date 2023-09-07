@@ -21,7 +21,7 @@ public class ExecutionLevelTests {
         manager.BaseLevel = ExecutionLevel.Multiplayer;
 
         var executed = false;
-        manager.RunIfLevelIsActive(ExecutionLevel.Gameplay, () => executed = true);
+        manager.RunIfLevelIsActive(ExecutionLevel.Game, () => executed = true);
 
         Assert.IsFalse(executed);
     }
@@ -30,10 +30,10 @@ public class ExecutionLevelTests {
     public void RequiredLevelEqualsToCurrent() {
         var runtime = new Runtime();
         var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
-        manager.BaseLevel = ExecutionLevel.Gameplay;
+        manager.BaseLevel = ExecutionLevel.Game;
 
         var executed = false;
-        manager.RunIfLevelIsActive(ExecutionLevel.Gameplay, () => executed = true);
+        manager.RunIfLevelIsActive(ExecutionLevel.Game, () => executed = true);
 
         Assert.IsTrue(executed);
     }
@@ -42,7 +42,7 @@ public class ExecutionLevelTests {
     public void RequiredLevelLowerThanCurrent() {
         var runtime = new Runtime();
         var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
-        manager.BaseLevel = ExecutionLevel.Gameplay;
+        manager.BaseLevel = ExecutionLevel.Game;
 
         var executed = false;
         manager.RunIfLevelIsActive(ExecutionLevel.Multiplayer, () => executed = true);
@@ -54,7 +54,7 @@ public class ExecutionLevelTests {
     public void RunActionWithTargetExecutionLevel() {
         var runtime = new Runtime();
         var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
-        manager.BaseLevel = ExecutionLevel.Gameplay;
+        manager.BaseLevel = ExecutionLevel.Game;
 
         var executedLevel = ExecutionLevel.System;
         manager.RunIfLevelIsActive(
@@ -75,7 +75,7 @@ public class ExecutionLevelTests {
         Assert.IsTrue(manager.LevelIsActive(ExecutionLevel.Multiplayer));
         Assert.IsTrue(manager.LevelIsActive(ExecutionLevel.Component));
         Assert.IsFalse(manager.LevelIsActive(ExecutionLevel.Command));
-        Assert.IsFalse(manager.LevelIsActive(ExecutionLevel.Gameplay));
+        Assert.IsFalse(manager.LevelIsActive(ExecutionLevel.Game));
     }
 
 }

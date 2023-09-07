@@ -29,7 +29,7 @@ public static class DiseaseOverlayEvents {
     // ReSharper disable once UnusedMember.Local
     private static void OnClickToggle() => TriggerEvent();
 
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void TriggerEvent() {
         DiseaseSettingsChanged?.Invoke(
             SaveGame.Instance.minGermCountForDisinfect,

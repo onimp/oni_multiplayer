@@ -15,7 +15,7 @@ public static class SkillScreenEvents {
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(SkillsScreen.OnHatDropEntryClick))]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void OnHatDropEntryClick(SkillsScreen __instance, IListableOption skill) {
             __instance.GetMinionIdentity(__instance.currentlySelectedMinion, out var minionIdentity, out _);
@@ -33,7 +33,7 @@ public static class SkillScreenEvents {
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(SkillMinionWidget.OnHatDropEntryClick))]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void OnHatDropEntryClick(SkillMinionWidget __instance, IListableOption skill) {
             __instance.skillsScreen.GetMinionIdentity(__instance.assignableIdentity, out var minionIdentity, out _);
@@ -47,7 +47,7 @@ public static class SkillScreenEvents {
     private static class SkillWidgetEvents {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(SkillWidget.OnPointerClick))]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void OnPointerClick(SkillWidget __instance) {
             __instance.skillsScreen.GetMinionIdentity(

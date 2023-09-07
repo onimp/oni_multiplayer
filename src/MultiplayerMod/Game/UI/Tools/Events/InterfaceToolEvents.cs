@@ -13,7 +13,7 @@ public static class InterfaceToolEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     [HarmonyPrefix]
     [HarmonyPatch(nameof(InterfaceTool.OnMouseMove))]
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void OnMouseMove(Vector3 cursor_pos) => MouseMoved?.Invoke(new Vector2(cursor_pos.x, cursor_pos.y));
 
 }

@@ -10,7 +10,7 @@ namespace MultiplayerMod.ModRuntime.Context;
 /// using <see cref="ExecutionLevelManager"/> ot its wrapper in <see cref="Execution"/>.<br/>
 /// Each next level "includes" previous (<see cref="ExecutionLevelManager.LevelIsActive"/>),
 /// e.g. <see cref="Multiplayer"/> include <see cref="System"/>
-/// and the top level <see cref="Gameplay"/> include all levels. <br/><br/>
+/// and the top level <see cref="Game"/> include all levels. <br/><br/>
 /// </summary>
 public enum ExecutionLevel {
 
@@ -41,6 +41,6 @@ public enum ExecutionLevel {
     /// This level is active by default when a multiplayer game is created and running. <br/>
     /// What should be used at that level: all game events that produce commands.
     /// </summary>
-    Gameplay
+    Game
 
 }

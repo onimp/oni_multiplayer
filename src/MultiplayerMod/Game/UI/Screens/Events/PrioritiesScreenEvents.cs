@@ -16,7 +16,7 @@ public static class PrioritiesScreenEvents {
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ChoreConsumer.SetPersonalPriority))]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void SetPersonalPriority(ChoreConsumer __instance, ChoreGroup group, int value) =>
             Set?.Invoke(__instance, group, value);
@@ -28,7 +28,7 @@ public static class PrioritiesScreenEvents {
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Immigration.SetPersonalPriority))]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void SetPersonalPriority(ChoreGroup group, int value) =>
             DefaultSet?.Invoke(group, value);
@@ -41,7 +41,7 @@ public static class PrioritiesScreenEvents {
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(JobsTableScreen.OnAdvancedModeToggleClicked))]
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
         private static void OnAdvancedModeToggleClicked() =>
             AdvancedSet?.Invoke(global::Game.Instance.advancedPersonalPriorities);

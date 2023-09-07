@@ -10,6 +10,6 @@ public enum MultiplayerCommandType {
     /// <summary>
     /// A command is related to the game and will be executed if possible.
     /// </summary>
-    Gameplay
+    Game
 
 }

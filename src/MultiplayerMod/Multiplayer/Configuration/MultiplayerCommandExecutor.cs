@@ -29,9 +29,9 @@ public class MultiplayerCommandExecutor {
             case MultiplayerCommandType.System:
                 command.Execute(new MultiplayerCommandContext(clientId, runtime));
                 break;
-            case MultiplayerCommandType.Gameplay:
+            case MultiplayerCommandType.Game:
                 executionLevelManager.RunIfLevelIsActive(
-                    ExecutionLevel.Gameplay,
+                    ExecutionLevel.Game,
                     ExecutionLevel.Command,
                     () => RunCatching(clientId, command)
                 );
@@ -64,7 +64,7 @@ public class MultiplayerCommandExecutor {
         public MultiplayerCommandType Type { get; set; }
 
         public Configuration(MultiplayerCommandAttribute? attribute) {
-            Type = attribute?.Type ?? MultiplayerCommandType.Gameplay;
+            Type = attribute?.Type ?? MultiplayerCommandType.Game;
         }
 
     }

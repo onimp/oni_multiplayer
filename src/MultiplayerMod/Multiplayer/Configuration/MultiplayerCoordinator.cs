@@ -72,7 +72,7 @@ public class MultiplayerCoordinator {
         if (multiplayer.Players.Current != @event.Player)
             return;
         if (multiplayer.Players.Current.State == PlayerState.Ready)
-            executionLevelManager.BaseLevel = ExecutionLevel.Gameplay;
+            executionLevelManager.BaseLevel = ExecutionLevel.Game;
     }
 
     private void OnServerStateChanged(MultiplayerServerState state) {

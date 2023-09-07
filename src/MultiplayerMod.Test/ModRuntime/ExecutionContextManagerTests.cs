@@ -20,8 +20,8 @@ public class ExecutionContextManagerTests {
         var manager = container.Get<ExecutionContextManager>();
 
         Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);
-        manager.BaseContext = new ExecutionContext(ExecutionLevel.Gameplay);
-        Assert.AreEqual(expected: ExecutionLevel.Gameplay, actual: manager.Context.Level);
+        manager.BaseContext = new ExecutionContext(ExecutionLevel.Game);
+        Assert.AreEqual(expected: ExecutionLevel.Game, actual: manager.Context.Level);
     }
 
     [Test]
@@ -47,10 +47,10 @@ public class ExecutionContextManagerTests {
     public void ManualGuardedOverrideStaleContextException() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Gameplay));
+        manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Game));
         UnityTestRuntime.NextFrame();
         Assert.Throws<ExecutionContextIntegrityFailureException>(
-            () => manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Gameplay))
+            () => manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Game))
         );
     }
 
@@ -58,8 +58,8 @@ public class ExecutionContextManagerTests {
     public void ManualGuardedOverride() {
         var container = CreateContainer();
         var manager = container.Get<ExecutionContextManager>();
-        manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Gameplay));
-        Assert.AreEqual(expected: ExecutionLevel.Gameplay, actual: manager.Context.Level);
+        manager.EnterOverrideSection(new ExecutionContext(ExecutionLevel.Game));
+        Assert.AreEqual(expected: ExecutionLevel.Game, actual: manager.Context.Level);
         manager.LeaveOverrideSection();
         UnityTestRuntime.NextFrame();
         Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);

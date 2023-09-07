@@ -135,7 +135,7 @@ public static class ObjectEvents {
         ProcessObjectEvent(__instance, __originalMethod, __args);
     }
 
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void ProcessObjectEvent(object __instance, MethodBase __originalMethod, object[] __args) {
         var args = __args.Select(
             obj =>

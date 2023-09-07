@@ -21,7 +21,7 @@ public static class TimerSideScreenEvents {
     // ReSharper disable once InconsistentNaming, UnusedMember.Local
     private static void UpdateMaxCapacity(TimerSideScreen __instance) => TriggerEvent(__instance);
 
-    [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+    [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void TriggerEvent(TimerSideScreen instance) => UpdateLogicTimeSensor?.Invoke(
         new TimerSideScreenEventArgs(
             instance.targetTimedSwitch.GetReference(),

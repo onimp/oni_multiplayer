@@ -58,7 +58,7 @@ public static class DragToolEvents {
         // ReSharper disable once UnusedMember.Local
         private static void DragToolOnDragToolPostfix(DragTool __instance, int cell) => AddDragCell(__instance, cell);
 
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         private static void AddDragCell(DragTool __instance, int cell) {
             AssertSameInstance(__instance);
             selection.Add(cell);
@@ -88,7 +88,7 @@ public static class DragToolEvents {
         private static void DragToolOnDragCompletePostfix(DragTool __instance, Vector3 __0, Vector3 __1) =>
             CompleteDrag(__instance, __0, __1);
 
-        [RequireExecutionLevel(ExecutionLevel.Gameplay)]
+        [RequireExecutionLevel(ExecutionLevel.Game)]
         private static void CompleteDrag(DragTool instance, Vector3 cursorDown, Vector3 cursorUp) {
             AssertSameInstance(instance);
 
