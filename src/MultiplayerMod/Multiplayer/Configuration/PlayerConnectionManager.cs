@@ -52,21 +52,11 @@ public class PlayerConnectionManager {
         client.StateChanged += OnClientStateChanged;
         server.ClientDisconnected += ServerOnClientDisconnected;
         eventDispatcher.Subscribe<ClientInitializationRequestEvent>(OnClientInitializationRequested);
-        eventDispatcher.Subscribe<PlayerStateChangedEvent>(PlayerStateChanged);
     }
 
     public void LeaveGame() {
         eventDispatcher.Dispatch(new GameLeaveRequestedEvent());
         client.Send(new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving));
-    }
-
-    private void PlayerStateChanged(PlayerStateChangedEvent @event) {
-        if (@event.Player != multiplayer.Players.Current)
-            return;
-
-        if (@event.State != PlayerState.Leaving)
-            return;
-
         client.Disconnect();
     }
 

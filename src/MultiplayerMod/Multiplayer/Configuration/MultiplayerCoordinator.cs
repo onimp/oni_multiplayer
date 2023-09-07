@@ -8,6 +8,7 @@ using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Components;
+using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 using MultiplayerMod.Multiplayer.UI;
 using MultiplayerMod.Multiplayer.World.Debug;
@@ -64,15 +65,14 @@ public class MultiplayerCoordinator {
         server.StateChanged += OnServerStateChanged;
         server.CommandReceived += ServerOnCommandReceived;
         serverBindings.Bind();
-        eventDispatcher.Subscribe<PlayerJoinedEvent>(OnPlayerJoined);
+        eventDispatcher.Subscribe<PlayerStateChangedEvent>(OnPlayerStateChanged);
     }
 
-    private void OnPlayerJoined(PlayerJoinedEvent @event) {
+    private void OnPlayerStateChanged(PlayerStateChangedEvent @event) {
         if (multiplayer.Players.Current != @event.Player)
             return;
-        runtime.Dependencies.Get<UnityTaskScheduler>().Run(() => {
+        if (multiplayer.Players.Current.State == PlayerState.Ready)
             executionLevelManager.ReplaceLevel(ExecutionLevel.Gameplay);
-        });
     }
 
     private void OnServerStateChanged(MultiplayerServerState state) {

@@ -58,7 +58,6 @@ public class SteamClient : IMultiplayerClient {
         }
 
         lobby.OnJoin += OnLobbyJoin;
-        lobby.OnLeave += Disconnect;
         lobby.Join(steamServerEndpoint.LobbyID);
     }
 
@@ -69,7 +68,7 @@ public class SteamClient : IMultiplayerClient {
         UnityObject.Destroy(gameObject);
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
-        SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
+        SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", true);
         SetState(MultiplayerClientState.Disconnected);
         SteamFriends.ClearRichPresence();
     }
