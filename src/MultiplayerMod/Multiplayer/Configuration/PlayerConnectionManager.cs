@@ -9,7 +9,6 @@ using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Commands;
 using MultiplayerMod.Multiplayer.Players.Events;
-using MultiplayerMod.Multiplayer.UI;
 using MultiplayerMod.Multiplayer.World;
 using MultiplayerMod.Network;
 
@@ -72,12 +71,6 @@ public class PlayerConnectionManager {
 
     private void OnClientStateChanged(MultiplayerClientState state) {
         switch (state) {
-            case MultiplayerClientState.Connecting:
-                if (multiplayer.Mode == MultiplayerMode.None)
-                    multiplayer.Mode = MultiplayerMode.Client;
-                if (multiplayer.Mode == MultiplayerMode.Client)
-                    LoadOverlay.Show();
-                break;
             case MultiplayerClientState.Connected:
                 client.Send(
                     new InitializeClientCommand(profileProvider.GetPlayerProfile()),

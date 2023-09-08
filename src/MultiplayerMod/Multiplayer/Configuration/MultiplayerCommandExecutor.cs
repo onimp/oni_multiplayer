@@ -27,10 +27,10 @@ public class MultiplayerCommandExecutor {
         var configuration = GetCommandConfiguration(command);
         switch (configuration.Type) {
             case MultiplayerCommandType.System:
-                command.Execute(new MultiplayerCommandContext(clientId, runtime));
+                RunCatching(clientId, command);
                 break;
             case MultiplayerCommandType.Game:
-                executionLevelManager.RunIfLevelIsActive(
+               executionLevelManager.RunIfLevelIsActive(
                     ExecutionLevel.Game,
                     ExecutionLevel.Command,
                     () => RunCatching(clientId, command)

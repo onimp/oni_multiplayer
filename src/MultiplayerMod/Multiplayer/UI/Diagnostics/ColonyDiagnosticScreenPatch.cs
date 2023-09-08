@@ -11,7 +11,7 @@ public class ColonyDiagnosticScreenPatch {
     [HarmonyPatch(nameof(ColonyDiagnosticScreen.SpawnTrackerLines))]
     // ReSharper disable once UnusedMember.Global
     public static void SpawnTrackerLines(ColonyDiagnosticScreen __instance, int world) {
-        if (Dependencies.Get<MultiplayerGame>().Mode == MultiplayerMode.None)
+        if (Dependencies.Get<MultiplayerGame>().Mode == MultiplayerMode.Disabled)
             return;
 
         __instance.AddDiagnostic<MultiplayerColonyDiagnostic>(

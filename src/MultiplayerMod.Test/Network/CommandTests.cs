@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.InteropServices;
-using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network;

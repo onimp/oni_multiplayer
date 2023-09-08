@@ -36,6 +36,25 @@ public class EventDispatcherTests {
         Assert.AreEqual(expected: new List<int> { 6 }, actual: result);
     }
 
+    [Test]
+    public void OneTimeSubscription() {
+        var result = new List<int>();
+        var dispatcher = new EventDispatcher();
+
+        dispatcher.Subscribe<Event<int>>(
+            (it, sub) => {
+                result.Add(it.Value);
+                sub.Cancel();
+            }
+        );
+        dispatcher.Subscribe<Event<int>>(it => result.Add(it.Value * 3));
+
+        dispatcher.Dispatch(new Event<int>(2));
+        dispatcher.Dispatch(new Event<int>(5));
+
+        Assert.AreEqual(expected: new List<int> { 2, 6, 15 }, actual: result);
+    }
+
     private class Event<T> {
         public T Value { get; }
 

@@ -1,21 +1,34 @@
-﻿using System.Threading.Tasks;
-using MultiplayerMod.Core.Scheduling;
+﻿using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
+using MultiplayerMod.Multiplayer.Players.Events;
 
 namespace MultiplayerMod.Multiplayer.UI;
 
 public static class LoadOverlay {
-    public static void Show() {
+
+    private static bool active;
+
+    public static void Show(string text) {
+        if (active)
+            return;
+
         LoadingOverlay.Load(() => { });
+        LoadingOverlay.instance.GetComponentInChildren<LocText>().text = text;
+
         var multiplayer = Dependencies.Get<MultiplayerGame>();
-        new TaskFactory(Dependencies.Get<UnityTaskScheduler>()).StartNew(
-            async () => {
-                // TODO block controls
-                while (!multiplayer.Players.Ready) {
-                    await Task.Delay(100);
-                }
+        var eventDispatcher = Dependencies.Get<EventDispatcher>();
+        eventDispatcher.Subscribe<PlayerStateChangedEvent>(
+            (_, subscription) => {
+                if (!multiplayer.Players.Ready)
+                    return;
+
                 LoadingOverlay.Clear();
+                subscription.Cancel();
+                active = false;
             }
         );
+
+        active = true;
     }
+
 }

@@ -1,10 +1,8 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Components;
@@ -29,7 +27,6 @@ public class MultiplayerCoordinator {
 
     private readonly MultiplayerGame multiplayer;
     private readonly ExecutionLevelManager executionLevelManager;
-    private readonly Runtime runtime;
     private readonly EventDispatcher eventDispatcher;
     private readonly MultiplayerCommandExecutor commandExecutor;
 
@@ -40,7 +37,6 @@ public class MultiplayerCoordinator {
         ServerEventBindings serverBindings,
         MultiplayerGame multiplayer,
         ExecutionLevelManager executionLevelManager,
-        Runtime runtime,
         EventDispatcher eventDispatcher,
         MultiplayerCommandExecutor commandExecutor
     ) {
@@ -50,13 +46,19 @@ public class MultiplayerCoordinator {
         this.serverBindings = serverBindings;
         this.multiplayer = multiplayer;
         this.executionLevelManager = executionLevelManager;
-        this.runtime = runtime;
         this.eventDispatcher = eventDispatcher;
         this.commandExecutor = commandExecutor;
 
         ConfigureServer();
         ConfigureClient();
         GameEvents.GameStarted += OnGameStarted;
+        eventDispatcher.Subscribe<MultiplayerJoinRequestedEvent>(OnMultiplayerJoinRequested);
+    }
+
+    private void OnMultiplayerJoinRequested(MultiplayerJoinRequestedEvent @event) {
+        multiplayer.Refresh(MultiplayerMode.Client);
+        client.Connect(@event.Endpoint);
+        LoadOverlay.Show($"Connecting to {@event.Name}...");
     }
 
     #region Server configuration
@@ -116,11 +118,11 @@ public class MultiplayerCoordinator {
     #endregion
 
     private void OnGameStarted() {
-        if (multiplayer.Mode == MultiplayerMode.None)
+        if (multiplayer.Mode == MultiplayerMode.Disabled)
             return;
 
         if (multiplayer.Mode == MultiplayerMode.Host) {
-            LoadOverlay.Show();
+            LoadOverlay.Show("Starting host...");
             server.Start();
         }
 

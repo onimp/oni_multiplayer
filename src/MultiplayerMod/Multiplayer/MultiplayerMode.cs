@@ -1,7 +1,7 @@
 ﻿namespace MultiplayerMod.Multiplayer;
 
 public enum MultiplayerMode {
-    None,
+    Disabled,
     Host,
     Client
 }

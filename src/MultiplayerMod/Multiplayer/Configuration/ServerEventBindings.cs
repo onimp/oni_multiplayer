@@ -31,12 +31,20 @@ public class ServerEventBindings {
 
         log.Debug("Binding server events");
 
-        PauseScreenEvents.QuitGame += server.Stop;
-        WorldDebugSnapshotRunner.SnapshotAvailable += snapshot => server.Send(new SyncWorldDebugSnapshot(snapshot));
-        SaveLoaderEvents.WorldSaved += worldManager.Sync;
+        PauseScreenEvents.QuitGame += () => RunIfHost(server.Stop);
+        WorldDebugSnapshotRunner.SnapshotAvailable +=
+            snapshot => RunIfHost(() => server.Send(new SyncWorldDebugSnapshot(snapshot)));
+        SaveLoaderEvents.WorldSaved += () => RunIfHost(worldManager.Sync);
 
-        ChoreConsumerEvents.FindNextChore += p => server.Send(new FindNextChore(p), MultiplayerCommandOptions.SkipHost);
+        ChoreConsumerEvents.FindNextChore += p =>
+            RunIfHost(() => server.Send(new FindNextChore(p), MultiplayerCommandOptions.SkipHost));
 
         bound = true;
     }
+
+    private void RunIfHost(System.Action action) {
+        if (multiplayer.Mode == MultiplayerMode.Host)
+            action();
+    }
+
 }

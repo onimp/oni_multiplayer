@@ -22,7 +22,7 @@ public class MultiplayerConnectionTests {
 
     [Test]
     public void HostSelfConnection() {
-        UnityTestRuntime.Install();
+        var harmony = SetupEnvironment();
 
         var runtime = MultiplayerTools.CreateTestRuntime(MultiplayerMode.Host, "Test player");
         runtime.Activate();
@@ -65,7 +65,7 @@ public class MultiplayerConnectionTests {
             actual: runtime.Multiplayer.Players.Current.Role
         );
 
-        UnityTestRuntime.Uninstall();
+        DisposeEnvironment(harmony);
     }
 
     [Test]
@@ -159,7 +159,7 @@ public class MultiplayerConnectionTests {
     private static Harmony SetupEnvironment() {
         UnityTestRuntime.Install();
         var harmony = new Harmony("MultiplayerConnectionTests");
-        PatchesSetup.Install(harmony, new List<Type> { typeof(WorldManagerPatch) });
+        PatchesSetup.Install(harmony, new List<Type> { typeof(WorldManagerPatch), typeof(LoadOverlayPatch) });
         return harmony;
     }
 

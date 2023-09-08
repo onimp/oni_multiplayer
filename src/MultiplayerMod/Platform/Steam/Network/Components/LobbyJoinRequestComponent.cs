@@ -1,8 +1,10 @@
 ﻿using System;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game.UI;
+using MultiplayerMod.Multiplayer;
 using Steamworks;
 
 // ReSharper disable FieldCanBeMadeReadOnly.Local
@@ -14,7 +16,7 @@ public class LobbyJoinRequestComponent : MultiplayerMonoBehaviour {
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<LobbyJoinRequestComponent>();
 
     [Dependency]
-    private SteamClient client = null!;
+    private EventDispatcher eventDispatcher = null!;
 
     private Callback<GameLobbyJoinRequested_t> lobbyJoinRequestedCallback = null!;
 
@@ -35,13 +37,24 @@ public class LobbyJoinRequestComponent : MultiplayerMonoBehaviour {
             return;
 
         var id = new CSteamID(ulong.Parse(arguments[2]));
-        log.Info($"Connecting to lobby {id} (command line)");
-        client.Connect(new SteamServerEndpoint(id));
+        log.Info($"Requesting connection to lobby {id} (command line)");
+        DispatchJoinRequest(id);
     }
 
     private void OnLobbyJoinRequested(GameLobbyJoinRequested_t request) {
-        log.Info($"Connecting to lobby {request.m_steamIDLobby} (lobby join request)");
-        client.Connect(new SteamServerEndpoint(request.m_steamIDLobby));
+        log.Info($"Requesting connection to lobby {request.m_steamIDLobby} (lobby join request)");
+        DispatchJoinRequest(request.m_steamIDLobby);
+    }
+
+    private void DispatchJoinRequest(CSteamID lobbyId) {
+        var endpoint = new SteamServerEndpoint(lobbyId);
+        var dataUpdateCallback = new Callback<LobbyDataUpdate_t>[1];
+        dataUpdateCallback[0] = Callback<LobbyDataUpdate_t>.Create(_ => {
+            var serverName = SteamMatchmaking.GetLobbyData(lobbyId, "server.name");
+            dataUpdateCallback[0].Unregister();
+            eventDispatcher.Dispatch(new MultiplayerJoinRequestedEvent(endpoint, serverName));
+        });
+        SteamMatchmaking.RequestLobbyData(lobbyId);
     }
 
     private void OnDestroy() {

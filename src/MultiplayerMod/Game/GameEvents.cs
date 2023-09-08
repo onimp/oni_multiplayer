@@ -1,6 +1,7 @@
 ﻿using System;
 using HarmonyLib;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ public static class GameEvents {
     // ReSharper disable once UnusedMember.Local
     [HarmonyPostfix]
     [HarmonyPatch(typeof(global::Game), nameof(global::Game.SetGameStarted))]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void SetGameStarted() => Dependencies.Get<UnityTaskScheduler>()
         .Run(() => { GameStarted?.Invoke(); });
 
@@ -29,6 +31,7 @@ public static class GameEvents {
         typeof(Vector3),
         typeof(IReader)
     )]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void SaveLoad(SaveLoadRoot __result) {
         if (__result != null)
             GameObjectCreated?.Invoke(__result.gameObject);
@@ -47,6 +50,7 @@ public static class GameEvents {
         typeof(bool),
         typeof(int)
     )]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void InstantiatePostfix(GameObject __result, bool initialize_id) {
         if (!initialize_id)
             return;

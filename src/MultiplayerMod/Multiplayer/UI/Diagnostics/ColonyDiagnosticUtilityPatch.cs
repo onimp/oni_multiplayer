@@ -12,7 +12,7 @@ internal static class ColonyDiagnosticUtilityPatch {
     [HarmonyPatch(nameof(ColonyDiagnosticUtility.AddWorld))]
     // ReSharper disable once UnusedMember.Local
     private static void AddWorldPostfix(ColonyDiagnosticUtility __instance, int worldID) {
-        if (Dependencies.Get<MultiplayerGame>().Mode == MultiplayerMode.None)
+        if (Dependencies.Get<MultiplayerGame>().Mode == MultiplayerMode.Disabled)
             return;
 
         var colonyDiagnostic = new MultiplayerColonyDiagnostic(worldID);

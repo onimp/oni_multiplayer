@@ -41,7 +41,7 @@ public static class MultiplayerTools {
         runtime.Activated += it => { it.Dependencies.Get<SpeedControlScreenContext>().Apply(); };
         runtime.Deactivated += it => { it.Dependencies.Get<SpeedControlScreenContext>().Restore(); };
 
-        runtime.Multiplayer.Mode = mode;
+        runtime.Multiplayer.Refresh(mode);
 
         var recorders = new Recorders();
         dependencies.Register(recorders);

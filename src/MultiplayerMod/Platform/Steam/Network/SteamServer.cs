@@ -189,7 +189,10 @@ public class SteamServer : IMultiplayerServer {
         SetState(MultiplayerServerState.Started);
     }
 
-    private void OnLobbyCreated() => lobbyCompletionSource.SetResult(true);
+    private void OnLobbyCreated() {
+        SteamMatchmaking.SetLobbyData(lobby.Id, "server.name", $"{SteamFriends.GetPersonaName()}");
+        lobbyCompletionSource.SetResult(true);
+    }
 
     private void ConnectedToSteamCallback() => steamServersCompletionSource.SetResult(true);
 
