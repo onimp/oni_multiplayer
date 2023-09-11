@@ -23,6 +23,7 @@ public class Runtime {
         Dependencies.Register(executionContextManager);
         Dependencies.Register<ExecutionLevelManager>();
         Dependencies.Register<EventDispatcher>();
+        Dependencies.Register<EventDispatcherMonitor>(DependencyOptions.AutoResolve);
         Dependencies.Register(this);
         Instance = this;
     }

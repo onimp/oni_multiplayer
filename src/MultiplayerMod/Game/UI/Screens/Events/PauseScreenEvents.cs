@@ -6,12 +6,12 @@ namespace MultiplayerMod.Game.UI.Screens.Events;
 [HarmonyPatch(typeof(PauseScreen))]
 public static class PauseScreenEvents {
 
-    public static event System.Action? QuitGame;
+    public static event System.Action? GameQuit;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(PauseScreen.TriggerQuitGame))]
     [RequireExecutionLevel(ExecutionLevel.Game)]
     // ReSharper disable once UnusedMember.Local
-    private static void TriggerQuitGame() => QuitGame?.Invoke();
+    private static void TriggerQuitGame() => GameQuit?.Invoke();
 
 }

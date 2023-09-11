@@ -3,8 +3,8 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Loader;
 using MultiplayerMod.Multiplayer.Configuration;
+using MultiplayerMod.Multiplayer.CoreOperations;
 using MultiplayerMod.Multiplayer.Objects;
-using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.World;
 
 namespace MultiplayerMod.Multiplayer;
@@ -22,6 +22,9 @@ public class MultiplayerLoader : IModComponentLoader {
         dependencies.Register<MultiplayerObjectsConfigurator>(DependencyOptions.AutoResolve);
         dependencies.Register<PlayerConnectionManager>(DependencyOptions.AutoResolve);
         dependencies.Register<MultiplayerCoordinator>(DependencyOptions.AutoResolve);
+
+        dependencies.Register<GameStateEventsRedirector>(DependencyOptions.AutoResolve);
+        dependencies.Register<ExecutionLevelController>(DependencyOptions.AutoResolve);
     }
 
 }

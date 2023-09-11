@@ -6,6 +6,7 @@ using MultiplayerMod.Game;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Configuration;
+using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 using MultiplayerMod.Network;
@@ -127,7 +128,7 @@ public class MultiplayerConnectionTests {
         clientRuntime.Activate();
 
         if (gracefully)
-            clientRuntime.Dependencies.Get<PlayerConnectionManager>().LeaveGame();
+            clientRuntime.EventDispatcher.Dispatch(new GameQuitEvent());
         else
             clientRuntime.Dependencies.Get<IMultiplayerClient>().Disconnect();
 

@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.ModRuntime.Context;
+using MultiplayerMod.Core.Events;
+using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
 
@@ -14,11 +15,11 @@ public class MultiplayerGame {
     public MultiplayerObjects Objects { get; private set; } = null!;
 
     private readonly DependencyContainer container;
-    private readonly ExecutionLevelManager levelManager;
+    private readonly EventDispatcher eventDispatcher;
 
-    public MultiplayerGame(DependencyContainer container, ExecutionLevelManager levelManager) {
+    public MultiplayerGame(DependencyContainer container, EventDispatcher eventDispatcher) {
         this.container = container;
-        this.levelManager = levelManager;
+        this.eventDispatcher = eventDispatcher;
         Refresh(MultiplayerMode.Disabled);
     }
 
@@ -27,8 +28,7 @@ public class MultiplayerGame {
         Players = new MultiplayerPlayers();
         Objects = container.Resolve<MultiplayerObjects>();
 
-        var executionLevel = mode == MultiplayerMode.Disabled ? ExecutionLevel.System : ExecutionLevel.Multiplayer;
-        levelManager.BaseLevel = executionLevel;
+        eventDispatcher.Dispatch(new MultiplayerModeChangedEvent(mode));
     }
 
 }

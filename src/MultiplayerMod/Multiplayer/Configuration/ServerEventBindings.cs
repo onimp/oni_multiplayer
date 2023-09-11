@@ -31,7 +31,6 @@ public class ServerEventBindings {
 
         log.Debug("Binding server events");
 
-        PauseScreenEvents.QuitGame += () => RunIfHost(server.Stop);
         WorldDebugSnapshotRunner.SnapshotAvailable +=
             snapshot => RunIfHost(() => server.Send(new SyncWorldDebugSnapshot(snapshot)));
         SaveLoaderEvents.WorldSaved += () => RunIfHost(worldManager.Sync);

@@ -6,6 +6,7 @@ using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game;
 using MultiplayerMod.ModRuntime.Context;
+using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Commands;
 using MultiplayerMod.Multiplayer.Players.Events;
@@ -24,7 +25,6 @@ public class PlayerConnectionManager {
 
     private readonly IPlayerProfileProvider profileProvider;
     private readonly WorldManager worldManager;
-    private readonly EventDispatcher eventDispatcher;
     private readonly MultiplayerGame multiplayer;
     private readonly ExecutionLevelManager executionLevelManager;
 
@@ -43,7 +43,6 @@ public class PlayerConnectionManager {
         this.client = client;
         this.profileProvider = profileProvider;
         this.worldManager = worldManager;
-        this.eventDispatcher = eventDispatcher;
         this.multiplayer = multiplayer;
         this.executionLevelManager = executionLevelManager;
 
@@ -51,10 +50,10 @@ public class PlayerConnectionManager {
         client.StateChanged += OnClientStateChanged;
         server.ClientDisconnected += ServerOnClientDisconnected;
         eventDispatcher.Subscribe<ClientInitializationRequestEvent>(OnClientInitializationRequested);
+        eventDispatcher.Subscribe<GameQuitEvent>(OnGameQuit);
     }
 
-    public void LeaveGame() {
-        eventDispatcher.Dispatch(new GameLeaveRequestedEvent());
+    private void OnGameQuit(GameQuitEvent _) {
         client.Send(new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving));
         client.Disconnect();
     }
