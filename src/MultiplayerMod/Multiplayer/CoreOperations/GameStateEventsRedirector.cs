@@ -22,7 +22,7 @@ public class GameStateEventsRedirector {
         SaveLoaderEvents.WorldSaved += OnWorldSave;
     }
 
-    private void OnWorldSave() => events.Dispatch(new GameWorldSavedEvent());
+    private void OnWorldSave() => events.Dispatch(new WorldSavedEvent());
 
     private void OnGameQuit() {
         events.Dispatch(new GameQuitEvent());

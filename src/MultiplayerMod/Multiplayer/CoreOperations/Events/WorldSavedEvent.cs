@@ -2,4 +2,4 @@
 
 namespace MultiplayerMod.Multiplayer.CoreOperations.Events;
 
-public record GameWorldSavedEvent : IDispatchableEvent;
+public record WorldSavedEvent : IDispatchableEvent;

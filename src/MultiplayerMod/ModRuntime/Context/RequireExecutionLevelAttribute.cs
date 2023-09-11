@@ -5,7 +5,7 @@ using MultiplayerMod.AttributeProcessor;
 namespace MultiplayerMod.ModRuntime.Context;
 
 [AttributeUsage(AttributeTargets.Method)]
-[ConditionalInvocation(typeof(RequireExecutionLevelAttribute), nameof(ExecutionLevelCheck))]
+[ConditionalInvocation(typeof(RequireExecutionLevelAttribute), nameof(CheckExecutionLevel))]
 public class RequireExecutionLevelAttribute : Attribute {
 
     [UsedImplicitly]
@@ -15,7 +15,7 @@ public class RequireExecutionLevelAttribute : Attribute {
         Level = level;
     }
 
-    private static bool ExecutionLevelCheck(ExecutionLevel level) =>
+    private static bool CheckExecutionLevel(ExecutionLevel level) =>
         Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().LevelIsActive(level);
 
 }

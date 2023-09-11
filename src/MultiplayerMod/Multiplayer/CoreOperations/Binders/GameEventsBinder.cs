@@ -26,20 +26,18 @@ using MultiplayerMod.Network;
 namespace MultiplayerMod.Multiplayer.CoreOperations.Binders;
 
 [UsedImplicitly]
-public class GameplayEventsBinder {
+public class GameEventsBinder {
 
-    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameplayEventsBinder>();
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameEventsBinder>();
 
     private readonly IMultiplayerClient client;
     private readonly MultiplayerGame multiplayer;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
-    public GameplayEventsBinder(IMultiplayerClient client, MultiplayerGame multiplayer) {
+    public GameEventsBinder(IMultiplayerClient client, MultiplayerGame multiplayer) {
         this.client = client;
         this.multiplayer = multiplayer;
-
-        Bind();
     }
 
     public void Bind() {

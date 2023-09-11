@@ -1,5 +1,4 @@
 ﻿using JetBrains.Annotations;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
@@ -25,21 +24,18 @@ public class MultiplayerCoordinator {
 
     private readonly MultiplayerGame multiplayer;
     private readonly MultiplayerCommandExecutor commandExecutor;
-    private readonly DependencyContainer dependencies;
 
     public MultiplayerCoordinator(
         IMultiplayerServer server,
         IMultiplayerClient client,
         MultiplayerGame multiplayer,
         EventDispatcher eventDispatcher,
-        MultiplayerCommandExecutor commandExecutor,
-        DependencyContainer dependencies
+        MultiplayerCommandExecutor commandExecutor
     ) {
         this.server = server;
         this.client = client;
         this.multiplayer = multiplayer;
         this.commandExecutor = commandExecutor;
-        this.dependencies = dependencies;
 
         ConfigureServer();
         ConfigureClient();
@@ -64,7 +60,6 @@ public class MultiplayerCoordinator {
     private void ConfigureServer() {
         server.StateChanged += OnServerStateChanged;
         server.CommandReceived += ServerOnCommandReceived;
-        dependencies.Resolve<ServerEventBindings>().Bind();
     }
 
     private void OnServerStateChanged(MultiplayerServerState state) {
