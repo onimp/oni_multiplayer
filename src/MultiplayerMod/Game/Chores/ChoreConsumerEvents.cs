@@ -1,7 +1,6 @@
 using System;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
-using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.CoreOperations;
 
 namespace MultiplayerMod.Game.Chores;
 
@@ -12,10 +11,8 @@ public class ChoreConsumerEvents {
     public static event Action<FindNextChoreEventArgs>? FindNextChore;
 
     // ReSharper disable once InconsistentNaming, UnusedMember.Global
+    [RequireHostMode]
     public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, ref bool __result) {
-        if (Dependencies.Get<MultiplayerGame>().Mode != MultiplayerMode.Host)
-            return;
-
         if (!__result)
             return;
 
