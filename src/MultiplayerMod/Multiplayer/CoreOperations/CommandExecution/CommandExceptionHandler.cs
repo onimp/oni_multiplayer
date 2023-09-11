@@ -4,7 +4,7 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
-namespace MultiplayerMod.Multiplayer.Configuration;
+namespace MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
 
 public class CommandExceptionHandler {
 

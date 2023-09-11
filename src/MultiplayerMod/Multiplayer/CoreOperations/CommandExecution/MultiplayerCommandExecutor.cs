@@ -7,7 +7,7 @@ using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Network;
 
-namespace MultiplayerMod.Multiplayer.Configuration;
+namespace MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
 
 [UsedImplicitly]
 public class MultiplayerCommandExecutor {
