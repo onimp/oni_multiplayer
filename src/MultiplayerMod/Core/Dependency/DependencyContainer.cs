@@ -102,7 +102,7 @@ public class DependencyContainer {
 
         var constructor = constructors[0];
         var arguments = constructor.GetParameters()
-            .Select(parameter => Resolve(parameter.ParameterType))
+            .Select(parameter => Get(parameter.ParameterType))
             .ToArray();
 
         return InjectDependencies(constructor.Invoke(arguments));
@@ -112,10 +112,10 @@ public class DependencyContainer {
         var type = instance.GetType();
         type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
             .Where(property => property.GetCustomAttribute<DependencyAttribute>() != null)
-            .ForEach(property => property.SetValue(instance, Resolve(property.PropertyType)));
+            .ForEach(property => property.SetValue(instance, Get(property.PropertyType)));
         type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
             .Where(field => field.GetCustomAttribute<DependencyAttribute>() != null)
-            .ForEach(field => field.SetValue(instance, Resolve(field.FieldType)));
+            .ForEach(field => field.SetValue(instance, Get(field.FieldType)));
         return instance;
     }
 

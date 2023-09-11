@@ -6,6 +6,7 @@ using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Configuration;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
+using MultiplayerMod.Multiplayer.World;
 using MultiplayerMod.Network;
 using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Network;
@@ -31,9 +32,11 @@ public static class MultiplayerTools {
         dependencies.Register(server);
         dependencies.Register<IMultiplayerServer>(server);
 
+        dependencies.Register<WorldManager>();
         dependencies.Register<UnityTaskScheduler>();
         dependencies.Register<MultiplayerIdentityProvider>();
         dependencies.Register<MultiplayerGame>();
+        dependencies.Register<MultiplayerCommandExecutor>();
         dependencies.Register<PlayerConnectionManager>(DependencyOptions.AutoResolve);
         dependencies.Register<MultiplayerCoordinator>(DependencyOptions.AutoResolve);
 

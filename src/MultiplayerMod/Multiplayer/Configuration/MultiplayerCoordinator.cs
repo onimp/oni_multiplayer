@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
@@ -22,32 +23,28 @@ public class MultiplayerCoordinator {
     private readonly IMultiplayerServer server;
     private readonly IMultiplayerClient client;
 
-    private readonly GameEventBindings gameBindings;
-    private readonly ServerEventBindings serverBindings;
-
     private readonly MultiplayerGame multiplayer;
     private readonly ExecutionLevelManager executionLevelManager;
     private readonly EventDispatcher eventDispatcher;
     private readonly MultiplayerCommandExecutor commandExecutor;
+    private readonly DependencyContainer dependencies;
 
     public MultiplayerCoordinator(
         IMultiplayerServer server,
         IMultiplayerClient client,
-        GameEventBindings gameBindings,
-        ServerEventBindings serverBindings,
         MultiplayerGame multiplayer,
         ExecutionLevelManager executionLevelManager,
         EventDispatcher eventDispatcher,
-        MultiplayerCommandExecutor commandExecutor
+        MultiplayerCommandExecutor commandExecutor,
+        DependencyContainer dependencies
     ) {
         this.server = server;
         this.client = client;
-        this.gameBindings = gameBindings;
-        this.serverBindings = serverBindings;
         this.multiplayer = multiplayer;
         this.executionLevelManager = executionLevelManager;
         this.eventDispatcher = eventDispatcher;
         this.commandExecutor = commandExecutor;
+        this.dependencies = dependencies;
 
         ConfigureServer();
         ConfigureClient();
@@ -66,7 +63,7 @@ public class MultiplayerCoordinator {
     private void ConfigureServer() {
         server.StateChanged += OnServerStateChanged;
         server.CommandReceived += ServerOnCommandReceived;
-        serverBindings.Bind();
+        dependencies.Resolve<ServerEventBindings>().Bind();
         eventDispatcher.Subscribe<PlayerStateChangedEvent>(OnPlayerStateChanged);
     }
 
@@ -98,7 +95,7 @@ public class MultiplayerCoordinator {
     private void ConfigureClient() {
         client.StateChanged += OnClientStateChanged;
         client.CommandReceived += ClientOnCommandReceived;
-        gameBindings.Bind();
+        dependencies.Resolve<GameEventBindings>().Bind();
     }
 
     private void OnClientStateChanged(MultiplayerClientState state) {

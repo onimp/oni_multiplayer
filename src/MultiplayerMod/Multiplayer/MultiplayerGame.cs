@@ -24,7 +24,7 @@ public class MultiplayerGame {
 
     public void Refresh(MultiplayerMode mode) {
         Mode = mode;
-        Players = container.Resolve<MultiplayerPlayers>();
+        Players = new MultiplayerPlayers();
         Objects = container.Resolve<MultiplayerObjects>();
 
         var executionLevel = mode == MultiplayerMode.Disabled ? ExecutionLevel.System : ExecutionLevel.Multiplayer;

@@ -92,16 +92,6 @@ public class DependencyContainerTests {
         Assert.AreSame(expected: container.Resolve<ISimpleInterface>(), actual: instance.Interface);
     }
 
-    [Test]
-    public void MixedInstantiation() {
-        var container = new DependencyContainer();
-        container.Register<ISimpleInterface, SimpleClass>();
-        var instance = container.Resolve<ClassWithMixedDependencies>();
-        Assert.AreSame(expected: container.Resolve<ISimpleInterface>(), actual: instance.Interface);
-        Assert.NotNull(instance.Dependency);
-        Assert.Throws(typeof(MissingDependencyException), () => container.Get<NonSingletonDependency>());
-    }
-
     public interface ISimpleInterface { }
 
     public class SimpleClass : ISimpleInterface { }
@@ -135,20 +125,6 @@ public class DependencyContainerTests {
 
         // ReSharper disable once UnassignedField.Global
         [Dependency] public ISimpleInterface? Interface;
-
-    }
-
-    public class NonSingletonDependency { }
-
-    public class ClassWithMixedDependencies {
-
-        public ISimpleInterface? Interface;
-        public NonSingletonDependency? Dependency;
-
-        public ClassWithMixedDependencies(ISimpleInterface? @interface, NonSingletonDependency? dependency) {
-            Interface = @interface;
-            Dependency = dependency;
-        }
 
     }
 
