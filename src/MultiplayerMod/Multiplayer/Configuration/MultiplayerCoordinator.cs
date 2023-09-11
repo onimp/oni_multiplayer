@@ -49,10 +49,10 @@ public class MultiplayerCoordinator {
         ConfigureServer();
         ConfigureClient();
         GameEvents.GameStarted += OnGameStarted;
-        eventDispatcher.Subscribe<MultiplayerJoinRequestedEvent>(OnMultiplayerJoinRequested);
+        eventDispatcher.Subscribe<MultiplayerConnectRequestedEvent>(OnMultiplayerConnectRequested);
     }
 
-    private void OnMultiplayerJoinRequested(MultiplayerJoinRequestedEvent @event) {
+    private void OnMultiplayerConnectRequested(MultiplayerConnectRequestedEvent @event) {
         multiplayer.Refresh(MultiplayerMode.Client);
         client.Connect(@event.Endpoint);
         LoadOverlay.Show($"Connecting to {@event.Name}...");

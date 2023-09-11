@@ -23,7 +23,7 @@ public class EventSubscription : IEventSubscription {
 }
 
 
-public class EventSubscription<T> : IEventSubscription where T : notnull {
+public class EventSubscription<T> : IEventSubscription where T : IDispatchableEvent {
 
     private readonly EventDispatcher<T> dispatcher;
     private readonly Delegate action;

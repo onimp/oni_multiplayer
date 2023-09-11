@@ -11,9 +11,11 @@ public class EventDispatcher {
 
     public event Action<object>? EventDispatching;
 
-    public EventSubscription Subscribe<T>(Action<T> action) => Subscribe<T>((@event, _) => action(@event));
+    public EventSubscription Subscribe<T>(Action<T> action) where T : IDispatchableEvent {
+        return Subscribe<T>((@event, _) => action(@event));
+    }
 
-    public EventSubscription Subscribe<T>(Action<T, EventSubscription> action) {
+    public EventSubscription Subscribe<T>(Action<T, EventSubscription> action) where T : IDispatchableEvent {
         var type = typeof(T);
         if (!handlers.TryGetValue(type, out var delegates)) {
             delegates = new LinkedHashSet<SubscribedAction>();
@@ -24,7 +26,9 @@ public class EventDispatcher {
         return subscription;
     }
 
-    public void Unsubscribe<T>(Action<T> action) => Unsubscribe(typeof(T), action);
+    public void Unsubscribe<T>(Action<T> action) where T : IDispatchableEvent {
+        Unsubscribe(typeof(T), action);
+    }
 
     public void Unsubscribe(Type type, Delegate action) {
         if (!handlers.TryGetValue(type, out var delegates))
@@ -33,7 +37,7 @@ public class EventDispatcher {
         delegates.Remove(new SubscribedAction(action, null));
     }
 
-    public void Dispatch<T>(T @event) where T : notnull {
+    public void Dispatch<T>(T @event) where T : IDispatchableEvent {
         EventDispatching?.Invoke(@event);
         if (!handlers.TryGetValue(typeof(T), out var delegates))
             return;
@@ -69,7 +73,7 @@ public class EventDispatcher {
 
 }
 
-public class EventDispatcher<T> where T : notnull {
+public class EventDispatcher<T> where T : IDispatchableEvent {
 
     private readonly LinkedHashSet<Delegate> delegates = new();
 

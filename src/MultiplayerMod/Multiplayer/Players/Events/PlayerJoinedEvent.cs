@@ -1,6 +1,5 @@
-﻿using System;
+﻿using MultiplayerMod.Core.Events;
 
 namespace MultiplayerMod.Multiplayer.Players.Events;
 
-[Serializable]
-public record PlayerJoinedEvent(MultiplayerPlayer Player);
+public record PlayerJoinedEvent(MultiplayerPlayer Player) : IDispatchableEvent;

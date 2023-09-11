@@ -1,7 +1,9 @@
-﻿using System;
+﻿using MultiplayerMod.Core.Events;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Players.Events;
 
-[Serializable]
-public record ClientInitializationRequestEvent(IMultiplayerClientId ClientId, PlayerProfile Profile);
+public record ClientInitializationRequestEvent(
+    IMultiplayerClientId ClientId,
+    PlayerProfile Profile
+) : IDispatchableEvent;

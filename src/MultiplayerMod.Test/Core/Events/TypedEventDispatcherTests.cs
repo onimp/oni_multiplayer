@@ -36,7 +36,7 @@ public class TypedEventDispatcherTests {
         Assert.AreEqual(expected: new List<int> { 6 }, actual: result);
     }
 
-    private class Event<T> {
+    private class Event<T> : IDispatchableEvent {
         public T Value { get; }
 
         public Event(T value) {

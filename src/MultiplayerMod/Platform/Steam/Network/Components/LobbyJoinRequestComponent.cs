@@ -4,7 +4,7 @@ using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Game.UI;
-using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Players.Events;
 using Steamworks;
 
 // ReSharper disable FieldCanBeMadeReadOnly.Local
@@ -52,7 +52,7 @@ public class LobbyJoinRequestComponent : MultiplayerMonoBehaviour {
         dataUpdateCallback[0] = Callback<LobbyDataUpdate_t>.Create(_ => {
             var serverName = SteamMatchmaking.GetLobbyData(lobbyId, "server.name");
             dataUpdateCallback[0].Unregister();
-            eventDispatcher.Dispatch(new MultiplayerJoinRequestedEvent(endpoint, serverName));
+            eventDispatcher.Dispatch(new MultiplayerConnectRequestedEvent(endpoint, serverName));
         });
         SteamMatchmaking.RequestLobbyData(lobbyId);
     }

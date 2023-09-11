@@ -22,7 +22,6 @@ public class MultiplayerLoader : IModComponentLoader {
         dependencies.Register<MultiplayerObjectsConfigurator>(DependencyOptions.AutoResolve);
         dependencies.Register<PlayerConnectionManager>(DependencyOptions.AutoResolve);
         dependencies.Register<MultiplayerCoordinator>(DependencyOptions.AutoResolve);
-        dependencies.Register<GameLeaveRequestGuard>(DependencyOptions.AutoResolve);
     }
 
 }

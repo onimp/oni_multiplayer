@@ -1,6 +1,5 @@
-﻿using System;
+﻿using MultiplayerMod.Core.Events;
 
 namespace MultiplayerMod.Multiplayer.Players.Events;
 
-[Serializable]
-public record PlayerLeftEvent(MultiplayerPlayer Player, bool Gracefully);
+public record PlayerLeftEvent(MultiplayerPlayer Player, bool Gracefully) : IDispatchableEvent;

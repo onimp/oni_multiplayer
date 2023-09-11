@@ -1,6 +1,5 @@
-﻿using System;
+﻿using MultiplayerMod.Core.Events;
 
 namespace MultiplayerMod.Multiplayer.Players.Events;
 
-[Serializable]
-public record PlayerStateChangedEvent(MultiplayerPlayer Player, PlayerState State);
+public record PlayerStateChangedEvent(MultiplayerPlayer Player, PlayerState State) : IDispatchableEvent;
