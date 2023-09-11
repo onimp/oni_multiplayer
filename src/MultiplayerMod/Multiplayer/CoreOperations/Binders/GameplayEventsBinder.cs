@@ -1,4 +1,5 @@
-﻿using MultiplayerMod.Core.Logging;
+﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Mechanics.Objects;
 using MultiplayerMod.Game.Mechanics.Printing;
 using MultiplayerMod.Game.UI;
@@ -22,29 +23,26 @@ using MultiplayerMod.Multiplayer.Players.Commands;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
-namespace MultiplayerMod.Multiplayer.Configuration;
+namespace MultiplayerMod.Multiplayer.CoreOperations.Binders;
 
-// ReSharper disable once ClassNeverInstantiated.Global
-public class GameEventBindings {
+[UsedImplicitly]
+public class GameplayEventsBinder {
 
-    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameEventBindings>();
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameplayEventsBinder>();
 
     private readonly IMultiplayerClient client;
     private readonly MultiplayerGame multiplayer;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
-    private bool bound;
-
-    public GameEventBindings(IMultiplayerClient client, MultiplayerGame multiplayer) {
+    public GameplayEventsBinder(IMultiplayerClient client, MultiplayerGame multiplayer) {
         this.client = client;
         this.multiplayer = multiplayer;
+
+        Bind();
     }
 
     public void Bind() {
-        if (bound)
-            return;
-
         log.Debug("Binding game events");
 
         BindSpeedControl();
@@ -54,8 +52,6 @@ public class GameEventBindings {
         BindTools();
         BindOverlays();
         BindMechanics();
-
-        bound = true;
     }
 
     private void BindSpeedControl() {

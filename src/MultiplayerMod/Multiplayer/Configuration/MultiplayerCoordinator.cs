@@ -87,7 +87,6 @@ public class MultiplayerCoordinator {
 
     private void ConfigureClient() {
         client.CommandReceived += ClientOnCommandReceived;
-        dependencies.Resolve<GameEventBindings>().Bind();
     }
 
     private void ClientOnCommandReceived(IMultiplayerCommand command) {
