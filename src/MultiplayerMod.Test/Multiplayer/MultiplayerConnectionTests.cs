@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
-using MultiplayerMod.Game;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 using MultiplayerMod.Network;
-using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Network;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;

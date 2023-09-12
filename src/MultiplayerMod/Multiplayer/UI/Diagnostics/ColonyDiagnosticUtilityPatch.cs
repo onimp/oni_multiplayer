@@ -1,20 +1,19 @@
 using System.Collections.Generic;
 using HarmonyLib;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
+using JetBrains.Annotations;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
 
+[UsedImplicitly]
 [HarmonyPatch(typeof(ColonyDiagnosticUtility))]
-// ReSharper disable once UnusedType.Global
 internal static class ColonyDiagnosticUtilityPatch {
 
+    [UsedImplicitly]
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ColonyDiagnosticUtility.AddWorld))]
-    // ReSharper disable once UnusedMember.Local
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void AddWorldPostfix(ColonyDiagnosticUtility __instance, int worldID) {
-        if (Dependencies.Get<MultiplayerGame>().Mode == MultiplayerMode.Disabled)
-            return;
-
         var colonyDiagnostic = new MultiplayerColonyDiagnostic(worldID);
         __instance.worldDiagnostics[worldID].Add(colonyDiagnostic);
         if (!__instance.diagnosticDisplaySettings[worldID].ContainsKey(colonyDiagnostic.id))

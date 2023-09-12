@@ -3,4 +3,4 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Players.Events;
 
-public record MultiplayerJoinRequestedEvent(IMultiplayerEndpoint Endpoint, string Name) : IDispatchableEvent;
+public record MultiplayerJoinRequestedEvent(IMultiplayerEndpoint Endpoint, string HostName) : IDispatchableEvent;

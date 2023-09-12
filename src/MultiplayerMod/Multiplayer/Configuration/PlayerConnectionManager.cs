@@ -4,7 +4,6 @@ using System.Linq;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Commands;
@@ -79,7 +78,7 @@ public class PlayerConnectionManager {
     }
 
     private void OnGameStarted(GameStartedEvent @event) {
-        if (@event.IsHostMode)
+        if (@event.Multiplayer.Mode != MultiplayerMode.Client)
             return;
 
         var currentPlayer = multiplayer.Players.Current;

@@ -1,12 +1,14 @@
 ﻿using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.Game;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
+using MultiplayerMod.Multiplayer.CoreOperations.Events;
 
 namespace MultiplayerMod.Multiplayer.Patches;
 
+[UsedImplicitly]
 [HarmonyPatch(typeof(MainMenu))]
-// ReSharper disable once UnusedType.Global
 internal static class MainMenuPatch {
 
     [HarmonyPrefix]
@@ -35,18 +37,24 @@ internal static class MainMenuPatch {
             return;
 
         var originalAction = info.action;
-        info.action = () => UseMultiplayerMode(MultiplayerMode.Disabled, originalAction);
+        info.action = () => DisableMultiplayer(originalAction);
     }
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MainMenu.ResumeGame))]
     [UsedImplicitly]
-    private static void ResumeGame() => Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Disabled);
+    private static void ResumeGame() => DisableMultiplayer();
 
     private static bool Is(this MainMenu.ButtonInfo info, LocString loc) => info.text.key.String == loc.key.String;
 
+    private static void DisableMultiplayer(System.Action? action = null) {
+        Dependencies.Get<EventDispatcher>().Dispatch(new SinglePlayerModeSelectedEvent());
+        action?.Invoke();
+    }
+
     private static void UseMultiplayerMode(MultiplayerMode mode, System.Action action) {
         Dependencies.Get<MultiplayerGame>().Refresh(mode);
+        Dependencies.Get<EventDispatcher>().Dispatch(new MultiplayerModeSelectedEvent(mode));
         action();
     }
 

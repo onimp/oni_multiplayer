@@ -1,19 +1,18 @@
 using HarmonyLib;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
+using JetBrains.Annotations;
+using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Multiplayer.UI.Diagnostics;
 
+[UsedImplicitly]
 [HarmonyPatch(typeof(ColonyDiagnosticScreen))]
-// ReSharper disable once UnusedType.Global
 public class ColonyDiagnosticScreenPatch {
 
+    [UsedImplicitly]
     [HarmonyPrefix]
     [HarmonyPatch(nameof(ColonyDiagnosticScreen.SpawnTrackerLines))]
-    // ReSharper disable once UnusedMember.Global
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     public static void SpawnTrackerLines(ColonyDiagnosticScreen __instance, int world) {
-        if (Dependencies.Get<MultiplayerGame>().Mode == MultiplayerMode.Disabled)
-            return;
-
         __instance.AddDiagnostic<MultiplayerColonyDiagnostic>(
             world,
             __instance.contentContainer,

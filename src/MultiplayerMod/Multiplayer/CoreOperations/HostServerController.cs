@@ -28,7 +28,7 @@ public class HostServerController {
     }
 
     private void OnGameStarted(GameStartedEvent @event) {
-        if (!@event.IsHostMode)
+        if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 
         LoadOverlay.Show("Starting host...");
@@ -36,7 +36,7 @@ public class HostServerController {
     }
 
     private void OnGameQuit(GameQuitEvent @event) {
-        if (!@event.IsHostMode)
+        if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 
         server.Stop();

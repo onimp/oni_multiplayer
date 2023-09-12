@@ -21,16 +21,18 @@ public class ExecutionLevelController {
         this.executionLevelManager = executionLevelManager;
         this.multiplayer = multiplayer;
 
-        eventDispatcher.Subscribe<MultiplayerModeChangedEvent>(OnMultiplayerModeChanged);
+        eventDispatcher.Subscribe<SinglePlayerModeSelectedEvent>(OnSinglePlayerModeSelected);
+        eventDispatcher.Subscribe<MultiplayerModeSelectedEvent>(OnMultiplayerModeSelected);
         eventDispatcher.Subscribe<PlayerStateChangedEvent>(OnPlayerStateChangedEvent);
         eventDispatcher.Subscribe<GameQuitEvent>(OnGameQuit);
     }
 
-    private void OnMultiplayerModeChanged(MultiplayerModeChangedEvent @event) {
-        var executionLevel = @event.Mode == MultiplayerMode.Disabled
-            ? ExecutionLevel.System
-            : ExecutionLevel.Multiplayer;
-        executionLevelManager.BaseLevel = executionLevel;
+    private void OnSinglePlayerModeSelected(SinglePlayerModeSelectedEvent @event) {
+        executionLevelManager.BaseLevel = ExecutionLevel.System;
+    }
+
+    private void OnMultiplayerModeSelected(MultiplayerModeSelectedEvent @event) {
+        executionLevelManager.BaseLevel = ExecutionLevel.Multiplayer;
     }
 
     private void OnPlayerStateChangedEvent(PlayerStateChangedEvent @event) {

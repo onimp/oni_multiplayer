@@ -2,4 +2,4 @@
 
 namespace MultiplayerMod.Multiplayer.CoreOperations.Events;
 
-public record MultiplayerModeChangedEvent(MultiplayerMode Mode) : IDispatchableEvent;
+public record MultiplayerModeSelectedEvent(MultiplayerMode Mode) : IDispatchableEvent;
