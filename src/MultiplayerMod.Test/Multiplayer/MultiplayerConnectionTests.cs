@@ -32,7 +32,7 @@ public class MultiplayerConnectionTests {
         server.EnablePendingActions = true;
         client.EnablePendingActions = true;
 
-        typeof(GameEvents).RaiseEvent(nameof(GameEvents.GameStarted), runtime);
+        runtime.EventDispatcher.Dispatch(new GameStartedEvent(runtime.Multiplayer));
 
         Assert.AreEqual(expected: MultiplayerServerState.Stopped, actual: server.State);
 

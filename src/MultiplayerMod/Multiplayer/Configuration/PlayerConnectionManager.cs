@@ -33,7 +33,7 @@ public class PlayerConnectionManager {
         IMultiplayerClient client,
         IPlayerProfileProvider profileProvider,
         WorldManager worldManager,
-        EventDispatcher eventDispatcher,
+        EventDispatcher events,
         MultiplayerGame multiplayer
     ) {
         this.server = server;
@@ -42,11 +42,11 @@ public class PlayerConnectionManager {
         this.worldManager = worldManager;
         this.multiplayer = multiplayer;
 
-        GameEvents.GameStarted += OnGameStarted;
         client.StateChanged += OnClientStateChanged;
         server.ClientDisconnected += ServerOnClientDisconnected;
-        eventDispatcher.Subscribe<ClientInitializationRequestEvent>(OnClientInitializationRequested);
-        eventDispatcher.Subscribe<GameQuitEvent>(OnGameQuit);
+        events.Subscribe<ClientInitializationRequestEvent>(OnClientInitializationRequested);
+        events.Subscribe<GameQuitEvent>(OnGameQuit);
+        events.Subscribe<GameStartedEvent>(OnGameStarted);
     }
 
     private void OnGameQuit(GameQuitEvent _) {
@@ -78,8 +78,8 @@ public class PlayerConnectionManager {
         }
     }
 
-    private void OnGameStarted() {
-        if (multiplayer.Mode != MultiplayerMode.Client)
+    private void OnGameStarted(GameStartedEvent @event) {
+        if (@event.IsHostMode)
             return;
 
         var currentPlayer = multiplayer.Players.Current;

@@ -1,4 +1,4 @@
-﻿using MultiplayerMod.Game;
+﻿using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Network;
 using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Network;
@@ -9,7 +9,7 @@ public static class TestRuntimeExtensions {
 
     public static void StartGame(this TestRuntime runtime) {
         runtime.Activate();
-        typeof(GameEvents).RaiseEvent(nameof(GameEvents.GameStarted), runtime);
+        runtime.EventDispatcher.Dispatch(new GameStartedEvent(runtime.Multiplayer));
     }
 
     public static void ConnectTo(this TestRuntime runtime, TestRuntime hostRuntime) {
