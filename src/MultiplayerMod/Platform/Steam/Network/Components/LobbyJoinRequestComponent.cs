@@ -52,7 +52,7 @@ public class LobbyJoinRequestComponent : MultiplayerMonoBehaviour {
         dataUpdateCallback[0] = Callback<LobbyDataUpdate_t>.Create(_ => {
             var serverName = SteamMatchmaking.GetLobbyData(lobbyId, "server.name");
             dataUpdateCallback[0].Unregister();
-            eventDispatcher.Dispatch(new MultiplayerConnectRequestedEvent(endpoint, serverName));
+            eventDispatcher.Dispatch(new MultiplayerJoinRequestedEvent(endpoint, serverName));
         });
         SteamMatchmaking.RequestLobbyData(lobbyId);
     }

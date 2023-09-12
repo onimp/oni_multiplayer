@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands;
@@ -11,6 +12,8 @@ namespace MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
 
 [UsedImplicitly]
 public class MultiplayerCommandExecutor {
+
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<MultiplayerCommandExecutor>();
 
     private readonly Runtime runtime;
     private readonly ExecutionLevelManager executionLevelManager;
@@ -43,6 +46,7 @@ public class MultiplayerCommandExecutor {
 
     private void RunCatching(IMultiplayerClientId? clientId, IMultiplayerCommand command) {
         try {
+            log.Trace(() => $"Executing {command}");
             command.Execute(new MultiplayerCommandContext(clientId, runtime));
         } catch (Exception exception) {
             exceptionHandler.Handle(command, exception);

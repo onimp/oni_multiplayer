@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Multiplayer.CoreOperations.Binders;
+using MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
@@ -14,11 +15,15 @@ public class MultiplayerOperationsConfigurer {
     }
 
     public void Configure() {
-        dependencies.Resolve<GameEventsBinder>().Bind();
-        dependencies.Resolve<HostEventsBinder>().Bind();
-
-        dependencies.Register<GameStateEventsRedirector>(DependencyOptions.AutoResolve);
+        dependencies.Register<MultiplayerCommandExecutor>();
+        dependencies.Register<GameEventsBinder>(DependencyOptions.AutoResolve);
+        dependencies.Register<HostEventsBinder>(DependencyOptions.AutoResolve);
+        dependencies.Register<GameStateEventsRelay>(DependencyOptions.AutoResolve);
         dependencies.Register<ExecutionLevelController>(DependencyOptions.AutoResolve);
+        dependencies.Register<HostServerController>(DependencyOptions.AutoResolve);
+        dependencies.Register<MultiplayerGameObjectsSpawner>(DependencyOptions.AutoResolve);
+        dependencies.Register<MultiplayerCommandController>(DependencyOptions.AutoResolve);
+        dependencies.Register<MultiplayerJoinRequestController>(DependencyOptions.AutoResolve);
     }
 
 }

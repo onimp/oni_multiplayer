@@ -5,7 +5,6 @@ using HarmonyLib;
 using MultiplayerMod.Game;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
-using MultiplayerMod.Multiplayer.Configuration;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
@@ -128,7 +127,7 @@ public class MultiplayerConnectionTests {
         clientRuntime.Activate();
 
         if (gracefully)
-            clientRuntime.EventDispatcher.Dispatch(new GameQuitEvent());
+            clientRuntime.EventDispatcher.Dispatch(new GameQuitEvent(clientRuntime.Multiplayer));
         else
             clientRuntime.Dependencies.Get<IMultiplayerClient>().Disconnect();
 

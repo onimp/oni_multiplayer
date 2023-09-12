@@ -5,7 +5,6 @@ using JetBrains.Annotations;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game;
-using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Commands;
@@ -26,7 +25,6 @@ public class PlayerConnectionManager {
     private readonly IPlayerProfileProvider profileProvider;
     private readonly WorldManager worldManager;
     private readonly MultiplayerGame multiplayer;
-    private readonly ExecutionLevelManager executionLevelManager;
 
     private readonly Dictionary<IMultiplayerClientId, PlayerIdentity> identities = new();
 
@@ -36,15 +34,13 @@ public class PlayerConnectionManager {
         IPlayerProfileProvider profileProvider,
         WorldManager worldManager,
         EventDispatcher eventDispatcher,
-        MultiplayerGame multiplayer,
-        ExecutionLevelManager executionLevelManager
+        MultiplayerGame multiplayer
     ) {
         this.server = server;
         this.client = client;
         this.profileProvider = profileProvider;
         this.worldManager = worldManager;
         this.multiplayer = multiplayer;
-        this.executionLevelManager = executionLevelManager;
 
         GameEvents.GameStarted += OnGameStarted;
         client.StateChanged += OnClientStateChanged;
@@ -89,8 +85,6 @@ public class PlayerConnectionManager {
         var currentPlayer = multiplayer.Players.Current;
         var command = new RequestPlayerStateChangeCommand(currentPlayer.Id, PlayerState.Ready);
         client.Send(command, MultiplayerCommandOptions.ExecuteOnServer);
-
-        executionLevelManager.BaseLevel = ExecutionLevel.Game;
     }
 
     private void OnClientInitializationRequested(ClientInitializationRequestEvent @event) {

@@ -23,7 +23,7 @@ public class ExecutionLevelController {
 
         eventDispatcher.Subscribe<MultiplayerModeChangedEvent>(OnMultiplayerModeChanged);
         eventDispatcher.Subscribe<PlayerStateChangedEvent>(OnPlayerStateChangedEvent);
-        eventDispatcher.Subscribe<MultiplayerGameQuittingEvent>(OnMultiplayerGameQuitting);
+        eventDispatcher.Subscribe<GameQuitEvent>(OnGameQuit);
     }
 
     private void OnMultiplayerModeChanged(MultiplayerModeChangedEvent @event) {
@@ -38,7 +38,7 @@ public class ExecutionLevelController {
             executionLevelManager.BaseLevel = ExecutionLevel.Game;
     }
 
-    private void OnMultiplayerGameQuitting(MultiplayerGameQuittingEvent _) {
+    private void OnGameQuit(GameQuitEvent _) {
         executionLevelManager.BaseLevel = ExecutionLevel.System;
     }
 

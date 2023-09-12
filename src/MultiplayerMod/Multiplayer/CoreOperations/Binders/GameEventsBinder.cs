@@ -38,9 +38,11 @@ public class GameEventsBinder {
     public GameEventsBinder(IMultiplayerClient client, MultiplayerGame multiplayer) {
         this.client = client;
         this.multiplayer = multiplayer;
+
+        Bind();
     }
 
-    public void Bind() {
+    private void Bind() {
         log.Debug("Binding game events");
 
         BindSpeedControl();

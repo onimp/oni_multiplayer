@@ -4,7 +4,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Configuration;
-using MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
+using MultiplayerMod.Multiplayer.CoreOperations;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.World;
@@ -37,9 +37,9 @@ public static class MultiplayerTools {
         dependencies.Register<UnityTaskScheduler>();
         dependencies.Register<MultiplayerIdentityProvider>();
         dependencies.Register<MultiplayerGame>();
-        dependencies.Register<MultiplayerCommandExecutor>();
         dependencies.Register<PlayerConnectionManager>(DependencyOptions.AutoResolve);
-        dependencies.Register<MultiplayerCoordinator>(DependencyOptions.AutoResolve);
+
+        dependencies.Resolve<MultiplayerOperationsConfigurer>().Configure();
 
         dependencies.Register<SpeedControlScreenContext>();
         runtime.Activated += it => { it.Dependencies.Get<SpeedControlScreenContext>().Apply(); };

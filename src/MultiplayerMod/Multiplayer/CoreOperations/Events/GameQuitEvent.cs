@@ -2,4 +2,6 @@
 
 namespace MultiplayerMod.Multiplayer.CoreOperations.Events;
 
-public record GameQuitEvent : IDispatchableEvent;
+public record GameQuitEvent(MultiplayerGame Multiplayer) : IDispatchableEvent {
+    public bool IsHostMode => Multiplayer.Mode == MultiplayerMode.Host;
+}

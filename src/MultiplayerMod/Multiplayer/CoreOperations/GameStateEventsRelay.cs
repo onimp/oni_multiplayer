@@ -8,12 +8,12 @@ using MultiplayerMod.Multiplayer.CoreOperations.Events;
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
 [UsedImplicitly]
-public class GameStateEventsRedirector {
+public class GameStateEventsRelay {
 
     private readonly EventDispatcher events;
     private readonly MultiplayerGame multiplayer;
 
-    public GameStateEventsRedirector(EventDispatcher events, MultiplayerGame multiplayer) {
+    public GameStateEventsRelay(EventDispatcher events, MultiplayerGame multiplayer) {
         this.events = events;
         this.multiplayer = multiplayer;
 
@@ -24,14 +24,8 @@ public class GameStateEventsRedirector {
 
     private void OnWorldSave() => events.Dispatch(new WorldSavedEvent());
 
-    private void OnGameQuit() {
-        events.Dispatch(new GameQuitEvent());
-        events.Dispatch(new MultiplayerGameQuittingEvent(multiplayer));
-    }
+    private void OnGameQuit() => events.Dispatch(new GameQuitEvent(multiplayer));
 
-    private void OnGameStarted() {
-        events.Dispatch(new GameStartedEvent());
-        events.Dispatch(new MultiplayerGameStartingEvent(multiplayer));
-    }
+    private void OnGameStarted() => events.Dispatch(new GameStartedEvent(multiplayer));
 
 }

@@ -25,9 +25,11 @@ public class HostEventsBinder {
         this.server = server;
         this.worldManager = worldManager;
         this.eventDispatcher = eventDispatcher;
+
+        Bind();
     }
 
-    public void Bind() {
+    private void Bind() {
         log.Debug("Binding host events");
 
         eventDispatcher.Subscribe<GameStartedEvent>(OnGameStarted);
@@ -36,8 +38,10 @@ public class HostEventsBinder {
         ChoreConsumerEvents.FindNextChore += p => server.Send(new FindNextChore(p), MultiplayerCommandOptions.SkipHost);
     }
 
-    [RequireMultiplayerMode(MultiplayerMode.Host)]
-    private void OnGameStarted(GameStartedEvent _) {
+    private void OnGameStarted(GameStartedEvent @event) {
+        if (@event.Multiplayer.Mode != MultiplayerMode.Host)
+            return;
+
         subscriptions = new EventSubscriptions {
             eventDispatcher.Subscribe<WorldSavedEvent>(_ => worldManager.Sync()),
             eventDispatcher.Subscribe<DebugSnapshotAvailableEvent>(
@@ -46,7 +50,11 @@ public class HostEventsBinder {
         };
     }
 
-    [RequireMultiplayerMode(MultiplayerMode.Host)]
-    private void OnGameQuit(GameQuitEvent _) => subscriptions.Cancel();
+    private void OnGameQuit(GameQuitEvent @event) {
+        if (@event.Multiplayer.Mode != MultiplayerMode.Host)
+            return;
+
+        subscriptions.Cancel();
+    }
 
 }
