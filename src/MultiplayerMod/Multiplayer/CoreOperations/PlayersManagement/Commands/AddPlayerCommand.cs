@@ -19,8 +19,10 @@ public class AddPlayerCommand : MultiplayerCommand {
 
     public override void Execute(MultiplayerCommandContext context) {
         context.Multiplayer.Players.Add(player);
-        if (current)
+        if (current) {
             context.Multiplayer.Players.SetCurrentPlayerId(player.Id);
+            context.EventDispatcher.Dispatch(new CurrentPlayerInitializedEvent(player));
+        }
         context.EventDispatcher.Dispatch(new PlayerJoinedEvent(player));
     }
 

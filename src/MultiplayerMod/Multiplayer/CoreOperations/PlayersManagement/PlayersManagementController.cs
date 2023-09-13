@@ -47,6 +47,16 @@ public class PlayersManagementController {
         client.StateChanged += OnClientStateChanged;
         events.Subscribe<GameStartedEvent>(OnGameStarted);
         events.Subscribe<GameQuitEvent>(OnGameQuit);
+        events.Subscribe<CurrentPlayerInitializedEvent>(OnCurrentPlayerInitialized);
+        events.Subscribe<WorldSyncRequestedEvent>(OnWorldSaveRequested);
+    }
+
+    private void OnCurrentPlayerInitialized(CurrentPlayerInitializedEvent @event) {
+        client.Send(new RequestPlayerStateChangeCommand(@event.Player.Id, PlayerState.Loading));
+        if (@event.Player.Role == PlayerRole.Host)
+            server.Send(new ChangePlayerStateCommand(@event.Player.Id, PlayerState.Ready));
+        else
+            client.Send(new RequestWorldSyncCommand());
     }
 
     private void OnClientStateChanged(MultiplayerClientState state) {
@@ -72,6 +82,10 @@ public class PlayersManagementController {
         multiplayer.Players.Synchronize(Array.Empty<MultiplayerPlayer>());
     }
 
+    private void OnWorldSaveRequested(WorldSyncRequestedEvent _) {
+        worldManager.Sync();
+    }
+
     private void OnClientDisconnected(IMultiplayerClientId clientId) {
         if (!identities.TryGetValue(clientId, out var playerId))
             throw new PlayersManagementException($"No associated player found for client {clientId}");
@@ -79,7 +93,7 @@ public class PlayersManagementController {
         var player = multiplayer.Players[playerId];
         server.Send(new RemovePlayerCommand(player.Id));
         identities.Remove(clientId);
-        log.Debug($"Client {client} disconnected {{ Id = {player.Id} }}");
+        log.Debug($"Client {clientId} disconnected {{ Id = {player.Id} }}");
     }
 
     private void OnClientInitializationRequested(ClientInitializationRequestEvent @event) {
@@ -92,11 +106,6 @@ public class PlayersManagementController {
         server.Clients.ForEach(it => server.Send(it, new AddPlayerCommand(player, it.Equals(@event.ClientId))));
 
         log.Debug($"Client {@event.ClientId} initialized {{ Role = {role}, Id = {player.Id} }}");
-
-        if (host)
-            server.Send(new ChangePlayerStateCommand(player.Id, PlayerState.Ready));
-        else
-            worldManager.Sync();
     }
 
 }
