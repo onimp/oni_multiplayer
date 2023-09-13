@@ -2,6 +2,7 @@
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Multiplayer.CoreOperations.Binders;
 using MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
+using MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
@@ -20,10 +21,11 @@ public class MultiplayerOperationsConfigurer {
         dependencies.Register<HostEventsBinder>(DependencyOptions.AutoResolve);
         dependencies.Register<GameStateEventsRelay>(DependencyOptions.AutoResolve);
         dependencies.Register<ExecutionLevelController>(DependencyOptions.AutoResolve);
-        dependencies.Register<HostServerController>(DependencyOptions.AutoResolve);
+        dependencies.Register<MultiplayerServerController>(DependencyOptions.AutoResolve);
         dependencies.Register<MultiplayerGameObjectsSpawner>(DependencyOptions.AutoResolve);
         dependencies.Register<MultiplayerCommandController>(DependencyOptions.AutoResolve);
         dependencies.Register<MultiplayerJoinRequestController>(DependencyOptions.AutoResolve);
+        dependencies.Register<PlayersManagementController>(DependencyOptions.AutoResolve);
     }
 
 }

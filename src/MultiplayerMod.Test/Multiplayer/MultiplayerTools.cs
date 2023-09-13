@@ -1,9 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Multiplayer;
-using MultiplayerMod.Multiplayer.Configuration;
 using MultiplayerMod.Multiplayer.CoreOperations;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
@@ -37,7 +35,6 @@ public static class MultiplayerTools {
         dependencies.Register<UnityTaskScheduler>();
         dependencies.Register<MultiplayerIdentityProvider>();
         dependencies.Register<MultiplayerGame>();
-        dependencies.Register<PlayerConnectionManager>(DependencyOptions.AutoResolve);
 
         dependencies.Resolve<MultiplayerOperationsConfigurer>().Configure();
 

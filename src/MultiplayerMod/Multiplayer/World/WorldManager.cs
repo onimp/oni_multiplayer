@@ -5,8 +5,8 @@ using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.World;
+using MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
 using MultiplayerMod.Multiplayer.Players;
-using MultiplayerMod.Multiplayer.Players.Commands;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.World;

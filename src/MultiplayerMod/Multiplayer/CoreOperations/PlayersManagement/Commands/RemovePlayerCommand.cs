@@ -1,8 +1,9 @@
 ﻿using System;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 
-namespace MultiplayerMod.Multiplayer.Players.Commands;
+namespace MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
 
 [Serializable]
 [MultiplayerCommand(Type = MultiplayerCommandType.System)]

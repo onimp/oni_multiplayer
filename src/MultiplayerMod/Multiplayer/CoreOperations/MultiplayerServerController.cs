@@ -7,12 +7,12 @@ using MultiplayerMod.Network;
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
 [UsedImplicitly]
-public class HostServerController {
+public class MultiplayerServerController {
 
     private readonly IMultiplayerServer server;
     private readonly IMultiplayerClient client;
 
-    public HostServerController(IMultiplayerServer server, IMultiplayerClient client, EventDispatcher events) {
+    public MultiplayerServerController(IMultiplayerServer server, IMultiplayerClient client, EventDispatcher events) {
         this.server = server;
         this.client = client;
 

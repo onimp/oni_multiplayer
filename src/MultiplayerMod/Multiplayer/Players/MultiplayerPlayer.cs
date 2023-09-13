@@ -32,4 +32,6 @@ public class MultiplayerPlayer {
 
     public static bool operator !=(MultiplayerPlayer? left, MultiplayerPlayer? right) => !Equals(left, right);
 
+    public override string ToString() => $"{nameof(MultiplayerPlayer)} {{ Id = {Id} }}";
+
 }

@@ -1,9 +1,9 @@
 ﻿using System;
-using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 using UnityEngine;
 
-namespace MultiplayerMod.Multiplayer.Players.Commands;
+namespace MultiplayerMod.Multiplayer.Commands.Player;
 
 [Serializable]
 public class UpdatePlayerCursorPosition : MultiplayerCommand {

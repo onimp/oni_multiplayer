@@ -9,6 +9,7 @@ using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
+using MultiplayerMod.Multiplayer.Commands.Player;
 using MultiplayerMod.Multiplayer.Commands.Screens.Consumable;
 using MultiplayerMod.Multiplayer.Commands.Screens.Immigration;
 using MultiplayerMod.Multiplayer.Commands.Screens.Priorities;
@@ -19,7 +20,6 @@ using MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.Tools;
-using MultiplayerMod.Multiplayer.Players.Commands;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
