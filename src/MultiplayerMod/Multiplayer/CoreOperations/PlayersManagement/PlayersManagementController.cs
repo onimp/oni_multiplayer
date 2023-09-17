@@ -52,7 +52,10 @@ public class PlayersManagementController {
     }
 
     private void OnCurrentPlayerInitialized(CurrentPlayerInitializedEvent @event) {
-        client.Send(new RequestPlayerStateChangeCommand(@event.Player.Id, PlayerState.Loading));
+        client.Send(
+            new RequestPlayerStateChangeCommand(@event.Player.Id, PlayerState.Loading),
+            MultiplayerCommandOptions.ExecuteOnServer
+        );
         if (@event.Player.Role == PlayerRole.Host)
             server.Send(new ChangePlayerStateCommand(@event.Player.Id, PlayerState.Ready));
         else
@@ -77,7 +80,10 @@ public class PlayersManagementController {
     }
 
     private void OnGameQuit(GameQuitEvent @event) {
-        client.Send(new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving));
+        client.Send(
+            new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving),
+            MultiplayerCommandOptions.ExecuteOnServer
+        );
         client.Disconnect();
         multiplayer.Players.Synchronize(Array.Empty<MultiplayerPlayer>());
     }
