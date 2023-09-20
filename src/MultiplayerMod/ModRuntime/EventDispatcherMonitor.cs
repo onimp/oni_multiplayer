@@ -1,10 +1,11 @@
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.ModRuntime;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class EventDispatcherMonitor {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<EventDispatcherMonitor>();

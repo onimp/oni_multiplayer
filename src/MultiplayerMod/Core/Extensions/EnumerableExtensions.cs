@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,5 +23,15 @@ public static class EnumerableExtensions {
     // ReSharper disable Unity.PerformanceAnalysis
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T?> enumerable) where T : notnull =>
         enumerable.Where(it => it != null)!;
+
+    // ReSharper disable Unity.PerformanceAnalysis
+    public static IList ToTypedList(this IEnumerable source, Type type) {
+        var listType = typeof(List<>).MakeGenericType(type);
+        var constructor = listType.GetConstructor(new Type[] { });
+        var typedList = (IList) constructor!.Invoke(new object[] { });
+        foreach (var item in source)
+            typedList.Add(item);
+        return typedList;
+    }
 
 }

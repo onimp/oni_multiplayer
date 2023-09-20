@@ -1,9 +1,10 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.ModRuntime.Context;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class ExecutionLevelManager {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ExecutionLevelManager>();

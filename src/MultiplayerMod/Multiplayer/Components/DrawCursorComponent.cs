@@ -12,7 +12,7 @@ namespace MultiplayerMod.Multiplayer.Components;
 // TODO: Replace with a game object with Image and Canvas components and draw it on the world canvas
 public class DrawCursorComponent : MultiplayerMonoBehaviour {
 
-    [Dependency]
+    [InjectDependency]
     private readonly EventDispatcher eventDispatcher = null!;
 
     private readonly Dictionary<MultiplayerPlayer, TemporalCursor> cursors = new();

@@ -6,8 +6,7 @@ namespace MultiplayerMod.Multiplayer.Objects;
 
 public class MultiplayerInstance : MultiplayerKMonoBehaviour {
 
-    [Dependency]
-    [UsedImplicitly]
+    [InjectDependency, UsedImplicitly]
     private MultiplayerGame multiplayer = null!;
 
     public MultiplayerId? Id { get; set; }

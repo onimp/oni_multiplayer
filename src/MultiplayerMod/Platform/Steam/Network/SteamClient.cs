@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
@@ -14,7 +16,7 @@ using static Steamworks.ESteamNetConnectionEnd;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
-// ReSharper disable once ClassNeverInstantiated.Global
+[Dependency, UsedImplicitly]
 public class SteamClient : IMultiplayerClient {
 
     public IMultiplayerClientId Id => playerContainer.Value;

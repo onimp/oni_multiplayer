@@ -7,8 +7,9 @@ namespace MultiplayerMod.Platform.Steam.Network.Components;
 
 public class SteamServerComponent : MultiplayerMonoBehaviour {
 
-    [Dependency]
+    [InjectDependency]
     private SteamServer server = null!;
 
     private void Update() => server.Tick();
+
 }

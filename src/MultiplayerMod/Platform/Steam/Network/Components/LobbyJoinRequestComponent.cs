@@ -15,7 +15,7 @@ public class LobbyJoinRequestComponent : MultiplayerMonoBehaviour {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<LobbyJoinRequestComponent>();
 
-    [Dependency]
+    [InjectDependency]
     private EventDispatcher eventDispatcher = null!;
 
     private Callback<GameLobbyJoinRequested_t> lobbyJoinRequestedCallback = null!;

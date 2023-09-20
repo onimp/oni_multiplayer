@@ -1,8 +1,11 @@
-﻿using MultiplayerMod.Core.Logging;
+﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Logging;
 using Steamworks;
 
 namespace MultiplayerMod.Platform.Steam.Network;
 
+[Dependency, UsedImplicitly]
 public class SteamLobby {
 
     public CSteamID Id { get; private set; } = CSteamID.Nil;

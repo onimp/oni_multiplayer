@@ -2,5 +2,8 @@
 
 namespace MultiplayerMod.Core.Dependency;
 
-[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-public class DependencyAttribute : Attribute { }
+[AttributeUsage(AttributeTargets.Class)]
+public class DependencyAttribute : Attribute {
+    public string? Name { get; set; } = null;
+    public bool Lazy { get; set; } = false;
+}

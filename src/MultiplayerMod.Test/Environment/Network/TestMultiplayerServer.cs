@@ -25,10 +25,10 @@ public class TestMultiplayerServer : IMultiplayerServer {
 
     public bool EnablePendingActions { get; set; }
 
-    public TestMultiplayerServer(TestMultiplayerClientId identity) {
+    public TestMultiplayerServer(TestMultiplayerClientId identity, TestRuntime runtime) {
         Endpoint = new TestMultiplayerEndpoint(this);
-        runtime = (TestRuntime) Runtime.Instance;
         currentPlayer = identity;
+        this.runtime = runtime;
     }
 
     public void Start() {

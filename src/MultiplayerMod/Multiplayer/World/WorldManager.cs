@@ -1,4 +1,6 @@
 using System.IO;
+using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
@@ -11,6 +13,7 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.World;
 
+[Dependency, UsedImplicitly]
 public class WorldManager {
 
     private readonly IMultiplayerServer server;

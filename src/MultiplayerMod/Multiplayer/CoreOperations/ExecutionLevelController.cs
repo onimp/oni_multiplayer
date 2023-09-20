@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
@@ -7,7 +8,7 @@ using MultiplayerMod.Multiplayer.Players.Events;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class ExecutionLevelController {
 
     private readonly MultiplayerGame multiplayer;

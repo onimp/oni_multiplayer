@@ -1,8 +1,10 @@
-﻿using MultiplayerMod.Network;
+﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-// ReSharper disable once ClassNeverInstantiated.Global
+[Dependency, UsedImplicitly]
 public class MultiplayerIdentityProvider {
 
     public long NextObjectId { get; set; }

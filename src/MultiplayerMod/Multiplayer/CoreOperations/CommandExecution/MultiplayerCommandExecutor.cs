@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
@@ -10,7 +11,7 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class MultiplayerCommandExecutor {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<MultiplayerCommandExecutor>();

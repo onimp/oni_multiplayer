@@ -1,122 +1,124 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.Core.Dependency;
 
-public class DependencyContainer {
+public class DependencyContainer : IDependencyContainer, IDependencyInjector {
 
-    private static readonly Logging.Logger log = LoggerFactory.GetLogger<DependencyContainer>();
+    private readonly Logging.Logger log = LoggerFactory.GetLogger<DependencyContainer>();
 
-    private readonly ConcurrentDictionary<Type, Lazy<object>> instances = new();
+    private readonly Dictionary<string, DependencyInfo> dependencies = new();
+    private readonly Dictionary<string, object> instances = new();
+    private readonly HashSet<string> instantiatingInstances = new();
+    private readonly Dictionary<Type, List<DependencyInfo>> dependenciesByType = new();
 
-    public DependencyContainer() {
-        Register(this);
+    private const BindingFlags injectionMemberBindingFlags =
+        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+    public IEnumerable<DependencyInfo> RegisteredDependencies => dependencies.Values;
+
+    public void Register(DependencyInfo info) {
+        if (dependencies.ContainsKey(info.Name))
+            throw new DependencyAlreadyRegisteredException(info.Name);
+
+        log.Trace(() => $"Registering dependency \"{info.Name}\"...");
+        dependencies[info.Name] = info;
+        ResolveDependencyTypes(info.Type).ForEach(it => RegisterDependencyByType(it, info));
     }
 
-    public void Register<T>(DependencyOptions options = DependencyOptions.Default) where T : class {
-        if (options.HasFlag(DependencyOptions.AutoResolve)) {
-            TryRegister(Resolve<T>());
-            return;
+    private IEnumerable<Type> ResolveDependencyTypes(Type type) {
+        var result = new List<Type> { type };
+        if (type.BaseType != null && type.BaseType != typeof(object))
+            result.AddRange(ResolveDependencyTypes(type.BaseType));
+        result.AddRange(type.GetInterfaces());
+        return result;
+    }
+
+    private void RegisterDependencyByType(Type type, DependencyInfo info) {
+        if (!dependenciesByType.TryGetValue(type, out var dependenceInfos)) {
+            dependenceInfos = new List<DependencyInfo>();
+            dependenciesByType[type] = dependenceInfos;
         }
-        TryRegister<T>();
+        log.Trace(() => $"Mapping dependency \"{info.Name}\" to type \"{type}\"...");
+        dependenceInfos.Add(info);
     }
 
-    public void Register<I, T>(DependencyOptions options = DependencyOptions.Default) where T : class, I {
-        if (options.HasFlag(DependencyOptions.AutoResolve)) {
-            TryRegister<I, T>(Resolve<T>());
-            return;
-        }
-        TryRegister<I, T>();
+    public void RegisterSingleton(object singleton) => RegisterSingleton(singleton.GetType().FullName!, singleton);
+
+    public void RegisterSingleton(string name, object singleton) {
+        var info = new DependencyInfo(name, singleton.GetType(), false);
+        Register(info);
+        instances[info.Name] = singleton;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T Register<T>(T instance) where T : notnull => TryRegister(instance);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T Register<I, T>(T instance) where T : class, I => TryRegister<I, T>(instance);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T Resolve<T>() where T : notnull => (T) Resolve(typeof(T));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T Inject<T>(T instance) where T : notnull => InjectDependencies(instance);
-
-    public object Resolve(Type type) {
-        instances.TryGetValue(type, out var instance);
-        return instance == null ? Instantiate(type) : instance.Value;
+    public T Get<T>() where T : notnull {
+        return (T) Get(typeof(T));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T Get<T>() where T : notnull => (T) Get(typeof(T));
 
     public object Get(Type type) {
-        instances.TryGetValue(type, out var singleton);
-        if (singleton == null)
-            throw new MissingDependencyException($"Type {type} is not registered");
+        var targetType = type;
+        var resolveMultiple = type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        if (resolveMultiple)
+            targetType = type.GetGenericArguments()[0];
 
-        return singleton.Value;
+        if (!dependenciesByType.TryGetValue(targetType, out var dependencyInfos))
+            throw new MissingDependencyException(targetType);
+
+        if (!resolveMultiple && dependencyInfos.Count > 1)
+            throw new AmbiguousDependencyException(targetType, dependencyInfos);
+
+        return resolveMultiple
+            ? dependencyInfos.Select(GetInstance).ToTypedList(targetType)
+            : GetInstance(dependencyInfos[0]);
     }
 
-    private void TryRegister<T>() where T : notnull {
-        var initializer = new Lazy<object>(() => Instantiate(typeof(T)));
-        RegisterInitializer(typeof(T), initializer);
-    }
+    public void PreInstantiate() => RegisteredDependencies.Where(it => !it.Lazy).ForEach(it => GetInstance(it));
 
-    private void TryRegister<I, T>() where T : class, I {
-        var initializer = new Lazy<object>(() => Instantiate(typeof(T)));
-        RegisterInitializer(typeof(I), initializer);
-        RegisterInitializer(typeof(T), initializer);
-    }
-
-    private T TryRegister<T>(T instance) where T : notnull {
-        RegisterInitializer(typeof(T), new Lazy<object>(() => instance));
-        return instance;
-    }
-
-    private T TryRegister<I, T>(T instance) where T : class, I {
-        var initializer = new Lazy<object>(() => instance);
-        RegisterInitializer(typeof(I), initializer);
-        RegisterInitializer(typeof(T), initializer);
-        return instance;
-    }
-
-    private void RegisterInitializer(Type type, Lazy<object> initializer) {
-        if (!instances.TryAdd(type, initializer))
-            throw new TypeAlreadyRegisteredException(type);
-
-        log.Trace(() => $"Type {type.FullName} is registered.");
-    }
-
-    private object Instantiate(Type type) {
-        if (!type.IsClass)
-            throw new DependencyContainerException($"A type {type} is not a class.");
-
-        var constructors = type.GetConstructors();
-        if (constructors.Length != 1)
-            throw new DependencyContainerException($"A type {type} is expected to have one public constructor.");
-
-        var constructor = constructors[0];
-        var arguments = constructor.GetParameters()
-            .Select(parameter => Get(parameter.ParameterType))
-            .ToArray();
-
-        return InjectDependencies(constructor.Invoke(arguments));
-    }
-
-    private T InjectDependencies<T>(T instance) where T : notnull {
+    public T Inject<T>(T instance) where T : notnull {
         var type = instance.GetType();
-        type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(property => property.GetCustomAttribute<DependencyAttribute>() != null)
+        type.GetProperties(injectionMemberBindingFlags)
+            .Where(property => property.GetCustomAttribute<InjectDependencyAttribute>() != null)
             .ForEach(property => property.SetValue(instance, Get(property.PropertyType)));
-        type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(field => field.GetCustomAttribute<DependencyAttribute>() != null)
+        type.GetFields(injectionMemberBindingFlags)
+            .Where(field => field.GetCustomAttribute<InjectDependencyAttribute>() != null)
             .ForEach(field => field.SetValue(instance, Get(field.FieldType)));
         return instance;
+    }
+
+    private object GetInstance(DependencyInfo info) {
+        if (instances.TryGetValue(info.Name, out var instance))
+            return instance;
+
+        instance = Instantiate(info);
+        instances[info.Name] = instance;
+        return instance;
+    }
+
+    private object Instantiate(DependencyInfo info) {
+        if (instantiatingInstances.Contains(info.Name))
+            throw new DependencyIsInstantiatingException(info);
+
+        var constructors = info.Type.GetConstructors();
+        if (constructors.Length != 1)
+            throw new InvalidDependencyException($"\"{info.Type}\" is expected to have one public constructor.");
+
+        var constructor = constructors[0];
+
+        instantiatingInstances.Add(info.Name);
+        try {
+            var arguments = constructor.GetParameters()
+                .Select(parameter => Get(parameter.ParameterType))
+                .ToArray();
+            return constructor.Invoke(arguments);
+        } catch (Exception exception) {
+            throw new DependencyInstantiationException(info, exception);
+        } finally {
+            instantiatingInstances.Remove(info.Name);
+        }
     }
 
 }

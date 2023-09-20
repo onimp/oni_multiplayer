@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Game;
@@ -8,7 +9,7 @@ using MultiplayerMod.Multiplayer.CoreOperations.Events;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class GameStateEventsRelay {
 
     private readonly EventDispatcher events;

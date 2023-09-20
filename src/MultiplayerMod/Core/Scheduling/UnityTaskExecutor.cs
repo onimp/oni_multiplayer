@@ -7,7 +7,7 @@ namespace MultiplayerMod.Core.Scheduling;
 
 public class UnityTaskExecutor : MultiplayerMonoBehaviour {
 
-    [Dependency]
+    [InjectDependency]
     private UnityTaskScheduler scheduler = null!;
 
     private void LateUpdate() => scheduler.Tick();

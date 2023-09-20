@@ -1,11 +1,12 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class MultiplayerCommandController {
 
     private readonly MultiplayerCommandExecutor executor;

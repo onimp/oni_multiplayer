@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 using MultiplayerMod.Network;
+using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Network;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
@@ -30,7 +30,7 @@ public class MultiplayerConnectionTests {
         server.EnablePendingActions = true;
         client.EnablePendingActions = true;
 
-        runtime.EventDispatcher.Dispatch(new GameStartedEvent(runtime.Multiplayer));
+        runtime.EventDispatcher().Dispatch(new GameStartedEvent(runtime.Multiplayer()));
 
         Assert.AreEqual(expected: MultiplayerServerState.Stopped, actual: server.State);
 
@@ -49,7 +49,7 @@ public class MultiplayerConnectionTests {
         Assert.IsTrue(client.RunPendingAction());
         Assert.AreEqual(expected: MultiplayerClientState.Connecting, actual: client.State);
 
-        Assert.AreEqual(expected: 0, actual: runtime.Multiplayer.Players.Count());
+        Assert.AreEqual(expected: 0, actual: runtime.Multiplayer().Players.Count());
 
         Assert.IsTrue(client.RunPendingAction());
         Assert.AreEqual(expected: MultiplayerClientState.Connected, actual: client.State);
@@ -57,10 +57,10 @@ public class MultiplayerConnectionTests {
         Assert.IsTrue(client.RunPendingAction());
         Assert.IsFalse(client.RunPendingAction());
 
-        Assert.AreEqual(expected: 1, actual: runtime.Multiplayer.Players.Count());
+        Assert.AreEqual(expected: 1, actual: runtime.Multiplayer().Players.Count());
         Assert.AreEqual(
             expected: PlayerRole.Host,
-            actual: runtime.Multiplayer.Players.Current.Role
+            actual: runtime.Multiplayer().Players.Current.Role
         );
 
         DisposeEnvironment(harmony);
@@ -77,8 +77,8 @@ public class MultiplayerConnectionTests {
         hostRuntime.StartGame();
 
         // Host player list must have a single ready player
-        Assert.AreEqual(expected: 1, actual: hostRuntime.Multiplayer.Players.Count());
-        var hostPlayer = hostRuntime.Multiplayer.Players.Current;
+        Assert.AreEqual(expected: 1, actual: hostRuntime.Multiplayer().Players.Count());
+        var hostPlayer = hostRuntime.Multiplayer().Players.Current;
         Assert.AreEqual(expected: PlayerRole.Host, actual: hostPlayer.Role);
         Assert.AreEqual(expected: PlayerState.Ready, actual: hostPlayer.State);
 
@@ -87,12 +87,12 @@ public class MultiplayerConnectionTests {
 
         // Lists must be equal and contain two players: the host player (ready) and a client player (loading)
         AssertPlayersAreEqual(hostRuntime, clientRuntime);
-        Assert.AreEqual(expected: 2, actual: hostRuntime.Multiplayer.Players.Count());
+        Assert.AreEqual(expected: 2, actual: hostRuntime.Multiplayer().Players.Count());
 
-        var clientPlayer = clientRuntime.Multiplayer.Players.Current;
+        var clientPlayer = clientRuntime.Multiplayer().Players.Current;
         Assert.AreEqual(expected: PlayerRole.Client, actual: clientPlayer.Role);
         Assert.AreEqual(expected: PlayerState.Loading, actual: clientPlayer.State);
-        Assert.IsFalse(hostRuntime.Multiplayer.Players.Ready);
+        Assert.IsFalse(hostRuntime.Multiplayer().Players.Ready);
 
         // Event: the client finished loading and the game is started
         clientRuntime.StartGame();
@@ -100,7 +100,7 @@ public class MultiplayerConnectionTests {
         // Lists must be equal and the client player must be ready
         AssertPlayersAreEqual(hostRuntime, clientRuntime);
         Assert.AreEqual(expected: PlayerState.Ready, actual: clientPlayer.State);
-        Assert.IsTrue(hostRuntime.Multiplayer.Players.Ready);
+        Assert.IsTrue(hostRuntime.Multiplayer().Players.Ready);
 
         DisposeEnvironment(harmony);
     }
@@ -117,7 +117,7 @@ public class MultiplayerConnectionTests {
 
         var hostRuntime = MultiplayerTools.CreateTestRuntime(MultiplayerMode.Host, "Host player");
         var clientRuntime = MultiplayerTools.CreateTestRuntime(MultiplayerMode.Client, "Client player");
-        hostRuntime.EventDispatcher.Subscribe<PlayerLeftEvent>(it => playerLeftEvent = it);
+        hostRuntime.EventDispatcher().Subscribe<PlayerLeftEvent>(it => playerLeftEvent = it);
 
         hostRuntime.StartGame();
         clientRuntime.ConnectTo(hostRuntime);
@@ -125,14 +125,14 @@ public class MultiplayerConnectionTests {
         clientRuntime.Activate();
 
         if (gracefully) {
-            clientRuntime.EventDispatcher.Dispatch(new GameQuitEvent(clientRuntime.Multiplayer));
-            Assert.AreEqual(expected: 0, clientRuntime.Multiplayer.Players.Count());
+            clientRuntime.EventDispatcher().Dispatch(new GameQuitEvent(clientRuntime.Multiplayer()));
+            Assert.AreEqual(expected: 0, clientRuntime.Multiplayer().Players.Count());
         } else {
             clientRuntime.Dependencies.Get<IMultiplayerClient>().Disconnect();
         }
 
-        Assert.AreEqual(expected: 1, hostRuntime.Multiplayer.Players.Count());
-        Assert.AreEqual(expected: PlayerRole.Host, hostRuntime.Multiplayer.Players.First().Role);
+        Assert.AreEqual(expected: 1, hostRuntime.Multiplayer().Players.Count());
+        Assert.AreEqual(expected: PlayerRole.Host, hostRuntime.Multiplayer().Players.First().Role);
 
         Assert.NotNull(playerLeftEvent);
 
@@ -144,9 +144,9 @@ public class MultiplayerConnectionTests {
         DisposeEnvironment(harmony);
     }
 
-    private static void AssertPlayersAreEqual(Runtime runtimeA, Runtime runtimeB) {
-        Assert.AreEqual(runtimeA.Multiplayer.Players.Count(), runtimeB.Multiplayer.Players.Count());
-        var collection = runtimeA.Multiplayer.Players.Zip(runtimeB.Multiplayer.Players, (a, b) => (a, b));
+    private static void AssertPlayersAreEqual(TestRuntime runtimeA, TestRuntime runtimeB) {
+        Assert.AreEqual(runtimeA.Multiplayer().Players.Count(), runtimeB.Multiplayer().Players.Count());
+        var collection = runtimeA.Multiplayer().Players.Zip(runtimeB.Multiplayer().Players, (a, b) => (a, b));
         foreach (var (playerA, playerB) in collection) {
             Assert.AreEqual(playerA.Id, playerB.Id);
             Assert.AreEqual(playerA.Role, playerB.Role);

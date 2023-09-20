@@ -1,11 +1,12 @@
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class MultiplayerObjectsConfigurator {
 
     public MultiplayerObjectsConfigurator(MultiplayerGame multiplayer, EventDispatcher events) {

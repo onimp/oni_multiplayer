@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-// ReSharper disable once ClassNeverInstantiated.Global
 public class MultiplayerObjects {
 
     private readonly MultiplayerIdentityProvider provider;

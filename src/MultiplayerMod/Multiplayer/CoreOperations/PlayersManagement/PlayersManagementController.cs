@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
@@ -12,7 +13,7 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class PlayersManagementController {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<PlayersManagementController>();

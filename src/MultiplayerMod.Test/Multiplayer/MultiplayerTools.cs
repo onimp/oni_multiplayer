@@ -1,12 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
+using MultiplayerMod.Multiplayer.CoreOperations.Binders;
+using MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
+using MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.World;
-using MultiplayerMod.Network;
 using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Network;
 
@@ -17,40 +22,48 @@ public static class MultiplayerTools {
     private static int nextPlayerId = 1;
 
     public static TestRuntime CreateTestRuntime(MultiplayerMode mode, string playerName) {
-        var clientId = new TestMultiplayerClientId(nextPlayerId++);
-        var runtime = new TestRuntime();
-        var dependencies = runtime.Dependencies;
+        var builder = new DependencyContainerBuilder()
+            .AddType<EventDispatcher>()
+            .AddType<ExecutionContextManager>()
+            .AddType<ExecutionLevelManager>()
+            .AddSingleton(new TestPlayerProfileProvider(new PlayerProfile(playerName)))
+            .AddSingleton(new TestMultiplayerClientId(nextPlayerId++))
+            .AddType<TestMultiplayerClient>()
+            .AddType<TestMultiplayerServer>()
+            .AddType<WorldManager>()
+            .AddType<UnityTaskScheduler>()
+            .AddType<MultiplayerIdentityProvider>()
+            .AddType<MultiplayerGame>()
+            .AddType<MultiplayerCommandExecutor>()
+            .AddType<GameEventsBinder>()
+            .AddType<HostEventsBinder>()
+            .AddType<GameStateEventsRelay>()
+            .AddType<ExecutionLevelController>()
+            .AddType<MultiplayerServerController>()
+            .AddType<MultiplayerGameObjectsSpawner>()
+            .AddType<MultiplayerCommandController>()
+            .AddType<MultiplayerJoinRequestController>()
+            .AddType<PlayersManagementController>()
+            .AddType<SpeedControlScreenContext>()
+            .AddType<Recorders>()
+            .AddType<TestRuntime>();
 
-        dependencies.Register<IPlayerProfileProvider>(new TestPlayerProfileProvider(new PlayerProfile(playerName)));
+        var container = builder.Build();
+        var runtime = container.Get<TestRuntime>();
+        var recorders = container.Get<Recorders>();
+        var client = container.Get<TestMultiplayerClient>();
+        var server = container.Get<TestMultiplayerServer>();
+        var eventDispatcher = container.Get<EventDispatcher>();
+        var multiplayer = container.Get<MultiplayerGame>();
 
-        var client = new TestMultiplayerClient(clientId);
-        dependencies.Register(client);
-        dependencies.Register<IMultiplayerClient>(client);
-
-        var server = new TestMultiplayerServer(clientId);
-        dependencies.Register(server);
-        dependencies.Register<IMultiplayerServer>(server);
-
-        dependencies.Register<WorldManager>();
-        dependencies.Register<UnityTaskScheduler>();
-        dependencies.Register<MultiplayerIdentityProvider>();
-        dependencies.Register<MultiplayerGame>();
-
-        dependencies.Resolve<MultiplayerOperationsConfigurer>().Configure();
-
-        dependencies.Register<SpeedControlScreenContext>();
-        runtime.Activated += it => { it.Dependencies.Get<SpeedControlScreenContext>().Apply(); };
-        runtime.Deactivated += it => { it.Dependencies.Get<SpeedControlScreenContext>().Restore(); };
-
-        runtime.Multiplayer.Refresh(mode);
-
-        var recorders = new Recorders();
-        dependencies.Register(recorders);
-
-        runtime.EventDispatcher.EventDispatching += e => recorders.Events.Add(e);
         server.CommandReceived += (_, command) => recorders.ServerCommands.Add(command);
         client.CommandReceived += command => recorders.ClientCommands.Add(command);
 
+        eventDispatcher.EventDispatching += e => recorders.Events.Add(e);
+        runtime.Activated += it => { it.Dependencies.Get<SpeedControlScreenContext>().Apply(); };
+        runtime.Deactivated += it => { it.Dependencies.Get<SpeedControlScreenContext>().Restore(); };
+
+        multiplayer.Refresh(mode);
         return runtime;
     }
 

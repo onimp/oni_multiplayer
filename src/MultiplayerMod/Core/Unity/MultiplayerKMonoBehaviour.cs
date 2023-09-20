@@ -1,12 +1,12 @@
 ﻿using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.ModRuntime;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 
 namespace MultiplayerMod.Core.Unity;
 
 public class MultiplayerKMonoBehaviour : KMonoBehaviour {
 
-    private readonly DependencyContainer container = Runtime.Instance.Dependencies;
+    private readonly IDependencyInjector injector = Dependencies.Get<IDependencyInjector>();
 
-    protected override void OnPrefabInit() => container.Inject(this);
+    protected override void OnPrefabInit() => injector.Inject(this);
 
 }

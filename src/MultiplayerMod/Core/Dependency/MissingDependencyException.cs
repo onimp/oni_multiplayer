@@ -3,5 +3,5 @@
 namespace MultiplayerMod.Core.Dependency;
 
 public class MissingDependencyException : Exception {
-    public MissingDependencyException(string message) : base(message) { }
+    public MissingDependencyException(Type type) : base($"Dependency of type \"{type}\" not found") { }
 }

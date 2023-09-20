@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer.Components;
@@ -7,7 +8,7 @@ using MultiplayerMod.Multiplayer.World.Debug;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class MultiplayerGameObjectsSpawner {
 
     public MultiplayerGameObjectsSpawner(EventDispatcher events) {

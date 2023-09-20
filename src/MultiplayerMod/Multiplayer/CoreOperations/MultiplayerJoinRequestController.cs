@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.Players.Events;
@@ -7,7 +8,7 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class MultiplayerJoinRequestController {
 
     private readonly EventDispatcher events;

@@ -5,16 +5,16 @@ using MultiplayerMod.Multiplayer.Players;
 
 namespace MultiplayerMod.Multiplayer;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class MultiplayerGame {
 
     public MultiplayerMode Mode { get; private set; }
     public MultiplayerPlayers Players { get; private set; } = null!;
     public MultiplayerObjects Objects { get; private set; } = null!;
 
-    private readonly DependencyContainer container;
+    private readonly IDependencyContainer container;
 
-    public MultiplayerGame(DependencyContainer container) {
+    public MultiplayerGame(IDependencyContainer container) {
         this.container = container;
         Refresh(MultiplayerMode.Client);
     }
@@ -22,7 +22,7 @@ public class MultiplayerGame {
     public void Refresh(MultiplayerMode mode) {
         Mode = mode;
         Players = new MultiplayerPlayers();
-        Objects = container.Resolve<MultiplayerObjects>();
+        Objects = new MultiplayerObjects(container.Get<MultiplayerIdentityProvider>());
     }
 
 }

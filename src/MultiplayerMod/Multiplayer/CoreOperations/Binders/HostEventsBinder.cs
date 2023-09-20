@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
@@ -11,7 +12,7 @@ using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations.Binders;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class HostEventsBinder {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<HostEventsBinder>();

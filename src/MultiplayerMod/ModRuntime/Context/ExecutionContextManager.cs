@@ -1,9 +1,10 @@
 ﻿using System.Threading;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 
 namespace MultiplayerMod.ModRuntime.Context;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class ExecutionContextManager {
 
     public ExecutionContext BaseContext { get; set; } = new(ExecutionLevel.System);

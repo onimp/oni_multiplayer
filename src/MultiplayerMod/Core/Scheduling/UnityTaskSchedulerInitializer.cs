@@ -7,13 +7,12 @@ using MultiplayerMod.ModRuntime.Loader;
 namespace MultiplayerMod.Core.Scheduling;
 
 [UsedImplicitly]
-public class UnityTaskSchedulerLoader : IModComponentLoader {
+public class UnityTaskSchedulerInitializer : IModComponentInitializer {
 
-    private readonly Logging.Logger log = LoggerFactory.GetLogger<UnityTaskSchedulerLoader>();
+    private readonly Logging.Logger log = LoggerFactory.GetLogger<UnityTaskSchedulerInitializer>();
 
-    public void Load(Runtime runtime) {
+    public void Initialize(Runtime runtime) {
         log.Debug("Creating task scheduler...");
-        runtime.Dependencies.Register<UnityTaskScheduler>();
         UnityObject.CreateStaticWithComponent<UnityTaskExecutor>();
     }
 

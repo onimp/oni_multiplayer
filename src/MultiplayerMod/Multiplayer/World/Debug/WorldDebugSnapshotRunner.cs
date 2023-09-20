@@ -14,7 +14,7 @@ public class WorldDebugSnapshotRunner : MultiplayerKMonoBehaviour, IRenderEveryT
     private float lastTime;
     public static WorldDebugSnapshot? LastServerInfo { private get; set; }
 
-    [Dependency]
+    [InjectDependency]
     private readonly EventDispatcher eventDispatcher = null!;
 
     public static int ErrorsCount { get; private set; }

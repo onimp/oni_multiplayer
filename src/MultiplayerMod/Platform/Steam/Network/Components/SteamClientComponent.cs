@@ -6,8 +6,10 @@ using MultiplayerMod.Core.Unity;
 namespace MultiplayerMod.Platform.Steam.Network.Components;
 
 public class SteamClientComponent : MultiplayerMonoBehaviour {
-    [Dependency]
+
+    [InjectDependency]
     private SteamClient client = null!;
 
     private void Update() => client.Tick();
+
 }

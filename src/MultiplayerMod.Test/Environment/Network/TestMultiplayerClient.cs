@@ -20,9 +20,9 @@ public class TestMultiplayerClient : IMultiplayerClient {
 
     public bool EnablePendingActions { get; set; }
 
-    public TestMultiplayerClient(TestMultiplayerClientId id) {
+    public TestMultiplayerClient(TestMultiplayerClientId id, TestRuntime runtime) {
+        this.runtime = runtime;
         Id = id;
-        runtime = (TestRuntime) Runtime.Instance;
         id.Client = this;
     }
 

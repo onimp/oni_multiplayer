@@ -1,30 +1,17 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Events;
-using MultiplayerMod.ModRuntime.Context;
-using MultiplayerMod.Multiplayer;
 
 namespace MultiplayerMod.ModRuntime;
 
-[UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class Runtime {
 
     public static Runtime Instance { get; private set; } = null!;
 
-    public DependencyContainer Dependencies { get; }
-    public ExecutionContext ExecutionContext => executionContextManager.Context;
-    public EventDispatcher EventDispatcher => Dependencies.Get<EventDispatcher>();
-    public MultiplayerGame Multiplayer => Dependencies.Get<MultiplayerGame>();
+    public IDependencyContainer Dependencies { get; }
 
-    private readonly ExecutionContextManager executionContextManager = new();
-
-    public Runtime() {
-        Dependencies = new DependencyContainer();
-        Dependencies.Register(executionContextManager);
-        Dependencies.Register<ExecutionLevelManager>();
-        Dependencies.Register<EventDispatcher>();
-        Dependencies.Register<EventDispatcherMonitor>(DependencyOptions.AutoResolve);
-        Dependencies.Register(this);
+    public Runtime(IDependencyContainer container) {
+        Dependencies = container;
         Instance = this;
     }
 

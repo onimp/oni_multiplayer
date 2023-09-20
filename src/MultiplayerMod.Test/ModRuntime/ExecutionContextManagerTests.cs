@@ -65,11 +65,9 @@ public class ExecutionContextManagerTests {
         Assert.AreEqual(expected: ExecutionLevel.System, actual: manager.Context.Level);
     }
 
-    private static DependencyContainer CreateContainer() {
-        var container = new DependencyContainer();
-        container.Register<ExecutionContextManager>();
-        container.Register<ExecutionLevelManager>();
-        return container;
-    }
+    private static DependencyContainer CreateContainer() => new DependencyContainerBuilder()
+        .AddType<ExecutionContextManager>()
+        .AddType<ExecutionLevelManager>()
+        .Build();
 
 }

@@ -1,5 +1,9 @@
-﻿namespace MultiplayerMod.Game.Extension;
+﻿using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 
+namespace MultiplayerMod.Game.Extension;
+
+[Dependency, UsedImplicitly]
 public class GameExtensionsConfigurator {
 
     public GameExtensionsConfigurator() {

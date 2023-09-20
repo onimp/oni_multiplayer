@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using KMod;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
@@ -25,20 +27,30 @@ public class DelayedModLoader {
     }
 
     public void OnLoad() {
-        var runtime = new Runtime();
-        runtime.Dependencies.Register(harmony);
+        var container = CreateDependencyContainer();
+        var runtime = container.Get<Runtime>();
         PrioritizedPatch();
         assembly.GetTypes()
-            .Where(type => typeof(IModComponentLoader).IsAssignableFrom(type) && type.IsClass)
+            .Where(type => typeof(IModComponentInitializer).IsAssignableFrom(type) && type.IsClass)
             .OrderBy(type => type.GetCustomAttribute<ModComponentOrder>()?.Order ?? ModComponentOrder.Default)
             .ForEach(
                 type => {
-                    var instance = (IModComponentLoader) Activator.CreateInstance(type);
+                    var instance = (IModComponentInitializer) Activator.CreateInstance(type);
                     log.Debug($"Running mod component loader {type.FullName}");
-                    instance.Load(runtime);
+                    instance.Initialize(runtime);
                 }
             );
         log.Info("Mod runtime is ready");
+    }
+
+    private DependencyContainer CreateDependencyContainer() {
+        var container = new DependencyContainerBuilder()
+            .AddSingleton(harmony)
+            .AddType<EventDispatcher>()
+            .ScanAssembly(assembly)
+            .Build();
+        container.PreInstantiate();
+        return container;
     }
 
     private void PrioritizedPatch() => AccessTools.GetTypesFromAssembly(assembly)

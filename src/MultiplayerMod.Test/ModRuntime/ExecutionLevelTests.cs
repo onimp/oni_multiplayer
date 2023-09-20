@@ -1,4 +1,4 @@
-﻿using MultiplayerMod.ModRuntime;
+﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Test.Environment.Unity;
 using NUnit.Framework;
@@ -16,8 +16,8 @@ public class ExecutionLevelTests {
 
     [Test]
     public void RequiredLevelHigherThanCurrent() {
-        var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        var container = CreateContainer();
+        var manager = container.Get<ExecutionLevelManager>();
         manager.BaseLevel = ExecutionLevel.Multiplayer;
 
         var executed = false;
@@ -28,8 +28,8 @@ public class ExecutionLevelTests {
 
     [Test]
     public void RequiredLevelEqualsToCurrent() {
-        var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        var container = CreateContainer();
+        var manager = container.Get<ExecutionLevelManager>();
         manager.BaseLevel = ExecutionLevel.Game;
 
         var executed = false;
@@ -40,8 +40,8 @@ public class ExecutionLevelTests {
 
     [Test]
     public void RequiredLevelLowerThanCurrent() {
-        var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        var container = CreateContainer();
+        var manager = container.Get<ExecutionLevelManager>();
         manager.BaseLevel = ExecutionLevel.Game;
 
         var executed = false;
@@ -52,15 +52,15 @@ public class ExecutionLevelTests {
 
     [Test]
     public void RunActionWithTargetExecutionLevel() {
-        var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        var container = CreateContainer();
+        var manager = container.Get<ExecutionLevelManager>();
         manager.BaseLevel = ExecutionLevel.Game;
 
         var executedLevel = ExecutionLevel.System;
         manager.RunIfLevelIsActive(
             ExecutionLevel.Multiplayer,
             ExecutionLevel.Command,
-            () => executedLevel = runtime.ExecutionContext.Level
+            () => executedLevel = container.Get<ExecutionContextManager>().Context.Level
         );
 
         Assert.AreEqual(expected: ExecutionLevel.Command, actual: executedLevel);
@@ -68,8 +68,8 @@ public class ExecutionLevelTests {
 
     [Test]
     public void AllLevelsUnderTargetOrTargetItselfAreActive() {
-        var runtime = new Runtime();
-        var manager = runtime.Dependencies.Get<ExecutionLevelManager>();
+        var container = CreateContainer();
+        var manager = container.Get<ExecutionLevelManager>();
         manager.BaseLevel = ExecutionLevel.Component;
         Assert.IsTrue(manager.LevelIsActive(ExecutionLevel.System));
         Assert.IsTrue(manager.LevelIsActive(ExecutionLevel.Multiplayer));
@@ -77,5 +77,10 @@ public class ExecutionLevelTests {
         Assert.IsFalse(manager.LevelIsActive(ExecutionLevel.Command));
         Assert.IsFalse(manager.LevelIsActive(ExecutionLevel.Game));
     }
+
+    private static DependencyContainer CreateContainer() => new DependencyContainerBuilder()
+        .AddType<ExecutionContextManager>()
+        .AddType<ExecutionLevelManager>()
+        .Build();
 
 }
