@@ -37,9 +37,9 @@ public class DependencyContainerBuilderTests {
     }
 
     [Test]
-    public void AssemblyDependenciesAreAvailable() {
+    public void AssemblyNamespaceDependenciesAreAvailable() {
         var container = new DependencyContainerBuilder()
-            .ScanAssembly(GetType().Assembly)
+            .ScanAssembly(GetType().Assembly, "MultiplayerMod.Test.Core.Dependency")
             .Build();
         Assert.DoesNotThrow(() => container.Get<DependencyA>());
         Assert.DoesNotThrow(() => container.Get<DependencyB>());
