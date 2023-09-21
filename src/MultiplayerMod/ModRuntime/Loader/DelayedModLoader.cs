@@ -27,30 +27,23 @@ public class DelayedModLoader {
     }
 
     public void OnLoad() {
-        var container = CreateDependencyContainer();
-        var runtime = container.Get<Runtime>();
+        var builder = new DependencyContainerBuilder()
+            .AddSingleton(harmony)
+            .AddType<EventDispatcher>()
+            .ScanAssembly(assembly);
         PrioritizedPatch();
         assembly.GetTypes()
-            .Where(type => typeof(IModComponentInitializer).IsAssignableFrom(type) && type.IsClass)
+            .Where(type => typeof(IModComponentConfigurer).IsAssignableFrom(type) && type.IsClass)
             .OrderBy(type => type.GetCustomAttribute<ModComponentOrder>()?.Order ?? ModComponentOrder.Default)
             .ForEach(
                 type => {
-                    var instance = (IModComponentInitializer) Activator.CreateInstance(type);
-                    log.Debug($"Running mod component loader {type.FullName}");
-                    instance.Initialize(runtime);
+                    var instance = (IModComponentConfigurer) Activator.CreateInstance(type);
+                    log.Debug($"Configuring mod component with {type.FullName}");
+                    instance.Configure(builder);
                 }
             );
+        builder.Build();
         log.Info("Mod runtime is ready");
-    }
-
-    private DependencyContainer CreateDependencyContainer() {
-        var container = new DependencyContainerBuilder()
-            .AddSingleton(harmony)
-            .AddType<EventDispatcher>()
-            .ScanAssembly(assembly)
-            .Build();
-        container.PreInstantiate();
-        return container;
     }
 
     private void PrioritizedPatch() => AccessTools.GetTypesFromAssembly(assembly)
