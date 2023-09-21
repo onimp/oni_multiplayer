@@ -109,6 +109,15 @@ public class DependencyContainerTests {
         Assert.Throws<AmbiguousDependencyException>(() => container.Get<IDependencyAb>());
     }
 
+    [Test]
+    public void MustAssignDependenciesToTypeOnce() {
+        var container = new DependencyContainer();
+        container.Register(CreateInfo<ChildDependency>());
+        Assert.DoesNotThrow(() => container.Get<ChildDependency>());
+        Assert.DoesNotThrow(() => container.Get<IDependencyA>());
+        Assert.DoesNotThrow(() => container.Get<IDependencyB>());
+    }
+
     private static DependencyInfo CreateInfo<T>() => new(typeof(T).FullName!, typeof(T), false);
 
     private static Exception UnwindCause(Exception exception) {
@@ -168,6 +177,11 @@ public class DependencyContainerTests {
         public IDependencyB BInstance { get; set; } = null!;
 
     }
+
+    [UsedImplicitly]
+    public class ChildDependency : ParentDependency { }
+
+    public class ParentDependency : IDependencyA, IDependencyB { }
 
     public interface IDependencyA { }
 

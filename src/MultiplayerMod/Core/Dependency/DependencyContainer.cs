@@ -32,8 +32,11 @@ public class DependencyContainer : IDependencyContainer, IDependencyInjector {
 
     private IEnumerable<Type> ResolveDependencyTypes(Type type) {
         var result = new List<Type> { type };
-        if (type.BaseType != null && type.BaseType != typeof(object))
-            result.AddRange(ResolveDependencyTypes(type.BaseType));
+        var baseType = type.BaseType;
+        while (baseType != null && baseType != typeof(object)) {
+            result.Add(baseType);
+            baseType = baseType.BaseType;
+        }
         result.AddRange(type.GetInterfaces());
         return result;
     }
