@@ -6,11 +6,11 @@ using MultiplayerMod.Game.UI.Tools.Events;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class AbstractBuildUtilityCommand<T> : MultiplayerCommand where T : BaseUtilityBuildTool, new() {
+public abstract class AbstractBuildUtilityCommand<T> : MultiplayerCommand where T : BaseUtilityBuildTool, new() {
 
     protected UtilityBuildEventArgs Arguments;
 
-    public AbstractBuildUtilityCommand(UtilityBuildEventArgs arguments) {
+    protected AbstractBuildUtilityCommand(UtilityBuildEventArgs arguments) {
         Arguments = arguments;
     }
 

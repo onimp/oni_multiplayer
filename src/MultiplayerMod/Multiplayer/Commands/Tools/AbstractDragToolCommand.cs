@@ -8,7 +8,7 @@ using MultiplayerMod.Game.UI.Tools.Events;
 namespace MultiplayerMod.Multiplayer.Commands.Tools;
 
 [Serializable]
-public class AbstractDragToolCommand<T> : MultiplayerCommand where T : DragTool, new() {
+public abstract class AbstractDragToolCommand<T> : MultiplayerCommand where T : DragTool, new() {
 
     protected DragCompleteEventArgs Arguments;
 

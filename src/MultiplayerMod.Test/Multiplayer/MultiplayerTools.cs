@@ -5,6 +5,8 @@ using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Commands.Registry;
 using MultiplayerMod.Multiplayer.CoreOperations;
 using MultiplayerMod.Multiplayer.CoreOperations.Binders;
 using MultiplayerMod.Multiplayer.CoreOperations.CommandExecution;
@@ -45,8 +47,12 @@ public static class MultiplayerTools {
             .AddType<MultiplayerJoinRequestController>()
             .AddType<PlayersManagementController>()
             .AddType<SpeedControlScreenContext>()
+            .AddType<MultiplayerCommandRegistry>()
             .AddType<Recorders>()
             .AddType<TestRuntime>();
+
+        var configurer = new MultiplayerCommandsConfigurer();
+        configurer.Configure(builder);
 
         var container = builder.Build();
         var runtime = container.Get<TestRuntime>();

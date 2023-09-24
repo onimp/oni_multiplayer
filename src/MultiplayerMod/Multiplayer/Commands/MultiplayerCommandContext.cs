@@ -1,5 +1,3 @@
-using System;
-using System.Threading;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Network;
@@ -9,25 +7,15 @@ namespace MultiplayerMod.Multiplayer.Commands;
 public class MultiplayerCommandContext {
 
     public IMultiplayerClientId? ClientId { get; }
-    public Runtime Runtime { get; }
+    public Runtime Runtime => accessor.Runtime;
+    public EventDispatcher EventDispatcher => accessor.EventDispatcher;
+    public MultiplayerGame Multiplayer => accessor.Multiplayer;
 
-    private readonly Lazy<EventDispatcher> eventDispatcher;
-    private readonly Lazy<MultiplayerGame> multiplayer;
+    private readonly MultiplayerCommandRuntimeAccessor accessor;
 
-    public EventDispatcher EventDispatcher => eventDispatcher.Value;
-    public MultiplayerGame Multiplayer => multiplayer.Value;
-
-    public MultiplayerCommandContext(IMultiplayerClientId? clientId, Runtime runtime) {
-        Runtime = runtime;
+    public MultiplayerCommandContext(IMultiplayerClientId? clientId, MultiplayerCommandRuntimeAccessor accessor) {
+        this.accessor = accessor;
         ClientId = clientId;
-        eventDispatcher = new Lazy<EventDispatcher>(
-            () => Runtime.Dependencies.Get<EventDispatcher>(),
-            LazyThreadSafetyMode.None
-        );
-        multiplayer = new Lazy<MultiplayerGame>(
-            () => Runtime.Dependencies.Get<MultiplayerGame>(),
-            LazyThreadSafetyMode.None
-        );
     }
 
 }
