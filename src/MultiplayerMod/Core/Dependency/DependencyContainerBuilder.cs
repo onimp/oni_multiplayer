@@ -11,6 +11,8 @@ public class DependencyContainerBuilder {
     private readonly List<Type> includeTypes = new();
     private readonly List<object> singletons = new();
 
+    public event Action<DependencyContainer>? ContainerCreated;
+
     public DependencyContainerBuilder ScanAssembly(Assembly assembly) {
         assemblies.Add((assembly, Array.Empty<string>()));
         return this;
@@ -54,6 +56,7 @@ public class DependencyContainerBuilder {
             container.Register(dependencyInfo);
         }
         container.PreInstantiate();
+        ContainerCreated?.Invoke(container);
         return container;
     }
 

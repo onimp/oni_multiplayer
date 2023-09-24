@@ -20,7 +20,7 @@ public class SteamPlatformConfigurer : IModComponentConfigurer {
 
         log.Info("Steam platform detected");
 
-        UnityObject.CreateStaticWithComponent<LobbyJoinRequestComponent>();
+        builder.ContainerCreated += _ => UnityObject.CreateStaticWithComponent<LobbyJoinRequestComponent>();
     }
 
 }

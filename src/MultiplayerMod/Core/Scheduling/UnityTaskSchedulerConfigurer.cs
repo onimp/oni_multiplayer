@@ -9,7 +9,7 @@ namespace MultiplayerMod.Core.Scheduling;
 public class UnityTaskSchedulerConfigurer : IModComponentConfigurer {
 
     public void Configure(DependencyContainerBuilder builder) {
-        UnityObject.CreateStaticWithComponent<UnityTaskExecutor>();
+        builder.ContainerCreated += _ => UnityObject.CreateStaticWithComponent<UnityTaskExecutor>();
     }
 
 }
