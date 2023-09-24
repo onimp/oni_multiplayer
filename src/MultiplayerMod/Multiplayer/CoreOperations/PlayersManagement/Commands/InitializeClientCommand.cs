@@ -6,7 +6,7 @@ using MultiplayerMod.Multiplayer.Players;
 namespace MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
 
 [Serializable]
-[MultiplayerCommand(Type = MultiplayerCommandType.System)]
+[MultiplayerCommand(Type = MultiplayerCommandType.System, ExecuteOnServer = true)]
 public class InitializeClientCommand : MultiplayerCommand {
 
     private static Core.Logging.Logger log = LoggerFactory.GetLogger<InitializeClientCommand>();

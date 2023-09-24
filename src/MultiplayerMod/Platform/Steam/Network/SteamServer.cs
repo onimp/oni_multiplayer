@@ -12,6 +12,7 @@ using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Commands.Registry;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Components;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
@@ -63,13 +64,15 @@ public class SteamServer : IMultiplayerServer {
     private readonly IMultiplayerClientId currentPlayer = new SteamMultiplayerClientId(SteamUser.GetSteamID());
 
     private readonly UnityTaskScheduler scheduler;
+    private readonly MultiplayerCommandRegistry commands;
     private readonly SteamLobby lobby;
 
     private GameObject? gameObject;
 
-    public SteamServer(SteamLobby lobby, UnityTaskScheduler scheduler) {
+    public SteamServer(SteamLobby lobby, UnityTaskScheduler scheduler, MultiplayerCommandRegistry commands) {
         this.lobby = lobby;
         this.scheduler = scheduler;
+        this.commands = commands;
     }
 
     public void Start() {
@@ -210,7 +213,8 @@ public class SteamServer : IMultiplayerServer {
             );
             if (message != null) {
                 IMultiplayerClientId id = new SteamMultiplayerClientId(steamMessage.m_identityPeer.GetSteamID());
-                if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
+                var configuration = commands.GetCommandConfiguration(message.Command.GetType());
+                if (configuration.ExecuteOnServer) {
                     CommandReceived?.Invoke(id, message.Command);
                 } else {
                     var connections = clients.Where(it => !it.Key.Equals(id)).Select(it => it.Value);

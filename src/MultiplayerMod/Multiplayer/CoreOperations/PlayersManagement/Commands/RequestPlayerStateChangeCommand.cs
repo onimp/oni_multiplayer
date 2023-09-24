@@ -6,7 +6,7 @@ using MultiplayerMod.Network;
 namespace MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
 
 [Serializable]
-[MultiplayerCommand(Type = MultiplayerCommandType.System)]
+[MultiplayerCommand(Type = MultiplayerCommandType.System, ExecuteOnServer = true)]
 public class RequestPlayerStateChangeCommand : MultiplayerCommand {
 
     private PlayerIdentity playerId;

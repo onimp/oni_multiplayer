@@ -37,7 +37,7 @@ public class MultiplayerCommandRegistry {
 
     private MultiplayerCommandConfiguration ExtractConfiguration(Type type) {
         var attribute = type.GetCustomAttribute<MultiplayerCommandAttribute>() ?? new MultiplayerCommandAttribute();
-        return new MultiplayerCommandConfiguration(type, attribute.Type);
+        return new MultiplayerCommandConfiguration(type, attribute.Type, attribute.ExecuteOnServer);
     }
 
 }

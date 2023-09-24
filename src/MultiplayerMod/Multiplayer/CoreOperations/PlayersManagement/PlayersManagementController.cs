@@ -53,10 +53,7 @@ public class PlayersManagementController {
     }
 
     private void OnCurrentPlayerInitialized(CurrentPlayerInitializedEvent @event) {
-        client.Send(
-            new RequestPlayerStateChangeCommand(@event.Player.Id, PlayerState.Loading),
-            MultiplayerCommandOptions.ExecuteOnServer
-        );
+        client.Send(new RequestPlayerStateChangeCommand(@event.Player.Id, PlayerState.Loading));
         if (@event.Player.Role == PlayerRole.Host)
             server.Send(new ChangePlayerStateCommand(@event.Player.Id, PlayerState.Ready));
         else
@@ -67,8 +64,7 @@ public class PlayersManagementController {
         if (state != MultiplayerClientState.Connected)
             return;
 
-        var command = new InitializeClientCommand(profileProvider.GetPlayerProfile());
-        client.Send(command, MultiplayerCommandOptions.ExecuteOnServer);
+        client.Send(new InitializeClientCommand(profileProvider.GetPlayerProfile()));
     }
 
     private void OnGameStarted(GameStartedEvent @event) {
@@ -76,15 +72,11 @@ public class PlayersManagementController {
             return;
 
         var currentPlayer = @event.Multiplayer.Players.Current;
-        var command = new RequestPlayerStateChangeCommand(currentPlayer.Id, PlayerState.Ready);
-        client.Send(command, MultiplayerCommandOptions.ExecuteOnServer);
+        client.Send(new RequestPlayerStateChangeCommand(currentPlayer.Id, PlayerState.Ready));
     }
 
     private void OnGameQuit(GameQuitEvent @event) {
-        client.Send(
-            new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving),
-            MultiplayerCommandOptions.ExecuteOnServer
-        );
+        client.Send(new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving));
         client.Disconnect();
         multiplayer.Players.Synchronize(Array.Empty<MultiplayerPlayer>());
     }
