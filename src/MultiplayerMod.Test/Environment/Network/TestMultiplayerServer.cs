@@ -4,6 +4,7 @@ using System.Linq;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Commands.Registry;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Test.Environment.Network;
@@ -20,15 +21,21 @@ public class TestMultiplayerServer : IMultiplayerServer {
     public List<IMultiplayerClientId> Clients { get; } = new();
 
     private readonly TestRuntime runtime;
+    private readonly MultiplayerCommandRegistry registry;
     private readonly TestMultiplayerClientId currentPlayer;
     private readonly Queue<System.Action> pendingActions = new();
 
     public bool EnablePendingActions { get; set; }
 
-    public TestMultiplayerServer(TestMultiplayerClientId identity, TestRuntime runtime) {
+    public TestMultiplayerServer(
+        TestMultiplayerClientId identity,
+        TestRuntime runtime,
+        MultiplayerCommandRegistry registry
+    ) {
         Endpoint = new TestMultiplayerEndpoint(this);
         currentPlayer = identity;
         this.runtime = runtime;
+        this.registry = registry;
     }
 
     public void Start() {
@@ -93,7 +100,8 @@ public class TestMultiplayerServer : IMultiplayerServer {
         var oldRuntime = (TestRuntime) Runtime.Instance;
         try {
             runtime.Activate();
-            if (options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
+            var configuration = registry.GetCommandConfiguration(command.GetType());
+            if (configuration.ExecuteOnServer) {
                 CommandReceived?.Invoke(source.Id, CommandTools.Copy(command));
                 return;
             }
