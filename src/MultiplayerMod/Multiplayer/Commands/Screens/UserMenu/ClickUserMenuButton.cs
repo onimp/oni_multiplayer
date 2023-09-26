@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Game;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
@@ -31,7 +32,10 @@ public class ClickUserMenuButton : MultiplayerCommand {
                 new Type[] { },
                 new ParameterModifier[] { }
             );
-            methodInfo?.Invoke(reference.GetComponent(actionDeclaringType), new object[] { });
+            var target = reference.GetGameObject();
+            methodInfo?.Invoke(target.GetComponent(actionDeclaringType), new object[] { });
+            target.Trigger(GameHashes.RefreshUserMenu);
+            target.Trigger(GameHashes.UIRefresh);
         } catch (Exception e) {
             log.Error(e.ToString());
         }
