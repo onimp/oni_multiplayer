@@ -14,4 +14,13 @@ public static class GameObjectExtensions {
     public static GameObjectReference GetGridReference(this GameObject gameObject) =>
         new GridReference(gameObject);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static GameObjectReference GetReference(this GameObject gameObject) {
+        var multiplayerId = gameObject.GetComponent<MultiplayerInstance>().Id;
+        if (multiplayerId != null)
+            return new MultiplayerIdReference(multiplayerId);
+
+        return new GridReference(gameObject);
+    }
+
 }

@@ -17,7 +17,7 @@ public class ClickUserMenuButton : MultiplayerCommand {
     private string actionName;
 
     public ClickUserMenuButton(GameObject gameObject, System.Action action) {
-        reference = gameObject.GetMultiplayerReference();
+        reference = gameObject.GetReference();
         actionDeclaringType = action.Method.DeclaringType!;
         actionName = action.Method.Name;
     }
