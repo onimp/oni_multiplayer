@@ -16,7 +16,7 @@ public class MultiplayerGameObjectsSpawner {
     }
 
     private void OnGameStarted(GameStartedEvent _) {
-        UnityObject.CreateWithComponent<DrawCursorComponent, WorldDebugSnapshotRunner>();
+        UnityObject.CreateWithComponent<CursorManager, WorldDebugSnapshotRunner>();
     }
 
 }
