@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +12,7 @@ public class CursorComponent : MonoBehaviour {
     private TimedCursor current = null!;
 
     private Camera camera = null!;
+    private TextMeshProUGUI textComponent = null!;
 
     private bool initialized;
 
@@ -22,13 +24,18 @@ public class CursorComponent : MonoBehaviour {
         }
     }
 
+    public string CursorText { get; set; } = null!;
+
     public void Trace(Vector2 position) {
         previous = current;
         current = new TimedCursor(position, System.DateTime.Now.Ticks);
     }
 
     private void OnEnable() {
-        CreateCursorGameObject();
+        var cursorTexture = Assets.GetTexture("cursor_arrow");
+
+        CreateCursorGameObject(cursorTexture);
+        CreateTextGameObject(cursorTexture);
 
         var parent = GameScreenManager.Instance.GetParent(GameScreenManager.UIRenderTarget.ScreenSpaceOverlay);
         gameObject.SetLayerRecursively(LayerMask.NameToLayer("UI"));
@@ -39,9 +46,8 @@ public class CursorComponent : MonoBehaviour {
         initialized = true;
     }
 
-    private void CreateCursorGameObject() {
+    private void CreateCursorGameObject(Texture2D cursorTexture) {
         var imageGameObject = new GameObject { transform = { parent = gameObject.transform } };
-        var cursorTexture = Assets.GetTexture("cursor_arrow");
         var rectTransform = imageGameObject.AddComponent<RectTransform>();
         rectTransform.transform.parent = imageGameObject.transform;
         rectTransform.sizeDelta = new Vector2(cursorTexture.width, cursorTexture.height);
@@ -56,11 +62,29 @@ public class CursorComponent : MonoBehaviour {
         imageComponent.raycastTarget = false;
     }
 
+    private void CreateTextGameObject(Texture2D cursorTexture) {
+        var textGameObject = new GameObject { transform = { parent = gameObject.transform } };
+
+        var rectTransform = textGameObject.AddComponent<RectTransform>();
+        rectTransform.transform.parent = textGameObject.transform;
+        rectTransform.sizeDelta = new Vector2(50, 50);
+        rectTransform.pivot = new Vector2(0, 1); // Align to top left corner.
+        rectTransform.position = new Vector3(cursorTexture.width, -cursorTexture.height, 0);
+
+        textComponent = textGameObject.AddComponent<TextMeshProUGUI>();
+        textComponent.fontSize = 14;
+        textComponent.font = Localization.FontAsset;
+        textComponent.color = Color.white;
+        textComponent.raycastTarget = false;
+        textComponent.enableWordWrapping = false;
+    }
+
     private void Update() {
         if (!initialized)
             return;
 
         gameObject.transform.position = camera.WorldToScreenPoint(GetCurrentPosition());
+        textComponent.text = CursorText;
     }
 
     private Vector2 GetCurrentPosition() {

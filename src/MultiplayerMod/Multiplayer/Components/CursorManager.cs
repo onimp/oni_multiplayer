@@ -31,6 +31,7 @@ public class CursorManager : MultiplayerMonoBehaviour {
         if (!cursors.TryGetValue(updatedEvent.Player, out var cursor)) {
             cursor = gameObject.AddComponent<CursorComponent>();
             cursor.Position = updatedEvent.Position;
+            cursor.CursorText = updatedEvent.Player.Profile.PlayerName;
             cursors[updatedEvent.Player] = cursor;
             return;
         }
