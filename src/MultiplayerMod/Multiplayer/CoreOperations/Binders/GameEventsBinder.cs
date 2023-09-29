@@ -8,6 +8,7 @@ using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.Multiplayer.Commands.Alerts;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Player;
@@ -96,6 +97,8 @@ public class GameEventsBinder {
             containers => client.Send(new InitializeImmigration(containers));
 
         UserMenuScreenEvents.PriorityChanged += (target, priority) => client.Send(new ChangePriority(target, priority));
+
+        MeterScreenEvents.RedAlertToggling += enabled => client.Send(new ChangeRedAlertState(enabled));
     }
 
     private void BindTools() {

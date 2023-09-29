@@ -25,7 +25,7 @@ public class MultiplayerCommandRegistry {
 
         var configuration = ExtractConfiguration(type);
         commands[type] = configuration;
-        log.Debug(() => $"{configuration.Type} command {type} registered");
+        log.Debug(() => $"{configuration.CommandType} command {type} registered");
     }
 
     public MultiplayerCommandConfiguration GetCommandConfiguration(Type type) {
