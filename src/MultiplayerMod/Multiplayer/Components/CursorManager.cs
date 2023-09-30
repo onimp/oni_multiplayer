@@ -28,14 +28,16 @@ public class CursorManager : MultiplayerMonoBehaviour {
     private void OnDisable() => subscriptions.Cancel();
 
     private void OnCursorUpdated(PlayerCursorPositionUpdatedEvent updatedEvent) {
-        if (!cursors.TryGetValue(updatedEvent.Player, out var cursor)) {
-            cursor = gameObject.AddComponent<CursorComponent>();
-            cursor.Position = updatedEvent.Position;
-            cursor.CursorText = updatedEvent.Player.Profile.PlayerName;
-            cursors[updatedEvent.Player] = cursor;
+        if (!cursors.TryGetValue(updatedEvent.Player, out var cursorComponent)) {
+            cursorComponent = gameObject.AddComponent<CursorComponent>();
+            cursorComponent.Position = updatedEvent.Position;
+            cursorComponent.PlayerName = updatedEvent.Player.Profile.PlayerName;
+            cursorComponent.ScreenName = updatedEvent.ScreenName;
+            cursors[updatedEvent.Player] = cursorComponent;
             return;
         }
-        cursor.Trace(updatedEvent.Position);
+        cursorComponent.ScreenName = updatedEvent.ScreenName;
+        cursorComponent.Trace(updatedEvent.Position);
     }
 
 }
