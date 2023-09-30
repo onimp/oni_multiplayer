@@ -3,4 +3,5 @@ using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Players.Events;
 
-public record PlayerCursorPositionUpdatedEvent(MultiplayerPlayer Player, Vector2 Position) : IDispatchableEvent;
+public record PlayerCursorPositionUpdatedEvent
+    (MultiplayerPlayer Player, Vector2 Position, string? ScreenName) : IDispatchableEvent;

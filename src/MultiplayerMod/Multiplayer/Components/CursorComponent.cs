@@ -24,7 +24,9 @@ public class CursorComponent : MonoBehaviour {
         }
     }
 
-    public string CursorText { get; set; } = null!;
+    public string PlayerName { get; set; } = null!;
+
+    public string? ScreenName { get; set; }
 
     public void Trace(Vector2 position) {
         previous = current;
@@ -84,7 +86,7 @@ public class CursorComponent : MonoBehaviour {
             return;
 
         gameObject.transform.position = camera.WorldToScreenPoint(GetCurrentPosition());
-        textComponent.text = CursorText;
+        textComponent.text = PlayerName + (ScreenName == null ? "" : $" ({ScreenName})");
     }
 
     private Vector2 GetCurrentPosition() {
