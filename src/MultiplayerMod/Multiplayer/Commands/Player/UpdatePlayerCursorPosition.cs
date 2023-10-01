@@ -1,7 +1,7 @@
 ﻿using System;
+using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
-using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands.Player;
 
@@ -9,18 +9,19 @@ namespace MultiplayerMod.Multiplayer.Commands.Player;
 public class UpdatePlayerCursorPosition : MultiplayerCommand {
 
     private PlayerIdentity playerId;
-    private Vector2 position;
-    private string? screenName;
+    private InterfaceToolEvents.MouseMovedEventArgs mouseMovedEventArgs;
 
-    public UpdatePlayerCursorPosition(PlayerIdentity playerId, Vector2 position, string? screenName) {
+    public UpdatePlayerCursorPosition(
+        PlayerIdentity playerId,
+        InterfaceToolEvents.MouseMovedEventArgs mouseMovedEventArgs
+    ) {
         this.playerId = playerId;
-        this.position = position;
-        this.screenName = screenName;
+        this.mouseMovedEventArgs = mouseMovedEventArgs;
     }
 
     public override void Execute(MultiplayerCommandContext context) {
         var player = context.Multiplayer.Players[playerId];
-        context.EventDispatcher.Dispatch(new PlayerCursorPositionUpdatedEvent(player, position, screenName));
+        context.EventDispatcher.Dispatch(new PlayerCursorPositionUpdatedEvent(player, mouseMovedEventArgs));
     }
 
 }

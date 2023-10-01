@@ -65,8 +65,8 @@ public class GameEventsBinder {
     private void BindMouse() {
         // TODO: Cursor update may be ignored if MouseMoved isn't triggered after the rate period.
         // TODO: Will be changed later (probably with current / last sent positions check).
-        InterfaceToolEvents.MouseMoved += (position, screenName) => throttle10Hz.Run<UpdatePlayerCursorPosition>(
-            () => client.Send(new UpdatePlayerCursorPosition(multiplayer.Players.Current.Id, position, screenName))
+        InterfaceToolEvents.MouseMoved += args => throttle10Hz.Run<UpdatePlayerCursorPosition>(
+            () => client.Send(new UpdatePlayerCursorPosition(multiplayer.Players.Current.Id, args))
         );
     }
 
