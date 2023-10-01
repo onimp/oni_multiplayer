@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,6 +14,7 @@ public class CursorComponent : MonoBehaviour {
     private TimedCursor current = null!;
 
     private Camera camera = null!;
+    private Image imageComponent = null!;
     private TextMeshProUGUI textComponent = null!;
 
     private bool initialized;
@@ -27,6 +30,7 @@ public class CursorComponent : MonoBehaviour {
     public string PlayerName { get; set; } = null!;
 
     public string? ScreenName { get; set; }
+    public Type? ScreenType { get; set; }
 
     public void Trace(Vector2 position) {
         previous = current;
@@ -55,7 +59,7 @@ public class CursorComponent : MonoBehaviour {
         rectTransform.sizeDelta = new Vector2(cursorTexture.width, cursorTexture.height);
         rectTransform.pivot = new Vector2(0, 1); // Align to top left corner.
 
-        var imageComponent = imageGameObject.AddComponent<Image>();
+        imageComponent = imageGameObject.AddComponent<Image>();
         imageComponent.sprite = Sprite.Create(
             cursorTexture,
             new Rect(0, 0, cursorTexture.width, cursorTexture.height),
@@ -85,8 +89,13 @@ public class CursorComponent : MonoBehaviour {
         if (!initialized)
             return;
 
+        var isOnTheSameScreen = KScreenManager.Instance.screenStack.FirstOrDefault(screen => screen.mouseOver)
+            ?.GetType() == ScreenType;
+
         gameObject.transform.position = camera.WorldToScreenPoint(GetCurrentPosition());
-        textComponent.text = PlayerName + (ScreenName == null ? "" : $" ({ScreenName})");
+        textComponent.text = PlayerName + (isOnTheSameScreen ? "" : $" ({ScreenName ?? "World"})");
+
+        imageComponent.color = textComponent.color = isOnTheSameScreen ? Color.white : new Color(1, 1, 1, 0.5f);
     }
 
     private Vector2 GetCurrentPosition() {
