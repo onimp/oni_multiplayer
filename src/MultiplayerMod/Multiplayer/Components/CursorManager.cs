@@ -31,7 +31,8 @@ public class CursorManager : MultiplayerMonoBehaviour {
         if (!cursors.TryGetValue(updatedEvent.Player, out var cursorComponent)) {
             cursorComponent = gameObject.AddComponent<CursorComponent>();
             cursorComponent.PlayerName = updatedEvent.Player.Profile.PlayerName;
-            cursorComponent.Position = updatedEvent.MouseMovedEventArgs.Position;
+            cursorComponent.CursorWithinWorld.SetPosition(updatedEvent.MouseMovedEventArgs.Position);
+            cursorComponent.CursorWithinScreen.SetPosition(updatedEvent.MouseMovedEventArgs.PositionWithinScreen);
             cursorComponent.ScreenName = updatedEvent.MouseMovedEventArgs.ScreenName;
             cursorComponent.ScreenType = updatedEvent.MouseMovedEventArgs.ScreenType;
             cursors[updatedEvent.Player] = cursorComponent;
@@ -39,7 +40,8 @@ public class CursorManager : MultiplayerMonoBehaviour {
         }
         cursorComponent.ScreenName = updatedEvent.MouseMovedEventArgs.ScreenName;
         cursorComponent.ScreenType = updatedEvent.MouseMovedEventArgs.ScreenType;
-        cursorComponent.Trace(updatedEvent.MouseMovedEventArgs.Position);
+        cursorComponent.CursorWithinWorld.Trace(updatedEvent.MouseMovedEventArgs.Position);
+        cursorComponent.CursorWithinScreen.Trace(updatedEvent.MouseMovedEventArgs.PositionWithinScreen);
     }
 
 }

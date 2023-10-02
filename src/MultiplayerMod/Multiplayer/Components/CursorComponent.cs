@@ -8,34 +8,18 @@ namespace MultiplayerMod.Multiplayer.Components;
 
 public class CursorComponent : MonoBehaviour {
 
-    private record TimedCursor(Vector2 Position, long Time);
-
-    private TimedCursor previous = null!;
-    private TimedCursor current = null!;
-
     private Camera camera = null!;
     private Image imageComponent = null!;
     private TextMeshProUGUI textComponent = null!;
 
     private bool initialized;
 
-    public Vector3 Position {
-        set {
-            var ticks = System.DateTime.Now.Ticks;
-            previous = new TimedCursor(value, ticks);
-            current = new TimedCursor(value, ticks);
-        }
-    }
-
+    public readonly SmoothCursor CursorWithinWorld = new SmoothCursor();
+    public readonly SmoothCursor CursorWithinScreen = new SmoothCursor();
     public string PlayerName { get; set; } = null!;
 
     public string? ScreenName { get; set; }
     public Type? ScreenType { get; set; }
-
-    public void Trace(Vector2 position) {
-        previous = current;
-        current = new TimedCursor(position, System.DateTime.Now.Ticks);
-    }
 
     private void OnEnable() {
         var cursorTexture = Assets.GetTexture("cursor_arrow");
@@ -89,18 +73,57 @@ public class CursorComponent : MonoBehaviour {
         if (!initialized)
             return;
 
-        var isOnTheSameScreen = KScreenManager.Instance.screenStack.FirstOrDefault(screen => screen.mouseOver)
-            ?.GetType() == ScreenType;
+        var currentScreen = KScreenManager.Instance.screenStack.FirstOrDefault(screen => screen.mouseOver);
+        var otherClientScreen =
+            KScreenManager.Instance.screenStack.FirstOrDefault(screen => screen.GetType() == ScreenType);
+        var isOnTheSameScreen = currentScreen?.GetType() == ScreenType;
 
-        gameObject.transform.position = camera.WorldToScreenPoint(GetCurrentPosition());
+        // If we see a screen where other player is - show cursor within that screen.
+        var showScreenOrWorldCursor =
+            CursorWithinScreen.CurrentPosition != null && (otherClientScreen?.isActive ?? false);
+        gameObject.transform.position = showScreenOrWorldCursor
+            ? ScreenToWorld(otherClientScreen!, (Vector3) CursorWithinScreen.CurrentPosition!)
+            : camera.WorldToScreenPoint((Vector3) CursorWithinWorld.CurrentPosition!);
         textComponent.text = PlayerName + (isOnTheSameScreen ? "" : $" ({ScreenName ?? "World"})");
-
         imageComponent.color = textComponent.color = isOnTheSameScreen ? Color.white : new Color(1, 1, 1, 0.5f);
     }
 
-    private Vector2 GetCurrentPosition() {
-        float updateDelta = current.Time - previous.Time;
-        var timeDiff = (System.DateTime.Now.Ticks - current.Time) / updateDelta;
-        return Vector2.Lerp(previous.Position, current.Position, timeDiff);
+    private static Vector3 ScreenToWorld(KScreen screen, Vector3 pos) {
+        var screenRectTransform = screen.transform as RectTransform;
+        if (screenRectTransform == null) return Vector3.zero;
+
+        return new Vector2(
+            screenRectTransform.position.x + pos.x * screenRectTransform.rect.width,
+            screenRectTransform.position.y + pos.y * screenRectTransform.rect.height
+        );
+    }
+
+    public class SmoothCursor {
+        private record TimedCursor(Vector2? Position, long Time);
+
+        private TimedCursor previous = null!;
+        private TimedCursor current = null!;
+
+        public void SetPosition(Vector2? position) {
+            var ticks = System.DateTime.Now.Ticks;
+            previous = new TimedCursor(position, ticks);
+            current = new TimedCursor(position, ticks);
+        }
+
+        public void Trace(Vector2? position) {
+            previous = current;
+            current = new TimedCursor(position, System.DateTime.Now.Ticks);
+        }
+
+        public Vector3? CurrentPosition {
+            get {
+                if (previous.Position == null) return current.Position;
+                if (current.Position == null) return null;
+
+                float updateDelta = current.Time - previous.Time;
+                var timeDiff = (System.DateTime.Now.Ticks - current.Time) / updateDelta;
+                return Vector2.Lerp((Vector2) previous.Position, (Vector2) current.Position, timeDiff);
+            }
+        }
     }
 }

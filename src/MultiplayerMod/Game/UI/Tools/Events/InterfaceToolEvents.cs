@@ -23,6 +23,7 @@ public static class InterfaceToolEvents {
         MouseMoved?.Invoke(
             new MouseMovedEventArgs(
                 new Vector2(cursor_pos.x, cursor_pos.y),
+                WorldToScreen(kScreen, cursor_pos),
                 GetScreenName(kScreen),
                 kScreen?.GetType()
             )
@@ -35,9 +36,23 @@ public static class InterfaceToolEvents {
         _ => screen?.displayName
     };
 
+    private static Vector2? WorldToScreen(KScreen? screen, Vector2 cursorPos) {
+        if (screen == null) return null;
+        var screenRectTransform = screen.transform as RectTransform;
+        if (screenRectTransform == null) return null;
+
+        var screenPoint = Camera.main.WorldToScreenPoint(cursorPos);
+
+        return new Vector2(
+            (screenPoint.x - screenRectTransform.position.x) / screenRectTransform.rect.width,
+            (screenPoint.y - screenRectTransform.position.y) / screenRectTransform.rect.height
+        );
+    }
+
     [Serializable]
     public record MouseMovedEventArgs(
         Vector2 Position,
+        Vector2? PositionWithinScreen,
         string? ScreenName,
         Type? ScreenType
     );
