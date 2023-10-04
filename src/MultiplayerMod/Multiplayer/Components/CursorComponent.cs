@@ -14,30 +14,39 @@ public class CursorComponent : MonoBehaviour {
 
     private bool initialized;
 
-    public readonly SmoothCursor CursorWithinWorld = new SmoothCursor();
-    public readonly SmoothCursor CursorWithinScreen = new SmoothCursor();
+    public readonly SmoothCursor CursorWithinWorld = new();
+    public readonly SmoothCursor CursorWithinScreen = new();
     public string PlayerName { get; set; } = null!;
 
     public string? ScreenName { get; set; }
     public Type? ScreenType { get; set; }
 
     private void OnEnable() {
-        var cursorTexture = Assets.GetTexture("cursor_arrow");
-
-        CreateCursorGameObject(cursorTexture);
-        CreateTextGameObject(cursorTexture);
-
         var parent = GameScreenManager.Instance.GetParent(GameScreenManager.UIRenderTarget.ScreenSpaceOverlay);
+
+        var cursorTexture = Assets.GetTexture("cursor_arrow");
+        var canvas = CreateCanvas(parent);
+        CreateCursorGameObject(gameObject, cursorTexture);
+        CreateTextGameObject(gameObject, cursorTexture);
+
+        gameObject.transform.SetParent(canvas.transform, false);
         gameObject.SetLayerRecursively(LayerMask.NameToLayer("UI"));
-        gameObject.transform.SetParent(parent.transform, false);
 
         camera = GameScreenManager.Instance.GetCamera(GameScreenManager.UIRenderTarget.ScreenSpaceCamera);
 
         initialized = true;
     }
 
-    private void CreateCursorGameObject(Texture2D cursorTexture) {
-        var imageGameObject = new GameObject { transform = { parent = gameObject.transform } };
+    private GameObject CreateCanvas(GameObject parent) {
+        var canvasGameObject = new GameObject { transform = { parent = parent.transform } };
+        var canvas = canvasGameObject.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 100;
+        return canvasGameObject;
+    }
+
+    private void CreateCursorGameObject(GameObject parent, Texture2D cursorTexture) {
+        var imageGameObject = new GameObject { transform = { parent = parent.transform } };
         var rectTransform = imageGameObject.AddComponent<RectTransform>();
         rectTransform.transform.parent = imageGameObject.transform;
         rectTransform.sizeDelta = new Vector2(cursorTexture.width, cursorTexture.height);
@@ -52,8 +61,8 @@ public class CursorComponent : MonoBehaviour {
         imageComponent.raycastTarget = false;
     }
 
-    private void CreateTextGameObject(Texture2D cursorTexture) {
-        var textGameObject = new GameObject { transform = { parent = gameObject.transform } };
+    private void CreateTextGameObject(GameObject parent, Texture2D cursorTexture) {
+        var textGameObject = new GameObject { transform = { parent = parent.transform } };
 
         var rectTransform = textGameObject.AddComponent<RectTransform>();
         rectTransform.transform.parent = textGameObject.transform;
