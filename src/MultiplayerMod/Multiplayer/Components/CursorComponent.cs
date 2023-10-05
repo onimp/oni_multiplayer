@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace MultiplayerMod.Multiplayer.Components;
@@ -82,10 +84,8 @@ public class CursorComponent : MonoBehaviour {
         if (!initialized)
             return;
 
-        var currentScreen = KScreenManager.Instance.screenStack.FirstOrDefault(screen => screen.mouseOver);
         var otherClientScreen =
             KScreenManager.Instance.screenStack.FirstOrDefault(screen => screen.GetType() == ScreenType);
-        var isOnTheSameScreen = currentScreen?.GetType() == ScreenType;
 
         // If we see a screen where other player is - show cursor within that screen.
         var showScreenOrWorldCursor =
@@ -93,8 +93,36 @@ public class CursorComponent : MonoBehaviour {
         gameObject.transform.position = showScreenOrWorldCursor
             ? ScreenToWorld(otherClientScreen!, (Vector3) CursorWithinScreen.CurrentPosition!)
             : camera.WorldToScreenPoint((Vector3) CursorWithinWorld.CurrentPosition!);
-        textComponent.text = PlayerName + (isOnTheSameScreen ? "" : $" ({ScreenName ?? "World"})");
-        imageComponent.color = textComponent.color = isOnTheSameScreen ? Color.white : new Color(1, 1, 1, 0.5f);
+        var screenUnderCursor = FindScreenUnderCursor(gameObject.transform.position);
+        var showScreeName = screenUnderCursor?.GetType() != ScreenType;
+        textComponent.text = PlayerName + (showScreeName ? $" ({ScreenName ?? "World"})" : "");
+        imageComponent.color = textComponent.color = showScreeName ? new Color(1, 1, 1, 0.5f) : Color.white;
+    }
+
+    private KScreen? FindScreenUnderCursor(Vector2 cursor) {
+        var eventData = new PointerEventData(UnityEngine.EventSystems.EventSystem.current) {
+            position = cursor
+        };
+
+        var results = new List<RaycastResult>();
+        UnityEngine.EventSystems.EventSystem.current.RaycastAll(eventData, results);
+        if (results.Count == 0) return null;
+
+        return KScreenManager.Instance.screenStack.FirstOrDefault(
+            screen => IsParentOf(screen.gameObject, results[0].gameObject)
+        );
+    }
+
+    private static bool IsParentOf(GameObject potentialParent, GameObject potentialChild) {
+        var current = potentialChild.transform;
+        while (current != null) {
+            if (current.gameObject == potentialParent) {
+                return true;
+            }
+            current = current.parent;
+        }
+
+        return false;
     }
 
     private static Vector3 ScreenToWorld(KScreen screen, Vector3 pos) {
