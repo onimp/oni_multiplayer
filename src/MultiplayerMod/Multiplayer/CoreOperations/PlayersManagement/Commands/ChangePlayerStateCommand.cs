@@ -21,6 +21,8 @@ public class ChangePlayerStateCommand : MultiplayerCommand {
         var player = context.Multiplayer.Players[playerId];
         player.State = state;
         context.EventDispatcher.Dispatch(new PlayerStateChangedEvent(player, state));
+        if (context.Multiplayer.Players.Ready)
+            context.EventDispatcher.Dispatch(new PlayersReadyEvent(context.Multiplayer));
     }
 
 }

@@ -25,12 +25,15 @@ public class WorldManager {
     }
 
     public void Sync() {
+        var resume = !SpeedControlScreen.Instance.IsPaused;
         server.Send(new PauseGame());
         multiplayer.Objects.SynchronizeWithTracker();
         multiplayer.Players.ForEach(it => server.Send(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
         server.Send(new ChangePlayerStateCommand(multiplayer.Players.Current.Id, PlayerState.Ready));
         server.Send(new ShowLoadOverlay());
         server.Send(new LoadWorld(GetWorldSave()), MultiplayerCommandOptions.SkipHost);
+        if (resume)
+            server.Send(new ResumeGame());
     }
 
     public static void LoadWorldSave(byte[] data) {

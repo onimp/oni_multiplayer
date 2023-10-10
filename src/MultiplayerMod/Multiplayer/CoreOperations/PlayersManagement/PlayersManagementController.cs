@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
 using MultiplayerMod.Multiplayer.Players;
@@ -23,6 +24,7 @@ public class PlayersManagementController {
 
     private readonly WorldManager worldManager;
     private readonly MultiplayerGame multiplayer;
+    private readonly UnityTaskScheduler scheduler;
 
     private readonly IPlayerProfileProvider profileProvider;
 
@@ -34,13 +36,15 @@ public class PlayersManagementController {
         EventDispatcher events,
         IPlayerProfileProvider profileProvider,
         WorldManager worldManager,
-        MultiplayerGame multiplayer
+        MultiplayerGame multiplayer,
+        UnityTaskScheduler scheduler
     ) {
         this.client = client;
         this.profileProvider = profileProvider;
         this.server = server;
         this.worldManager = worldManager;
         this.multiplayer = multiplayer;
+        this.scheduler = scheduler;
 
         server.ClientDisconnected += OnClientDisconnected;
         events.Subscribe<ClientInitializationRequestEvent>(OnClientInitializationRequested);
@@ -72,7 +76,7 @@ public class PlayersManagementController {
             return;
 
         var currentPlayer = @event.Multiplayer.Players.Current;
-        client.Send(new RequestPlayerStateChangeCommand(currentPlayer.Id, PlayerState.Ready));
+        scheduler.Run(() => client.Send(new RequestPlayerStateChangeCommand(currentPlayer.Id, PlayerState.Ready)));
     }
 
     private void OnGameQuit(GameQuitEvent @event) {

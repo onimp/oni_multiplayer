@@ -15,13 +15,9 @@ public static class LoadOverlay {
         LoadingOverlay.Load(() => { });
         LoadingOverlay.instance.GetComponentInChildren<LocText>().text = text;
 
-        var multiplayer = Dependencies.Get<MultiplayerGame>();
         var eventDispatcher = Dependencies.Get<EventDispatcher>();
-        eventDispatcher.Subscribe<PlayerStateChangedEvent>(
+        eventDispatcher.Subscribe<PlayersReadyEvent>(
             (_, subscription) => {
-                if (!multiplayer.Players.Ready)
-                    return;
-
                 LoadingOverlay.Clear();
                 subscription.Cancel();
                 active = false;
