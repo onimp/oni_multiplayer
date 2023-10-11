@@ -100,7 +100,11 @@ public class CursorComponent : MonoBehaviour {
     }
 
     private KScreen? FindScreenUnderCursor(Vector2 cursor) {
-        var eventData = new PointerEventData(UnityEngine.EventSystems.EventSystem.current) {
+        var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+        if (eventSystem == null)
+            return null;
+
+        var eventData = new PointerEventData(eventSystem) {
             position = cursor
         };
 
