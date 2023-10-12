@@ -31,18 +31,25 @@ public class WorldManager {
         multiplayer.Players.ForEach(it => server.Send(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
         server.Send(new ChangePlayerStateCommand(multiplayer.Players.Current.Id, PlayerState.Ready));
         server.Send(new ShowLoadOverlay());
-        server.Send(new LoadWorld(GetWorldSave()), MultiplayerCommandOptions.SkipHost);
+        server.Send(new LoadWorld(WorldName, GetWorldSave()), MultiplayerCommandOptions.SkipHost);
         if (resume)
             server.Send(new ResumeGame());
     }
 
-    public static void LoadWorldSave(byte[] data) {
-        var path = Path.GetTempFileName();
+    public static void LoadWorldSave(string worldName, byte[] data) {
+        var savePath = SaveLoader.GetCloudSavesDefault()
+            ? SaveLoader.GetCloudSavePrefix()
+            : SaveLoader.GetSavePrefixAndCreateFolder();
+
+        var path = Path.Combine(savePath, worldName, $"{worldName}.sav");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using (var writer = new BinaryWriter(File.OpenWrite(path))) {
             writer.Write(data);
         }
         LoadScreen.DoLoad(path);
     }
+
+    private static string WorldName => Path.GetFileNameWithoutExtension(SaveLoader.GetActiveSaveFilePath());
 
     private static byte[] GetWorldSave() {
         var path = SaveLoader.GetActiveSaveFilePath();

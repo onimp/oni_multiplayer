@@ -7,12 +7,14 @@ namespace MultiplayerMod.Multiplayer.Commands.World;
 [MultiplayerCommand(Type = MultiplayerCommandType.System)]
 public class LoadWorld : MultiplayerCommand {
 
+    private string worldName;
     private byte[] data;
 
-    public LoadWorld(byte[] data) {
+    public LoadWorld(string worldName, byte[] data) {
+        this.worldName = worldName;
         this.data = data;
     }
 
-    public override void Execute(MultiplayerCommandContext context) => WorldManager.LoadWorldSave(data);
+    public override void Execute(MultiplayerCommandContext context) => WorldManager.LoadWorldSave(worldName, data);
 
 }
