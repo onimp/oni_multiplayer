@@ -26,7 +26,11 @@ internal static class MainMenuPatch {
             highlight: false,
             () => UseMultiplayerMode(MultiplayerMode.Host, __instance.LoadGame)
         );
-        __instance.AddButton("JOIN MULTIPLAYER", highlight: false, operations.Join);
+        __instance.AddButton(
+            "JOIN MULTIPLAYER",
+            highlight: false,
+            () => UseMultiplayerMode(MultiplayerMode.Client, operations.Join)
+        );
     }
 
     [HarmonyPrefix]
