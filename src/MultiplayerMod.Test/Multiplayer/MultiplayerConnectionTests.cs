@@ -97,6 +97,13 @@ public class MultiplayerConnectionTests {
         // Event: the client finished loading and the game is started
         clientRuntime.StartGame();
 
+        // Lists must be equal and the client player must be in loading state
+        AssertPlayersAreEqual(hostRuntime, clientRuntime);
+        Assert.AreEqual(expected: PlayerState.Loading, actual: clientPlayer.State);
+
+        // Unity transitions into the next frame
+        UnityTestRuntime.NextFrame();
+
         // Lists must be equal and the client player must be ready
         AssertPlayersAreEqual(hostRuntime, clientRuntime);
         Assert.AreEqual(expected: PlayerState.Ready, actual: clientPlayer.State);
@@ -158,7 +165,13 @@ public class MultiplayerConnectionTests {
     private static Harmony SetupEnvironment() {
         UnityTestRuntime.Install();
         var harmony = new Harmony("MultiplayerConnectionTests");
-        PatchesSetup.Install(harmony, new List<Type> { typeof(WorldManagerPatch), typeof(LoadOverlayPatch) });
+        PatchesSetup.Install(
+            harmony,
+            new List<Type> {
+                typeof(WorldManagerPatch),
+                typeof(MultiplayerStatusOverlayPatch)
+            }
+        );
         return harmony;
     }
 

@@ -51,8 +51,8 @@ public static class MultiplayerTools {
             .AddType<Recorders>()
             .AddType<TestRuntime>();
 
-        var configurer = new MultiplayerCommandsConfigurer();
-        configurer.Configure(builder);
+        new MultiplayerCommandsConfigurer().Configure(builder);
+        new UnityTaskSchedulerConfigurer().Configure(builder);
 
         var container = builder.Build();
         var runtime = container.Get<TestRuntime>();

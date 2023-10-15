@@ -15,6 +15,8 @@ public class LoadWorld : MultiplayerCommand {
         this.data = data;
     }
 
-    public override void Execute(MultiplayerCommandContext context) => WorldManager.LoadWorldSave(worldName, data);
+    public override void Execute(MultiplayerCommandContext context) {
+        context.Runtime.Dependencies.Get<WorldManager>().RequestWorldLoad(worldName, data);
+    }
 
 }

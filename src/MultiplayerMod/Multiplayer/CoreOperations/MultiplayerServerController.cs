@@ -2,7 +2,8 @@
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
-using MultiplayerMod.Multiplayer.UI;
+using MultiplayerMod.Multiplayer.Players.Events;
+using MultiplayerMod.Multiplayer.UI.Overlays;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
@@ -12,10 +13,12 @@ public class MultiplayerServerController {
 
     private readonly IMultiplayerServer server;
     private readonly IMultiplayerClient client;
+    private readonly EventDispatcher events;
 
     public MultiplayerServerController(IMultiplayerServer server, IMultiplayerClient client, EventDispatcher events) {
         this.server = server;
         this.client = client;
+        this.events = events;
 
         events.Subscribe<GameStartedEvent>(OnGameStarted);
         events.Subscribe<GameQuitEvent>(OnGameQuit);
@@ -32,7 +35,14 @@ public class MultiplayerServerController {
         if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 
-        LoadOverlay.Show("Starting host...");
+        MultiplayerStatusOverlay.Show("Starting host...");
+        events.Subscribe<PlayersReadyEvent>(
+            (_, subscription) => {
+                MultiplayerStatusOverlay.Close();
+                subscription.Cancel();
+            }
+        );
+
         server.Start();
     }
 

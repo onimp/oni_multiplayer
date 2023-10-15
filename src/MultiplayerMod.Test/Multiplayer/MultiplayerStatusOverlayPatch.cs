@@ -1,16 +1,16 @@
 ﻿using HarmonyLib;
 using JetBrains.Annotations;
-using MultiplayerMod.Multiplayer.UI;
+using MultiplayerMod.Multiplayer.UI.Overlays;
 
 namespace MultiplayerMod.Test.Multiplayer;
 
 [UsedImplicitly]
-[HarmonyPatch(typeof(LoadOverlay))]
-public class LoadOverlayPatch {
+[HarmonyPatch(typeof(MultiplayerStatusOverlay))]
+public class MultiplayerStatusOverlayPatch {
 
     [UsedImplicitly]
     [HarmonyPrefix]
-    [HarmonyPatch(nameof(LoadOverlay.Show))]
+    [HarmonyPatch(nameof(MultiplayerStatusOverlay.Show))]
     private static bool Show() {
         return false;
     }

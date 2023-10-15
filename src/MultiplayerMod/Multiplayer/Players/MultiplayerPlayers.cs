@@ -22,6 +22,8 @@ public class MultiplayerPlayers : IEnumerable<MultiplayerPlayer> {
 
     public IEnumerator<MultiplayerPlayer> GetEnumerator() => players.Values.GetEnumerator();
 
+    public int Count => players.Values.Count;
+
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public MultiplayerPlayer Current => players[currentPlayerId];
