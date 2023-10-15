@@ -10,6 +10,9 @@ namespace MultiplayerMod.Multiplayer.Components;
 
 public class CursorComponent : MonoBehaviour {
 
+    // Perhaps we should provide a setting to enable this feature later on.
+    private const bool ENABLE_CURSORS_RELATIVE_TO_GUI = false;
+
     private Camera camera = null!;
     private Image imageComponent = null!;
     private TextMeshProUGUI textComponent = null!;
@@ -90,7 +93,7 @@ public class CursorComponent : MonoBehaviour {
         // If we see a screen where other player is - show cursor within that screen.
         var showScreenOrWorldCursor =
             CursorWithinScreen.CurrentPosition != null && (otherClientScreen?.isActive ?? false);
-        gameObject.transform.position = showScreenOrWorldCursor
+        gameObject.transform.position = showScreenOrWorldCursor && ENABLE_CURSORS_RELATIVE_TO_GUI
             ? ScreenToWorld(otherClientScreen!, (Vector3) CursorWithinScreen.CurrentPosition!)
             : camera.WorldToScreenPoint((Vector3) CursorWithinWorld.CurrentPosition!);
         var screenUnderCursor = FindScreenUnderCursor(gameObject.transform.position);
