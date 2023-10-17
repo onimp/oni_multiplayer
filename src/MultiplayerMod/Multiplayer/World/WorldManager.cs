@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Paths;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
@@ -84,7 +85,7 @@ public class WorldManager {
             ? SaveLoader.GetCloudSavePrefix()
             : SaveLoader.GetSavePrefixAndCreateFolder();
 
-        var path = Path.Combine(savePath, name, $"{name}.sav");
+        var path = SecurePath.Combine(savePath, name, $"{name}.sav");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using (var writer = new BinaryWriter(File.OpenWrite(path)))
             writer.Write(data);
