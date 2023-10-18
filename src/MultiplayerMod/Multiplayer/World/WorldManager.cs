@@ -25,17 +25,21 @@ public class WorldManager {
     private readonly MultiplayerGame multiplayer;
     private readonly EventDispatcher events;
     private readonly UnityTaskScheduler scheduler;
+    private readonly ExecutionLevelManager executionLevelManager;
+
 
     public WorldManager(
         IMultiplayerServer server,
         MultiplayerGame multiplayer,
         EventDispatcher events,
-        UnityTaskScheduler scheduler
+        UnityTaskScheduler scheduler,
+        ExecutionLevelManager executionLevelManager
     ) {
         this.server = server;
         this.multiplayer = multiplayer;
         this.events = events;
         this.scheduler = scheduler;
+        this.executionLevelManager = executionLevelManager;
     }
 
     public void Sync() {
@@ -90,6 +94,7 @@ public class WorldManager {
         using (var writer = new BinaryWriter(File.OpenWrite(path)))
             writer.Write(data);
 
+        executionLevelManager.BaseLevel = ExecutionLevel.Multiplayer;
         LoadScreen.DoLoad(path);
     }
 
