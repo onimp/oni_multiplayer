@@ -34,7 +34,7 @@ public class HostEventsBinder {
         log.Debug("Binding host events");
 
         eventDispatcher.Subscribe<GameStartedEvent>(OnGameStarted);
-        eventDispatcher.Subscribe<GameQuitEvent>(OnGameQuit);
+        eventDispatcher.Subscribe<StopMultiplayerEvent>(OnStopMultiplayer);
 
         ChoreConsumerEvents.FindNextChore += p => server.Send(new FindNextChore(p), MultiplayerCommandOptions.SkipHost);
     }
@@ -51,7 +51,7 @@ public class HostEventsBinder {
         };
     }
 
-    private void OnGameQuit(GameQuitEvent @event) {
+    private void OnStopMultiplayer(StopMultiplayerEvent @event) {
         if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 

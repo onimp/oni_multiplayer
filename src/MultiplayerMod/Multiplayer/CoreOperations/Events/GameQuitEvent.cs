@@ -2,4 +2,4 @@
 
 namespace MultiplayerMod.Multiplayer.CoreOperations.Events;
 
-public record GameQuitEvent(MultiplayerGame Multiplayer) : IDispatchableEvent;
+public record GameQuitEvent : IDispatchableEvent;

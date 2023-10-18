@@ -132,7 +132,7 @@ public class MultiplayerConnectionTests {
         clientRuntime.Activate();
 
         if (gracefully) {
-            clientRuntime.EventDispatcher().Dispatch(new GameQuitEvent(clientRuntime.Multiplayer()));
+            clientRuntime.EventDispatcher().Dispatch(new GameQuitEvent());
             Assert.AreEqual(expected: 0, clientRuntime.Multiplayer().Players.Count());
         } else {
             clientRuntime.Dependencies.Get<IMultiplayerClient>().Disconnect();

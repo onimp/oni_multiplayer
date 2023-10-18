@@ -64,7 +64,7 @@ public class SteamClient : IMultiplayerClient {
     }
 
     public void Disconnect() {
-        if (State <= MultiplayerClientState.Disconnected)
+        if (State == MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
         UnityObject.Destroy(gameObject);
@@ -96,8 +96,10 @@ public class SteamClient : IMultiplayerClient {
                     k_nSteamNetworkingSend_Reliable,
                     out var messageOut
                 );
-                if (result != EResult.k_EResultOK && messageOut == 0)
+                if (result != EResult.k_EResultOK || messageOut == 0) {
                     log.Error($"Failed to send {command}: {result}");
+                    SetState(MultiplayerClientState.Error);
+                }
             }
         );
     }
