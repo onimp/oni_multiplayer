@@ -28,7 +28,7 @@ public class GameStateEventsRelay {
 
     private void OnWorldSave() => events.Dispatch(new WorldSavedEvent());
 
-    private void OnGameQuit() => events.Dispatch(new GameQuitEvent(multiplayer));
+    private void OnGameQuit() => events.Dispatch(new GameQuitEvent());
 
     private void OnGameStarted() => scheduler.Run(() => events.Dispatch(new GameStartedEvent(multiplayer)));
 

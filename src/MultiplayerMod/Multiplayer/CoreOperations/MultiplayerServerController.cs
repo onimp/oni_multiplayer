@@ -21,7 +21,7 @@ public class MultiplayerServerController {
         this.events = events;
 
         events.Subscribe<GameStartedEvent>(OnGameStarted);
-        events.Subscribe<GameQuitEvent>(OnGameQuit);
+        events.Subscribe<StopMultiplayerEvent>(OnStopMultiplayer);
 
         server.StateChanged += OnServerStateChanged;
     }
@@ -46,7 +46,7 @@ public class MultiplayerServerController {
         server.Start();
     }
 
-    private void OnGameQuit(GameQuitEvent @event) {
+    private void OnStopMultiplayer(StopMultiplayerEvent @event) {
         if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 

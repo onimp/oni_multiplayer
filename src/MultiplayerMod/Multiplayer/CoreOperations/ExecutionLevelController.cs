@@ -25,7 +25,7 @@ public class ExecutionLevelController {
         eventDispatcher.Subscribe<SinglePlayerModeSelectedEvent>(OnSinglePlayerModeSelected);
         eventDispatcher.Subscribe<MultiplayerModeSelectedEvent>(OnMultiplayerModeSelected);
         eventDispatcher.Subscribe<PlayerStateChangedEvent>(OnPlayerStateChangedEvent);
-        eventDispatcher.Subscribe<GameQuitEvent>(OnGameQuit);
+        eventDispatcher.Subscribe<StopMultiplayerEvent>(OnStopMultiplayer);
     }
 
     private void OnSinglePlayerModeSelected(SinglePlayerModeSelectedEvent @event) {
@@ -41,7 +41,7 @@ public class ExecutionLevelController {
             executionLevelManager.BaseLevel = ExecutionLevel.Game;
     }
 
-    private void OnGameQuit(GameQuitEvent _) {
+    private void OnStopMultiplayer(StopMultiplayerEvent _) {
         executionLevelManager.BaseLevel = ExecutionLevel.System;
     }
 

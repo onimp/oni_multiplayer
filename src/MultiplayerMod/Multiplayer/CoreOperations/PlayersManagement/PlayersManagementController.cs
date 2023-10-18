@@ -22,6 +22,8 @@ public class PlayersManagementController {
     private readonly IMultiplayerServer server;
     private readonly IMultiplayerClient client;
 
+    private readonly EventDispatcher events;
+
     private readonly WorldManager worldManager;
     private readonly MultiplayerGame multiplayer;
     private readonly UnityTaskScheduler scheduler;
@@ -39,12 +41,13 @@ public class PlayersManagementController {
         MultiplayerGame multiplayer,
         UnityTaskScheduler scheduler
     ) {
-        this.client = client;
-        this.profileProvider = profileProvider;
         this.server = server;
+        this.client = client;
+        this.events = events;
         this.worldManager = worldManager;
         this.multiplayer = multiplayer;
         this.scheduler = scheduler;
+        this.profileProvider = profileProvider;
 
         server.ClientDisconnected += OnClientDisconnected;
         events.Subscribe<ClientInitializationRequestEvent>(OnClientInitializationRequested);
@@ -52,6 +55,7 @@ public class PlayersManagementController {
         client.StateChanged += OnClientStateChanged;
         events.Subscribe<GameStartedEvent>(OnGameStarted);
         events.Subscribe<GameQuitEvent>(OnGameQuit);
+        events.Subscribe<StopMultiplayerEvent>(OnStopMultiplayer);
         events.Subscribe<CurrentPlayerInitializedEvent>(OnCurrentPlayerInitialized);
         events.Subscribe<WorldSyncRequestedEvent>(OnWorldSaveRequested);
     }
@@ -65,10 +69,12 @@ public class PlayersManagementController {
     }
 
     private void OnClientStateChanged(MultiplayerClientState state) {
-        if (state != MultiplayerClientState.Connected)
-            return;
-
-        client.Send(new InitializeClientCommand(profileProvider.GetPlayerProfile()));
+        if (state == MultiplayerClientState.Connected)
+            client.Send(new InitializeClientCommand(profileProvider.GetPlayerProfile()));
+        if (state == MultiplayerClientState.Error) {
+            events.Dispatch(new StopMultiplayerEvent(multiplayer));
+            events.Dispatch(new ConnectionLostEvent());
+        }
     }
 
     private void OnGameStarted(GameStartedEvent @event) {
@@ -81,6 +87,10 @@ public class PlayersManagementController {
 
     private void OnGameQuit(GameQuitEvent @event) {
         client.Send(new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving));
+        events.Dispatch(new StopMultiplayerEvent(multiplayer));
+    }
+
+    private void OnStopMultiplayer(StopMultiplayerEvent @event) {
         client.Disconnect();
         multiplayer.Players.Synchronize(Array.Empty<MultiplayerPlayer>());
     }
