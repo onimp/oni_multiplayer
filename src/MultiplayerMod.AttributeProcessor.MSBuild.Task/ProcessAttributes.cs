@@ -21,7 +21,9 @@ public class ProcessAttributes : Microsoft.Build.Utilities.Task {
             return ReturnError($"Assembly \"{nameof(AssemblyPath)}\" doesn't exist");
 
         var configuration = Configure(AssemblyPath);
-        var module = ModuleDefMD.Load(configuration.OriginalAssemblyPath);
+        FileStream OriginalAssemblyFile = new FileStream(configuration.OriginalAssemblyPath, FileMode.Open);
+        var module = ModuleDefMD.Load(OriginalAssemblyFile);
+        OriginalAssemblyFile.Close();
         if (GetProcessors(module).Any(processor => !processor.Process()))
             return false;
 
