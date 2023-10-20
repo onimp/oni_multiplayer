@@ -21,14 +21,14 @@ public class ProcessAttributes : Microsoft.Build.Utilities.Task {
             return ReturnError($"Assembly \"{nameof(AssemblyPath)}\" doesn't exist");
 
         var configuration = Configure(AssemblyPath);
-        FileStream OriginalAssemblyFile = new FileStream(configuration.OriginalAssemblyPath, FileMode.Open);
-        var module = ModuleDefMD.Load(OriginalAssemblyFile);
-        OriginalAssemblyFile.Close();
-        if (GetProcessors(module).Any(processor => !processor.Process()))
-            return false;
+        using (var module = ModuleDefMD.Load(configuration.OriginalAssemblyPath))
+        {
+            if (GetProcessors(module).Any(processor => !processor.Process()))
+                return false;
 
-        var options = new ModuleWriterOptions(module) { WritePdb = true };
-        module.Write(AssemblyPath, options);
+            var options = new ModuleWriterOptions(module) { WritePdb = true };
+            module.Write(AssemblyPath, options);
+        }
         Cleanup(configuration);
         return true;
     }
