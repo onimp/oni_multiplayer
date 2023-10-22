@@ -50,6 +50,7 @@ public class WorldManager {
         multiplayer.Objects.SynchronizeWithTracker();
         multiplayer.Players.ForEach(it => server.Send(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
         server.Send(new ChangePlayerStateCommand(multiplayer.Players.Current.Id, PlayerState.Ready));
+        server.Send(new NotifyWorldSavePreparing(), MultiplayerCommandOptions.SkipHost);
         server.Send(new LoadWorld(WorldName, GetWorldSave()), MultiplayerCommandOptions.SkipHost);
 
         if (resume)
