@@ -1,6 +1,6 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using TMPro;
@@ -28,13 +28,16 @@ public class MultiplayerStatusOverlay {
     [InjectDependency, UsedImplicitly]
     private UnityTaskScheduler scheduler = null!;
 
-    [InjectDependency, UsedImplicitly]
-    private EventDispatcher events = null!;
+    private RectTransform rect = null!;
+
+    // ReSharper disable once InconsistentNaming
+    private Func<float> GetScale = null!;
 
     private static MultiplayerStatusOverlay? overlay;
 
     private MultiplayerStatusOverlay() {
         SceneManager.sceneLoaded += OnPostLoadScene;
+        ScreenResize.Instance.OnResize += OnResize;
         Dependencies.Get<IDependencyInjector>().Inject(this);
         CreateOverlay();
     }
@@ -46,15 +49,17 @@ public class MultiplayerStatusOverlay {
         textComponent.margin = new Vector4(0, -21.0f, 0, 0);
         textComponent.text = text;
 
-        var rect = textComponent.gameObject.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(Screen.width, 0);
+        GetScale = LoadingOverlay.instance.GetComponentInParent<KCanvasScaler>().GetCanvasScale;
 
-        var scale = LoadingOverlay.instance.GetComponentInParent<KCanvasScaler>().GetCanvasScale();
-        ScreenResize.Instance.OnResize += () => rect.sizeDelta = new Vector2(Screen.width / scale, 0);
+        rect = textComponent.gameObject.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(Screen.width / GetScale(), 0);
     }
+
+    private void OnResize() => rect.sizeDelta = new Vector2(Screen.width / GetScale(), 0);
 
     private void Dispose() {
         SceneManager.sceneLoaded -= OnPostLoadScene;
+        ScreenResize.Instance.OnResize -= OnResize;
         LoadingOverlay.Clear();
     }
 
