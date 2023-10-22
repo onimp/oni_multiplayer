@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Game.Debug;
 using MultiplayerMod.Game.Mechanics.Objects;
 using MultiplayerMod.Game.Mechanics.Printing;
 using MultiplayerMod.Game.UI;
@@ -9,6 +10,7 @@ using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
 using MultiplayerMod.Multiplayer.Commands.Alerts;
+using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
 using MultiplayerMod.Multiplayer.Commands.Overlay;
 using MultiplayerMod.Multiplayer.Commands.Player;
@@ -54,6 +56,7 @@ public class GameEventsBinder {
         BindTools();
         BindOverlays();
         BindMechanics();
+        BindDebug();
     }
 
     private void BindSpeedControl() {
@@ -158,6 +161,11 @@ public class GameEventsBinder {
         TimeRangeSideScreenEvents.UpdateLogicTimeOfDaySensor +=
             args => client.Send(new UpdateLogicTimeOfDaySensor(args));
         TimerSideScreenEvents.UpdateLogicTimeSensor += args => client.Send(new UpdateLogicTimeSensor(args));
+    }
+
+    private void BindDebug() {
+        GameDebugEvents.GameFrameStepping += () => client.Send(new DebugGameFrameStep());
+        GameDebugEvents.SimulationStepping += () => client.Send(new DebugSimulationStep());
     }
 
 }

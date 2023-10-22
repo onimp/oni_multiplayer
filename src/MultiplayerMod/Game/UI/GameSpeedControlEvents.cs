@@ -1,5 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using HarmonyLib;
+using JetBrains.Annotations;
+using MultiplayerMod.AttributeProcessor;
+using MultiplayerMod.Core.Patch;
 using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.UI;
@@ -11,23 +17,43 @@ public static class GameSpeedControlEvents {
     public static event System.Action? GameResumed;
     public static event Action<int>? SpeedChanged;
 
-    [HarmonyPostfix]
+    private static bool eventsEnabled = true;
+
+    [HarmonyPostfix, UsedImplicitly]
     [HarmonyPatch(nameof(SpeedControlScreen.SetSpeed))]
     [RequireExecutionLevel(ExecutionLevel.Game)]
+    [RequireEnabledEvents]
     // ReSharper disable once InconsistentNaming
-    // ReSharper disable once UnusedMember.Local
     private static void SetSpeedPostfix(int Speed) => SpeedChanged?.Invoke(Speed);
 
-    [HarmonyPostfix]
+    [HarmonyPostfix, UsedImplicitly]
     [HarmonyPatch(nameof(SpeedControlScreen.OnPause))]
     [RequireExecutionLevel(ExecutionLevel.Game)]
-    // ReSharper disable once UnusedMember.Local
-    private static void OnPausePostfix() => GamePaused?.Invoke();
+    private static void OnPausePostfix() {
+        if (!eventsEnabled) {
+            eventsEnabled = true;
+            return;
+        }
+        GamePaused?.Invoke();
+    }
 
-    [HarmonyPostfix]
+    [HarmonyPostfix, UsedImplicitly]
     [HarmonyPatch(nameof(SpeedControlScreen.OnPlay))]
     [RequireExecutionLevel(ExecutionLevel.Game)]
-    // ReSharper disable once UnusedMember.Local
+    [RequireEnabledEvents]
     private static void OnPlayPostfix() => GameResumed?.Invoke();
+
+    [HarmonyPrefix, UsedImplicitly]
+    [HarmonyPatch(nameof(SpeedControlScreen.DebugStepFrame))]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
+    private static void DebugStepFramePrefix() => eventsEnabled = false;
+
+    [AttributeUsage(AttributeTargets.Method)]
+    [ConditionalInvocation(typeof(RequireEnabledEventsAttribute), nameof(CheckEnabled))]
+    private class RequireEnabledEventsAttribute : Attribute {
+
+        private static bool CheckEnabled() => eventsEnabled;
+
+    }
 
 }
