@@ -1,47 +1,41 @@
-﻿using System.Collections.Generic;
-using MultiplayerMod.Core.Dependency;
+﻿using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
+using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Components;
 
-public class CursorManager : MultiplayerMonoBehaviour {
+public class CursorManager : MultiplayerKMonoBehaviour {
 
-    [InjectDependency] private readonly EventDispatcher eventDispatcher = null!;
+    [InjectDependency]
+    private readonly EventDispatcher events = null!;
 
-    private readonly Dictionary<MultiplayerPlayer, CursorComponent> cursors = new();
-    private EventSubscriptions subscriptions = null!;
+    [InjectDependency]
+    private readonly MultiplayerGame multiplayer = null!;
 
-    private void OnEnable() {
-        subscriptions = new EventSubscriptions()
-            .Add(eventDispatcher.Subscribe<PlayerCursorPositionUpdatedEvent>(OnCursorUpdated))
-            .Add(eventDispatcher.Subscribe<PlayerLeftEvent>(OnPlayerLeft));
+    private EventSubscription subscription = null!;
+
+    protected override void OnSpawn() {
+        subscription = events.Subscribe<PlayerJoinedEvent>(OnPlayerJoined);
+        multiplayer.Players.ForEach(CreatePlayerCursor);
     }
 
-    private void OnPlayerLeft(PlayerLeftEvent @event) {
-        Destroy(cursors[@event.Player]);
-        cursors.Remove(@event.Player);
-    }
+    private void OnPlayerJoined(PlayerJoinedEvent @event) => CreatePlayerCursor(@event.Player);
 
-    private void OnDisable() => subscriptions.Cancel();
+    protected override void OnForcedCleanUp() => subscription.Cancel();
 
-    private void OnCursorUpdated(PlayerCursorPositionUpdatedEvent updatedEvent) {
-        if (!cursors.TryGetValue(updatedEvent.Player, out var cursorComponent)) {
-            cursorComponent = gameObject.AddComponent<CursorComponent>();
-            cursorComponent.PlayerName = updatedEvent.Player.Profile.PlayerName;
-            cursorComponent.CursorWithinWorld.SetPosition(updatedEvent.MouseMovedEventArgs.Position);
-            cursorComponent.CursorWithinScreen.SetPosition(updatedEvent.MouseMovedEventArgs.PositionWithinScreen);
-            cursorComponent.ScreenName = updatedEvent.MouseMovedEventArgs.ScreenName;
-            cursorComponent.ScreenType = updatedEvent.MouseMovedEventArgs.ScreenType;
-            cursors[updatedEvent.Player] = cursorComponent;
+    private void CreatePlayerCursor(MultiplayerPlayer player) {
+        if (player == multiplayer.Players.Current)
             return;
-        }
-        cursorComponent.ScreenName = updatedEvent.MouseMovedEventArgs.ScreenName;
-        cursorComponent.ScreenType = updatedEvent.MouseMovedEventArgs.ScreenType;
-        cursorComponent.CursorWithinWorld.Trace(updatedEvent.MouseMovedEventArgs.Position);
-        cursorComponent.CursorWithinScreen.Trace(updatedEvent.MouseMovedEventArgs.PositionWithinScreen);
+        var canvas = GameScreenManager.Instance.GetParent(GameScreenManager.UIRenderTarget.ScreenSpaceOverlay);
+        var cursorName = $"{player.Profile.PlayerName}'s cursor";
+        var cursor = new GameObject(cursorName) { transform = { parent = canvas.transform } };
+        cursor.AddComponent<AssignedMultiplayerPlayer>().Player = player;
+        cursor.AddComponent<CursorComponent>();
+        cursor.AddComponent<DestroyOnPlayerLeave>();
     }
 
 }
