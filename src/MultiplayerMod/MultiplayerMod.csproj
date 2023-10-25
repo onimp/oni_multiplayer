@@ -31,7 +31,7 @@
     </PropertyGroup>
     <PropertyGroup>
         <OniSupportedContent>VANILLA_ID</OniSupportedContent>
-        <OniMinimumSupportedBuild>537329</OniMinimumSupportedBuild>
+        <OniMinimumSupportedBuild>577063</OniMinimumSupportedBuild>
         <OniApiVersion>2</OniApiVersion>
     </PropertyGroup>
     <ItemGroup>
