@@ -1,10 +1,10 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
-using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer.Components;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.World.Debug;
+using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
@@ -15,8 +15,14 @@ public class MultiplayerGameObjectsSpawner {
         events.Subscribe<GameStartedEvent>(OnGameStarted);
     }
 
+    // ReSharper disable once ObjectCreationAsStatement
     private void OnGameStarted(GameStartedEvent _) {
-        UnityObject.CreateWithComponent<CursorManager, WorldDebugSnapshotRunner>();
+        new GameObject(
+            "Multiplayer",
+            typeof(CursorManager),
+            typeof(WorldDebugSnapshotRunner),
+            typeof(MultiplayerPlayerNotifier)
+        );
     }
 
 }
