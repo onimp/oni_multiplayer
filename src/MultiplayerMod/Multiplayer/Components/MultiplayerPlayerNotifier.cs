@@ -13,7 +13,7 @@ public class MultiplayerPlayerNotifier : MultiplayerMonoBehaviour {
     [InjectDependency]
     private readonly EventDispatcher dispatcher = null!;
 
-    private readonly float notificationTimeout = 10f;
+    private const float notificationTimeout = 10f;
     private readonly LinkedList<Notification> notifications = new();
     private EventSubscription subscription = null!;
     private bool removalPending;
