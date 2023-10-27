@@ -22,6 +22,7 @@ public static class ChoreMultiplayerPreconditions {
             var shouldBeAssigned = pooledChore.Driver == driver;
             var runByDesiredDriver = pooledChore.Driver == chore.driver;
 
+            // Try to replace with context.isAttemptingOverride = true;
             if (chore.driver != null && !runByDesiredDriver && shouldBeAssigned && pooledChore.Preemptable) {
                 log.Debug(
                     $"Chore driver {chore.driver.GetProperName()} stops a host pooled chore {pooledChore} " +
