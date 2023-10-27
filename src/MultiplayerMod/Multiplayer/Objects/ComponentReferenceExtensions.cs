@@ -31,4 +31,14 @@ public static class ComponentReferenceExtensions {
     private static bool Movable(this KMonoBehaviour kMonoBehaviour) =>
         movableObjectTypes.Contains(kMonoBehaviour.GetType());
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComponentReference<T> GetReference2<T>(this T component) where T : KMonoBehaviour {
+        var movable = component.gameObject.GetComponent<KPrefabID>().Tags.Contains(GameTags.DupeBrain);
+        if (component.gameObject == SaveGame.Instance.gameObject)
+            return new ComponentReference<T>(new StaticKPrefabIdReference(component.gameObject));
+        return movable
+            ? new ComponentReference<T>(component.gameObject.GetMultiplayerReference())
+            : new ComponentReference<T>(component.gameObject.GetGridReference());
+    }
+
 }
