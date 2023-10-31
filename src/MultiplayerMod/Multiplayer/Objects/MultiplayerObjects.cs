@@ -32,6 +32,8 @@ public class MultiplayerObjects {
         objects = new Dictionary<MultiplayerId, GameObject>();
         var kPrefabIds = KPrefabIDTracker.Get().prefabIdMap.Values;
         foreach (var kPrefabId in kPrefabIds) {
+            if (kPrefabId == null)
+                return;
             var gameObject = kPrefabId.gameObject;
             var instance = gameObject.GetComponent<MultiplayerInstance>();
             instance.Id = new MultiplayerId(null, kPrefabId.InstanceID);
