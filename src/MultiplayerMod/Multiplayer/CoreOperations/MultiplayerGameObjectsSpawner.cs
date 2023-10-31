@@ -17,12 +17,14 @@ public class MultiplayerGameObjectsSpawner {
 
     // ReSharper disable once ObjectCreationAsStatement
     private void OnGameStarted(GameStartedEvent _) {
-        new GameObject(
-            "Multiplayer",
-            typeof(CursorManager),
+        var components = new[] {
+#if DEBUG
             typeof(WorldDebugSnapshotRunner),
+#endif
+            typeof(CursorManager),
             typeof(MultiplayerPlayerNotifier)
-        );
+        };
+        new GameObject("Multiplayer", components);
     }
 
 }

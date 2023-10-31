@@ -13,6 +13,7 @@ internal static class ColonyDiagnosticUtilityPatch {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(ColonyDiagnosticUtility.AddWorld))]
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
+    [RequireDebugBuild]
     private static void AddWorldPostfix(ColonyDiagnosticUtility __instance, int worldID) {
         var colonyDiagnostic = new MultiplayerColonyDiagnostic(worldID);
         __instance.worldDiagnostics[worldID].Add(colonyDiagnostic);
