@@ -1,20 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
 public class MultiplayerObjects {
 
-    private readonly MultiplayerIdentityProvider provider;
-
     private Dictionary<MultiplayerId, GameObject> objects = new();
 
-    public MultiplayerObjects(MultiplayerIdentityProvider provider) {
-        this.provider = provider;
-    }
-
     public MultiplayerId Register(MultiplayerInstance instance) {
-        instance.Id ??= provider.GetNextId();
+        instance.Id ??= new MultiplayerId(Guid.NewGuid());
         objects[instance.Id] = instance.gameObject;
         return instance.Id;
     }
@@ -42,7 +37,7 @@ public class MultiplayerObjects {
                 return;
             var gameObject = kPrefabId.gameObject;
             var instance = gameObject.GetComponent<MultiplayerInstance>();
-            instance.Id = new MultiplayerId(null, kPrefabId.InstanceID);
+            instance.Id = new MultiplayerId(kPrefabId.InstanceID);
             Register(instance);
         }
     }
