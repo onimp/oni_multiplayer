@@ -26,6 +26,12 @@ public class MultiplayerObjects {
             objects.TryGetValue(id, out var result);
             return result;
         }
+        set {
+            if (value != null)
+                objects[id] = value;
+            else
+                objects.Remove(id);
+        }
     }
 
     public void SynchronizeWithTracker() {

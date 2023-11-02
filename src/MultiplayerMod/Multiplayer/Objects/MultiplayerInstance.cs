@@ -18,4 +18,12 @@ public class MultiplayerInstance : MultiplayerKMonoBehaviour {
 
     public MultiplayerId Register() => multiplayer.Objects.Register(this);
 
+    public void Redirect(MultiplayerInstance destination) {
+        if (Id == null)
+            return;
+        destination.Id = Id;
+        multiplayer.Objects[Id] = destination.gameObject;
+        Id = null;
+    }
+
 }
