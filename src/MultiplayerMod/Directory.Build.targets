@@ -111,7 +111,7 @@
         <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
     </Target>
 
-    <Target Name="ExposeUnityAssemblies"  BeforeTargets="PreBuildEvent">
+    <Target Name="ExposeUnityAssemblies" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.UI.dll"/>
