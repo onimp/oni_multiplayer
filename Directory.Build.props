@@ -18,13 +18,6 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <AssemblyExposerName>AssemblyExposer.MSBuild.Task</AssemblyExposerName>
-        <AssemblyExposerProject>..\$(AssemblyExposerName)\$(AssemblyExposerName).csproj</AssemblyExposerProject>
-        <AssemblyExposer>src\$(AssemblyExposerName)\tasks\$(AssemblyExposerName).dll</AssemblyExposer>
-    </PropertyGroup>
-    <UsingTask TaskName="ExposeAssembly" AssemblyFile="$(AssemblyExposer)"/>
-
-    <PropertyGroup>
         <AttributeProcessorName>MultiplayerMod.AttributeProcessor.MSBuild.Task</AttributeProcessorName>
         <AttributeProcessorProject>..\$(AttributeProcessorName)\$(AttributeProcessorName).csproj</AttributeProcessorProject>
         <AttributeProcessor>src\$(AttributeProcessorName)\tasks\$(AttributeProcessorName).dll</AttributeProcessor>

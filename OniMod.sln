@@ -26,8 +26,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{3D14A142-7
 		docs\CONTRIBUTING.md = docs\CONTRIBUTING.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyExposer.MSBuild.Task", "src\AssemblyExposer.MSBuild.Task\AssemblyExposer.MSBuild.Task.csproj", "{80DD29DB-6127-4F8B-845E-A04420FE22AB}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiplayerMod.AttributeProcessor.MSBuild.Task", "src\MultiplayerMod.AttributeProcessor.MSBuild.Task\MultiplayerMod.AttributeProcessor.MSBuild.Task.csproj", "{4E847723-EA84-41A5-B9E7-503E5FF1D501}"
 EndProject
 Project("{7582E52A-F9D4-4C1C-9C30-1DB3D27EF986}") = "MultiplayerMod.AttributeProcessor", "src\MultiplayerMod.AttributeProcessor\MultiplayerMod.AttributeProcessor.csproj", "{AD124BC6-64AE-4731-816B-2546D54BCA40}"
@@ -63,12 +61,6 @@ Global
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Publish|Any CPU.Build.0 = Publish|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Publish|Any CPU.ActiveCfg = Debug|Any CPU
