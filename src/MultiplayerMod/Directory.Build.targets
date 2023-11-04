@@ -79,7 +79,7 @@
         <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)"/>
     </Target>
 
-    <Target Name="ExposeAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
+    <Target Name="ExposeAssemblies" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
             <ExposureRules Include="Private and internal targets to public">
@@ -111,7 +111,7 @@
         <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
     </Target>
 
-    <Target Name="ExposeUnityAssemblies" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
+    <Target Name="ExposeUnityAssemblies"  BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.UI.dll"/>
@@ -129,7 +129,7 @@
         <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)"/>
     </Target>
 
-    <Target Name="ExposeHarmonyAssembly" DependsOnTargets="BuildAssemblyExposer" BeforeTargets="PreBuildEvent">
+    <Target Name="ExposeHarmonyAssembly" BeforeTargets="PreBuildEvent">
         <ItemGroup>
             <HarmonyAssembly Include="$(ManagedPath)\0Harmony.dll"/>
             <HarmonyExposureRules Include="Private and internal targets to public">

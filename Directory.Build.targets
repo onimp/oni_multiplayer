@@ -1,7 +1,4 @@
 <Project>
-    <Target Name="BuildAssemblyExposer">
-        <MSBuild Projects="$(AssemblyExposerProject)"/>
-    </Target>
     <Target Name="BuildAttributeProcessor">
         <MSBuild Projects="$(AttributeProcessorProject)"/>
     </Target>
