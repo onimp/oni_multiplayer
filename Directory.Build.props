@@ -17,11 +17,4 @@
         <ModInstallationPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\dev\$(MSBuildProjectName)</ModInstallationPath>
     </PropertyGroup>
 
-    <PropertyGroup>
-        <AttributeProcessorName>MultiplayerMod.AttributeProcessor.MSBuild.Task</AttributeProcessorName>
-        <AttributeProcessorProject>..\$(AttributeProcessorName)\$(AttributeProcessorName).csproj</AttributeProcessorProject>
-        <AttributeProcessor>src\$(AttributeProcessorName)\tasks\$(AttributeProcessorName).dll</AttributeProcessor>
-    </PropertyGroup>
-    <UsingTask TaskName="ProcessAttributes" AssemblyFile="$(AttributeProcessor)"/>
-
 </Project>

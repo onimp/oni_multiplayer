@@ -1,5 +1,0 @@
-<Project>
-    <Target Name="BuildAttributeProcessor">
-        <MSBuild Projects="$(AttributeProcessorProject)"/>
-    </Target>
-</Project>

@@ -59,9 +59,8 @@
         <Reference Include="ImGui.NET" HintPath="$(ManagedPath)\ImGui.NET.dll" Private="false" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\MultiplayerMod.AttributeProcessor\MultiplayerMod.AttributeProcessor.csproj" Private="false"/>
-    </ItemGroup>
-    <ItemGroup>
       <PackageReference Include="AssemblyExposer.MSBuild.Task" Version="0.1.3" Private="true"/>
+      <PackageReference Include="AttributeProcessor.Annotations" Version="0.*" ExcludeAssets="runtime"/>
+      <PackageReference Include="AttributeProcessor.MSBuild.Task" Version="0.*" />
     </ItemGroup>
 </Project>

@@ -1,5 +1,5 @@
 ﻿using System;
-using MultiplayerMod.AttributeProcessor;
+using AttributeProcessor.Annotations;
 
 namespace MultiplayerMod.ModRuntime.Context;
 

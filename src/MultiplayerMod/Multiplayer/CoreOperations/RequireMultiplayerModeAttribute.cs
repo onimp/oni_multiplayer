@@ -1,6 +1,6 @@
 using System;
+using AttributeProcessor.Annotations;
 using JetBrains.Annotations;
-using MultiplayerMod.AttributeProcessor;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
