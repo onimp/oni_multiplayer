@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-public class MultiplayerObjects {
+public class MultiplayerObjects : IEnumerable<KeyValuePair<MultiplayerId, GameObject>> {
 
     private Dictionary<MultiplayerId, GameObject> objects = new();
 
@@ -41,5 +42,9 @@ public class MultiplayerObjects {
             Register(instance);
         }
     }
+
+    public IEnumerator<KeyValuePair<MultiplayerId, GameObject>> GetEnumerator() => objects.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 }

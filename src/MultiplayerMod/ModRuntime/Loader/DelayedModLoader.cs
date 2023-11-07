@@ -42,7 +42,12 @@ public class DelayedModLoader {
                     instance.Configure(builder);
                 }
             );
-        builder.Build();
+        var container = builder.Build();
+        OnRuntimeReady(container);
+    }
+
+    private void OnRuntimeReady(IDependencyContainer container) {
+        container.Get<EventDispatcher>().Dispatch(new RuntimeReadyEvent(container.Get<Runtime>()));
         log.Info("Mod runtime is ready");
     }
 

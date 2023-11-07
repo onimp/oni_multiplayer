@@ -6,18 +6,18 @@ namespace MultiplayerMod.Multiplayer.Objects;
 [Serializable]
 public class MultiplayerId {
 
-    private readonly long uuidA;
-    private readonly long uuidB;
-    private readonly int instanceId;
+    public long UuidA { get; }
+    public long UuidB { get; }
+    public int InstanceId { get; }
 
     public MultiplayerId(int instanceId) {
-        this.instanceId = instanceId;
+        InstanceId = instanceId;
     }
 
     public MultiplayerId(Guid guid) {
         var bytes = guid.ToByteArray();
-        uuidA = GetLong(bytes, 0);
-        uuidB = GetLong(bytes, 8);
+        UuidA = GetLong(bytes, 0);
+        UuidB = GetLong(bytes, 8);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -33,7 +33,7 @@ public class MultiplayerId {
     }
 
     protected bool Equals(MultiplayerId other) {
-        return uuidA == other.uuidA && uuidB == other.uuidB && instanceId == other.instanceId;
+        return UuidA == other.UuidA && UuidB == other.UuidB && InstanceId == other.InstanceId;
     }
 
     public override bool Equals(object? other) {
@@ -46,9 +46,9 @@ public class MultiplayerId {
     }
 
     public override int GetHashCode() {
-        var hashCode = uuidA.GetHashCode();
-        hashCode = hashCode * 397 ^ uuidB.GetHashCode();
-        hashCode = hashCode * 397 ^ instanceId;
+        var hashCode = UuidA.GetHashCode();
+        hashCode = hashCode * 397 ^ UuidB.GetHashCode();
+        hashCode = hashCode * 397 ^ InstanceId;
         return hashCode;
     }
 
@@ -57,7 +57,7 @@ public class MultiplayerId {
     public static bool operator !=(MultiplayerId? left, MultiplayerId? right) => !Equals(left, right);
 
     public override string ToString() {
-        return $"MultiplayerId {{ UUID = {uuidA:x16}{uuidB:x16}, InstanceId = {instanceId} }}";
+        return $"MultiplayerId {{ UUID = {UuidA:x16}{UuidB:x16}, InstanceId = {InstanceId} }}";
     }
 
 }
