@@ -2,16 +2,27 @@
 <Project>
 
     <Target Name="SetVersionAttributes" BeforeTargets="InitializeSourceControlInformation">
+        <Exec Command="git rev-parse --is-inside-work-tree" IgnoreExitCode="True">
+            <Output PropertyName="GitWorkTreeExitCode" TaskParameter="ExitCode"/>
+        </Exec>
+        <CallTarget Targets="SetVersionAttributesFromGitRepository" Condition="$(GitWorkTreeExitCode) == 0"/>
+    </Target>
+
+    <Target Name="SetVersionAttributesFromGitRepository">
         <Exec
             Command="git describe --long --always --dirty --exclude=* --abbrev=8"
             ConsoleToMSBuild="True"
-            IgnoreExitCode="False"
+            IgnoreExitCode="True"
         >
             <Output PropertyName="GitRevision" TaskParameter="ConsoleOutput"/>
         </Exec>
-        <Exec Command="git describe --tag --abbrev=0" ConsoleToMSBuild="True" IgnoreExitCode="False">
+        <Exec Command="git describe --tag --abbrev=0" ConsoleToMSBuild="True" IgnoreExitCode="True">
             <Output PropertyName="GitVersion" TaskParameter="ConsoleOutput"/>
+            <Output PropertyName="GitVersionErrorCode" TaskParameter="ExitCode"/>
         </Exec>
+        <PropertyGroup Condition="$(GitVersionErrorCode) != 0">
+            <GitVersion>0.0.0</GitVersion>
+        </PropertyGroup>
         <CreateProperty Value="$([System.Text.RegularExpressions.Regex]::Match($(GitVersion), [^v].*))">
             <Output TaskParameter="Value" PropertyName="GitVersion"/>
         </CreateProperty>
