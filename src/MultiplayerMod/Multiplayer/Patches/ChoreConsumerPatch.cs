@@ -8,7 +8,7 @@ using MultiplayerMod.Multiplayer.World;
 
 namespace MultiplayerMod.Multiplayer.Patches;
 
-[HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
+// [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
 public class ChoreConsumerPatch {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ChoreConsumerPatch>();
