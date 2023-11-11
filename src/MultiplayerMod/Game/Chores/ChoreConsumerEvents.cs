@@ -11,7 +11,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Game.Chores;
 
-[HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
+// [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
 public class ChoreConsumerEvents {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ChoreConsumerEvents>();
