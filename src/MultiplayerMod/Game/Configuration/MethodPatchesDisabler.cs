@@ -15,6 +15,7 @@ public static class MethodPatchesDisabler {
         .AddMethods(typeof(MinionIdentity), nameof(MinionIdentity.OnSpawn))
         .AddMethods(typeof(MinionStartingStats), nameof(MinionStartingStats.Deliver))
         .AddMethods(typeof(SaveLoader), nameof(SaveLoader.InitialSave))
+        .AddMethods(typeof(MinionStorage), nameof(MinionStorage.CopyMinion))
         .Build();
 
     // ReSharper disable once UnusedMember.Local

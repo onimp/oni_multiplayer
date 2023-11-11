@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
+using MultiplayerMod.ModRuntime.Context;
 using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Game.UI.Tools.Events;
@@ -76,6 +77,7 @@ public static class BuildEvents {
         return result;
     }
 
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void BuildComplete(BuildTool tool, int cell, bool instantBuild, bool replaced) {
         Build?.Invoke(
             new BuildEventArgs(

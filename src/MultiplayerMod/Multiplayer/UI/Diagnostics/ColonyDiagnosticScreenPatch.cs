@@ -12,6 +12,7 @@ public class ColonyDiagnosticScreenPatch {
     [HarmonyPrefix]
     [HarmonyPatch(nameof(ColonyDiagnosticScreen.SpawnTrackerLines))]
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
+    [RequireDebugBuild]
     public static void SpawnTrackerLines(ColonyDiagnosticScreen __instance, int world) {
         __instance.AddDiagnostic<MultiplayerColonyDiagnostic>(
             world,

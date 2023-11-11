@@ -16,7 +16,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "root", "root", "{E643528F-7
 		LICENSE = LICENSE
 		README.md = README.md
 		Directory.Build.props = Directory.Build.props
-		Directory.Build.targets = Directory.Build.targets
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiplayerMod.Test", "src\MultiplayerMod.Test\MultiplayerMod.Test.csproj", "{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}"
@@ -25,14 +24,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{3D14A142-7
 	ProjectSection(SolutionItems) = preProject
 		docs\CONTRIBUTING.md = docs\CONTRIBUTING.md
 	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyExposer.MSBuild.Task", "src\AssemblyExposer.MSBuild.Task\AssemblyExposer.MSBuild.Task.csproj", "{80DD29DB-6127-4F8B-845E-A04420FE22AB}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiplayerMod.AttributeProcessor.MSBuild.Task", "src\MultiplayerMod.AttributeProcessor.MSBuild.Task\MultiplayerMod.AttributeProcessor.MSBuild.Task.csproj", "{4E847723-EA84-41A5-B9E7-503E5FF1D501}"
-EndProject
-Project("{7582E52A-F9D4-4C1C-9C30-1DB3D27EF986}") = "MultiplayerMod.AttributeProcessor", "src\MultiplayerMod.AttributeProcessor\MultiplayerMod.AttributeProcessor.csproj", "{AD124BC6-64AE-4731-816B-2546D54BCA40}"
-EndProject
-Project("{41C8A68D-8077-44C3-A83B-55E4527EA189}") = "MultiplayerMod.AttributeProcessor.Test", "src\MultiplayerMod.AttributeProcessor.Test\MultiplayerMod.AttributeProcessor.Test.csproj", "{649CD3D0-39C9-412A-A42D-4826FD443B5F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{518908C5-74DD-4F86-B62F-985ABBD320D6}"
 	ProjectSection(SolutionItems) = preProject
@@ -63,28 +54,6 @@ Global
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
 		{0C3E1EF7-5EFB-4FAC-B676-2C0660E959AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Publish|Any CPU.Build.0 = Publish|Any CPU
-		{80DD29DB-6127-4F8B-845E-A04420FE22AB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Publish|Any CPU.ActiveCfg = Debug|Any CPU
-		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Publish|Any CPU.Build.0 = Debug|Any CPU
-		{4E847723-EA84-41A5-B9E7-503E5FF1D501}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Publish|Any CPU.ActiveCfg = Debug|Any CPU
-		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Publish|Any CPU.Build.0 = Debug|Any CPU
-		{AD124BC6-64AE-4731-816B-2546D54BCA40}.Release|Any CPU.Build.0 = Release|Any CPU
-		{649CD3D0-39C9-412A-A42D-4826FD443B5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{649CD3D0-39C9-412A-A42D-4826FD443B5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{649CD3D0-39C9-412A-A42D-4826FD443B5F}.Publish|Any CPU.ActiveCfg = Debug|Any CPU
-		{649CD3D0-39C9-412A-A42D-4826FD443B5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
