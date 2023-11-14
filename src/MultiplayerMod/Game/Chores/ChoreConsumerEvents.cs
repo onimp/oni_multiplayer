@@ -3,7 +3,6 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.ModRuntime.Context;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
 using MultiplayerMod.Multiplayer.Objects;
@@ -22,9 +21,6 @@ public class ChoreConsumerEvents {
     [RequireExecutionLevel(ExecutionLevel.Game)]
     public static void Postfix(ChoreConsumer __instance, Chore.Precondition.Context out_context, bool __result) {
         if (!__result)
-            return;
-
-        if (Dependencies.Get<MultiplayerGame>().Mode != MultiplayerMode.Host)
             return;
 
         var choreId = out_context.chore.id;

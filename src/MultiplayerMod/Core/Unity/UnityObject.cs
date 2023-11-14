@@ -45,8 +45,11 @@ public static class UnityObject {
         Object.Destroy(gameObject);
     }
 
-    public static T CreateStub<T>() where T : MonoBehaviour, new() => new() {
+    public static void MarkAsNotNull(Object obj) {
+        obj.m_CachedPtr = unityPlayerNullObject;
+    }
+
+    public static T CreateStub<T>() where T : Object, new() => new() {
         m_CachedPtr = unityPlayerNullObject // Support for != and == for Unity objects
     };
-
 }
