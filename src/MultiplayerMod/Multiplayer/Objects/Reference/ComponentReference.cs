@@ -16,6 +16,24 @@ public class ComponentReference {
 
     public Component? GetComponent() => GameObjectReference.GetComponent(ComponentType);
 
+    protected bool Equals(ComponentReference other) {
+        return GameObjectReference.Equals(other.GameObjectReference) && ComponentType == other.ComponentType;
+    }
+
+    public override bool Equals(object? obj) {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != this.GetType()) return false;
+
+        return Equals((ComponentReference) obj);
+    }
+
+    public override int GetHashCode() {
+        unchecked {
+            return (GameObjectReference.GetHashCode() * 397) ^ ComponentType.GetHashCode();
+        }
+    }
+
 }
 
 [Serializable]
