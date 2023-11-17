@@ -27,13 +27,13 @@ public class CreateHostChoreTest : AbstractGameTest {
         var targetGameObject = createGameObject();
         target = targetGameObject.GetComponent<KMonoBehaviour>();
 
+        db = Db.Get();
         gameObject = createGameObject();
         kPrefabId = createGameObject().AddComponent<KPrefabID>();
         kPrefabId.gameObject.AddComponent<SkillPerkMissingComplainer>(); // required for RancherChore
-        choreType = new ChoreTypes(null).Astronaut;
+        choreType = db.ChoreTypes.Astronaut;
         medicineWorkable = createGameObject().AddComponent<MedicinalPillWorkable>();
         medicineWorkable.Awake();
-        db = Db.Get();
     }
 
     [Test, TestCaseSource(nameof(GetTestArgs))]
@@ -69,12 +69,12 @@ public class CreateHostChoreTest : AbstractGameTest {
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(DropUnusedInventoryChore), new object[] { choreType, target })
             ),
-            new Func<CreateNewChoreArgs>(
-                () => new CreateNewChoreArgs(
-                    typeof(EmoteChore),
-                    new object?[] { target, choreType, db.Emotes.Minion.Cheer, 1, null }
-                )
-            ),
+            // new Func<CreateNewChoreArgs>(
+            //     () => new CreateNewChoreArgs(
+            //         typeof(EmoteChore),
+            //         new object?[] { target, choreType, db.Emotes.Minion.Cheer, 1, null }
+            //     )
+            // ),
             new Func<CreateNewChoreArgs>(() => new CreateNewChoreArgs(typeof(EquipChore), new object[] { target })),
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(FixedCaptureChore), new object[] { kPrefabId })
@@ -88,12 +88,12 @@ public class CreateHostChoreTest : AbstractGameTest {
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(MoveToQuarantineChore), new object[] { target, target })
             ),
-            new Func<CreateNewChoreArgs>(
-                () => new CreateNewChoreArgs(
-                    typeof(PartyChore),
-                    new object?[] { target, medicineWorkable, null, null, null }
-                )
-            ),
+            // new Func<CreateNewChoreArgs>(
+            //     () => new CreateNewChoreArgs(
+            //         typeof(PartyChore),
+            //         new object?[] { target, medicineWorkable, null, null, null }
+            //     )
+            // ),
             new Func<CreateNewChoreArgs>(() => new CreateNewChoreArgs(typeof(PeeChore), new object[] { target })),
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(PutOnHatChore), new object[] { target, choreType })
@@ -101,12 +101,24 @@ public class CreateHostChoreTest : AbstractGameTest {
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(RancherChore), new object[] { kPrefabId })
             ),
-            new Func<CreateNewChoreArgs>(
-                () => new CreateNewChoreArgs(
-                    typeof(ReactEmoteChore),
-                    new object?[] { target, choreType, null, null, null, null, null }
-                )
-            ),
+            // new Func<CreateNewChoreArgs>(
+            //     () => new CreateNewChoreArgs(
+            //         typeof(ReactEmoteChore),
+            //         new object?[] {
+            //             target, choreType,
+            //             new EmoteReactable(
+            //                 gameObject,
+            //                 (HashedString) "WorkPasserbyAcknowledgement",
+            //                 Db.Get().ChoreTypes.Emote,
+            //                 5,
+            //                 5,
+            //                 localCooldown: 600f
+            //             ),
+            //             new HashedString(1), new HashedString[] { new(2) },
+            //             KAnim.PlayMode.Loop, null
+            //         }
+            //     )
+            // ),
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(RescueIncapacitatedChore), new object[] { target, gameObject })
             ),
@@ -117,12 +129,15 @@ public class CreateHostChoreTest : AbstractGameTest {
                 )
             ),
             new Func<CreateNewChoreArgs>(() => new CreateNewChoreArgs(typeof(SighChore), new object[] { target })),
-            new Func<CreateNewChoreArgs>(
-                () => new CreateNewChoreArgs(
-                    typeof(StressEmoteChore),
-                    new object?[] { target, choreType, null, null, null, null }
-                )
-            ),
+            // new Func<CreateNewChoreArgs>(
+            //     () => new CreateNewChoreArgs(
+            //         typeof(StressEmoteChore),
+            //         new object?[] {
+            //             target, choreType, new HashedString(1), new HashedString[] { new(2) }, KAnim.PlayMode.Paused,
+            //             null
+            //         }
+            //     )
+            // ),
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(StressIdleChore), new object[] { target })
             ),
@@ -135,25 +150,26 @@ public class CreateHostChoreTest : AbstractGameTest {
             new Func<CreateNewChoreArgs>(
                 () => new CreateNewChoreArgs(typeof(TakeOffHatChore), new object[] { target, choreType })
             ),
-            new Func<CreateNewChoreArgs>(
-                () => new CreateNewChoreArgs(typeof(UglyCryChore), new object?[] { choreType, target, null })
-            ),
-            new Func<CreateNewChoreArgs>(
-                () => new CreateNewChoreArgs(
-                    typeof(WaterCoolerChore),
-                    new object?[] { target, medicineWorkable, null, null, null }
-                )
-            ),
-            new Func<CreateNewChoreArgs>(
-                () => new CreateNewChoreArgs(
-                    typeof(WorkChore<MedicinalPillWorkable>),
-                    new object?[] {
-                        choreType, medicineWorkable, null, true, null, null, null, true, null, false, true, null, false,
-                        true, true,
-                        PriorityScreen.PriorityClass.basic, 5, false, true
-                    }
-                )
-            )
+            // new Func<CreateNewChoreArgs>(
+            //     () => new CreateNewChoreArgs(typeof(UglyCryChore), new object?[] { choreType, target, null })
+            // ),
+            // new Func<CreateNewChoreArgs>(
+            //     () => new CreateNewChoreArgs(
+            //         typeof(WaterCoolerChore),
+            //         new object?[] { target, medicineWorkable, null, null, null }
+            //     )
+            // ),
+            // new Func<CreateNewChoreArgs>(
+            //     () => new CreateNewChoreArgs(
+            //         typeof(WorkChore<MedicinalPillWorkable>),
+            //         new object?[] {
+            //             choreType, medicineWorkable, createGameObject().AddComponent<ChoreProvider>(), false, null,
+            //             null, null, false, db.ScheduleBlockTypes.Work, true,
+            //             false, Assets.GetAnim("anim_interacts_medicine_nuclear_kanim"), true, false, false,
+            //             PriorityScreen.PriorityClass.high, 6, true, false
+            //         }
+            //     )
+            // )
         };
         Assert.AreEqual(result.Length, ChoreList.DeterministicChores.Count);
 

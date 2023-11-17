@@ -21,6 +21,7 @@ public static class SerializationSurrogates {
         Selector.Add(new EmoteSurrogate());
         Selector.Add(new MinionStartingStatsSurrogate());
         Selector.Add(new RoomSurrogate());
+        Selector.Add(new ScheduleBlockTypeSurrogate());
         Selector.Add(new SpaceDestinationSurrogate());
         Selector.Add(new SpiceGrinderSurrogate());
     }
