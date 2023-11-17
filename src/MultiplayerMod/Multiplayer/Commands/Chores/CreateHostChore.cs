@@ -13,7 +13,7 @@ public class CreateHostChore : MultiplayerCommand {
     private readonly Type choreType;
     private readonly object?[] args;
 
-    public CreateHostChore(ChoreEvents.CreateNewChoreArgs args) {
+    public CreateHostChore(CreateNewChoreArgs args) {
         this.choreType = args.ChoreType;
         this.args = args.Args.Select(
             obj =>
