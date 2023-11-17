@@ -13,13 +13,11 @@ namespace MultiplayerMod.Game.Chores;
 [HarmonyPatch]
 public static class ChoreEvents {
 
-    private static readonly HashSet<Type> supportedChores = new(ChoreList.DeterministicChores);
-
     public static event Action<CreateNewChoreArgs>? CreateNewChore;
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
-        return supportedChores
+        return ChoreList.SupportedChores
             .Select(
                 type => {
                     if (!type.IsGenericType) return type.GetConstructors()[0];
@@ -37,8 +35,8 @@ public static class ChoreEvents {
     [RequireMultiplayerMode(MultiplayerMode.Host)]
     private static void Chore_Constructor(Chore __instance, object[] __args) {
         var type = __instance.GetType();
-        if (!supportedChores.Contains(type) &&
-            !(type.IsGenericType && supportedChores.Contains(type.GetGenericTypeDefinition()))) {
+        if (!ChoreList.SupportedChores.Contains(type) &&
+            !(type.IsGenericType && ChoreList.SupportedChores.Contains(type.GetGenericTypeDefinition()))) {
             return;
         }
 

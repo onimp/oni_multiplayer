@@ -20,6 +20,6 @@ public class EmoteSurrogate : ISerializationSurrogate, ISurrogateType {
         ISurrogateSelector selector
     ) {
         var id = info.GetString("id");
-        return Db.Get().Emotes.Get(id);
+        return Db.Get().Emotes.Minion.Get(id);
     }
 }

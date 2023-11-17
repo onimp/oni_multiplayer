@@ -72,11 +72,11 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(DropUnusedInventoryChore),
                 new Func<object[]>(() => new object[] { choreType, target })
             },
-            // new object[] {
-            //     new System.Action(() => new EmoteChore(target, choreType, emote)),
-            //     typeof(EmoteChore),
-            //     new Func<object?[]>(() => new object?[] { target, choreType, emote, 1, null })
-            // },
+            new object[] {
+                new System.Action(() => new EmoteChore(target, choreType, emote)),
+                typeof(EmoteChore),
+                new Func<object?[]>(() => new object?[] { target, choreType, emote, 1, null })
+            },
             new object[] {
                 new System.Action(() => new EquipChore(target)),
                 typeof(EquipChore),
@@ -97,11 +97,11 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(MoveToQuarantineChore),
                 new Func<object[]>(() => new object[] { target, target })
             },
-            // new object[] {
-            //     new System.Action(() => new PartyChore(target, medicinalPillWorkable)),
-            //     typeof(PartyChore),
-            //     new Func<object?[]>(() => new object?[] { target, medicinalPillWorkable, null, null, null })
-            // },
+            new object[] {
+                new System.Action(() => new PartyChore(target, medicinalPillWorkable)),
+                typeof(PartyChore),
+                new Func<object?[]>(() => new object?[] { target, medicinalPillWorkable, null, null, null })
+            },
             new object[] {
                 new System.Action(() => new PeeChore(target)),
                 typeof(PeeChore),
@@ -150,15 +150,15 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(SighChore),
                 new Func<object[]>(() => new object[] { target })
             },
-            // new object[] {
-            //     new System.Action(
-            //         () => new StressEmoteChore(target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null)
-            //     ),
-            //     typeof(StressEmoteChore),
-            //     new Func<object?[]>(
-            //         () => new object?[] { target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null }
-            //     )
-            // },
+            new object[] {
+                new System.Action(
+                    () => new StressEmoteChore(target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null)
+                ),
+                typeof(StressEmoteChore),
+                new Func<object?[]>(
+                    () => new object?[] { target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null }
+                )
+            },
             new object[] {
                 new System.Action(() => new StressIdleChore(target)),
                 typeof(StressIdleChore),
@@ -179,26 +179,26 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(TakeOffHatChore),
                 new Func<object[]>(() => new object[] { target, choreType })
             },
-            // new object[] {
-            //     new System.Action(() => new UglyCryChore(choreType, target)),
-            //     typeof(UglyCryChore),
-            //     new Func<object?[]>(() => new object?[] { choreType, target, null })
-            // },
-            // new object[] {
-            //     new System.Action(() => new WaterCoolerChore(target, medicinalPillWorkable)),
-            //     typeof(WaterCoolerChore),
-            //     new Func<object?[]>(() => new object?[] { target, medicinalPillWorkable, null, null, null })
-            // },
-            // new object[] {
-            //     new System.Action(() => new WorkChore<MedicinalPillWorkable>(choreType, medicinalPillWorkable)),
-            //     typeof(WorkChore<MedicinalPillWorkable>),
-            //     new Func<object?[]>(
-            //         () => new object?[] {
-            //             choreType, medicinalPillWorkable, null, true, null, null, null, true, null, false, true, null,
-            //             false, true, true, PriorityScreen.PriorityClass.basic, 5, false, true
-            //         }
-            //     )
-            // }
+            new object[] {
+                new System.Action(() => new UglyCryChore(choreType, target)),
+                typeof(UglyCryChore),
+                new Func<object?[]>(() => new object?[] { choreType, target, null })
+            },
+            new object[] {
+                new System.Action(() => new WaterCoolerChore(target, medicinalPillWorkable)),
+                typeof(WaterCoolerChore),
+                new Func<object?[]>(() => new object?[] { target, medicinalPillWorkable, null, null, null })
+            },
+            new object[] {
+                new System.Action(() => new WorkChore<MedicinalPillWorkable>(choreType, medicinalPillWorkable)),
+                typeof(WorkChore<MedicinalPillWorkable>),
+                new Func<object?[]>(
+                    () => new object?[] {
+                        choreType, medicinalPillWorkable, null, true, null, null, null, true, null, false, true, null,
+                        false, true, true, PriorityScreen.PriorityClass.basic, 5, false, true
+                    }
+                )
+            }
         };
         Assert.AreEqual(ChoreList.DeterministicChores.Count, testArgs.Length);
         return testArgs;

@@ -6,6 +6,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
 using MultiplayerMod.Test.Multiplayer.Commands.Chores;
@@ -40,6 +41,7 @@ public abstract class AbstractGameTest {
     protected static GameObject createGameObject() {
         var gameObject = new GameObject();
         gameObject.AddComponent<KMonoBehaviour>();
+        gameObject.AddComponent<MultiplayerInstance>();
         Grid.Objects[Grid.PosToCell(gameObject), 0] = gameObject;
         return gameObject;
     }
@@ -100,6 +102,8 @@ public abstract class AbstractGameTest {
         dependencyContainer.Register(
             new DependencyInfo(nameof(ExecutionContextManager), typeof(ExecutionContextManager), false)
         );
+        dependencyContainer.Register(
+            new DependencyInfo(nameof(DependencyContainer), typeof(DependencyContainer), false));
         new Runtime(dependencyContainer);
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
         Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().EnterOverrideSection(ExecutionLevel.Game);
