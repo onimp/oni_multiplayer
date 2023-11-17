@@ -36,7 +36,14 @@ public class HostEventsBinder {
         eventDispatcher.Subscribe<GameStartedEvent>(OnGameStarted);
         eventDispatcher.Subscribe<StopMultiplayerEvent>(OnStopMultiplayer);
 
-        ChoreConsumerEvents.FindNextChore += args => server.Send(new SetHostChore(args), MultiplayerCommandOptions.SkipHost);
+        ChoreConsumerEvents.FindNextChore += args => server.Send(
+            new SetHostChore(args),
+            MultiplayerCommandOptions.SkipHost
+        );
+        ChoreEvents.CreateNewChore += args => server.Send(
+            new CreateHostChore(args),
+            MultiplayerCommandOptions.SkipHost
+        );
     }
 
     private void OnGameStarted(GameStartedEvent @event) {

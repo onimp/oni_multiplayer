@@ -50,7 +50,7 @@ public static class UnityTestRuntime {
     private static void SetUpUniquePosition(GameObject gameObject) {
         var cell = lastCell++;
         var width = 40; // random
-        var cellSizeInMeters = 100;  // random
+        var cellSizeInMeters = 100; // random
         SetPosition(
             gameObject,
             new Vector3(cellSizeInMeters * (float) (cell % width), cellSizeInMeters * (float) (cell / width), 0.0f)
@@ -93,8 +93,10 @@ public static class UnityTestRuntime {
         GetComponentFastPath(component.gameObject, type, oneFurtherThanResultValue);
     }
 
-    public static Component GetComponent(GameObject gameObject, Type type) =>
-        Objects[gameObject].SingleOrDefault(component => component.GetType() == type);
+    public static Component GetComponent(GameObject gameObject, Type type) {
+        return Objects[gameObject].SingleOrDefault(component => type == component.GetType()) ??
+               Objects[gameObject].SingleOrDefault(component => type.IsAssignableFrom(component.GetType()));
+    }
 
     public static unsafe void GetComponentFastPath(GameObject gameObject, Type type, IntPtr oneFurtherThanResultValue) {
         var component = GetComponent(gameObject, type);
@@ -142,6 +144,7 @@ public static class UnityTestRuntime {
     public static void Uninstall() {
         PatchesSetup.Uninstall(harmony);
         FrameCount = 0;
+        lastCell = 0;
         Components.Clear();
         EnabledComponents.Clear();
         StartAwaitingComponents.Clear();
