@@ -33,6 +33,9 @@
         <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedPath)\Unity.TextMeshPro.dll"/>
         <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedPath)\com.rlabrecque.steamworks.net.dll"/>
         <Reference Include="ImGui.NET" HintPath="$(ManagedPath)\ImGui.NET.dll"/>
+        <Reference Include="ImGui" HintPath="$(ManagedPath)\ImGui.dll"/>
+        <Reference Include="LibNoiseDotNet" HintPath="$(ManagedPath)\LibNoiseDotNet.dll"/>
+        <Reference Include="Ionic.Zip" HintPath="$(ManagedPath)\Ionic.Zip.dll"/>
         <Reference Include="Newtonsoft.Json" HintPath="$(ManagedPath)\Newtonsoft.Json.dll"/>
     </ItemGroup>
 </Project>

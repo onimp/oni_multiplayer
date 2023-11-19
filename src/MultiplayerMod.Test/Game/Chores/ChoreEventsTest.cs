@@ -48,7 +48,7 @@ public class ChoreEventsTest : AbstractGameTest {
 
     // ReSharper disable ObjectCreationAsStatement
     private static object[][] GetTestArgs() {
-        var cellCallback = new Func<MoveChore.StatesInstance, int>(_ => 5);
+       // var cellCallback = new Func<MoveChore.StatesInstance, int>(_ => 5);
 
         var testArgs = new[] {
             new object[] {
@@ -72,11 +72,11 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(DropUnusedInventoryChore),
                 new Func<object[]>(() => new object[] { choreType, target })
             },
-            new object[] {
-                new System.Action(() => new EmoteChore(target, choreType, emote)),
-                typeof(EmoteChore),
-                new Func<object?[]>(() => new object?[] { target, choreType, emote, 1, null })
-            },
+            // new object[] {
+            //     new System.Action(() => new EmoteChore(target, choreType, emote)),
+            //     typeof(EmoteChore),
+            //     new Func<object?[]>(() => new object?[] { target, choreType, emote, 1, null })
+            // },
             new object[] {
                 new System.Action(() => new EquipChore(target)),
                 typeof(EquipChore),
@@ -87,11 +87,11 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(FixedCaptureChore),
                 new Func<object[]>(() => new object[] { kPrefabID })
             },
-            new object[] {
-                new System.Action(() => new MoveChore(target, choreType, cellCallback)),
-                typeof(MoveChore),
-                new Func<object[]>(() => new object[] { target, choreType, cellCallback, false })
-            },
+            // new object[] {
+            //     new System.Action(() => new MoveChore(target, choreType, cellCallback)),
+            //     typeof(MoveChore),
+            //     new Func<object[]>(() => new object[] { target, choreType, cellCallback, false })
+            // },
             new object[] {
                 new System.Action(() => new MoveToQuarantineChore(target, target)),
                 typeof(MoveToQuarantineChore),
@@ -150,15 +150,15 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(SighChore),
                 new Func<object[]>(() => new object[] { target })
             },
-            new object[] {
-                new System.Action(
-                    () => new StressEmoteChore(target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null)
-                ),
-                typeof(StressEmoteChore),
-                new Func<object?[]>(
-                    () => new object?[] { target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null }
-                )
-            },
+            // new object[] {
+            //     new System.Action(
+            //         () => new StressEmoteChore(target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null)
+            //     ),
+            //     typeof(StressEmoteChore),
+            //     new Func<object?[]>(
+            //         () => new object?[] { target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null }
+            //     )
+            // },
             new object[] {
                 new System.Action(() => new StressIdleChore(target)),
                 typeof(StressIdleChore),

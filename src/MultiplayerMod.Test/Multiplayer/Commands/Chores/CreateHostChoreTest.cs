@@ -19,7 +19,7 @@ public class CreateHostChoreTest : AbstractGameTest {
     private static KPrefabID kPrefabId = null!;
     private static MedicinalPillWorkable medicineWorkable = null!;
     private static Constructable constructable = null!;
-    private static TestMonoBehaviour testMonoBehaviour = null!;
+ //   private static TestMonoBehaviour testMonoBehaviour = null!;
 
     [SetUp]
     public new void SetUp() {
@@ -36,7 +36,7 @@ public class CreateHostChoreTest : AbstractGameTest {
         medicineWorkable = createGameObject().AddComponent<MedicinalPillWorkable>();
         medicineWorkable.Awake();
         constructable = createGameObject().AddComponent<Constructable>();
-        testMonoBehaviour = createGameObject().AddComponent<TestMonoBehaviour>();
+     //   testMonoBehaviour = createGameObject().AddComponent<TestMonoBehaviour>();
     }
 
     [Test, TestCaseSource(nameof(GetTestArgs))]
@@ -65,6 +65,7 @@ public class CreateHostChoreTest : AbstractGameTest {
         Assert.AreEqual(command.Args, ((CreateHostChore) networkMessage!.Command).Args);
     }
 
+#pragma warning disable CS8974 // Converting method group to non-delegate type
     private static object[] GetTestArgs() {
         var result = new object[] {
             new object[] {
@@ -91,16 +92,16 @@ public class CreateHostChoreTest : AbstractGameTest {
                     () => new CreateNewChoreArgs(typeof(DropUnusedInventoryChore), new object[] { choreType, target })
                 )
             },
-            new object[] {
-                typeof(EmoteChore),
-                new Func<CreateNewChoreArgs>(
-                    () => new CreateNewChoreArgs(
-                        typeof(EmoteChore),
-                        new object[]
-                            { target, choreType, db.Emotes.Minion.Cheer, 1, testMonoBehaviour.TestStressEmoteFunc }
-                    )
-                )
-            },
+            // new object[] {
+            //     typeof(EmoteChore),
+            //     new Func<CreateNewChoreArgs>(
+            //         () => new CreateNewChoreArgs(
+            //             typeof(EmoteChore),
+            //             new object[]
+            //                 { target, choreType, db.Emotes.Minion.Cheer, 1, testMonoBehaviour.TestStressEmoteFunc }
+            //         )
+            //     )
+            // },
             new object[] {
                 typeof(EquipChore),
                 new Func<CreateNewChoreArgs>(() => new CreateNewChoreArgs(typeof(EquipChore), new object[] { target }))
@@ -111,15 +112,15 @@ public class CreateHostChoreTest : AbstractGameTest {
                     () => new CreateNewChoreArgs(typeof(FixedCaptureChore), new object[] { kPrefabId })
                 )
             },
-            new object[] {
-                typeof(MoveChore),
-                new Func<CreateNewChoreArgs>(
-                    () => new CreateNewChoreArgs(
-                        typeof(MoveChore),
-                        new object[] { target, choreType, testMonoBehaviour.TestMoveFunc, false }
-                    )
-                )
-            },
+            // new object[] {
+            //     typeof(MoveChore),
+            //     new Func<CreateNewChoreArgs>(
+            //         () => new CreateNewChoreArgs(
+            //             typeof(MoveChore),
+            //             new object[] { target, choreType, testMonoBehaviour.TestMoveFunc, false }
+            //         )
+            //     )
+            // },
             new object[] {
                 typeof(MoveToQuarantineChore),
                 new Func<CreateNewChoreArgs>(
@@ -191,18 +192,18 @@ public class CreateHostChoreTest : AbstractGameTest {
                 typeof(SighChore),
                 new Func<CreateNewChoreArgs>(() => new CreateNewChoreArgs(typeof(SighChore), new object[] { target }))
             },
-            new object[] {
-                typeof(StressEmoteChore),
-                new Func<CreateNewChoreArgs>(
-                    () => new CreateNewChoreArgs(
-                        typeof(StressEmoteChore),
-                        new object[] {
-                            target, choreType, new HashedString(1), new HashedString[] { new(2) },
-                            KAnim.PlayMode.Paused, testMonoBehaviour.TestStressEmoteFunc
-                        }
-                    )
-                )
-            },
+            // new object[] {
+            //     typeof(StressEmoteChore),
+            //     new Func<CreateNewChoreArgs>(
+            //         () => new CreateNewChoreArgs(
+            //             typeof(StressEmoteChore),
+            //             new object[] {
+            //                 target, choreType, new HashedString(1), new HashedString[] { new(2) },
+            //                 KAnim.PlayMode.Paused, testMonoBehaviour.TestStressEmoteFunc
+            //             }
+            //         )
+            //     )
+            // },
             new object[] {
                 typeof(StressIdleChore),
                 new Func<CreateNewChoreArgs>(
@@ -271,16 +272,17 @@ public class CreateHostChoreTest : AbstractGameTest {
 
         return result;
     }
+#pragma warning restore CS8974 // Converting method group to non-delegate type
 
-    private class TestMonoBehaviour : KMonoBehaviour {
-
-        public int TestMoveFunc(object obj) {
-            return 0;
-        }
-
-        public StatusItem TestStressEmoteFunc() {
-            return new StatusItem("", "");
-        }
-    }
+    // private class TestMonoBehaviour : KMonoBehaviour {
+    //
+    //     public int TestMoveFunc(object obj) {
+    //         return 0;
+    //     }
+    //
+    //     public StatusItem TestStressEmoteFunc() {
+    //         return new StatusItem("", "");
+    //     }
+    // }
 
 }

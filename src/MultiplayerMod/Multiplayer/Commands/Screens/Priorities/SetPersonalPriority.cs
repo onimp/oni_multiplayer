@@ -17,7 +17,7 @@ public class SetPersonalPriority : MultiplayerCommand {
         Db.Get().ChoreGroups.resources.FirstOrDefault(resource => resource.Id == choreGroupId);
 
     public SetPersonalPriority(ChoreConsumer choreConsumer, ChoreGroup choreGroup, int value) {
-        choreConsumerReference = choreConsumer.gameObject.GetMultiplayerReference();
+        choreConsumerReference = choreConsumer.gameObject.GetReference();
         choreGroupId = choreGroup.Id;
         this.value = value;
     }
