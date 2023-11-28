@@ -4,11 +4,11 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using UnityEngine;
 
-namespace MultiplayerMod.Test.Environment.Unity.Patches;
+namespace MultiplayerMod.Test.Environment.Unity.Patches.Unity;
 
 [UsedImplicitly]
 [HarmonyPatch(typeof(Time))]
-public class UnityTimePatch {
+public class TimePatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]

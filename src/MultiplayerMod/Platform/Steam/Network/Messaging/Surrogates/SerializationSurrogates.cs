@@ -15,7 +15,10 @@ public static class SerializationSurrogates {
         Selector.Add(new PathNodeSurrogate());
         Selector.Add(new AssignmentGroupSurrogate());
         Selector.Add(new CarePackageInstanceDataSurrogate());
+        Selector.Add(new ChoreTypeSurrogate());
         Selector.Add(new ComplexRecipeSurrogate());
+        Selector.Add(new DeathSurrogate());
+        Selector.Add(new EmoteSurrogate());
         Selector.Add(new MinionStartingStatsSurrogate());
         Selector.Add(new RoomSurrogate());
         Selector.Add(new SpaceDestinationSurrogate());

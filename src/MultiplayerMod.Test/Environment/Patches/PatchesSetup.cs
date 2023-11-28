@@ -8,7 +8,7 @@ namespace MultiplayerMod.Test.Environment.Patches;
 
 public static class PatchesSetup {
 
-    public static void Install(Harmony harmony, List<Type> patches) =>
+    public static void Install(Harmony harmony, IEnumerable<Type> patches) =>
         patches.ForEach(it => harmony.CreateClassProcessor(it).Patch());
 
     public static void Uninstall(Harmony harmony) {

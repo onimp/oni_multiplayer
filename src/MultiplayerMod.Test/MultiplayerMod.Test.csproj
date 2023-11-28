@@ -12,18 +12,21 @@
         <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="NUnit" Version="3.13.3" />
-    </ItemGroup>
-    <ItemGroup>
         <ProjectReference Include="..\MultiplayerMod\MultiplayerMod.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="NUnit" Version="3.13.3"/>
+        <PackageReference Include="AssemblyExposer.MSBuild.Task" Version="0.1.3" Private="true"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="Assembly-CSharp" HintPath="lib\exposed\Assembly-CSharp.dll"/>
+        <Reference Include="Assembly-CSharp-firstpass" HintPath="lib\exposed\Assembly-CSharp-firstpass.dll"/>
+        <Reference Include="UnityEngine.CoreModule" HintPath="lib\exposed\UnityEngine.CoreModule.dll"  />
+    </ItemGroup>
+    <ItemGroup>
         <Reference Include="0Harmony" HintPath="$(ManagedPath)\0Harmony.dll"/>
-        <Reference Include="Assembly-CSharp" HintPath="$(ManagedPath)\Assembly-CSharp.dll"/>
-        <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ManagedPath)\Assembly-CSharp-firstpass.dll"/>
         <Reference Include="FMODUnity" HintPath="$(ManagedPath)\FMODUnity.dll"/>
         <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll"/>
-        <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
         <Reference Include="UnityEngine.UI" HintPath="$(ManagedPath)\UnityEngine.UI.dll"/>
         <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(ManagedPath)\UnityEngine.ImageConversionModule.dll"/>
         <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedPath)\UnityEngine.IMGUIModule.dll"/>
