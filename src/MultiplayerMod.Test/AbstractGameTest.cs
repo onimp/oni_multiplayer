@@ -58,8 +58,6 @@ public abstract class AbstractGameTest {
         ReportManager.Instance.Awake();
         ReportManager.Instance.todaysReport = new ReportManager.DailyReport(ReportManager.Instance);
 
-        GlobalChoreProvider.Instance = new GlobalChoreProvider();
-
         StateMachineDebuggerSettings._Instance = new StateMachineDebuggerSettings();
         StateMachineDebuggerSettings._Instance.Initialize();
     }

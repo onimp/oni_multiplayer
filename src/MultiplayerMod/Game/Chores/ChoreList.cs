@@ -15,23 +15,16 @@ public static class ChoreList {
             typeof(DeliverFoodChore),
             typeof(DieChore),
             typeof(DropUnusedInventoryChore),
-            typeof(EquipChore),
-            typeof(FixedCaptureChore),
             typeof(MoveToQuarantineChore),
             typeof(PartyChore),
             typeof(PeeChore),
             typeof(PutOnHatChore),
-            typeof(RancherChore),
-            typeof(RescueIncapacitatedChore),
-            typeof(RescueSweepBotChore),
             typeof(SighChore),
             typeof(StressIdleChore),
             typeof(SwitchRoleHatChore),
-            typeof(TakeMedicineChore),
             typeof(TakeOffHatChore),
             typeof(UglyCryChore),
             typeof(WaterCoolerChore),
-            typeof(WorkChore<>),
         }
     );
 
@@ -42,7 +35,15 @@ public static class ChoreList {
         new[] {
             // No usage has been found in the game dlls.
             // one argument of type EmoteReactable is not serializable.
-            typeof(ReactEmoteChore)
+            typeof(ReactEmoteChore),
+            // Chores below using global providers. Hence they depends on consumer who will pick them up.
+            typeof(EquipChore),
+            typeof(FixedCaptureChore),
+            typeof(RancherChore),
+            typeof(RescueIncapacitatedChore),
+            typeof(RescueSweepBotChore),
+            typeof(TakeMedicineChore),
+            typeof(WorkChore<>),
         }
     );
 
