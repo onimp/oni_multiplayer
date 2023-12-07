@@ -12,7 +12,7 @@ public class ComponentPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
-    [HarmonyPatch(typeof(Component), "get_gameObject")]
+    [HarmonyPatch("get_gameObject")]
     private static IEnumerable<CodeInstruction> Component_get_gameObject(IEnumerable<CodeInstruction> instructions) {
         return new List<CodeInstruction> {
             new(OpCodes.Ldarg_0), // this

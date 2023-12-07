@@ -24,7 +24,17 @@ public class ChoreEventsTest : AbstractGameTest {
 
         target = createGameObject().GetComponent<KMonoBehaviour>();
         target.gameObject.AddComponent<ChoreProvider>();
+        target.gameObject.AddComponent<KPrefabID>();
+        target.gameObject.AddComponent<MeshRenderer>();
+        target.gameObject.AddComponent<Prioritizable>();
+
+        var sensors = target.gameObject.AddComponent<Sensors>();
+        sensors.Add(new SafeCellSensor(sensors));
+
         gameObject = createGameObject();
+        gameObject.AddComponent<Pickupable>();
+        gameObject.AddComponent<PrimaryElement>();
+
         choreType = Db.Get().ChoreTypes.Astronaut;
         kPrefabID = createGameObject().AddComponent<KPrefabID>();
         kPrefabID.gameObject.AddComponent<SkillPerkMissingComplainer>(); // required for RancherChore
@@ -49,7 +59,7 @@ public class ChoreEventsTest : AbstractGameTest {
 
     // ReSharper disable ObjectCreationAsStatement
     private static object[][] GetTestArgs() {
-        // var cellCallback = new Func<MoveChore.StatesInstance, int>(_ => 5);
+        var cellCallback = new Func<MoveChore.StatesInstance, int>(_ => 5);
 
         var testArgs = new[] {
             new object[] {
@@ -57,7 +67,6 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(AttackChore),
                 new Func<object[]>(() => new object[] { target, gameObject })
             },
-
             new object[] {
                 new System.Action(() => new DeliverFoodChore(target)),
                 typeof(DeliverFoodChore),
@@ -74,11 +83,6 @@ public class ChoreEventsTest : AbstractGameTest {
                 new Func<object[]>(() => new object[] { choreType, target })
             },
             // new object[] {
-            //     new System.Action(() => new EmoteChore(target, choreType, emote)),
-            //     typeof(EmoteChore),
-            //     new Func<object?[]>(() => new object?[] { target, choreType, emote, 1, null })
-            // },
-            // new object[] {
             //     new System.Action(() => new EquipChore(target)),
             //     typeof(EquipChore),
             //     new Func<object[]>(() => new object[] { target })
@@ -87,11 +91,6 @@ public class ChoreEventsTest : AbstractGameTest {
             //     new System.Action(() => new FixedCaptureChore(kPrefabID)),
             //     typeof(FixedCaptureChore),
             //     new Func<object[]>(() => new object[] { kPrefabID })
-            // },
-            // new object[] {
-            //     new System.Action(() => new MoveChore(target, choreType, cellCallback)),
-            //     typeof(MoveChore),
-            //     new Func<object[]>(() => new object[] { target, choreType, cellCallback, false })
             // },
             new object[] {
                 new System.Action(() => new MoveToQuarantineChore(target, target)),
@@ -151,15 +150,6 @@ public class ChoreEventsTest : AbstractGameTest {
                 typeof(SighChore),
                 new Func<object[]>(() => new object[] { target })
             },
-            // new object[] {
-            //     new System.Action(
-            //         () => new StressEmoteChore(target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null)
-            //     ),
-            //     typeof(StressEmoteChore),
-            //     new Func<object?[]>(
-            //         () => new object?[] { target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null }
-            //     )
-            // },
             new object[] {
                 new System.Action(() => new StressIdleChore(target)),
                 typeof(StressIdleChore),
@@ -206,8 +196,92 @@ public class ChoreEventsTest : AbstractGameTest {
             //         }
             //     )
             // }
+            new object[] {
+                new System.Action(() => new AggressiveChore(target)),
+                typeof(AggressiveChore),
+                new Func<object?[]>(() => new object?[] { target, null })
+            },
+            new object[] {
+                new System.Action(() => new BeIncapacitatedChore(target)),
+                typeof(BeIncapacitatedChore),
+                new Func<object[]>(() => new object[] { target })
+            },
+            new object[] {
+                new System.Action(() => new BingeEatChore(target)),
+                typeof(BingeEatChore),
+                new Func<object?[]>(() => new object?[] { target, null })
+            },
+            new object[] {
+                new System.Action(() => new EatChore(target)),
+                typeof(EatChore),
+                new Func<object[]>(() => new object[] { target })
+            },
+            new object[] {
+                new System.Action(() => new EmoteChore(target, choreType, emote)),
+                typeof(EmoteChore),
+                new Func<object?[]>(() => new object?[] { target, choreType, emote, 1, null })
+            },
+            new object[] {
+                new System.Action(() => new EntombedChore(target, "override")),
+                typeof(EntombedChore),
+                new Func<object[]>(() => new object[] { target, "override" })
+            },
+            // new object[] {
+            //     new System.Action(() => new FetchAreaChore(new Chore.Precondition.Context())),
+            //     typeof(FetchAreaChore),
+            //     new Func<object[]>(() => new object[] { new Chore.Precondition.Context() })
+            // },
+            new object[] {
+                new System.Action(() => new FleeChore(target, gameObject)),
+                typeof(FleeChore),
+                new Func<object[]>(() => new object[] { target, gameObject })
+            },
+            new object[] {
+                new System.Action(() => new FoodFightChore(target, gameObject)),
+                typeof(FoodFightChore),
+                new Func<object[]>(() => new object[] { target, gameObject })
+            },
+            new object[] {
+                new System.Action(() => new MoveChore(target, choreType, cellCallback)),
+                typeof(MoveChore),
+                new Func<object[]>(() => new object[] { target, choreType, cellCallback, false })
+            },
+            new object[] {
+                new System.Action(() => new MournChore(target)),
+                typeof(MournChore),
+                new Func<object[]>(() => new object[] { target })
+            },
+            new object[] {
+                new System.Action(() => new MovePickupableChore(target, gameObject, null)),
+                typeof(MovePickupableChore),
+                new Func<object?[]>(() => new object?[] { target, gameObject, null })
+            },
+            new object[] {
+                new System.Action(() => new MoveToSafetyChore(target)),
+                typeof(MoveToSafetyChore),
+                new Func<object[]>(() => new object[] { target })
+            },
+            new object[] {
+                new System.Action(() => new RecoverBreathChore(target)),
+                typeof(RecoverBreathChore),
+                new Func<object[]>(() => new object[] { target })
+            },
+            new object[] {
+                new System.Action(() => new SleepChore(choreType, target, gameObject, false, false)),
+                typeof(SleepChore),
+                new Func<object[]>(() => new object[] { choreType, target, gameObject, false, false })
+            },
+            new object[] {
+                new System.Action(
+                    () => new StressEmoteChore(target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null)
+                ),
+                typeof(StressEmoteChore),
+                new Func<object?[]>(
+                    () => new object?[] { target, choreType, new HashedString(1), null, KAnim.PlayMode.Loop, null }
+                )
+            },
         };
-        Assert.AreEqual(ChoreList.DeterministicChores.Count, testArgs.Length);
+        Assert.AreEqual(ChoreList.SupportedChores.Count, testArgs.Length);
         return testArgs;
     }
 }

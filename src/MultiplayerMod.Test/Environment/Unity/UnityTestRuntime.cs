@@ -98,6 +98,9 @@ public static class UnityTestRuntime {
                Objects[gameObject].SingleOrDefault(component => type.IsAssignableFrom(component.GetType()));
     }
 
+    public static Component? GetComponentInChildren(GameObject gameObject, Type type, bool includeInactive) =>
+        GetComponent(gameObject, type);
+
     public static unsafe void GetComponentFastPath(GameObject gameObject, Type type, IntPtr oneFurtherThanResultValue) {
         var component = GetComponent(gameObject, type);
 

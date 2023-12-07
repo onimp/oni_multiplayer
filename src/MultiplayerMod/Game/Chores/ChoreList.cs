@@ -9,7 +9,7 @@ public static class ChoreList {
     /**
      * Those chores are fully determined by the input.
      */
-    public static readonly HashSet<Type> DeterministicChores = new(
+    private static readonly HashSet<Type> deterministicChores = new(
         new[] {
             typeof(AttackChore),
             typeof(DeliverFoodChore),
@@ -31,7 +31,7 @@ public static class ChoreList {
     /**
      * Those chores have some issues and are disabled for now.
      */
-    public static readonly HashSet<Type> DeterministicChoresOff = new(
+    private static readonly HashSet<Type> deterministicChoresOff = new(
         new[] {
             // No usage has been found in the game dlls.
             // one argument of type EmoteReactable is not serializable.
@@ -47,12 +47,10 @@ public static class ChoreList {
         }
     );
 
-    public static readonly HashSet<Type> SupportedChores = new(DeterministicChores);
-
     /**
      * Those chores changes its parameters dynamically via target parameters.
      */
-    public static readonly HashSet<Type> DynamicTargetedChores = new(
+    private static readonly HashSet<Type> dynamicTargetedChores = new(
         new[] {
             typeof(AggressiveChore),
             typeof(BeIncapacitatedChore),
@@ -60,7 +58,6 @@ public static class ChoreList {
             typeof(EatChore),
             typeof(EmoteChore),
             typeof(EntombedChore),
-            typeof(FetchAreaChore),
             typeof(FleeChore),
             typeof(FoodFightChore),
             typeof(MoveChore),
@@ -74,9 +71,19 @@ public static class ChoreList {
     );
 
     /**
+     * Those chores have some issues and are disabled for now.
+     */
+    private static readonly HashSet<Type> dynamicTargetedChoresOff = new(
+        new[] {
+            // an argument is not serializable.
+            typeof(FetchAreaChore),
+        }
+    );
+
+    /**
      * Those chores changes its parameters dynamically without using target parameters.
      */
-    public static readonly HashSet<Type> DynamicNonTargetedChores = new(
+    private static readonly HashSet<Type> dynamicNonTargetedChores = new(
         new[] {
             typeof(BalloonArtistChore),
             typeof(BansheeChore),
@@ -87,6 +94,10 @@ public static class ChoreList {
         }
     );
 
-    public static readonly IEnumerable<Type> AllChoreTypes = DeterministicChores.Concat(DeterministicChoresOff)
-        .Concat(DynamicTargetedChores).Concat(DynamicNonTargetedChores).OrderBy(a => a.FullName).ToList();
+    public static readonly HashSet<Type> SupportedChores = new(deterministicChores.Union(dynamicTargetedChores));
+
+    public static readonly IEnumerable<Type> AllChoreTypes = deterministicChores.Concat(deterministicChoresOff)
+        .Concat(dynamicTargetedChores).Concat(dynamicTargetedChoresOff)
+        .Concat(dynamicNonTargetedChores)
+        .OrderBy(a => a.FullName).ToList();
 }

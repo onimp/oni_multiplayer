@@ -65,7 +65,22 @@ public class GameObjectPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
-    [HarmonyPatch(typeof(GameObject), "get_transform")]
+    [HarmonyPatch("GetComponentInChildren", typeof(Type), typeof(bool))]
+    private static IEnumerable<CodeInstruction> GameObject_GetComponentInChildren(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0), // this
+            new(OpCodes.Ldarg_1), // type
+            new(OpCodes.Ldarg_2), // includeInactive
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.GetComponentInChildren)),
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("get_transform")]
     private static IEnumerable<CodeInstruction> GameObject_get_transform(IEnumerable<CodeInstruction> instructions) {
         return new List<CodeInstruction> {
             new(OpCodes.Ldarg_0), // this
@@ -84,19 +99,6 @@ public class GameObjectPatch {
             new(OpCodes.Ldarg_0), // this (go)
             new(OpCodes.Ldarg_1), // componentType
             CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.AddComponent)),
-            new(OpCodes.Ret)
-        };
-    }
-
-    [UsedImplicitly]
-    [HarmonyTranspiler]
-    [HarmonyPatch(typeof(Time), "get_frameCount")]
-    private static IEnumerable<CodeInstruction> Time_get_frameCount(IEnumerable<CodeInstruction> instructions) {
-        return new List<CodeInstruction> {
-            new(
-                OpCodes.Call,
-                AccessTools.PropertyGetter(typeof(UnityTestRuntime), nameof(UnityTestRuntime.FrameCount))
-            ),
             new(OpCodes.Ret)
         };
     }

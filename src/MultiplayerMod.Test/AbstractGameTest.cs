@@ -60,6 +60,9 @@ public abstract class AbstractGameTest {
 
         StateMachineDebuggerSettings._Instance = new StateMachineDebuggerSettings();
         StateMachineDebuggerSettings._Instance.Initialize();
+
+        MinionGroupProber.Instance = worldGameObject.AddComponent<MinionGroupProber>();
+        MinionGroupProber.Instance.OnPrefabInit();
     }
 
     private static void InitGame(GameObject worldGameObject) {
