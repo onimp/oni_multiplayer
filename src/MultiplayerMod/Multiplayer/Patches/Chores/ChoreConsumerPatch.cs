@@ -6,7 +6,7 @@ using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.World;
 
-namespace MultiplayerMod.Multiplayer.Patches;
+namespace MultiplayerMod.Multiplayer.Patches.Chores;
 
 // [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
 public class ChoreConsumerPatch {

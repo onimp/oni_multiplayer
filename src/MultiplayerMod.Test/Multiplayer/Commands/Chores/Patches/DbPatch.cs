@@ -36,6 +36,7 @@ public class DbPatch {
         __instance.BuildingStatusItems = new BuildingStatusItems(root);
         __instance.effects = new ResourceSet<Effect>();
         __instance.AttributeConverters = new AttributeConverters();
+        __instance.StatusItemCategories = new StatusItemCategories(root);
         return false;
     }
 }

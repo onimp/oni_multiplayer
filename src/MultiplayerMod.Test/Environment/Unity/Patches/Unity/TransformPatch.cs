@@ -12,7 +12,7 @@ public class TransformPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
-    [HarmonyPatch(typeof(Transform), "get_position_Injected")]
+    [HarmonyPatch("get_position_Injected")]
     private static IEnumerable<CodeInstruction> Transform_get_position_Injected(
         IEnumerable<CodeInstruction> instructions
     ) {

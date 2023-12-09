@@ -12,7 +12,7 @@ public class TimePatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
-    [HarmonyPatch(typeof(Time), "get_frameCount")]
+    [HarmonyPatch("get_frameCount")]
     private static IEnumerable<CodeInstruction> Time_get_frameCount(IEnumerable<CodeInstruction> instructions) {
         return new List<CodeInstruction> {
             new(
@@ -22,5 +22,4 @@ public class TimePatch {
             new(OpCodes.Ret)
         };
     }
-
 }
