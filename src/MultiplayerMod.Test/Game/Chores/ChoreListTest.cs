@@ -8,7 +8,7 @@ namespace MultiplayerMod.Test.Game.Chores;
 [TestFixture]
 public class ChoreListTest {
     [Test]
-    public void EnsureChoreListContainsAllChores() {
+    public void ContainsAllChores() {
         var foundChoreTypes = Assembly.GetAssembly(typeof(Chore))
             .GetTypes()
             .Where(
@@ -20,6 +20,11 @@ public class ChoreListTest {
             .OrderBy(a => a.FullName)
             .ToHashSet();
 
-        Assert.AreEqual(foundChoreTypes, ChoreList.AllChoreTypes);
+        Assert.AreEqual(
+            foundChoreTypes,
+            ChoreList.Config.Keys
+                .OrderBy(a => a.FullName)
+                .ToHashSet()
+        );
     }
 }
