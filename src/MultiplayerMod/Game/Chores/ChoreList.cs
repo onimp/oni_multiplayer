@@ -41,7 +41,7 @@ public static class ChoreList {
                 typeof(MoveChore),
                 new ChoreSyncConfig(
                     // fully determined by the input.
-                    CreationStatusEnum.Off
+                    CreationStatusEnum.On
                 )
             }, {
                 typeof(MoveToQuarantineChore),
