@@ -255,11 +255,10 @@ public class AbstractChoreTest : AbstractGameTest {
             //     new Func<Chore>(() => new FoodFightChore(target, gameObject)),
             //     new Func<object[]>(() => new object[] { target, gameObject })
             // },
-            // new object[] {
-            //     typeof(MoveChore),
-            //     new Func<Chore>(() => new MoveChore(target, choreType, _ => 15)),
-            //     new Func<object[]>(() => new object[] { target, choreType, 15, false })
-            // },
+            new object[] {
+                typeof(MoveChore),
+                new Func<object[]>(() => new object[] { target, choreType, (StateMachine.Instance _) => 15, false })
+            },
             // new object[] {
             //     typeof(MournChore),
             //     new Func<Chore>(() => new MournChore(target)),

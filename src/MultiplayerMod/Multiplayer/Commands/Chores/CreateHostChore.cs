@@ -16,13 +16,30 @@ public class CreateHostChore : MultiplayerCommand {
 
     public CreateHostChore(CreateNewChoreArgs args) {
         ChoreType = args.ChoreType;
-        Args = args.Args.Select(WrapObject).ToArray();
+        Args = SpecialWrap(args.Args);
+        Args = Args.Select(WrapObject).ToArray();
     }
 
     public override void Execute(MultiplayerCommandContext context) {
         var args = Args.Select(UnWrapObject).ToArray();
+        args = SpecialUnWrap(args);
 
         ChoreType.GetConstructors()[0].Invoke(args);
+    }
+
+    private object?[] SpecialWrap(object?[] args) {
+        if (ChoreType == typeof(MoveChore)) {
+            args[2] = ((Func<MoveChore.StatesInstance, int>) args[2]!).Invoke(null!);
+        }
+        return args;
+    }
+
+    private object?[] SpecialUnWrap(object?[] args) {
+        if (ChoreType == typeof(MoveChore)) {
+            var targetCell = (int) args[2]!;
+            args[2] = new Func<MoveChore.StatesInstance, int>(_ => targetCell);
+        }
+        return args;
     }
 
     private object? WrapObject(object? obj) {
