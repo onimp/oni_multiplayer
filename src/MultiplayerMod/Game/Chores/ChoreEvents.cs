@@ -17,7 +17,9 @@ public static class ChoreEvents {
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
-        return ChoreList.SupportedChores
+        return ChoreList.Config
+            .Where(config => config.Value.CreationSync == ChoreList.CreationStatusEnum.On)
+            .Select(config => config.Key)
             .Select(
                 type => {
                     if (!type.IsGenericType) return type.GetConstructors()[0];
@@ -34,12 +36,6 @@ public static class ChoreEvents {
     [RequireExecutionLevel(ExecutionLevel.Game)]
     [RequireMultiplayerMode(MultiplayerMode.Host)]
     private static void Chore_Constructor(Chore __instance, object[] __args) {
-        var type = __instance.GetType();
-        if (!ChoreList.SupportedChores.Contains(type) &&
-            !(type.IsGenericType && ChoreList.SupportedChores.Contains(type.GetGenericTypeDefinition()))) {
-            return;
-        }
-
         CreateNewChore?.Invoke(new CreateNewChoreArgs(__instance.GetType(), __args));
     }
 }

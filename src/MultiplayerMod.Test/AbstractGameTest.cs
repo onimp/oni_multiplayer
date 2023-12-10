@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.ModRuntime;
@@ -9,7 +8,7 @@ using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
-using MultiplayerMod.Test.Multiplayer.Commands.Chores;
+using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -19,15 +18,13 @@ public abstract class AbstractGameTest {
 
     private static Harmony harmony = null!;
 
-    protected HashSet<Type> patches = typeof(CreateHostChoreTest).Assembly.GetTypes()
-        .Where(type => type.Namespace == typeof(CreateHostChoreTest).Namespace + ".Patches")
-        .ToHashSet();
+    protected readonly HashSet<Type> Patches = new(new[] { typeof(DbPatch) });
 
     [SetUp]
     public void SetUp() {
-        harmony = new Harmony("CreateHostChoreTest");
+        harmony = new Harmony("AbstractGameTest");
         UnityTestRuntime.Install();
-        PatchesSetup.Install(harmony, patches);
+        PatchesSetup.Install(harmony, Patches);
         SetUpUnityAndGame();
         SetupDependencies();
     }
@@ -60,15 +57,21 @@ public abstract class AbstractGameTest {
 
         StateMachineDebuggerSettings._Instance = new StateMachineDebuggerSettings();
         StateMachineDebuggerSettings._Instance.Initialize();
+
+        worldGameObject.AddComponent<MinionGroupProber>().OnPrefabInit();
+        worldGameObject.AddComponent<GameClock>().OnPrefabInit();
+        worldGameObject.AddComponent<GlobalChoreProvider>().OnPrefabInit();
     }
 
     private static void InitGame(GameObject worldGameObject) {
         // From global
         Singleton<StateMachineUpdater>.CreateInstance();
         Singleton<StateMachineManager>.CreateInstance();
+        Singleton<CellChangeMonitor>.CreateInstance();
 
         var game = worldGameObject.AddComponent<global::Game>();
         global::Game.Instance = game;
+        game.obj = KObjectManager.Instance.GetOrCreateObject(game.gameObject);
 
         var widthInCells = 40;
         var heightInCells = 40;
@@ -83,6 +86,7 @@ public abstract class AbstractGameTest {
         game.travelTubeSystem = new UtilityNetworkTubesManager(widthInCells, heightInCells, 35);
         game.gasConduitFlow = new ConduitFlow(ConduitType.Gas, numCells, game.gasConduitSystem, 1f, 0.25f);
         game.liquidConduitFlow = new ConduitFlow(ConduitType.Liquid, numCells, game.liquidConduitSystem, 10f, 0.75f);
+        game.mingleCellTracker = worldGameObject.AddComponent<MingleCellTracker>();
 
         GridSettings.Reset(widthInCells, heightInCells);
 
@@ -101,7 +105,8 @@ public abstract class AbstractGameTest {
             new DependencyInfo(nameof(ExecutionContextManager), typeof(ExecutionContextManager), false)
         );
         dependencyContainer.Register(
-            new DependencyInfo(nameof(DependencyContainer), typeof(DependencyContainer), false));
+            new DependencyInfo(nameof(DependencyContainer), typeof(DependencyContainer), false)
+        );
         new Runtime(dependencyContainer);
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
         Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().EnterOverrideSection(ExecutionLevel.Game);

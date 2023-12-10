@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -8,13 +9,26 @@ using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations;
 
-namespace MultiplayerMod.Multiplayer.Patches;
+namespace MultiplayerMod.Multiplayer.Patches.Chores;
 
 [HarmonyPatch(typeof(Chore))]
-public static class DisableClientChorePatch {
+public static class DisableClientChoreCreationPatch {
 
     [UsedImplicitly]
-    private static IEnumerable<MethodBase> TargetMethods() => new[] { typeof(Chore).GetConstructors()[0] };
+    private static IEnumerable<MethodBase> TargetMethods() {
+        return ChoreList.Config
+            .Where(config => config.Value.CreationSync == ChoreList.CreationStatusEnum.On)
+            .Select(config => config.Key)
+            .Select(
+                type => {
+                    if (!type.IsGenericType) return type.GetConstructors()[0];
+                    if (type == typeof(WorkChore<>))
+                        return type.MakeGenericType(typeof(Workable)).GetConstructors()[0];
+
+                    return type.GetConstructors()[0];
+                }
+            );
+    }
 
     [UsedImplicitly]
     [HarmonyPostfix]
@@ -22,10 +36,6 @@ public static class DisableClientChorePatch {
     [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void Chore_Constructor(Chore __instance, object[] __args) {
         var type = __instance.GetType();
-        if (!ChoreList.SupportedChores.Contains(type) &&
-            !(type.IsGenericType && ChoreList.SupportedChores.Contains(type.GetGenericTypeDefinition()))) {
-            return;
-        }
 
         Runtime.Instance.Dependencies.Get<UnityTaskScheduler>().Run(
             () => { __instance.Cancel($"Client chore {type} must be created by host only."); }
