@@ -14,7 +14,7 @@ public class ChoreEventsTest : AbstractChoreTest {
         SetUpGame(new HashSet<Type> { typeof(ChoreEvents) });
     }
 
-    [Test, TestCaseSource(nameof(GetTestArgs))]
+    [Test, TestCaseSource(nameof(GetCreationTestArgs))]
     public void TestEventFiring(Type choreType, Func<object?[]> expectedArgsFunc) {
         CreateNewChoreArgs? firedArgs = null;
         ChoreEvents.CreateNewChore += args => firedArgs = args;

@@ -72,7 +72,7 @@ public class GameObjectPatch {
         return new List<CodeInstruction> {
             new(OpCodes.Ldarg_0), // this
             new(OpCodes.Ldarg_1), // type
-            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.GetComponent)),
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.GetComponentsInternal)),
             new(OpCodes.Ret)
         };
     }
@@ -99,6 +99,15 @@ public class GameObjectPatch {
         return new List<CodeInstruction> {
             new(OpCodes.Ldarg_0), // this
             CodeInstruction.Call(typeof(GameObjectPatch), nameof(GetTransform)),
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("SetActive")]
+    private static IEnumerable<CodeInstruction> GameObject_SetActive(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
             new(OpCodes.Ret)
         };
     }

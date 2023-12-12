@@ -23,7 +23,23 @@ public class ResourcesAPIInternalPatch {
         };
     }
 
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("FindObjectsOfTypeAll")]
+    private static IEnumerable<CodeInstruction> ResourcesAPIInternal_FindObjectsOfTypeAll(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            CodeInstruction.Call(typeof(ResourcesAPIInternalPatch), nameof(FindObjectsOfTypeAll)),
+            new(OpCodes.Ret)
+        };
+    }
+
     public static object Load(Type type) {
         return Activator.CreateInstance(type);
+    }
+
+    public static Object[] FindObjectsOfTypeAll() {
+        return Array.Empty<object>();
     }
 }
