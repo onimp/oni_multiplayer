@@ -18,13 +18,14 @@ public abstract class AbstractGameTest {
 
     private static Harmony harmony = null!;
 
-    protected readonly HashSet<Type> Patches = new(new[] { typeof(DbPatch) });
-
-    [SetUp]
-    public void SetUp() {
+    protected static void SetUpGame(HashSet<Type>? additionalPatches = null) {
         harmony = new Harmony("AbstractGameTest");
+        var patches = new HashSet<Type>(new[] { typeof(DbPatch) });
+        if (additionalPatches != null) {
+            patches.UnionWith(additionalPatches);
+        }
         UnityTestRuntime.Install();
-        PatchesSetup.Install(harmony, Patches);
+        PatchesSetup.Install(harmony, patches);
         SetUpUnityAndGame();
         SetupDependencies();
     }
@@ -58,9 +59,9 @@ public abstract class AbstractGameTest {
         StateMachineDebuggerSettings._Instance = new StateMachineDebuggerSettings();
         StateMachineDebuggerSettings._Instance.Initialize();
 
-        worldGameObject.AddComponent<MinionGroupProber>().OnPrefabInit();
-        worldGameObject.AddComponent<GameClock>().OnPrefabInit();
-        worldGameObject.AddComponent<GlobalChoreProvider>().OnPrefabInit();
+        worldGameObject.AddComponent<MinionGroupProber>().Awake();
+        worldGameObject.AddComponent<GameClock>().Awake();
+        worldGameObject.AddComponent<GlobalChoreProvider>().Awake();
     }
 
     private static void InitGame(GameObject worldGameObject) {
@@ -92,7 +93,7 @@ public abstract class AbstractGameTest {
 
         GameScenePartitioner.instance?.OnForcedCleanUp();
         var partitioner = worldGameObject.AddComponent<GameScenePartitioner>();
-        partitioner.OnPrefabInit();
+        partitioner.Awake();
     }
 
     private static void SetupDependencies() {
