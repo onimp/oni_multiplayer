@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
+using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Game.Chores;
 
@@ -36,6 +37,7 @@ public static class ChoreEvents {
     [RequireExecutionLevel(ExecutionLevel.Game)]
     [RequireMultiplayerMode(MultiplayerMode.Host)]
     private static void Chore_Constructor(Chore __instance, object[] __args) {
-        CreateNewChore?.Invoke(new CreateNewChoreArgs(__instance.GetType(), __args));
+        var choreId = __instance.Register();
+        CreateNewChore?.Invoke(new CreateNewChoreArgs(choreId, __instance.GetType(), __args));
     }
 }

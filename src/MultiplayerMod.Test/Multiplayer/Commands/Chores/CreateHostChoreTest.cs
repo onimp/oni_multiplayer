@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.Commands.Chores;
+using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Game.Chores;
@@ -12,18 +13,26 @@ namespace MultiplayerMod.Test.Multiplayer.Commands.Chores;
 [TestFixture]
 public class CreateHostChoreTest : AbstractChoreTest {
 
+    [SetUp]
+    public void SetUp() {
+        SetUpGame();
+    }
+
     [Test, TestCaseSource(nameof(GetTestArgs))]
     public void ExecutionTest(Type choreType, Func<object?[]> expectedArgsFunc) {
-        var arg = new CreateNewChoreArgs(choreType, expectedArgsFunc.Invoke());
-
+        var choreId = new MultiplayerId(Guid.NewGuid());
+        var arg = new CreateNewChoreArgs(choreId, choreType, expectedArgsFunc.Invoke());
         var command = new CreateHostChore(arg);
 
         command.Execute(null!);
+        var chore = ChoreObjects.GetChore(choreId);
+
+        Assert.NotNull(chore);
     }
 
     [Test, TestCaseSource(nameof(GetTestArgs))]
     public void SerializationTest(Type choreType, Func<object?[]> expectedArgsFunc) {
-        var arg = new CreateNewChoreArgs(choreType, expectedArgsFunc.Invoke());
+        var arg = new CreateNewChoreArgs(new MultiplayerId(Guid.NewGuid()), choreType, expectedArgsFunc.Invoke());
         var command = new CreateHostChore(arg);
         var messageFactory = new NetworkMessageFactory();
         var messageProcessor = new NetworkMessageProcessor();
@@ -34,6 +43,7 @@ public class CreateHostChoreTest : AbstractChoreTest {
         }
 
         Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
+        Assert.AreEqual(command.ChoreId, ((CreateHostChore) networkMessage!.Command).ChoreId);
         Assert.AreEqual(command.ChoreType, ((CreateHostChore) networkMessage!.Command).ChoreType);
         Assert.AreEqual(command.Args, ((CreateHostChore) networkMessage!.Command).Args);
     }

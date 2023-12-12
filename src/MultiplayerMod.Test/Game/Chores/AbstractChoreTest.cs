@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Game.Chores;
 using NUnit.Framework;
@@ -24,9 +25,8 @@ public class AbstractChoreTest : AbstractGameTest {
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
 
-    [SetUp]
-    public new void SetUp() {
-        base.SetUp();
+    protected new static void SetUpGame(HashSet<Type>? additionalPatches = null) {
+        AbstractGameTest.SetUpGame(additionalPatches);
 
         target = createGameObject().GetComponent<KMonoBehaviour>();
         target.gameObject.AddComponent<ChoreProvider>();

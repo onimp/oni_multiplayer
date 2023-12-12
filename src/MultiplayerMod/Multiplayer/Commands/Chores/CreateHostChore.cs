@@ -11,10 +11,12 @@ namespace MultiplayerMod.Multiplayer.Commands.Chores;
 [Serializable]
 public class CreateHostChore : MultiplayerCommand {
 
+    public readonly MultiplayerId ChoreId;
     public readonly Type ChoreType;
     public readonly object?[] Args;
 
     public CreateHostChore(CreateNewChoreArgs args) {
+        ChoreId = args.ChoreId;
         ChoreType = args.ChoreType;
         Args = SpecialWrap(args.Args);
         Args = Args.Select(WrapObject).ToArray();
@@ -24,7 +26,8 @@ public class CreateHostChore : MultiplayerCommand {
         var args = Args.Select(UnWrapObject).ToArray();
         args = SpecialUnWrap(args);
 
-        ChoreType.GetConstructors()[0].Invoke(args);
+        var chore = (Chore) ChoreType.GetConstructors()[0].Invoke(args);
+        chore.Register(ChoreId);
     }
 
     private object?[] SpecialWrap(object?[] args) {
