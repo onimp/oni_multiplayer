@@ -21,7 +21,7 @@ public class ChoreStateEventsTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void TestEventFiring(Type choreType, Func<object?[]> expectedArgsFunc, object[] expectedArgs) {
+    public void TestEventFiring(Type choreType, Func<object[]> expectedArgsFunc, object[] expectedArgs) {
         ChoreTransitStateArgs? firedArgs = null;
         ChoreStateEvents.OnStateTransition += args => firedArgs = args;
         var chore = CreateChore(choreType, expectedArgsFunc.Invoke());
@@ -29,12 +29,17 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         chore.Register(choreId);
         var config = ChoreList.Config[choreType];
         var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
+        chore.Begin(
+            new Chore.Precondition.Context {
+                consumerState = new ChoreConsumerState(target.GetComponent<ChoreConsumer>())
+            }
+        );
 
         smi.GoTo("root." + config.StateTransitionSync.StateToMonitorName);
 
         Assert.NotNull(firedArgs);
         Assert.AreEqual(choreId, firedArgs!.ChoreId);
         Assert.AreEqual(expectedArgs[0], firedArgs!.TargetState);
-        Assert.AreEqual(expectedArgs[1], firedArgs!.Args);
+        Assert.AreEqual(expectedArgs[1], firedArgs!.Args.Keys);
     }
 }

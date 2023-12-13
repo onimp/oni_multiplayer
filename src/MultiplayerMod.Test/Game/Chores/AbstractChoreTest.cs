@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Klei.AI;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -12,7 +14,7 @@ namespace MultiplayerMod.Test.Game.Chores;
 
 public class AbstractChoreTest : AbstractGameTest {
 
-    private static KMonoBehaviour target = null!;
+    protected static KMonoBehaviour target = null!;
     private static GameObject gameObject = null!;
     private static ChoreType choreType = null!;
     private static KPrefabID kPrefabID = null!;
@@ -28,9 +30,17 @@ public class AbstractChoreTest : AbstractGameTest {
     protected new static void SetUpGame(HashSet<Type>? additionalPatches = null) {
         AbstractGameTest.SetUpGame(additionalPatches);
 
+        var locatorGameObject = createGameObject();
+        locatorGameObject.AddComponent<Approachable>();
+        locatorGameObject.AddComponent<KPrefabID>();
+
         target = createGameObject().GetComponent<KMonoBehaviour>();
         var targetGameObject = target.gameObject;
         targetGameObject.AddComponent<ChoreProvider>();
+        targetGameObject.AddComponent<ChoreDriver>();
+        targetGameObject.AddComponent<User>();
+        targetGameObject.AddComponent<StateMachineController>();
+        targetGameObject.AddComponent<ChoreConsumer>().Awake();
         targetGameObject.AddComponent<KPrefabID>();
         targetGameObject.AddComponent<MeshRenderer>();
         targetGameObject.AddComponent<Prioritizable>();
@@ -39,11 +49,11 @@ public class AbstractChoreTest : AbstractGameTest {
         targetGameObject.AddComponent<Modifiers>().Awake();
         targetGameObject.AddComponent<PathProber>();
         targetGameObject.AddComponent<Facing>();
-        targetGameObject.AddComponent<StateMachineController>();
         targetGameObject.AddComponent<KSelectable>();
         Assets.PrefabsByTag[(Tag) TargetLocator.ID] = targetGameObject.GetComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) MinionAssignablesProxyConfig.ID] =
             createGameObject().AddComponent<MinionAssignablesProxy>().gameObject.AddComponent<KPrefabID>();
+        Assets.PrefabsByTag[(Tag) ApproachableLocator.ID] = locatorGameObject.GetComponent<KPrefabID>();
         var navigator = targetGameObject.AddComponent<Navigator>();
         navigator.NavGridName = MinionConfig.MINION_NAV_GRID_NAME;
         navigator.CurrentNavType = NavType.Floor;
@@ -83,20 +93,25 @@ public class AbstractChoreTest : AbstractGameTest {
     [TearDown]
     public void Teardown() {
         KPrefabIDTracker.Instance = null;
+        AssetsPatch.Cache.Clear();
     }
 
     protected static object[][] GetCreationTestArgs() =>
         GetTestArgs().Where(
-            testArgs => ChoreList.Config[(Type) testArgs[0]].CreationSync == ChoreList.CreationStatusEnum.On
+            testArgs => ChoreList.Config[((Type) testArgs[0]).IsGenericType
+                ? ((Type) testArgs[0]).GetGenericTypeDefinition()
+                : ((Type) testArgs[0])].CreationSync == ChoreList.CreationStatusEnum.On
         ).Select(testArgs => new[] { testArgs[0], testArgs[1] }).ToArray();
 
     protected static object[]?[] GetTransitionTestArgs() =>
         GetTestArgs().Where(
-            testArgs => ChoreList.Config[(Type) testArgs[0]].StateTransitionSync.Status ==
+            testArgs => ChoreList.Config[((Type) testArgs[0]).IsGenericType
+                            ? ((Type) testArgs[0]).GetGenericTypeDefinition()
+                            : ((Type) testArgs[0])].StateTransitionSync.Status ==
                         ChoreList.StateTransitionConfig.SyncStatus.On
         ).ToArray();
 
-    protected static Chore CreateChore(Type choreType, object?[] args) {
+    protected static Chore CreateChore(Type choreType, object[] args) {
         return (Chore) choreType.GetConstructors()[0].Invoke(args);
     }
 
@@ -135,8 +150,8 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(PartyChore),
-                new Func<object?[]>(
-                    () => new object?[] {
+                new Func<object[]>(
+                    () => new object[] {
                         target, medicinalPillWorkable, constructable.UpdateBuildState, constructable.UpdateBuildState,
                         constructable.UpdateBuildState
                     }
@@ -156,9 +171,11 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(ReactEmoteChore),
-                new Func<object?[]>(
-                    () => new object?[]
-                        { target, choreType, null, new HashedString(1), null, KAnim.PlayMode.Loop, null }
+                new Func<object[]>(
+                    () => new object[] {
+                        target, choreType, null!, new HashedString(1),
+                        new[] { new HashedString(2) }, KAnim.PlayMode.Loop, testMonoBehaviour.TestStressEmoteFunc
+                    }
                 )
             },
             new object[] {
@@ -191,30 +208,32 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(UglyCryChore),
-                new Func<object?[]>(() => new object?[] { choreType, target, constructable.UpdateBuildState })
+                new Func<object[]>(() => new object[] { choreType, target, constructable.UpdateBuildState })
             },
             new object[] {
                 typeof(WaterCoolerChore),
-                new Func<object?[]>(
-                    () => new object?[] {
+                new Func<object[]>(
+                    () => new object[] {
                         target, medicinalPillWorkable, constructable.UpdateBuildState, constructable.UpdateBuildState,
                         constructable.UpdateBuildState
                     }
                 )
             },
             new object[] {
-                typeof(WorkChore<>),
-                new Func<object?[]>(
-                    () => new object?[] {
-                        choreType, medicinalPillWorkable, GlobalChoreProvider.Instance, true, null, null, null, true,
-                        null, false, true, null, false, true, true, PriorityScreen.PriorityClass.basic, 5, false, true
+                typeof(WorkChore<MedicinalPillWorkable>),
+                new Func<object[]>(
+                    () => new object[] {
+                        choreType, medicinalPillWorkable, target.GetComponent<ChoreProvider>(), true, ChoreCallback,
+                        ChoreCallback, ChoreCallback, true, db.ScheduleBlockTypes.Eat, false, true,
+                        Assets.GetAnim("test"), false, true, true, PriorityScreen.PriorityClass.basic,
+                        5, false, true
                     }
                 )
             },
             new object[] {
                 typeof(AggressiveChore),
-                new Func<object?[]>(() => new object?[] { target, ChoreCallback }),
-                new object[] { "root.move_notarget", new Dictionary<int, object?> { { 2, 84 }, { 1, null } } }
+                new Func<object[]>(() => new object[] { target, ChoreCallback }),
+                new object[] { "root.move_notarget", new[] { 2, 1 } }
             },
             new object[] {
                 typeof(BeIncapacitatedChore),
@@ -222,8 +241,8 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(BingeEatChore),
-                new Func<object?[]>(() => new object?[] { target, ChoreCallback }),
-                new object[] { "root.cantFindFood", new Dictionary<int, object?> { { 1, null } } }
+                new Func<object[]>(() => new object[] { target, ChoreCallback }),
+                new object[] { "root.cantFindFood", new[] { 1 } }
             },
             new object[] {
                 typeof(EatChore),
@@ -231,8 +250,8 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(EmoteChore),
-                new Func<object?[]>(
-                    () => new object?[]
+                new Func<object[]>(
+                    () => new object[]
                         { target, choreType, db.Emotes.Minion.Cheer, 1, testMonoBehaviour.TestStressEmoteFunc }
                 )
             },
@@ -242,12 +261,47 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(FetchAreaChore),
-                new Func<object[]>(() => new object[] { new Chore.Precondition.Context() })
+                new Func<object[]>(
+                    () => {
+                        var fetchChore = new FetchChore(
+                            choreType,
+                            storage,
+                            0f,
+                            new HashSet<Tag>(),
+                            FetchChore.MatchCriteria.MatchTags,
+                            new Tag()
+                        );
+                        fetchChore.Register();
+                        return new object[] {
+                            new Chore.Precondition.Context {
+                                chore = fetchChore,
+                                consumerState = new ChoreConsumerState(target.GetComponent<ChoreConsumer>()) {
+                                    choreProvider = target.GetComponent<ChoreProvider>()
+                                },
+                                masterPriority = new PrioritySetting(PriorityScreen.PriorityClass.basic, 5)
+                            }
+                        };
+                    }
+                )
             },
             new object[] {
                 typeof(FleeChore),
                 new Func<object[]>(() => new object[] { target, gameObject }),
-                new object[] { "root.cower", new Dictionary<int, object?> { { 1, null } } }
+                new object[] { "root.cower", new[] { 1 } }
+            },
+            new object[] {
+                typeof(MournChore),
+                new Func<object[]>(
+                    () => {
+                        var grave = createGameObject().AddComponent<Grave>();
+                        grave.burialTime = 0;
+                        Components.Graves.Clear();
+                        Components.Graves.Add(grave);
+                        target.GetComponent<Navigator>().NavGrid.NavTable.SetValid(19, NavType.Floor, true);
+                        return new object[] { target };
+                    }
+                ),
+                new object[] { "root.moveto", new int[] { 1 } }
             },
             new object[] {
                 typeof(FoodFightChore),
@@ -260,12 +314,8 @@ public class AbstractChoreTest : AbstractGameTest {
                 )
             },
             new object[] {
-                typeof(MournChore),
-                new Func<object[]>(() => new object[] { target })
-            },
-            new object[] {
                 typeof(MovePickupableChore),
-                new Func<object?[]>(() => new object?[] { target, gameObject, ChoreCallback })
+                new Func<object[]>(() => new object[] { target, gameObject, ChoreCallback })
             },
             new object[] {
                 typeof(MoveToSafetyChore),
@@ -281,8 +331,8 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(StressEmoteChore),
-                new Func<object?[]>(
-                    () => new object?[] {
+                new Func<object[]>(
+                    () => new object[] {
                         target, choreType, new HashedString(1), new HashedString[] { new(2) },
                         KAnim.PlayMode.Paused, testMonoBehaviour.TestStressEmoteFunc
                     }
@@ -294,12 +344,12 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(BansheeChore),
-                new Func<object?[]>(() => new object?[] { choreType, target, null, null })
+                new Func<object[]>(() => new object[] { choreType, target, notification, ChoreCallback })
             },
             new object[] {
                 typeof(FetchChore),
-                new Func<object?[]>(
-                    () => new object?[] {
+                new Func<object[]>(
+                    () => new object[] {
                         choreType, storage, 0f, new HashSet<Tag>(), FetchChore.MatchCriteria.MatchTags, new Tag(),
                         Array.Empty<Tag>(), target.GetComponent<ChoreProvider>(), true, ChoreCallback, ChoreCallback,
                         ChoreCallback,
@@ -317,13 +367,15 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(VomitChore),
-                new Func<object?[]>(() => new object?[] { choreType, target, statusItem, notification, null })
+                new Func<object[]>(() => new object[] { choreType, target, statusItem, notification, ChoreCallback })
             },
         };
         var expectedChoreTypes = ChoreList.Config.Keys
             .OrderBy(a => a.FullName)
             .ToList();
-        var actualChoreTypes = testArgs.Select(config => (Type) config[0]).OrderBy(a => a.FullName).ToList();
+        var actualChoreTypes = testArgs.Select(config => (Type) config[0])
+            .Select(type => type.IsGenericType ? type.GetGenericTypeDefinition() : type)
+            .OrderBy(a => a.FullName).ToList();
         Assert.AreEqual(expectedChoreTypes, actualChoreTypes);
         return testArgs;
     }

@@ -19,6 +19,7 @@ public static class SerializationSurrogates {
         Selector.Add(new ComplexRecipeSurrogate());
         Selector.Add(new DeathSurrogate());
         Selector.Add(new EmoteSurrogate());
+        Selector.Add(new KAnimFileSurrogate());
         Selector.Add(new MinionStartingStatsSurrogate());
         Selector.Add(new RoomSurrogate());
         Selector.Add(new ScheduleBlockTypeSurrogate());

@@ -15,7 +15,7 @@ public class ChoreEventsTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]
-    public void TestEventFiring(Type choreType, Func<object?[]> expectedArgsFunc) {
+    public void TestEventFiring(Type choreType, Func<object[]> expectedArgsFunc) {
         CreateNewChoreArgs? firedArgs = null;
         ChoreEvents.CreateNewChore += args => firedArgs = args;
         var expected = expectedArgsFunc.Invoke();

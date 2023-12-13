@@ -35,6 +35,15 @@ public class ObjectPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
+    [HarmonyPatch("Destroy", typeof(Object), typeof(float))]
+    private static IEnumerable<CodeInstruction> Object_Destroy(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
     [HarmonyPatch("Internal_InstantiateSingle_Injected")]
     private static IEnumerable<CodeInstruction> Object_Internal_InstantiateSingle_Injected(
         IEnumerable<CodeInstruction> instructions
