@@ -24,9 +24,7 @@ public class DisableClientChoreCreationPatchTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]
-    public void ClientChoresMustBeCancelled(Type choreType, Func<object?[]> expectedArgsFunc) {
-        CreateNewChoreArgs? firedArgs = null;
-
+    public void ClientChoresMustBeCancelled(Type choreType, Func<object[]> expectedArgsFunc) {
         var chore = CreateChore(choreType, expectedArgsFunc.Invoke());
         var provider = chore.provider;
         Runtime.Instance.Dependencies.Get<UnityTaskScheduler>().Tick();

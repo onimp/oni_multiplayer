@@ -56,7 +56,7 @@ public static class ChoreStateEvents {
                 parameter => GetParameterIndex(smi, parameter),
                 parameter => GetParameterValue(smi, parameter)
             );
-        OnStateTransition?.Invoke(new ChoreTransitStateArgs(chore.MultiplayerId()!, state.name, args));
+        OnStateTransition?.Invoke(new ChoreTransitStateArgs(chore.MultiplayerId()!, state?.name, args));
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {

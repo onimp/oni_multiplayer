@@ -7,6 +7,6 @@ namespace MultiplayerMod.Game.Chores.States;
 [Serializable]
 public record ChoreTransitStateArgs(
     MultiplayerId ChoreId,
-    string TargetState,
+    string? TargetState,
     Dictionary<int, object> Args
 );

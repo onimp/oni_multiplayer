@@ -9,120 +9,58 @@ public static class ChoreList {
         new() {
             {
                 typeof(AttackChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(DeliverFoodChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(DieChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(DropUnusedInventoryChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(EntombedChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(MoveChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(MoveToQuarantineChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(PartyChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(PeeChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(PutOnHatChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(SighChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(StressIdleChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(SwitchRoleHatChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(TakeOffHatChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(UglyCryChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(WaterCoolerChore),
-                new ChoreSyncConfig(
-                    // fully determined by the input.
-                    CreationStatusEnum.On,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(ReactEmoteChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(AggressiveChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.On,
+                ChoreSyncConfig.Dynamic(
                     new StateTransitionConfig(
                         typeof(AggressiveChore.States),
                         nameof(AggressiveChore.States.findbreakable),
@@ -133,8 +71,7 @@ public static class ChoreList {
                 )
             }, {
                 typeof(BingeEatChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.On,
+                ChoreSyncConfig.Dynamic(
                     new StateTransitionConfig(
                         typeof(BingeEatChore.States),
                         nameof(BingeEatChore.States.findfood),
@@ -143,8 +80,7 @@ public static class ChoreList {
                 )
             }, {
                 typeof(FleeChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.On,
+                ChoreSyncConfig.Dynamic(
                     new StateTransitionConfig(
                         typeof(FleeChore.States),
                         nameof(FleeChore.States.planFleeRoute),
@@ -152,188 +88,114 @@ public static class ChoreList {
                     )
                 )
             }, {
-                typeof(BeIncapacitatedChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
+                typeof(MournChore),
+                ChoreSyncConfig.Dynamic(
+                    new StateTransitionConfig(
+                        typeof(MournChore.States),
+                        nameof(MournChore.States.findOffset),
+                        new[] { nameof(MournChore.States.locator) }
+                    )
                 )
+            }, {
+                typeof(BeIncapacitatedChore),
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(EmoteChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(StressEmoteChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
-            }, {
-                typeof(ReactEmoteChore),
-                new ChoreSyncConfig(
-                    //  an argument is not serializable.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(FoodFightChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
-            }, {
-                typeof(MournChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(MoveToSafetyChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(RecoverBreathChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(EatChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(MovePickupableChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(SleepChore),
-                new ChoreSyncConfig(
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(EquipChore),
-                new ChoreSyncConfig(
-                    // using global providers. Hence they depends on consumer who will pick them up.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(FixedCaptureChore),
-                new ChoreSyncConfig(
-                    // using global providers. Hence they depends on consumer who will pick them up.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(RancherChore),
-                new ChoreSyncConfig(
-                    // using global providers. Hence they depends on consumer who will pick them up.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(RescueIncapacitatedChore),
-                new ChoreSyncConfig(
-                    // using global providers. Hence they depends on consumer who will pick them up.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(RescueSweepBotChore),
-                new ChoreSyncConfig(
-                    // using global providers. Hence they depends on consumer who will pick them up.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(TakeMedicineChore),
-                new ChoreSyncConfig(
-                    // using global providers. Hence they depends on consumer who will pick them up.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(WorkChore<>),
-                new ChoreSyncConfig(
-                    // using global providers. Hence they depends on consumer who will pick them up.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(FetchAreaChore),
-                new ChoreSyncConfig(
-                    //  an argument is not serializable.
-                    // fully determined by the input.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(BalloonArtistChore),
-                new ChoreSyncConfig(
-                    // changes its parameters dynamically without using target parameters.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(BansheeChore),
-                new ChoreSyncConfig(
-                    // changes its parameters dynamically without using target parameters.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(FetchChore),
-                new ChoreSyncConfig(
-                    // changes its parameters dynamically without using target parameters.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(IdleChore),
-                new ChoreSyncConfig(
-                    // changes its parameters dynamically without using target parameters.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(MingleChore),
-                new ChoreSyncConfig(
-                    // changes its parameters dynamically without using target parameters.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }, {
                 typeof(VomitChore),
-                new ChoreSyncConfig(
-                    // changes its parameters dynamically without using target parameters.
-                    CreationStatusEnum.Off,
-                    StateTransitionConfig.Disabled()
-                )
+                ChoreSyncConfig.Dynamic(StateTransitionConfig.TODO_SpecifyConfig())
             }
         };
 
     public record ChoreSyncConfig(
         CreationStatusEnum CreationSync,
+        GlobalChoreProviderStatusEnum GlobalChoreProviderSync,
         StateTransitionConfig StateTransitionSync
-    );
+    ) {
+        public static ChoreSyncConfig FullyDeterminedByInput(
+            GlobalChoreProviderStatusEnum globalChoreStatus = GlobalChoreProviderStatusEnum.Off
+        ) {
+            return new ChoreSyncConfig(
+                CreationStatusEnum.On,
+                globalChoreStatus,
+                StateTransitionConfig.Disabled()
+            );
+        }
+
+        public static ChoreSyncConfig Dynamic(StateTransitionConfig stateTransitionConfig) {
+            return new ChoreSyncConfig(CreationStatusEnum.On, GlobalChoreProviderStatusEnum.Off, stateTransitionConfig);
+        }
+    }
 
     public enum CreationStatusEnum {
         On,
+        Off
+    }
+
+    public enum GlobalChoreProviderStatusEnum {
+        // TODO implement sync using this value.
+        OnTodo,
         Off
     }
 
@@ -357,5 +219,7 @@ public static class ChoreList {
         public static StateTransitionConfig Disabled() {
             return new StateTransitionConfig(SyncStatus.Off, null!, null!, null!);
         }
+
+        public static StateTransitionConfig TODO_SpecifyConfig() => Disabled();
     };
 }
