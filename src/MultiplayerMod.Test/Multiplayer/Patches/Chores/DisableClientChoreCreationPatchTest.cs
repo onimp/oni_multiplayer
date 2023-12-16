@@ -13,8 +13,9 @@ namespace MultiplayerMod.Test.Multiplayer.Patches.Chores;
 
 [TestFixture]
 public class DisableClientChoreCreationPatchTest : AbstractChoreTest {
+
     [SetUp]
-    public new void SetUp() {
+    public void SetUp() {
         SetUpGame(new HashSet<Type>() { typeof(DisableClientChoreCreationPatch) });
 
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Client);
@@ -22,7 +23,7 @@ public class DisableClientChoreCreationPatchTest : AbstractChoreTest {
         di.Register(new DependencyInfo(nameof(UnityTaskScheduler), typeof(UnityTaskScheduler), false));
     }
 
-    [Test, TestCaseSource(nameof(GetTestArgs))]
+    [Test, TestCaseSource(nameof(GetCreationTestArgs))]
     public void ClientChoresMustBeCancelled(Type choreType, Func<object?[]> expectedArgsFunc) {
         CreateNewChoreArgs? firedArgs = null;
 

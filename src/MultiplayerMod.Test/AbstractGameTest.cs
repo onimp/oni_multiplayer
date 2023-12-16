@@ -20,7 +20,7 @@ public abstract class AbstractGameTest {
 
     protected static void SetUpGame(HashSet<Type>? additionalPatches = null) {
         harmony = new Harmony("AbstractGameTest");
-        var patches = new HashSet<Type>(new[] { typeof(DbPatch) });
+        var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch) });
         if (additionalPatches != null) {
             patches.UnionWith(additionalPatches);
         }
@@ -52,6 +52,7 @@ public abstract class AbstractGameTest {
         DistributionPlatform.sImpl = worldGameObject.AddComponent<SteamDistributionPlatform>();
 
         InitGame(worldGameObject);
+        worldGameObject.AddComponent<Notifier>();
         ReportManager.Instance = worldGameObject.AddComponent<ReportManager>();
         ReportManager.Instance.Awake();
         ReportManager.Instance.todaysReport = new ReportManager.DailyReport(ReportManager.Instance);
@@ -59,18 +60,55 @@ public abstract class AbstractGameTest {
         StateMachineDebuggerSettings._Instance = new StateMachineDebuggerSettings();
         StateMachineDebuggerSettings._Instance.Initialize();
 
+        StateMachineManager.Instance.Clear();
+
         worldGameObject.AddComponent<MinionGroupProber>().Awake();
         worldGameObject.AddComponent<GameClock>().Awake();
         worldGameObject.AddComponent<GlobalChoreProvider>().Awake();
+        worldGameObject.AddComponent<GameScenePartitioner>().Awake();
+        World.Instance = null;
+        worldGameObject.AddComponent<World>().Awake();
+        worldGameObject.AddComponent<Pathfinding>().Awake();
+        PathFinder.Initialize();
+        new GameNavGrids(Pathfinding.Instance);
+        worldGameObject.AddComponent<NavigationReservations>().Awake();
+        worldGameObject.AddComponent<NameDisplayScreen>().Awake();
+        worldGameObject.AddComponent<BuildingConfigManager>().Awake();
+        SetupAssets(worldGameObject);
+        worldGameObject.AddComponent<CustomGameSettings>().Awake();
     }
 
-    private static void InitGame(GameObject worldGameObject) {
-        // From global
-        Singleton<StateMachineUpdater>.CreateInstance();
-        Singleton<StateMachineManager>.CreateInstance();
+    private static void SetupAssets(GameObject worldGameObject) {
+        worldGameObject.AddComponent<BundledAssetsLoader>().Awake();
+        worldGameObject.AddComponent<BuildingLoader>().Awake();
+
+        var assets = worldGameObject.AddComponent<Assets>();
+        assets.AnimAssets = new List<KAnimFile>();
+        assets.SpriteAssets = new List<Sprite>();
+        assets.TintedSpriteAssets = new List<TintedSprite>();
+        assets.MaterialAssets = new List<Material>();
+        assets.TextureAssets = new List<Texture2D>();
+        assets.TextureAtlasAssets = new List<TextureAtlas>();
+        assets.BlockTileDecorInfoAssets = new List<BlockTileDecorInfo>();
+        Assets.ModLoadedKAnims = new List<KAnimFile>() { ScriptableObject.CreateInstance<KAnimFile>() };
+        assets.elementAudio = new TextAsset("");
+        assets.personalitiesFile = new TextAsset("");
+        Assets.instance = assets;
+
+        AsyncLoadManager<IGlobalAsyncLoader>.Run();
+        //assets.Awake();
+    }
+
+    private static unsafe void InitGame(GameObject worldGameObject) {
+        new GameObject { name = "Canvas" };
         Singleton<CellChangeMonitor>.CreateInstance();
 
+        Global.Instance?.OnDestroy();
+        worldGameObject.AddComponent<Global>().Awake();
+
         var game = worldGameObject.AddComponent<global::Game>();
+        game.maleNamesFile = new TextAsset("Bob");
+        game.femaleNamesFile = new TextAsset("Alisa");
         global::Game.Instance = game;
         game.obj = KObjectManager.Instance.GetOrCreateObject(game.gameObject);
 
@@ -89,11 +127,14 @@ public abstract class AbstractGameTest {
         game.liquidConduitFlow = new ConduitFlow(ConduitType.Liquid, numCells, game.liquidConduitSystem, 10f, 0.75f);
         game.mingleCellTracker = worldGameObject.AddComponent<MingleCellTracker>();
 
+        ElementLoader.elements = new List<Element> { new() };
         GridSettings.Reset(widthInCells, heightInCells);
+        fixed (ushort* ptr = &(new ushort[numCells])[0]) {
+            Grid.elementIdx = ptr;
+        }
+        Grid.InitializeCells();
 
         GameScenePartitioner.instance?.OnForcedCleanUp();
-        var partitioner = worldGameObject.AddComponent<GameScenePartitioner>();
-        partitioner.Awake();
     }
 
     private static void SetupDependencies() {

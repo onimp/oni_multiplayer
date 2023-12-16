@@ -37,6 +37,16 @@ public class DbPatch {
         __instance.effects = new ResourceSet<Effect>();
         __instance.AttributeConverters = new AttributeConverters();
         __instance.StatusItemCategories = new StatusItemCategories(root);
+        __instance.Personalities = new Personalities();
+        __instance.TechItems = new TechItems(root);
+        __instance.RoomTypeCategories = new RoomTypeCategories(root);
+        __instance.RoomTypes = new RoomTypes(root);
+        __instance.AssignableSlots = new AssignableSlots();
+        __instance.ArtableStatuses = new ArtableStatuses(root);
+        __instance.Accessories = new Accessories(root);
+        __instance.AccessorySlots = new AccessorySlots(root);
+        __instance.Permits = new PermitResources(root);
+        __instance.Stories = new Stories(root);
         return false;
     }
 }

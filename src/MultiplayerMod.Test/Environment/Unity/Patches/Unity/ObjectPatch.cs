@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Emit;
 using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Unity;
+using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Test.Environment.Unity.Patches.Unity;
@@ -17,6 +19,9 @@ public class ObjectPatch {
     [HarmonyPatch(MethodType.Constructor)]
     private static void Object_Constructor(Object __instance) {
         UnityObject.MarkAsNotNull(__instance);
+        if (__instance is not Component && __instance is not GameObject) {
+            UnityTestRuntime.SetName(__instance, $"New {__instance.GetType()}");
+        }
     }
 
     [UsedImplicitly]
@@ -24,6 +29,18 @@ public class ObjectPatch {
     [HarmonyPatch("DontDestroyOnLoad")]
     private static IEnumerable<CodeInstruction> Object_DontDestroyOnLoad(IEnumerable<CodeInstruction> instructions) {
         return new List<CodeInstruction> {
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("Internal_InstantiateSingle_Injected")]
+    private static IEnumerable<CodeInstruction> Object_Internal_InstantiateSingle_Injected(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0),
             new(OpCodes.Ret)
         };
     }

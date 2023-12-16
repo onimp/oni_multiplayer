@@ -12,6 +12,19 @@ public class TimePatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
+    [HarmonyPatch("get_time")]
+    private static IEnumerable<CodeInstruction> Time_get_time(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(
+                OpCodes.Call,
+                AccessTools.PropertyGetter(typeof(UnityTestRuntime), nameof(UnityTestRuntime.Time))
+            ),
+            new(OpCodes.Ret)
+        };
+   }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
     [HarmonyPatch("get_frameCount")]
     private static IEnumerable<CodeInstruction> Time_get_frameCount(IEnumerable<CodeInstruction> instructions) {
         return new List<CodeInstruction> {

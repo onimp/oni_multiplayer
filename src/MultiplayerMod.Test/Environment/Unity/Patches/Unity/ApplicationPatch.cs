@@ -22,6 +22,16 @@ public class ApplicationPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
+    [HarmonyPatch("get_dataPath")]
+    private static IEnumerable<CodeInstruction> Application_get_dataPath(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldstr, ""), // ""true""
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
     [HarmonyPatch("get_streamingAssetsPath")]
     private static IEnumerable<CodeInstruction> Application_get_streamingAssetsPath(
         IEnumerable<CodeInstruction> instructions
@@ -50,6 +60,16 @@ public class ApplicationPatch {
     private static IEnumerable<CodeInstruction> Application_consoleLogPath(IEnumerable<CodeInstruction> instructions) {
         return new List<CodeInstruction> {
             new(OpCodes.Ldstr, ""), // ""
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("get_platform")]
+    private static IEnumerable<CodeInstruction> Application_get_platform(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldc_I4_2), // WindowsPlayer
             new(OpCodes.Ret)
         };
     }

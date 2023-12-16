@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Test.Environment.Patches;
@@ -20,18 +21,16 @@ public static class UnityTestRuntime {
 
     private static readonly Dictionary<Type, Dictionary<UnityEvent, MethodInfo>> eventMethodCache = new();
 
-    public static readonly Dictionary<Component, GameObject> Components = new();
+    public static readonly Dictionary<string, GameObject> Components = new();
     public static readonly List<Component> EnabledComponents = new();
     public static readonly List<Component> StartAwaitingComponents = new();
     public static readonly List<Component> NewComponents = new();
-    public static readonly Dictionary<GameObject, List<Component>> Objects = new();
+    public static readonly Dictionary<string, GameObjectCompanion> GameObjectCompanionData = new();
     private static readonly Dictionary<int, string> objectNames = new();
-    private static readonly Dictionary<GameObject, Vector3> objectPositions = new();
     private static int lastCell;
 
     public static int FrameCount { get; private set; }
-
-    public static float RealtimeSinceStartup => FrameCount;
+    public static float Time => FrameCount;
 
     private static readonly HashSet<Type> supportedComponents = new() {
         typeof(UnityTaskExecutor),
@@ -41,46 +40,62 @@ public static class UnityTestRuntime {
     };
 
     public static void Register(GameObject gameObject) {
-        Objects[gameObject] = new List<Component>();
         SetName(gameObject, "New game object");
+        GameObjectCompanionData[gameObject.name] = new GameObjectCompanion(
+            new List<Component>(),
+            GenerateUniquePosition(),
+            gameObject
+        );
         AddComponent(gameObject, typeof(Transform));
-        SetUpUniquePosition(gameObject);
     }
 
-    private static void SetUpUniquePosition(GameObject gameObject) {
-        var cell = lastCell++;
+    private static Vector3 GenerateUniquePosition() {
+        var cell = ++lastCell;
         var width = 40; // random
-        var cellSizeInMeters = 100; // random
-        SetPosition(
-            gameObject,
-            new Vector3(cellSizeInMeters * (float) (cell % width), cellSizeInMeters * (float) (cell / width), 0.0f)
-        );
+        return new Vector3((float) (cell % width), (float) (cell / width), 0.0f);
     }
 
     public static void GetPosition(Transform transform, out Vector3 position) {
-        position = objectPositions[transform.gameObject];
+        position = GameObjectCompanionData[transform.gameObject.name].Position;
     }
 
-    public static void SetPosition(GameObject gameObject, Vector3 position) => objectPositions[gameObject] = position;
+    public static void SetPositionFromTransform(Transform transform, ref Vector3 position) =>
+        SetPosition(transform.gameObject, position);
+
+    public static void SetPosition(GameObject gameObject, Vector3 position) =>
+        GameObjectCompanionData[gameObject.name].Position = position;
 
     public static string GetName(Object obj) {
-        return objectNames[obj.GetHashCode()];
+        return objectNames[RuntimeHelpers.GetHashCode(obj)];
     }
 
-    public static void SetName(Object obj, string name) {
-        if (objectNames.Values.Contains(name)) {
-            SetName(obj, $"New {name}");
-            return;
+    public static void SetName(Object obj, string desiredName, int? numberOfCollisions = null) {
+        var name = desiredName;
+        if (numberOfCollisions != null) {
+            name += $" ({numberOfCollisions})";
         }
-        objectNames[obj.GetHashCode()] = name;
+        while (objectNames.Values.Contains(name)) {
+            numberOfCollisions = (numberOfCollisions ?? 0) + 1;
+            name = $"{desiredName} ({numberOfCollisions})";
+        }
+        var hashCode = RuntimeHelpers.GetHashCode(obj);
+        if (obj is GameObject && objectNames.ContainsKey(hashCode)) {
+            var oldName = objectNames[hashCode];
+            if (GameObjectCompanionData.ContainsKey(oldName)) {
+                var oldData = GameObjectCompanionData[oldName];
+                GameObjectCompanionData.Remove(oldName);
+                GameObjectCompanionData[name] = oldData;
+            }
+        }
+        objectNames[hashCode] = name;
     }
 
     public static Component AddComponent(GameObject gameObject, Type type) {
         var component = (Component) Activator.CreateInstance(type, true);
-        Objects[gameObject].Add(component);
-        Components[component] = gameObject;
-        NewComponents.Add(component);
         SetName(component, $"New {type}");
+        GameObjectCompanionData[gameObject.name].Components.Add(component);
+        Components[component.name] = gameObject;
+        NewComponents.Add(component);
         Trigger(component, UnityEvent.Awake);
         return component;
     }
@@ -93,9 +108,24 @@ public static class UnityTestRuntime {
         GetComponentFastPath(component.gameObject, type, oneFurtherThanResultValue);
     }
 
-    public static Component GetComponent(GameObject gameObject, Type type) {
-        return Objects[gameObject].SingleOrDefault(component => type == component.GetType()) ??
-               Objects[gameObject].SingleOrDefault(component => type.IsAssignableFrom(component.GetType()));
+    public static Component? GetComponent(GameObject gameObject, Type type) {
+        var components = GameObjectCompanionData[gameObject.name].Components;
+        var assignableTypes = components.Where(type.IsInstanceOfType).ToList();
+        if (assignableTypes.Count == 1) {
+            return assignableTypes.Single();
+        }
+        var exactTypes = assignableTypes.Where(component => type == component.GetType()).ToList();
+        if (exactTypes.Count == 1) {
+            return exactTypes.Single();
+        }
+        return exactTypes.Count > 0 ? exactTypes.First() : null;
+    }
+
+    public static Array GetComponentsInternal(GameObject gameObject, Type type) {
+        var res = GameObjectCompanionData[gameObject.name].Components.Where(type.IsInstanceOfType).ToArray();
+        var newArray = Array.CreateInstance(type, res.Length);
+        Array.Copy(res, newArray, newArray.Length);
+        return newArray;
     }
 
     public static Component? GetComponentInChildren(GameObject gameObject, Type type, bool includeInactive) =>
@@ -119,9 +149,10 @@ public static class UnityTestRuntime {
         }
     }
 
-    public static GameObject GetGameObject(Component component) => Components[component];
+    public static GameObject GetGameObject(Component component) => Components[component.name];
 
-    public static GameObject? Find(string name) => Objects.Keys.FirstOrDefault(it => it.name == name);
+    public static GameObject? Find(string name) =>
+        GameObjectCompanionData.Select(it => it.Value.GameObject).FirstOrDefault(it => it.name == name);
 
     public static void NextFrame() {
         FrameCount++;
@@ -152,7 +183,8 @@ public static class UnityTestRuntime {
         EnabledComponents.Clear();
         StartAwaitingComponents.Clear();
         NewComponents.Clear();
-        Objects.Clear();
+        GameObjectCompanionData.Clear();
+        objectNames.Clear();
     }
 
     private static void Trigger(Component component, UnityEvent @event) {
@@ -179,4 +211,17 @@ public static class UnityTestRuntime {
         return eventMethod;
     }
 
+    public class GameObjectCompanion {
+
+        public List<Component> Components { get; set; }
+        public Vector3 Position { get; set; }
+
+        public GameObject GameObject { get; }
+
+        public GameObjectCompanion(List<Component> components, Vector3 position, GameObject gameObject) {
+            Components = components;
+            Position = position;
+            GameObject = gameObject;
+        }
+    }
 }
