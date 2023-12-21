@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
-using MultiplayerMod.Multiplayer.Objects;
-using UnityEngine;
 
 namespace MultiplayerMod.Game.Mechanics.Objects;
 
@@ -137,34 +134,12 @@ public static class ObjectEvents {
 
     [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void ProcessObjectEvent(object __instance, MethodBase __originalMethod, object[] __args) {
-        var args = __args.Select(
-            obj =>
-                obj switch {
-                    GameObject gameObject => gameObject.GetReference(),
-                    KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
-                    _ => obj
-                }
-        ).ToArray();
         switch (__instance) {
             case KMonoBehaviour kMonoBehaviour:
-                ComponentMethodCalled?.Invoke(
-                    new ComponentEventsArgs(
-                        kMonoBehaviour.GetReference(),
-                        __originalMethod.DeclaringType!,
-                        __originalMethod.Name,
-                        args
-                    )
-                );
+                ComponentMethodCalled?.Invoke(new ComponentEventsArgs(kMonoBehaviour, __originalMethod, __args));
                 return;
             case StateMachine.Instance stateMachine:
-                StateMachineMethodCalled?.Invoke(
-                    new StateMachineEventsArgs(
-                        stateMachine.GetReference(),
-                        __originalMethod.DeclaringType!,
-                        __originalMethod.Name,
-                        args
-                    )
-                );
+                StateMachineMethodCalled?.Invoke(new StateMachineEventsArgs(stateMachine, __originalMethod, __args));
                 return;
             default:
                 throw new NotSupportedException($"{__instance} has un supported type");

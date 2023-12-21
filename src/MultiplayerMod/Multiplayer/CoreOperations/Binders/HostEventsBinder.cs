@@ -3,7 +3,9 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Multiplayer.Commands.Chores;
+using MultiplayerMod.Multiplayer.Commands.Chores.States;
 using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.World;
@@ -42,6 +44,10 @@ public class HostEventsBinder {
         );
         ChoreEvents.CreateNewChore += args => server.Send(
             new CreateHostChore(args),
+            MultiplayerCommandOptions.SkipHost
+        );
+        ChoreStateEvents.OnStateTransition += args => server.Send(
+            new TransitChoreToState(args),
             MultiplayerCommandOptions.SkipHost
         );
     }

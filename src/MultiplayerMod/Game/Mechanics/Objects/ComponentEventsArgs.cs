@@ -1,11 +1,10 @@
 ﻿using System;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+using System.Reflection;
 
 namespace MultiplayerMod.Game.Mechanics.Objects;
 
 public record ComponentEventsArgs(
-    ComponentReference Target,
-    Type MethodType,
-    string MethodName,
+    KMonoBehaviour Component,
+    MethodBase Method,
     object[] Args
 );
