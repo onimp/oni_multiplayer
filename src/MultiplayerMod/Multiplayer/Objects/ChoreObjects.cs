@@ -19,8 +19,5 @@ public static class ChoreObjects {
         return id;
     }
 
-    public static MultiplayerId? MultiplayerId(this Chore chore) {
-        choreIdDictionary.TryGetValue(chore, out var id);
-        return id;
-    }
+    public static MultiplayerId MultiplayerId(this Chore chore) => choreIdDictionary[chore];
 }

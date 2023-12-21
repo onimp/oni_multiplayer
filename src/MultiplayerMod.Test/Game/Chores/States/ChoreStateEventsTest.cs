@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
@@ -21,10 +22,10 @@ public class ChoreStateEventsTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void TestEventFiring(Type choreType, Func<object[]> expectedArgsFunc, object[] expectedArgs) {
+    public void TestEventFiring(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> stateTransitionArgsFunc) {
         ChoreTransitStateArgs? firedArgs = null;
         ChoreStateEvents.OnStateTransition += args => firedArgs = args;
-        var chore = CreateChore(choreType, expectedArgsFunc.Invoke());
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var choreId = new MultiplayerId(123);
         chore.Register(choreId);
         var config = ChoreList.Config[choreType];
@@ -37,9 +38,15 @@ public class ChoreStateEventsTest : AbstractChoreTest {
 
         smi.GoTo("root." + config.StateTransitionSync.StateToMonitorName);
 
+        var expectedArgs = stateTransitionArgsFunc.Invoke();
+        var expectedDictionary = (Dictionary<int, object>) expectedArgs[1];
         Assert.NotNull(firedArgs);
         Assert.AreEqual(choreId, firedArgs!.ChoreId);
         Assert.AreEqual(expectedArgs[0], firedArgs!.TargetState);
-        Assert.AreEqual(expectedArgs[1], firedArgs!.Args.Keys);
+        Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
+        Assert.AreEqual(
+            expectedDictionary.Values.Select(a => a?.GetType()).ToList(),
+            firedArgs.Args.Values.Select(a => a?.GetType()).ToList()
+        );
     }
 }

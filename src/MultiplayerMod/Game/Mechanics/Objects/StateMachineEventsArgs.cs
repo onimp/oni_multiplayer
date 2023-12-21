@@ -1,11 +1,5 @@
-﻿using System;
-using MultiplayerMod.Multiplayer.Objects.Reference;
+﻿using System.Reflection;
 
 namespace MultiplayerMod.Game.Mechanics.Objects;
 
-public record StateMachineEventsArgs(
-    StateMachineReference Target,
-    Type MethodType,
-    string MethodName,
-    object[] Args
-);
+public record StateMachineEventsArgs(StateMachine.Instance StateMachineInstance, MethodBase Method, object[] Args);

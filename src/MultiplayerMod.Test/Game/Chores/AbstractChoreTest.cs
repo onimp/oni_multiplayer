@@ -233,7 +233,9 @@ public class AbstractChoreTest : AbstractGameTest {
             new object[] {
                 typeof(AggressiveChore),
                 new Func<object[]>(() => new object[] { target, ChoreCallback }),
-                new object[] { "root.move_notarget", new[] { 2, 1 } }
+                new Func<object[]>(
+                    () => new object[] { "root.move_notarget", new Dictionary<int, object> { { 2, 1 }, { 1, null! } } }
+                )
             },
             new object[] {
                 typeof(BeIncapacitatedChore),
@@ -242,7 +244,9 @@ public class AbstractChoreTest : AbstractGameTest {
             new object[] {
                 typeof(BingeEatChore),
                 new Func<object[]>(() => new object[] { target, ChoreCallback }),
-                new object[] { "root.cantFindFood", new[] { 1 } }
+                new Func<object[]>(
+                    () => new object[] { "root.cantFindFood", new Dictionary<int, object> { { 1, null! } } }
+                )
             },
             new object[] {
                 typeof(EatChore),
@@ -287,7 +291,7 @@ public class AbstractChoreTest : AbstractGameTest {
             new object[] {
                 typeof(FleeChore),
                 new Func<object[]>(() => new object[] { target, gameObject }),
-                new object[] { "root.cower", new[] { 1 } }
+                new Func<object[]>(() => new object[] { "root.cower", new Dictionary<int, object> { { 1, null! } } })
             },
             new object[] {
                 typeof(MournChore),
@@ -301,7 +305,9 @@ public class AbstractChoreTest : AbstractGameTest {
                         return new object[] { target };
                     }
                 ),
-                new object[] { "root.moveto", new int[] { 1 } }
+                new Func<object[]>(
+                    () => new object[] { "root.moveto", new Dictionary<int, object> { { 1, gameObject } } }
+                )
             },
             new object[] {
                 typeof(FoodFightChore),

@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.Objects;
-using MultiplayerMod.Multiplayer.Objects.Reference;
 using STRINGS;
-using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands.Chores;
 
@@ -21,11 +17,11 @@ public class CreateHostChore : MultiplayerCommand {
         ChoreId = args.ChoreId;
         ChoreType = args.ChoreType;
         Args = SpecialWrap(args.Args);
-        Args = Args.Select(WrapObject).ToArray();
+        Args = ArgumentUtils.WrapObjects(Args);
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var args = Args.Select(UnWrapObject).ToArray();
+        var args = ArgumentUtils.UnWrapObjects(Args);
         args = SpecialUnWrap(args);
 
         var chore = (Chore) ChoreType.GetConstructors()[0].Invoke(args);
@@ -95,33 +91,4 @@ public class CreateHostChore : MultiplayerCommand {
         }
         return args;
     }
-
-    private object? WrapObject(object? obj) {
-        return obj switch {
-            GameObject gameObject => gameObject.GetReference(),
-            KMonoBehaviour kMonoBehaviour => kMonoBehaviour.GetReference(),
-            Delegate action => new DelegateRef(action.GetType(), WrapObject(action.Target), action.Method),
-            _ => obj
-        };
-    }
-
-    private object? UnWrapObject(object? obj) {
-        return obj switch {
-            GameObjectReference gameObjectReference => gameObjectReference.GetGameObject(),
-            ComponentReference reference => reference.GetComponent(),
-            DelegateRef delegateRef => Delegate.CreateDelegate(
-                delegateRef.DelegateType,
-                UnWrapObject(delegateRef.Target),
-                delegateRef.MethodInfo
-            ),
-            _ => obj
-        };
-    }
-
-    [Serializable]
-    public record DelegateRef(
-        Type DelegateType,
-        object? Target,
-        MethodInfo MethodInfo
-    );
 }
