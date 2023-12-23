@@ -19,7 +19,7 @@ public class CreateHostChoreTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]
-    public void ExecutionTest(Type choreType, Func<object?[]> choreArgsFunc) {
+    public void ExecutionTest(Type choreType, Func<object[]> choreArgsFunc) {
         var choreId = new MultiplayerId(Guid.NewGuid());
         var arg = new CreateNewChoreArgs(choreId, choreType, choreArgsFunc.Invoke());
         var command = new CreateHostChore(arg);
@@ -31,7 +31,7 @@ public class CreateHostChoreTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]
-    public void SerializationTest(Type choreType, Func<object?[]> choreArgsFunc) {
+    public void SerializationTest(Type choreType, Func<object[]> choreArgsFunc) {
         var arg = new CreateNewChoreArgs(new MultiplayerId(Guid.NewGuid()), choreType, choreArgsFunc.Invoke());
         var command = new CreateHostChore(arg);
         var messageFactory = new NetworkMessageFactory();

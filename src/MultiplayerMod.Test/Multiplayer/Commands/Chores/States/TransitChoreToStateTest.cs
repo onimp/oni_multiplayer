@@ -29,11 +29,16 @@ public class TransitChoreToStateTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void ExecutionTest(Type choreType, Func<object[]> _, Func<object[]> stateTransitionArgsFunc) {
+    public void ExecutionTest(
+        Type choreType,
+        Func<object[]> createChoreArgsFunc,
+        Func<object[]> stateTransitionArgsFunc
+    ) {
         var stateTransitionArgs = stateTransitionArgsFunc.Invoke();
-        var choreId = new MultiplayerId(Guid.NewGuid());
+        var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
+        chore.Register(new MultiplayerId(Guid.NewGuid()));
         var arg = new ChoreTransitStateArgs(
-            choreId,
+            chore,
             (string?) stateTransitionArgs[0],
             (Dictionary<int, object>) stateTransitionArgs[1]
         );
@@ -45,10 +50,16 @@ public class TransitChoreToStateTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void SerializationTest(Type choreType, Func<object[]> _, Func<object[]> stateTransitionArgsFunc) {
+    public void SerializationTest(
+        Type choreType,
+        Func<object[]> createChoreArgsFunc,
+        Func<object[]> stateTransitionArgsFunc
+    ) {
         var stateTransitionArgs = stateTransitionArgsFunc.Invoke();
+        var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
+        chore.Register(new MultiplayerId(Guid.NewGuid()));
         var arg = new ChoreTransitStateArgs(
-            new MultiplayerId(Guid.NewGuid()),
+            chore,
             (string?) stateTransitionArgs[0],
             (Dictionary<int, object>) stateTransitionArgs[1]
         );
@@ -70,11 +81,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
     private class FakeStatesManager : StatesManager {
         public bool WasCalled;
 
-        public override void AllowTransition(
-            MultiplayerId ChoreId,
-            string? TargetState,
-            Dictionary<int, object> Args
-        ) {
+        public override void AllowTransition(Chore chore, string? targetState, Dictionary<int, object> args) {
             WasCalled = true;
         }
     }

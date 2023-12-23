@@ -1,18 +1,58 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Multiplayer.States;
 
 [Dependency, UsedImplicitly]
 public class StatesManager {
 
-    public virtual void AllowTransition(MultiplayerId choreId, string? targetState, Dictionary<int, object> args) {
-        // TODO implement me.
+    public const string StateName = "WaitHostState";
+
+    public virtual void AllowTransition(Chore chore, string? targetState, Dictionary<int, object> args) {
+        var smi = (StateMachine.Instance) chore.GetType().GetMethod("GetSMI").Invoke(chore, Array.Empty<object>());
+
+        var waitHostState = GetWaitHostState(smi);
+        waitHostState.GetType().GetMethod("AllowTransition").Invoke(
+            waitHostState,
+            new object?[] { smi, targetState, args }
+        );
     }
 
     public virtual void DisableChoreStateTransition(StateMachine.BaseState stateToBeSynced) {
-        // TODO implement me.
+        var sm = (StateMachine) stateToBeSynced.GetType().GetField("sm").GetValue(stateToBeSynced);
+        InjectWaitHostState(sm);
+        var callbackType = typeof(StateMachine<,,,>)
+            .GetNestedType("State")
+            .GetNestedType("Callback")
+            .MakeGenericType(sm.GetType().BaseType.GetGenericArguments().Append(typeof(object)));
+        stateToBeSynced.enterActions.Clear();
+        var method = typeof(StatesManager).GetMethod(
+            nameof(TransitToWaitState),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+        var callback = Delegate.CreateDelegate(callbackType, method);
+        stateToBeSynced.enterActions.Add(new StateMachine.Action("Transit to waiting state", callback));
     }
+
+    public void InjectWaitHostState(StateMachine sm) {
+        var genericType = typeof(WaitHostState<,,,>).MakeGenericType(
+            sm.GetType().BaseType.GetGenericArguments().Append(typeof(object))
+        );
+        Activator.CreateInstance(genericType, sm);
+    }
+
+    public object GetWaitHostState(Chore chore) {
+        var smi = (StateMachine.Instance) chore.GetType().GetMethod("GetSMI").Invoke(chore, Array.Empty<object>());
+        return GetWaitHostState(smi);
+    }
+
+    private object GetWaitHostState(StateMachine.Instance smi) => smi.stateMachine.GetState("root." + StateName);
+
+    private static void TransitToWaitState(StateMachine.Instance smi) {
+        smi.GoTo("root." + StateName);
+    }
+
 }
