@@ -61,6 +61,7 @@ public abstract class AbstractGameTest {
         StateMachineDebuggerSettings._Instance.Initialize();
 
         StateMachineManager.Instance.Clear();
+        StateMachine.Instance.error = false;
 
         worldGameObject.AddComponent<MinionGroupProber>().Awake();
         worldGameObject.AddComponent<GameClock>().Awake();

@@ -15,6 +15,7 @@
         <ProjectReference Include="..\MultiplayerMod\MultiplayerMod.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
         <PackageReference Include="NUnit" Version="3.13.3"/>
         <PackageReference Include="AssemblyExposer.MSBuild.Task" Version="0.1.3" Private="true"/>
     </ItemGroup>

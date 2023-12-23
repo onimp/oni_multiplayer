@@ -41,7 +41,7 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         var expectedArgs = stateTransitionArgsFunc.Invoke();
         var expectedDictionary = (Dictionary<int, object>) expectedArgs[1];
         Assert.NotNull(firedArgs);
-        Assert.AreEqual(choreId, firedArgs!.ChoreId);
+        Assert.AreEqual(chore, firedArgs!.Chore);
         Assert.AreEqual(expectedArgs[0], firedArgs!.TargetState);
         Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
         Assert.AreEqual(

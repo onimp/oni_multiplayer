@@ -7,7 +7,6 @@ using JetBrains.Annotations;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
-using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Game.Chores.States;
 
@@ -56,7 +55,7 @@ public static class ChoreStateEvents {
                 parameter => GetParameterIndex(smi, parameter),
                 parameter => GetParameterValue(smi, parameter)
             );
-        OnStateTransition?.Invoke(new ChoreTransitStateArgs(chore.MultiplayerId()!, state?.name, args));
+        OnStateTransition?.Invoke(new ChoreTransitStateArgs(chore, state?.name, args));
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {
