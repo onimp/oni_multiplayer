@@ -28,7 +28,7 @@ public class ChoreConsumerPatch {
         var needWaitForChoreCompletion = NeedWaitForChoreCompletion(currentChore);
         if (needWaitForChoreCompletion && queueNotEmpty) {
             log.Debug(
-                $"{reference.GetComponent()} Waiting for" +
+                $"{reference.Resolve()} Waiting for" +
                 $" {currentChore?.choreType.Name} to finish before assigning next one from the host ({queue?.Peek().Invoke()?.chore?.choreType?.Name})."
             );
             return false;

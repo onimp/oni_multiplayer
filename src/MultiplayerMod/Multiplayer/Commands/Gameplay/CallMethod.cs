@@ -8,21 +8,20 @@ namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
 public class CallMethod : MultiplayerCommand {
-    private readonly ComponentReference? componentTarget;
-    private readonly StateMachineReference? stateMachineTarget;
+    private readonly Reference target;
     private readonly Type methodType;
     private readonly string methodName;
     private readonly object?[] args;
 
     public CallMethod(ComponentEventsArgs eventArgs) {
-        componentTarget = eventArgs.Component.GetReference();
+        target = eventArgs.Component.GetReference();
         methodType = eventArgs.Method.GetType();
         methodName = eventArgs.Method.Name;
         args = ArgumentUtils.WrapObjects(eventArgs.Args);
     }
 
     public CallMethod(StateMachineEventsArgs eventArgs) {
-        stateMachineTarget = eventArgs.StateMachineInstance.GetReference();
+        target = eventArgs.StateMachineInstance.GetReference();
         methodType = eventArgs.Method.GetType();
         methodName = eventArgs.Method.Name;
         args = ArgumentUtils.WrapObjects(eventArgs.Args);
@@ -35,7 +34,7 @@ public class CallMethod : MultiplayerCommand {
                 BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance |
                 BindingFlags.DeclaredOnly
             );
-        object? obj = componentTarget != null ? componentTarget.GetComponent() : stateMachineTarget!.GetInstance();
+        var obj = target.ResolveRaw();
         if (obj != null) {
             method?.Invoke(obj, ArgumentUtils.UnWrapObjects(this.args));
         }

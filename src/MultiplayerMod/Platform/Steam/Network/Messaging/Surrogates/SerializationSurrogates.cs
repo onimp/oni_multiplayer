@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 
 namespace MultiplayerMod.Platform.Steam.Network.Messaging.Surrogates;
 
@@ -30,6 +31,10 @@ public static class SerializationSurrogates {
     private static void Add<T>(this SurrogateSelector selector, T surrogate)
         where T : ISerializationSurrogate, ISurrogateType {
         selector.AddSurrogate(surrogate.Type, new StreamingContext(StreamingContextStates.All), surrogate);
+    }
+
+    public static bool HasSurrogate(Type type) {
+        return Selector.GetSurrogate(type, new StreamingContext(StreamingContextStates.All), out var _) != null;
     }
 
 }
