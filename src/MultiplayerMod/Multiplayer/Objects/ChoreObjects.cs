@@ -11,6 +11,7 @@ public static class ChoreObjects {
         idChoreDictionary.Clear();
         choreIdDictionary.Clear();
     }
+  
     public static Chore GetChore(MultiplayerId multiplayerId) => idChoreDictionary[multiplayerId];
 
     public static MultiplayerId Register(this Chore chore, MultiplayerId? multiplayerId = null) {
