@@ -94,6 +94,7 @@ public class AbstractChoreTest : AbstractGameTest {
     public void Teardown() {
         KPrefabIDTracker.Instance = null;
         AssetsPatch.Cache.Clear();
+        ChoreObjects.Clear();
     }
 
     protected static object[][] GetCreationTestArgs() =>
@@ -112,7 +113,9 @@ public class AbstractChoreTest : AbstractGameTest {
         ).ToArray();
 
     protected static Chore CreateChore(Type choreType, object[] args) {
-        return (Chore) choreType.GetConstructors()[0].Invoke(args);
+        var result = (Chore) choreType.GetConstructors()[0].Invoke(args);
+        result.Register();
+        return result;
     }
 
     private static object[][] GetTestArgs() {

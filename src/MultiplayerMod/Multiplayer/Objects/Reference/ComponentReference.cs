@@ -4,7 +4,7 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
 
 [Serializable]
-public class ComponentReference {
+public class ComponentReference : Reference<Component> {
 
     private GameObjectReference GameObjectReference { get; set; }
     private Type ComponentType { get; set; }
@@ -14,7 +14,7 @@ public class ComponentReference {
         ComponentType = type;
     }
 
-    public Component? GetComponent() => GameObjectReference.GetComponent(ComponentType);
+    public override Component? Resolve() => GameObjectReference.GetComponent(ComponentType);
 
     protected bool Equals(ComponentReference other) {
         return GameObjectReference.Equals(other.GameObjectReference) && ComponentType == other.ComponentType;
@@ -23,7 +23,7 @@ public class ComponentReference {
     public override bool Equals(object? obj) {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;
-        if (obj.GetType() != this.GetType()) return false;
+        if (obj.GetType() != GetType()) return false;
 
         return Equals((ComponentReference) obj);
     }
@@ -37,30 +37,9 @@ public class ComponentReference {
 }
 
 [Serializable]
-public class ComponentReference<T> where T : KMonoBehaviour {
+public class ComponentReference<T> : ComponentReference where T : KMonoBehaviour {
 
-    private GameObjectReference GameObjectReference { get; set; }
+    public ComponentReference(GameObjectReference gameObjectReference) : base(gameObjectReference, typeof(T)) { }
 
-    public ComponentReference(GameObjectReference gameObjectReference) {
-        GameObjectReference = gameObjectReference;
-    }
-
-    public T GetComponent() => GameObjectReference.GetComponent<T>();
-
-    protected bool Equals(ComponentReference<T> other) {
-        return GameObjectReference.Equals(other.GameObjectReference);
-    }
-
-    public override bool Equals(object? obj) {
-        if (ReferenceEquals(null, obj)) return false;
-        if (ReferenceEquals(this, obj)) return true;
-        if (obj.GetType() != this.GetType()) return false;
-
-        return Equals((ComponentReference<T>) obj);
-    }
-
-    public override int GetHashCode() {
-        return GameObjectReference.GetHashCode();
-    }
-
+    public T GetComponent() => (T) Resolve()!;
 }
