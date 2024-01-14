@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
 
     <Target Name="SetVersionAttributes" BeforeTargets="InitializeSourceControlInformation">
         <Exec Command="git rev-parse --is-inside-work-tree" IgnoreExitCode="True">
@@ -86,68 +87,6 @@
             <ModFiles Include="$(TargetDir)*.*"/>
         </ItemGroup>
         <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModInstallationPath)"/>
-    </Target>
-
-    <Target Name="ExposeAssemblies" BeforeTargets="PreBuildEvent">
-        <ItemGroup>
-            <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
-            <ExposureRules Include="Private and internal targets to public">
-                <PatternRule>^(private|internal)</PatternRule>
-                <TargetRule>All</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </ExposureRules>
-            <ExposureRules Include="DragTool::OnDrag* to public">
-                <PatternRule>Tool::OnDrag</PatternRule>
-                <TargetRule>Method</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </ExposureRules>
-            <ExposureRules Include="Game::OnPrefabInit to public">
-                <PatternRule>Game::OnPrefabInit</PatternRule>
-                <TargetRule>Method</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </ExposureRules>
-            <ExposureRules Include="KMonoBehaviour overriden methods to public">
-                <PatternRule>^(?!.*?KMonoBehaviour).*?::(OnSpawn)</PatternRule>
-                <TargetRule>Method</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </ExposureRules>
-            <ExposureRules Include="Protected types and fields to public">
-                <PatternRule>protected</PatternRule>
-                <TargetRule>Type, Field</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </ExposureRules>
-        </ItemGroup>
-        <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
-    </Target>
-
-    <Target Name="ExposeUnityAssemblies" BeforeTargets="PreBuildEvent">
-        <ItemGroup>
-            <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
-            <UnityAssemblies Include="$(ManagedPath)\UnityEngine.UI.dll"/>
-            <UnityExposureRules Include="Cached pointer to public">
-                <PatternRule>^private.*?Object::m_CachedPtr</PatternRule>
-                <TargetRule>Field</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </UnityExposureRules>
-            <UnityExposureRules Include="Open Toggle constructor">
-                <PatternRule>Toggle::.ctor()</PatternRule>
-                <TargetRule>Method</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </UnityExposureRules>
-        </ItemGroup>
-        <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)"/>
-    </Target>
-
-    <Target Name="ExposeHarmonyAssembly" BeforeTargets="PreBuildEvent">
-        <ItemGroup>
-            <HarmonyAssembly Include="$(ManagedPath)\0Harmony.dll"/>
-            <HarmonyExposureRules Include="Private and internal targets to public">
-                <PatternRule>^(private|internal).*?</PatternRule>
-                <TargetRule>All</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </HarmonyExposureRules>
-        </ItemGroup>
-        <ExposeAssembly SourceAssemblies="@(HarmonyAssembly)" Rules="@(HarmonyExposureRules)"/>
     </Target>
 
     <Target Name="ProcessAttributes" AfterTargets="PostBuildEvent">

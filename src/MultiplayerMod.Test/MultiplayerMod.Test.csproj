@@ -12,17 +12,17 @@
         <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\MultiplayerMod\MultiplayerMod.csproj"/>
+        <ProjectReference Include="..\MultiplayerMod\MultiplayerMod.csproj" PrivateAssets="All"/>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
         <PackageReference Include="NUnit" Version="3.13.3"/>
         <PackageReference Include="AssemblyExposer.MSBuild.Task" Version="0.1.3" Private="true"/>
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="Assembly-CSharp" HintPath="lib\exposed\Assembly-CSharp.dll"/>
-        <Reference Include="Assembly-CSharp-firstpass" HintPath="lib\exposed\Assembly-CSharp-firstpass.dll"/>
-        <Reference Include="UnityEngine.CoreModule" HintPath="lib\exposed\UnityEngine.CoreModule.dll"  />
+        <Reference Include="Assembly-CSharp" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp.dll"/>
+        <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp-firstpass.dll"/>
+        <Reference Include="UnityEngine.CoreModule" HintPath="$(ExposedLibrariesPath)\UnityEngine.CoreModule.dll"/>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="0Harmony" HintPath="$(ManagedPath)\0Harmony.dll"/>

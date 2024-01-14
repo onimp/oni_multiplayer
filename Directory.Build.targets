@@ -1,0 +1,80 @@
+<Project>
+
+    <Target Name="ExposeAssemblies" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
+            <ExposureRules Include="Private and internal targets to public">
+                <PatternRule>^(private|internal)</PatternRule>
+                <TargetRule>All</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="DragTool::OnDrag* to public">
+                <PatternRule>Tool::OnDrag</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="Game::OnPrefabInit to public">
+                <PatternRule>Game::OnPrefabInit</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="KMonoBehaviour overriden methods to public">
+                <PatternRule>^(?!.*?KMonoBehaviour).*?::(OnSpawn)</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="Protected types and fields to public">
+                <PatternRule>protected</PatternRule>
+                <TargetRule>Type, Field</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+            <ExposureRules Include="Game scene partitioner protected methods">
+                <PatternRule>GameScenePartitioner::</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
+        </ItemGroup>
+        <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)" OutputDirectory="$(ExposedLibrariesPath)"/>
+    </Target>
+
+    <Target Name="ExposeUnityAssemblies" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
+            <UnityAssemblies Include="$(ManagedPath)\UnityEngine.UI.dll"/>
+            <UnityExposureRules Include="Cached pointer to public">
+                <PatternRule>^private.*?Object::m_CachedPtr</PatternRule>
+                <TargetRule>Field</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </UnityExposureRules>
+            <UnityExposureRules Include="Open Toggle constructor">
+                <PatternRule>Toggle::.ctor()</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </UnityExposureRules>
+            <UnityExposureRules Include="Open DebugLogHandler">
+                <PatternRule>DebugLogHandler</PatternRule>
+                <TargetRule>Type, Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </UnityExposureRules>
+            <UnityExposureRules Include="Open ResourcesAPIInternal">
+                <PatternRule>ResourcesAPIInternal</PatternRule>
+                <TargetRule>All</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </UnityExposureRules>
+        </ItemGroup>
+        <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)" OutputDirectory="$(ExposedLibrariesPath)"/>
+    </Target>
+
+    <Target Name="ExposeHarmonyAssembly" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <HarmonyAssembly Include="$(ManagedPath)\0Harmony.dll"/>
+            <HarmonyExposureRules Include="Private and internal targets to public">
+                <PatternRule>^(private|internal).*?</PatternRule>
+                <TargetRule>All</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </HarmonyExposureRules>
+        </ItemGroup>
+        <ExposeAssembly SourceAssemblies="@(HarmonyAssembly)" Rules="@(HarmonyExposureRules)" OutputDirectory="$(ExposedLibrariesPath)"/>
+    </Target>
+
+</Project>

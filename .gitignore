@@ -5,4 +5,4 @@ src/Assembly-CSharp-firstpass
 src/Assembly-CSharp
 src/*/bin/
 src/*/obj/
-src/*/lib/
+/lib

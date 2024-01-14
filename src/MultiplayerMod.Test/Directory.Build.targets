@@ -1,38 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-
-    <Target Name="ExposeAssemblies" BeforeTargets="PreBuildEvent">
-        <ItemGroup>
-            <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
-            <ExposureRules Include="Private and internal targets to public">
-                <PatternRule>^(private|internal|protected)</PatternRule>
-                <TargetRule>All</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </ExposureRules>
-        </ItemGroup>
-        <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)"/>
-    </Target>
-
-    <Target Name="ExposeUnityAssemblies" BeforeTargets="PreBuildEvent">
-        <ItemGroup>
-            <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
-            <UnityExposureRules Include="Cached pointer to public">
-                <PatternRule>^private.*?Object::m_CachedPtr</PatternRule>
-                <TargetRule>Field</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </UnityExposureRules>
-            <UnityExposureRules Include="Open DebugLogHandler">
-                <PatternRule>DebugLogHandler</PatternRule>
-                <TargetRule>Type, Method</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </UnityExposureRules>
-            <UnityExposureRules Include="Open ResourcesAPIInternal">
-                <PatternRule>ResourcesAPIInternal</PatternRule>
-                <TargetRule>All</TargetRule>
-                <VisibilityRule>Public</VisibilityRule>
-            </UnityExposureRules>
-        </ItemGroup>
-        <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)"/>
-    </Target>
-
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
 </Project>

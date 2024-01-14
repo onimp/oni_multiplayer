@@ -43,11 +43,11 @@
         </Content>
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="Assembly-CSharp" HintPath="lib\exposed\Assembly-CSharp.dll" Private="false" />
-        <Reference Include="Assembly-CSharp-firstpass" HintPath="lib\exposed\Assembly-CSharp-firstpass.dll" Private="false" />
-        <Reference Include="UnityEngine.CoreModule" HintPath="lib\exposed\UnityEngine.CoreModule.dll" Private="false" />
-        <Reference Include="UnityEngine.UI" HintPath="lib\exposed\UnityEngine.UI.dll" Private="false" />
-        <Reference Include="0Harmony" HintPath="lib\exposed\0Harmony.dll" Private="false" />
+        <Reference Include="Assembly-CSharp" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp.dll" Private="false" />
+        <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp-firstpass.dll" Private="false" />
+        <Reference Include="UnityEngine.CoreModule" HintPath="$(ExposedLibrariesPath)\UnityEngine.CoreModule.dll" Private="false" />
+        <Reference Include="UnityEngine.UI" HintPath="$(ExposedLibrariesPath)\UnityEngine.UI.dll" Private="false" />
+        <Reference Include="0Harmony" HintPath="$(ExposedLibrariesPath)\0Harmony.dll" Private="false" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedPath)\com.rlabrecque.steamworks.net.dll" Private="false" />
