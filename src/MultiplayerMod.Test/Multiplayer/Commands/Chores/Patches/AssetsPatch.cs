@@ -9,12 +9,23 @@ namespace MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
 [HarmonyPatch(typeof(Assets))]
 public class AssetsPatch {
 
-    public static readonly Dictionary<string, KAnimFile> Cache = new();
+    private static readonly Dictionary<string, KAnimFile> cache = new();
 
-    static AssetsPatch() {
+    private static bool initialized;
+
+    private static void Init() {
         var batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(new HashedString("Fake"));
-        batchGroupData.AddNewBuildFile(new KAnimHashedString());
+        var hash = new KAnimHashedString();
+        batchGroupData.textureStartIndex.Remove(hash);
+        batchGroupData.AddNewBuildFile(hash);
         batchGroupData.builds[0].symbols = Array.Empty<KAnim.Build.Symbol>();
+        //      HashCache.Get().Add("cheek_005");
+        initialized = true;
+    }
+
+    public static void Clear() {
+        initialized = false;
+        cache.Clear();
     }
 
     [UsedImplicitly]
@@ -23,8 +34,11 @@ public class AssetsPatch {
     private static bool Assets_GetAnim(ref KAnimFile __result, HashedString name) {
         var key1 = name.ToString();
         var key2 = new HashedString(name.ToString()).ToString();
-        if (!Cache.ContainsKey(key1) && !Cache.ContainsKey(key2)) {
-            Cache[key1] = Cache[key2] = new KAnimFile() {
+        if (!initialized) {
+            Init();
+        }
+        if (!cache.ContainsKey(key1) && !cache.ContainsKey(key2)) {
+            cache[key1] = cache[key2] = new KAnimFile() {
                 name = key1,
                 IsBuildLoaded = true,
                 data = new KAnimFileData("") {
@@ -32,7 +46,7 @@ public class AssetsPatch {
                 }
             };
         }
-        __result = Cache[key1];
+        __result = cache[key1];
         return false;
     }
 

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using HarmonyLib;
 using Klei.AI;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
 using NUnit.Framework;
 using UnityEngine;
@@ -13,6 +15,7 @@ using UnityEngine;
 namespace MultiplayerMod.Test.Game.Chores;
 
 public class AbstractChoreTest : AbstractGameTest {
+    private Harmony harmony = null!;
 
     protected static KMonoBehaviour target = null!;
     private static GameObject gameObject = null!;
@@ -27,8 +30,11 @@ public class AbstractChoreTest : AbstractGameTest {
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
 
-    protected new static void SetUpGame(HashSet<Type>? additionalPatches = null) {
-        AbstractGameTest.SetUpGame(additionalPatches);
+    protected void SetUpGame(HashSet<Type>? additionalPatches = null) {
+        if (additionalPatches != null) {
+            harmony = new Harmony("AbstractChoreTest");
+            PatchesSetup.Install(harmony, additionalPatches);
+        }
 
         var locatorGameObject = createGameObject();
         locatorGameObject.AddComponent<Approachable>();
@@ -93,8 +99,11 @@ public class AbstractChoreTest : AbstractGameTest {
     [TearDown]
     public void Teardown() {
         KPrefabIDTracker.Instance = null;
-        AssetsPatch.Cache.Clear();
+        AssetsPatch.Clear();
         ChoreObjects.Clear();
+        if (harmony != null) {
+            PatchesSetup.Uninstall(harmony);
+        }
     }
 
     protected static object[][] GetCreationTestArgs() =>
@@ -302,6 +311,7 @@ public class AbstractChoreTest : AbstractGameTest {
                     () => {
                         var grave = createGameObject().AddComponent<Grave>();
                         grave.burialTime = 0;
+                        grave.transform.position = new Vector3(20, 0.5f, 0);
                         Components.Graves.Clear();
                         Components.Graves.Add(grave);
                         target.GetComponent<Navigator>().NavGrid.NavTable.SetValid(19, NavType.Floor, true);

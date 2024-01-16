@@ -12,7 +12,7 @@ public class StatesManager {
     public const string StateName = "WaitHostState";
 
     public virtual void AllowTransition(Chore chore, string? targetState, Dictionary<int, object> args) {
-        var smi = (StateMachine.Instance) chore.GetType().GetMethod("GetSMI").Invoke(chore, Array.Empty<object>());
+        var smi = GetSmi(chore);
 
         var waitHostState = GetWaitHostState(smi);
         waitHostState.GetType().GetMethod("AllowTransition").Invoke(
@@ -45,8 +45,12 @@ public class StatesManager {
     }
 
     public object GetWaitHostState(Chore chore) {
-        var smi = (StateMachine.Instance) chore.GetType().GetMethod("GetSMI").Invoke(chore, Array.Empty<object>());
-        return GetWaitHostState(smi);
+        return GetWaitHostState(GetSmi(chore));
+    }
+
+    public StateMachine.Instance GetSmi(Chore chore) {
+        return (StateMachine.Instance) chore.GetType().GetProperty(nameof(Chore<StateMachine.Instance>.smi))
+            .GetValue(chore);
     }
 
     private object GetWaitHostState(StateMachine.Instance smi) => smi.stateMachine.GetState("root." + StateName);

@@ -17,7 +17,7 @@ public class ScriptableObjectPatch {
     [HarmonyPatch(MethodType.Constructor)]
     private static bool ScriptableObject_Constructor(ScriptableObject __instance) {
         UnityObject.MarkAsNotNull(__instance);
-        UnityTestRuntime.SetName(__instance, $"New {__instance.GetType()}");
+        UnityTestRuntime.RegisterObject(__instance, null);
         return false;
     }
 

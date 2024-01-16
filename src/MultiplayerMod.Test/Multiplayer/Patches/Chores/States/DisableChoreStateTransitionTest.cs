@@ -14,14 +14,18 @@ namespace MultiplayerMod.Test.Multiplayer.Patches.Chores.States;
 [TestFixture]
 public class DisableChoreStateTransitionTest : AbstractChoreTest {
 
-    [SetUp]
-    public void SetUp() {
-        SetUpGame(new HashSet<Type> { typeof(DisableChoreStateTransition) });
-
+    [OneTimeSetUp]
+    public static void OneTimeSetUp() {
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Client);
+
         var di = (DependencyContainer) Runtime.Instance.Dependencies;
         di.Register(new DependencyInfo(nameof(EventDispatcher), typeof(EventDispatcher), false));
         di.Register(new DependencyInfo(nameof(FakeStatesManager), typeof(FakeStatesManager), false));
+    }
+
+    [SetUp]
+    public void SetUp() {
+        SetUpGame(new HashSet<Type> { typeof(DisableChoreStateTransition) });
     }
 
     [Test, TestCaseSource(nameof(GetTransitionTestArgs))]

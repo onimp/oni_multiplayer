@@ -19,13 +19,16 @@ namespace MultiplayerMod.Test.Multiplayer.Commands.Chores.States;
 [TestFixture]
 public class TransitChoreToStateTest : AbstractChoreTest {
 
-    [SetUp]
-    public void SetUp() {
-        SetUpGame();
-
+    [OneTimeSetUp]
+    public static void OneTimeSetUp() {
         var di = (DependencyContainer) Runtime.Instance.Dependencies;
         di.Register(new DependencyInfo(nameof(EventDispatcher), typeof(EventDispatcher), false));
         di.Register(new DependencyInfo(nameof(FakeStatesManager), typeof(FakeStatesManager), false));
+    }
+
+    [SetUp]
+    public void SetUp() {
+        SetUpGame();
     }
 
     [Test, TestCaseSource(nameof(GetTransitionTestArgs))]

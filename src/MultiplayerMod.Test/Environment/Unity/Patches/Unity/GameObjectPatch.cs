@@ -19,7 +19,7 @@ public class GameObjectPatch {
     ) {
         var result = new List<CodeInstruction> {
             new(OpCodes.Ldarg_0), // self
-            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.Register)),
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.RegisterGameObject)),
             new(OpCodes.Ret)
         };
         return result;

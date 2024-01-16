@@ -15,7 +15,7 @@ public class ChoreStateEventsTest : AbstractChoreTest {
     public void SetUp() {
         SetUpGame(new HashSet<Type> { typeof(ChoreStateEvents) });
 
-        Assets.AnimTable[new HashedString(1525736797)] = new KAnimFile() {
+        Assets.AnimTable[new HashedString(1525736797)] = new KAnimFile {
             data = new KAnimFileData("")
         };
         Grid.BuildMasks[123] = Grid.BuildFlags.Solid;

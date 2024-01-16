@@ -19,8 +19,8 @@ public class ObjectPatch {
     [HarmonyPatch(MethodType.Constructor)]
     private static void Object_Constructor(Object __instance) {
         UnityObject.MarkAsNotNull(__instance);
-        if (__instance is not Component && __instance is not GameObject) {
-            UnityTestRuntime.SetName(__instance, $"New {__instance.GetType()}");
+        if (__instance is not GameObject) {
+            UnityTestRuntime.RegisterObject(__instance, null);
         }
     }
 
@@ -38,6 +38,8 @@ public class ObjectPatch {
     [HarmonyPatch("Destroy", typeof(Object), typeof(float))]
     private static IEnumerable<CodeInstruction> Object_Destroy(IEnumerable<CodeInstruction> instructions) {
         return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0),
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.Destroy)),
             new(OpCodes.Ret)
         };
     }

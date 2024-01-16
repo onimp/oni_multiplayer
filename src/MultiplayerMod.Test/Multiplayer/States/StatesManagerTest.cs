@@ -12,12 +12,16 @@ namespace MultiplayerMod.Test.Multiplayer.States;
 [TestFixture]
 public class StatesManagerTest : AbstractChoreTest {
 
+    [OneTimeSetUp]
+    public static void OneTimeSetUp() {
+        var di = (DependencyContainer) Runtime.Instance.Dependencies;
+        di.Register(new DependencyInfo(nameof(StatesManager), typeof(StatesManager), false));
+    }
+
     [SetUp]
     public void SetUp() {
         SetUpGame();
 
-        var di = (DependencyContainer) Runtime.Instance.Dependencies;
-        di.Register(new DependencyInfo(nameof(StatesManager), typeof(StatesManager), false));
     }
 
     [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
@@ -27,18 +31,19 @@ public class StatesManagerTest : AbstractChoreTest {
         Func<object[]> stateTransitionArgsFunc
     ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
-        Runtime.Instance.Dependencies.Get<StatesManager>().InjectWaitHostState(sm);
+        var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
+        statesManager.InjectWaitHostState(sm);
         var stateTransitionArgs = stateTransitionArgsFunc.Invoke();
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
-        var smi = (StateMachine.Instance) chore.GetType().GetMethod("GetSMI").Invoke(chore, Array.Empty<object>());
+        var smi = statesManager.GetSmi(chore);
 
-        Runtime.Instance.Dependencies.Get<StatesManager>().AllowTransition(
+        statesManager.AllowTransition(
             chore,
             (string?) stateTransitionArgs[0],
             (Dictionary<int, object>) stateTransitionArgs[1]
         );
 
-        var waitHostState = (dynamic) Runtime.Instance.Dependencies.Get<StatesManager>().GetWaitHostState(chore);
+        var waitHostState = (dynamic) statesManager.GetWaitHostState(chore);
         Assert.True(waitHostState.TransitionAllowed.Get(smi));
         Assert.AreEqual(stateTransitionArgs[0], waitHostState.TargetState.Get(smi));
         Assert.AreEqual(stateTransitionArgs[1], waitHostState.ParametersArgs.Get(smi));
@@ -51,10 +56,11 @@ public class StatesManagerTest : AbstractChoreTest {
         Func<object[]> stateTransitionArgsFunc
     ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
-        Runtime.Instance.Dependencies.Get<StatesManager>()
+        var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
+        statesManager
             .DisableChoreStateTransition(sm.GetState("root"));
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
-        var smi = (StateMachine.Instance) chore.GetType().GetMethod("GetSMI").Invoke(chore, Array.Empty<object>());
+        var smi = statesManager.GetSmi(chore);
 
         chore.Begin(
             new Chore.Precondition.Context {
@@ -62,7 +68,7 @@ public class StatesManagerTest : AbstractChoreTest {
             }
         );
 
-        var waitHostState = (dynamic) Runtime.Instance.Dependencies.Get<StatesManager>().GetWaitHostState(chore);
+        var waitHostState = (dynamic) statesManager.GetWaitHostState(chore);
         Assert.AreEqual(waitHostState, smi.GetCurrentState());
     }
 

@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using HarmonyLib;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Test.Environment.Patches;
 using UnityEngine;
@@ -21,12 +21,10 @@ public static class UnityTestRuntime {
 
     private static readonly Dictionary<Type, Dictionary<UnityEvent, MethodInfo>> eventMethodCache = new();
 
-    public static readonly Dictionary<string, GameObject> Components = new();
-    public static readonly List<Component> EnabledComponents = new();
-    public static readonly List<Component> StartAwaitingComponents = new();
-    public static readonly List<Component> NewComponents = new();
-    public static readonly Dictionary<string, GameObjectCompanion> GameObjectCompanionData = new();
-    private static readonly Dictionary<int, string> objectNames = new();
+    private static readonly HashSet<Component> enabledComponents = new();
+    private static readonly HashSet<Component> startAwaitingComponents = new();
+    private static readonly HashSet<Component> newComponents = new();
+    private static readonly Dictionary<IntPtr, ObjectCompanion> companionData = new();
     private static int lastCell;
 
     public static int FrameCount { get; private set; }
@@ -36,68 +34,92 @@ public static class UnityTestRuntime {
         typeof(UnityTaskExecutor),
         typeof(LoadingOverlay),
         typeof(KMonoBehaviour),
-        typeof(KPrefabID)
+        typeof(KPrefabID),
+        typeof(PathProber),
+        typeof(Facing),
+        typeof(Notifier)
     };
 
-    public static void Register(GameObject gameObject) {
-        SetName(gameObject, "New game object");
-        GameObjectCompanionData[gameObject.name] = new GameObjectCompanion(
-            new List<Component>(),
-            GenerateUniquePosition(),
-            gameObject
+    public static void RegisterGameObject(GameObject gameObject) {
+        SetCompanion(
+            gameObject,
+            new GameObjectCompanion(
+                new List<Component>(),
+                GenerateUniquePosition(),
+                gameObject,
+                "New game object"
+            )
         );
         AddComponent(gameObject, typeof(Transform));
+    }
+
+    public static void RegisterObject(Object obj, GameObject? parent) {
+        if (GetGameObjectCompanionSafe(obj) != null) {
+            return;
+        }
+        SetCompanion(obj, new ObjectCompanion($"New {obj.GetType()}", parent));
     }
 
     private static Vector3 GenerateUniquePosition() {
         var cell = ++lastCell;
         var width = 40; // random
-        return new Vector3((float) (cell % width), (float) (cell / width), 0.0f);
+        return new Vector3(cell % width, (float) cell / width, 0.0f);
     }
 
     public static void GetPosition(Transform transform, out Vector3 position) {
-        position = GameObjectCompanionData[transform.gameObject.name].Position;
+        position = GetGameObjectCompanion(transform.gameObject).Position;
     }
 
     public static void SetPositionFromTransform(Transform transform, ref Vector3 position) =>
         SetPosition(transform.gameObject, position);
 
     public static void SetPosition(GameObject gameObject, Vector3 position) =>
-        GameObjectCompanionData[gameObject.name].Position = position;
+        GetGameObjectCompanion(gameObject).Position = position;
 
-    public static string GetName(Object obj) {
-        return objectNames[RuntimeHelpers.GetHashCode(obj)];
-    }
+    public static string GetName(Object obj) =>
+        GetGameObjectCompanionSafe(obj)?.Name ?? $"Error-{obj.GetType()}-{obj.m_CachedPtr}";
 
-    public static void SetName(Object obj, string desiredName, int? numberOfCollisions = null) {
-        var name = desiredName;
-        if (numberOfCollisions != null) {
-            name += $" ({numberOfCollisions})";
-        }
-        while (objectNames.Values.Contains(name)) {
-            numberOfCollisions = (numberOfCollisions ?? 0) + 1;
-            name = $"{desiredName} ({numberOfCollisions})";
-        }
-        var hashCode = RuntimeHelpers.GetHashCode(obj);
-        if (obj is GameObject && objectNames.ContainsKey(hashCode)) {
-            var oldName = objectNames[hashCode];
-            if (GameObjectCompanionData.ContainsKey(oldName)) {
-                var oldData = GameObjectCompanionData[oldName];
-                GameObjectCompanionData.Remove(oldName);
-                GameObjectCompanionData[name] = oldData;
-            }
-        }
-        objectNames[hashCode] = name;
-    }
+    public static void SetName(Object obj, string desiredName) => GetGameObjectCompanion(obj).Name = desiredName;
 
     public static Component AddComponent(GameObject gameObject, Type type) {
         var component = (Component) Activator.CreateInstance(type, true);
-        SetName(component, $"New {type}");
-        GameObjectCompanionData[gameObject.name].Components.Add(component);
-        Components[component.name] = gameObject;
-        NewComponents.Add(component);
+        GetGameObjectCompanion(component).Parent = gameObject;
+        GetGameObjectCompanion(gameObject).Components.Add(component);
+        newComponents.Add(component);
         Trigger(component, UnityEvent.Awake);
         return component;
+    }
+
+    public static void Destroy(Object obj) {
+        switch (obj) {
+            case null:
+                return;
+            case Component component: {
+                var parent = GetGameObjectCompanion(component).Parent!;
+                GetGameObjectCompanion(parent).Components.Remove(component);
+                if (!newComponents.Remove(component)) {
+                    throw new Exception($"Can not remove {component.GetType()}-{component.m_CachedPtr}");
+                }
+                RemoveCompanion(obj);
+                return;
+            }
+            case GameObject gameObject: {
+                var companion = GetGameObjectCompanion(gameObject);
+                companion.Components.ForEach(
+                    it => {
+                        if (!newComponents.Remove(it)) {
+                            throw new Exception($"Can not remove {it.GetType()}-{it.m_CachedPtr}");
+                        }
+                        RemoveCompanion(it);
+                    }
+                );
+                RemoveCompanion(obj);
+                gameObject.m_CachedPtr = IntPtr.Zero;
+                return;
+            }
+            default:
+                throw new Exception($"Unknown thing to destroy {obj.GetType()}-{obj.m_CachedPtr}");
+        }
     }
 
     public static void GetComponentFastPathFromComponent(
@@ -109,20 +131,17 @@ public static class UnityTestRuntime {
     }
 
     public static Component? GetComponent(GameObject gameObject, Type type) {
-        var components = GameObjectCompanionData[gameObject.name].Components;
+        var components = GetGameObjectCompanion(gameObject).Components;
         var assignableTypes = components.Where(type.IsInstanceOfType).ToList();
         if (assignableTypes.Count == 1) {
             return assignableTypes.Single();
         }
         var exactTypes = assignableTypes.Where(component => type == component.GetType()).ToList();
-        if (exactTypes.Count == 1) {
-            return exactTypes.Single();
-        }
         return exactTypes.Count > 0 ? exactTypes.First() : null;
     }
 
     public static Array GetComponentsInternal(GameObject gameObject, Type type) {
-        var res = GameObjectCompanionData[gameObject.name].Components.Where(type.IsInstanceOfType).ToArray();
+        var res = GetGameObjectCompanion(gameObject).Components.Where(type.IsInstanceOfType).ToArray();
         var newArray = Array.CreateInstance(type, res.Length);
         Array.Copy(res, newArray, newArray.Length);
         return newArray;
@@ -149,28 +168,31 @@ public static class UnityTestRuntime {
         }
     }
 
-    public static GameObject GetGameObject(Component component) => Components[component.name];
+    public static GameObject? GetGameObject(Component component) => GetGameObjectCompanion(component).Parent;
 
     public static GameObject? Find(string name) =>
-        GameObjectCompanionData.Select(it => it.Value.GameObject).FirstOrDefault(it => it.name == name);
+        companionData
+            .Where(it => it.Value is GameObjectCompanion)
+            .Select(it => ((GameObjectCompanion) it.Value).GameObject)
+            .FirstOrDefault(it => it.name == name);
 
     public static void NextFrame() {
         FrameCount++;
 
-        NewComponents.ForEach(
+        newComponents.ForEach(
             it => {
                 Trigger(it, UnityEvent.Enable);
-                EnabledComponents.Add(it);
-                StartAwaitingComponents.Add(it);
+                enabledComponents.Add(it);
+                startAwaitingComponents.Add(it);
             }
         );
-        NewComponents.Clear();
+        newComponents.Clear();
 
-        StartAwaitingComponents.ForEach(it => Trigger(it, UnityEvent.Start));
-        StartAwaitingComponents.Clear();
+        startAwaitingComponents.ForEach(it => Trigger(it, UnityEvent.Start));
+        startAwaitingComponents.Clear();
 
-        EnabledComponents.ForEach(it => Trigger(it, UnityEvent.Update));
-        EnabledComponents.ForEach(it => Trigger(it, UnityEvent.LateUpdate));
+        enabledComponents.ForEach(it => Trigger(it, UnityEvent.Update));
+        enabledComponents.ForEach(it => Trigger(it, UnityEvent.LateUpdate));
     }
 
     public static void Install() => PatchesSetup.Install(harmony, unityPatches);
@@ -179,12 +201,10 @@ public static class UnityTestRuntime {
         PatchesSetup.Uninstall(harmony);
         FrameCount = 0;
         lastCell = 0;
-        Components.Clear();
-        EnabledComponents.Clear();
-        StartAwaitingComponents.Clear();
-        NewComponents.Clear();
-        GameObjectCompanionData.Clear();
-        objectNames.Clear();
+        enabledComponents.Clear();
+        startAwaitingComponents.Clear();
+        newComponents.Clear();
+        companionData.Clear();
     }
 
     private static void Trigger(Component component, UnityEvent @event) {
@@ -211,14 +231,79 @@ public static class UnityTestRuntime {
         return eventMethod;
     }
 
-    public class GameObjectCompanion {
+    private static GameObjectCompanion? GetGameObjectCompanionSafe(GameObject obj) {
+        return (GameObjectCompanion) companionData.GetValueSafe(GenerateKey(obj));
+    }
 
-        public List<Component> Components { get; set; }
+    private static ObjectCompanion? GetGameObjectCompanionSafe(Object obj) {
+        return companionData.GetValueSafe(GenerateKey(obj));
+    }
+
+    private static GameObjectCompanion GetGameObjectCompanion(GameObject obj) {
+        var gameObjectCompanion = GetGameObjectCompanionSafe(obj);
+        if (gameObjectCompanion == null) {
+            throw new Exception($"No companion found for {obj.GetType()}-{obj.m_CachedPtr}");
+        }
+        return gameObjectCompanion;
+    }
+
+    private static ObjectCompanion GetGameObjectCompanion(Object obj) {
+        var gameObjectCompanion = GetGameObjectCompanionSafe(obj);
+        if (gameObjectCompanion == null) {
+            throw new Exception($"No companion found for {obj.GetType()}-{obj.m_CachedPtr}");
+        }
+        return gameObjectCompanion;
+    }
+
+    private static void SetCompanion(Object obj, ObjectCompanion companion) {
+        var key = GenerateKey(obj);
+        if (companionData.ContainsKey(key)) {
+            throw new Exception("Trying to override companion data");
+        }
+        companionData[key] = companion;
+    }
+
+    private static void SetCompanion(GameObject obj, GameObjectCompanion companion) {
+        var key = GenerateKey(obj);
+        if (companionData.ContainsKey(key)) {
+            throw new Exception("Trying to override companion data");
+        }
+        companionData[key] = companion;
+    }
+
+    private static void RemoveCompanion(Object obj) {
+        companionData.Remove(GenerateKey(obj));
+    }
+
+    private static IntPtr GenerateKey(Object obj) {
+        return obj.m_CachedPtr;
+    }
+
+    private class ObjectCompanion {
+        public string Name { get; set; }
+
+        public GameObject? Parent { get; set; }
+
+        public ObjectCompanion(string name, GameObject? parent) {
+            Name = name;
+            Parent = parent;
+        }
+
+    }
+
+    private class GameObjectCompanion : ObjectCompanion {
+
+        public List<Component> Components { get; }
         public Vector3 Position { get; set; }
 
         public GameObject GameObject { get; }
 
-        public GameObjectCompanion(List<Component> components, Vector3 position, GameObject gameObject) {
+        public GameObjectCompanion(
+            List<Component> components,
+            Vector3 position,
+            GameObject gameObject,
+            string name
+        ) : base(name, null!) {
             Components = components;
             Position = position;
             GameObject = gameObject;

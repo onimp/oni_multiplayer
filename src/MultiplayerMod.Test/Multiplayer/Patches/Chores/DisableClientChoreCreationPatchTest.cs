@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Scheduling;
-using MultiplayerMod.Game.Chores;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Patches.Chores;
@@ -14,13 +13,16 @@ namespace MultiplayerMod.Test.Multiplayer.Patches.Chores;
 [TestFixture]
 public class DisableClientChoreCreationPatchTest : AbstractChoreTest {
 
-    [SetUp]
-    public void SetUp() {
-        SetUpGame(new HashSet<Type>() { typeof(DisableClientChoreCreationPatch) });
-
+    [OneTimeSetUp]
+    public static void OneTimeSetUp() {
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Client);
         var di = (DependencyContainer) Runtime.Instance.Dependencies;
         di.Register(new DependencyInfo(nameof(UnityTaskScheduler), typeof(UnityTaskScheduler), false));
+    }
+
+    [SetUp]
+    public void SetUp() {
+        SetUpGame(new HashSet<Type>() { typeof(DisableClientChoreCreationPatch) });
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]

@@ -18,19 +18,17 @@ public abstract class AbstractGameTest {
 
     private static Harmony harmony = null!;
 
-    protected static void SetUpGame(HashSet<Type>? additionalPatches = null) {
+    [OneTimeSetUp]
+    public static void SetUpGame() {
         harmony = new Harmony("AbstractGameTest");
         var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch) });
-        if (additionalPatches != null) {
-            patches.UnionWith(additionalPatches);
-        }
         UnityTestRuntime.Install();
         PatchesSetup.Install(harmony, patches);
         SetUpUnityAndGame();
         SetupDependencies();
     }
 
-    [TearDown]
+    [OneTimeTearDown]
     public static void TearDown() {
         UnityTestRuntime.Uninstall();
         PatchesSetup.Uninstall(harmony);
