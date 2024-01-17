@@ -75,6 +75,7 @@ public abstract class AbstractGameTest {
         worldGameObject.AddComponent<BuildingConfigManager>().Awake();
         SetupAssets(worldGameObject);
         worldGameObject.AddComponent<CustomGameSettings>().Awake();
+        GameComps.InfraredVisualizers = new InfraredVisualizerComponents();
     }
 
     private static void SetupAssets(GameObject worldGameObject) {
@@ -126,10 +127,17 @@ public abstract class AbstractGameTest {
         game.liquidConduitFlow = new ConduitFlow(ConduitType.Liquid, numCells, game.liquidConduitSystem, 10f, 0.75f);
         game.mingleCellTracker = worldGameObject.AddComponent<MingleCellTracker>();
 
+        game.statusItemRenderer = new StatusItemRenderer();
+        game.fetchManager = new FetchManager();
+
         ElementLoader.elements = new List<Element> { new() };
         GridSettings.Reset(widthInCells, heightInCells);
         fixed (ushort* ptr = &(new ushort[numCells])[0]) {
             Grid.elementIdx = ptr;
+        }
+        fixed (float* ptr = &(new float[numCells])[0]) {
+            Grid.temperature = ptr;
+            Grid.radiation = ptr;
         }
         Grid.InitializeCells();
 

@@ -1,5 +1,4 @@
 using System;
-using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.ModRuntime.Context;
@@ -11,6 +10,9 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 namespace MultiplayerMod.Game.Chores;
 
 // [HarmonyPatch(typeof(ChoreConsumer), nameof(ChoreConsumer.FindNextChore))]
+[Obsolete(
+    "Approach has been changed to go with smaller patches. See https://github.com/onimp/oni_multiplayer/discussions/301"
+)]
 public class ChoreConsumerEvents {
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<ChoreConsumerEvents>();
@@ -42,6 +44,9 @@ public class ChoreConsumerEvents {
 
 }
 
+[Obsolete(
+    "Approach has been changed to go with smaller patches. See https://github.com/onimp/oni_multiplayer/discussions/301"
+)]
 public record FindNextChoreEventArgs(
     ComponentReference<ChoreConsumer> Reference,
     int InstanceCell,

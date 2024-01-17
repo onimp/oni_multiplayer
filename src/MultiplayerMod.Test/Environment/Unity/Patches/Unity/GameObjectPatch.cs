@@ -114,6 +114,15 @@ public class GameObjectPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
+    [HarmonyPatch("set_layer")]
+    private static IEnumerable<CodeInstruction> GameObject_set_layer(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
     [HarmonyPatch("Internal_AddComponentWithType")]
     private static IEnumerable<CodeInstruction> GameObject_Internal_AddComponentWithType(
         IEnumerable<CodeInstruction> instructions

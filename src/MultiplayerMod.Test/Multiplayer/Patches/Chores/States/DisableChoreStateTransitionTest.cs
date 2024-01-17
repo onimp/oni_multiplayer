@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime;
@@ -25,21 +26,38 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
 
     [SetUp]
     public void SetUp() {
-        SetUpGame(new HashSet<Type> { typeof(DisableChoreStateTransition) });
+        CreateTestData(new HashSet<Type> { typeof(DisableChoreStateTransition) });
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void ClientMustDisableTransitionViaManager(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> _) {
+    private static IEnumerable<object[]> TestArgs() {
+        return GetTransitionOnExitTestArgs()
+            .GroupBy(it => it[0])
+            .Select(
+                group => {
+                    var allConfigs = group.Select(it => it[3]).Count();
+                    return new[] { group.First()[0], group.First()[1], allConfigs };
+                }
+            );
+    }
+
+    [Test, TestCaseSource(nameof(TestArgs))]
+    public void ClientMustDisableTransitionViaManager(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        int configCounts
+    ) {
+        Runtime.Instance.Dependencies.Get<FakeStatesManager>().CalledTimes = 0;
+
         CreateChore(choreType, choreArgsFunc.Invoke());
 
-        Assert.True(Runtime.Instance.Dependencies.Get<FakeStatesManager>().WasCalled);
+        Assert.AreEqual(configCounts, Runtime.Instance.Dependencies.Get<FakeStatesManager>().CalledTimes);
     }
 
     private class FakeStatesManager : StatesManager {
-        public bool WasCalled;
+        public int CalledTimes;
 
         public override void DisableChoreStateTransition(StateMachine.BaseState stateToBeSynced) {
-            WasCalled = true;
+            CalledTimes++;
         }
     }
 

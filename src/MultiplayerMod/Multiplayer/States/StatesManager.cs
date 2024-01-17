@@ -11,7 +11,7 @@ public class StatesManager {
 
     public const string StateName = "WaitHostState";
 
-    public virtual void AllowTransition(Chore chore, string? targetState, Dictionary<int, object> args) {
+    public virtual void AllowTransition(Chore chore, string? targetState, Dictionary<int, object?> args) {
         var smi = GetSmi(chore);
 
         var waitHostState = GetWaitHostState(smi);
@@ -28,6 +28,7 @@ public class StatesManager {
             .GetNestedType("State")
             .GetNestedType("Callback")
             .MakeGenericType(sm.GetType().BaseType.GetGenericArguments().Append(typeof(object)));
+        stateToBeSynced.enterActions ??= new List<StateMachine.Action>();
         stateToBeSynced.enterActions.Clear();
         var method = typeof(StatesManager).GetMethod(
             nameof(TransitToWaitState),

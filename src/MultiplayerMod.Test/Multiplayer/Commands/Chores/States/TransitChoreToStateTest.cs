@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
+using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Commands;
@@ -28,22 +29,22 @@ public class TransitChoreToStateTest : AbstractChoreTest {
 
     [SetUp]
     public void SetUp() {
-        SetUpGame();
+        CreateTestData();
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
+    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
     public void ExecutionTest(
         Type choreType,
         Func<object[]> createChoreArgsFunc,
-        Func<object[]> stateTransitionArgsFunc
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        ChoreList.StateTransitionConfig config
     ) {
-        var stateTransitionArgs = stateTransitionArgsFunc.Invoke();
         var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
         chore.Register(new MultiplayerId(Guid.NewGuid()));
         var arg = new ChoreTransitStateArgs(
             chore,
-            (string?) stateTransitionArgs[0],
-            (Dictionary<int, object>) stateTransitionArgs[1]
+            config.StateToMonitorName,
+            stateTransitionArgsFunc.Invoke()
         );
         var command = new TransitChoreToState(arg);
 
@@ -52,19 +53,19 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         Assert.True(Runtime.Instance.Dependencies.Get<FakeStatesManager>().WasCalled);
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
+    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
     public void SerializationTest(
         Type choreType,
         Func<object[]> createChoreArgsFunc,
-        Func<object[]> stateTransitionArgsFunc
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        ChoreList.StateTransitionConfig config
     ) {
-        var stateTransitionArgs = stateTransitionArgsFunc.Invoke();
         var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
         chore.Register(new MultiplayerId(Guid.NewGuid()));
         var arg = new ChoreTransitStateArgs(
             chore,
-            (string?) stateTransitionArgs[0],
-            (Dictionary<int, object>) stateTransitionArgs[1]
+            config.StateToMonitorName,
+            stateTransitionArgsFunc.Invoke()
         );
         var command = new TransitChoreToState(arg);
         var messageFactory = new NetworkMessageFactory();
@@ -84,7 +85,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
     private class FakeStatesManager : StatesManager {
         public bool WasCalled;
 
-        public override void AllowTransition(Chore chore, string? targetState, Dictionary<int, object> args) {
+        public override void AllowTransition(Chore chore, string? targetState, Dictionary<int, object?> args) {
             WasCalled = true;
         }
     }

@@ -15,12 +15,11 @@ using UnityEngine;
 namespace MultiplayerMod.Test.Game.Chores;
 
 public class AbstractChoreTest : AbstractGameTest {
-    private Harmony harmony = null!;
+    private Harmony? harmony;
 
-    protected static KMonoBehaviour target = null!;
-    private static GameObject gameObject = null!;
-    private static ChoreType choreType = null!;
-    private static KPrefabID kPrefabID = null!;
+    protected static KMonoBehaviour Minion = null!;
+    protected static GameObject PickupableGameObject = null!;
+    private static ChoreType astronautChoreType = null!;
     private static MedicinalPillWorkable medicinalPillWorkable = null!;
 
     private static Death death = null!;
@@ -30,22 +29,48 @@ public class AbstractChoreTest : AbstractGameTest {
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
 
-    protected void SetUpGame(HashSet<Type>? additionalPatches = null) {
+    protected void CreateTestData(HashSet<Type>? additionalPatches = null) {
         if (additionalPatches != null) {
             harmony = new Harmony("AbstractChoreTest");
             PatchesSetup.Install(harmony, additionalPatches);
         }
 
-        var locatorGameObject = createGameObject();
-        locatorGameObject.AddComponent<Approachable>();
-        locatorGameObject.AddComponent<KPrefabID>();
+        PickupableGameObject = CreatePickupableGameObject();
+        Minion = CreateMinion();
+        db = Db.Get();
+        astronautChoreType = db.ChoreTypes.Astronaut;
+        medicinalPillWorkable = createGameObject().AddComponent<MedicinalPillWorkable>();
+        medicinalPillWorkable.Awake();
+        death = db.Deaths.Frozen;
+        storage = createGameObject().AddComponent<Storage>();
+        storage.Awake();
+        constructable = createGameObject().AddComponent<Constructable>();
+        testMonoBehaviour = createGameObject().AddComponent<TestMonoBehaviour>();
+    }
 
-        target = createGameObject().GetComponent<KMonoBehaviour>();
-        var targetGameObject = target.gameObject;
+    private static GameObject CreatePickupableGameObject() {
+        const int cell = 11;
+
+        var gameObject = createGameObject();
+        gameObject.AddComponent<KPrefabID>().AddTag(GameTags.Edible);
+        gameObject.AddComponent<PrimaryElement>();
+        gameObject.AddComponent<Edible>().foodInfo = new EdiblesManager.FoodInfo("", "", 10f, 1, 0f, 0f, 0f, false);
+        var pickupable = gameObject.AddComponent<Pickupable>();
+        OffsetTableTracker.navGrid.NavTable.SetValid(cell, NavType.Floor, true);
+        pickupable.Awake();
+        pickupable.UpdateCachedCell(cell);
+        global::Game.Instance.fetchManager.Add(pickupable);
+        return gameObject;
+    }
+
+    private static KMonoBehaviour CreateMinion() {
+        var minion = createGameObject().GetComponent<KMonoBehaviour>();
+        var targetGameObject = minion.gameObject;
         targetGameObject.AddComponent<ChoreProvider>();
         targetGameObject.AddComponent<ChoreDriver>();
         targetGameObject.AddComponent<User>();
         targetGameObject.AddComponent<StateMachineController>();
+        new RationMonitor.Instance(minion);
         targetGameObject.AddComponent<ChoreConsumer>().Awake();
         targetGameObject.AddComponent<KPrefabID>();
         targetGameObject.AddComponent<MeshRenderer>();
@@ -53,47 +78,42 @@ public class AbstractChoreTest : AbstractGameTest {
         targetGameObject.AddComponent<KBatchedAnimController>();
         targetGameObject.AddComponent<Effects>();
         targetGameObject.AddComponent<Modifiers>().Awake();
+        targetGameObject.GetComponent<Modifiers>().attributes.Add(Db.Get().Attributes.CarryAmount);
         targetGameObject.AddComponent<PathProber>();
         targetGameObject.AddComponent<Facing>();
         targetGameObject.AddComponent<KSelectable>();
+        targetGameObject.AddComponent<ConsumableConsumer>().forbiddenTagSet = new HashSet<Tag>();
+        targetGameObject.AddComponent<Worker>();
+
         Assets.PrefabsByTag[(Tag) TargetLocator.ID] = targetGameObject.GetComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) MinionAssignablesProxyConfig.ID] =
             createGameObject().AddComponent<MinionAssignablesProxy>().gameObject.AddComponent<KPrefabID>();
+        var locatorGameObject = createGameObject();
+        locatorGameObject.AddComponent<Approachable>();
+        locatorGameObject.AddComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) ApproachableLocator.ID] = locatorGameObject.GetComponent<KPrefabID>();
         var navigator = targetGameObject.AddComponent<Navigator>();
         navigator.NavGridName = MinionConfig.MINION_NAV_GRID_NAME;
         navigator.CurrentNavType = NavType.Floor;
-
         navigator.Awake();
         navigator.Start();
         navigator.SetAbilities(new MinionPathFinderAbilities(navigator));
+        minion.GetComponent<Navigator>().NavGrid.NavTable.SetValid(19, NavType.Floor, true);
+
         targetGameObject.AddComponent<MinionIdentity>().Awake();
         targetGameObject.GetComponent<MinionIdentity>().Start();
+        targetGameObject.AddComponent<OxygenBreather>();
+        targetGameObject.AddComponent<MinionBrain>().Awake();
+        targetGameObject.AddComponent<SkillPerkMissingComplainer>();
 
         var sensors = targetGameObject.AddComponent<Sensors>();
         sensors.Add(new SafeCellSensor(sensors));
         sensors.Add(new IdleCellSensor(sensors));
         sensors.Add(new MingleCellSensor(sensors));
+        sensors.Add(new PickupableSensor(sensors));
+        sensors.Add(new ClosestEdibleSensor(sensors));
 
-        gameObject = createGameObject();
-        gameObject.AddComponent<Pickupable>();
-        gameObject.AddComponent<PrimaryElement>();
-
-        db = Db.Get();
-
-        choreType = db.ChoreTypes.Astronaut;
-        kPrefabID = createGameObject().AddComponent<KPrefabID>();
-        kPrefabID.gameObject.AddComponent<SkillPerkMissingComplainer>(); // required for RancherChore
-        medicinalPillWorkable = createGameObject().AddComponent<MedicinalPillWorkable>();
-        medicinalPillWorkable.Awake();
-        death = db.Deaths.Frozen;
-
-        storage = createGameObject().AddComponent<Storage>();
-        storage.Awake();
-
-        constructable = createGameObject().AddComponent<Constructable>();
-
-        testMonoBehaviour = createGameObject().AddComponent<TestMonoBehaviour>();
+        return minion;
     }
 
     [TearDown]
@@ -113,13 +133,22 @@ public class AbstractChoreTest : AbstractGameTest {
                 : ((Type) testArgs[0])].CreationSync == ChoreList.CreationStatusEnum.On
         ).Select(testArgs => new[] { testArgs[0], testArgs[1] }).ToArray();
 
-    protected static object[]?[] GetTransitionTestArgs() =>
-        GetTestArgs().Where(
-            testArgs => ChoreList.Config[((Type) testArgs[0]).IsGenericType
-                            ? ((Type) testArgs[0]).GetGenericTypeDefinition()
-                            : ((Type) testArgs[0])].StateTransitionSync.Status ==
-                        ChoreList.StateTransitionConfig.SyncStatus.On
-        ).ToArray();
+    protected static IEnumerable<object[]> GetTransitionOnExitTestArgs() =>
+        GetTestArgs()
+            .SelectMany(
+                testArgs => {
+                    if (testArgs.Length == 2) return Array.Empty<object[]>();
+
+                    return ((object[]) testArgs[2]).Where(
+                        it => ((ChoreList.StateTransitionConfig) ((object[]) it)[0]).TransitionType ==
+                              ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit
+                    ).Select(
+                        it => new[] {
+                            testArgs[0], testArgs[1], ((object[]) it)[1], ((object[]) it)[0]
+                        }
+                    ).ToArray();
+                }
+            );
 
     protected static Chore CreateChore(Type choreType, object[] args) {
         var result = (Chore) choreType.GetConstructors()[0].Invoke(args);
@@ -134,81 +163,81 @@ public class AbstractChoreTest : AbstractGameTest {
         var testArgs = new[] {
             new object[] {
                 typeof(AttackChore),
-                new Func<object[]>(() => new object[] { target, gameObject })
+                new Func<object[]>(() => new object[] { Minion, PickupableGameObject })
             },
             new object[] {
                 typeof(DeliverFoodChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(DieChore),
-                new Func<object[]>(() => new object[] { target, death })
+                new Func<object[]>(() => new object[] { Minion, death })
             },
             new object[] {
                 typeof(DropUnusedInventoryChore),
-                new Func<object[]>(() => new object[] { choreType, target })
+                new Func<object[]>(() => new object[] { astronautChoreType, Minion })
             },
             new object[] {
                 typeof(EquipChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(FixedCaptureChore),
-                new Func<object[]>(() => new object[] { kPrefabID })
+                new Func<object[]>(() => new object[] { Minion.GetComponent<KPrefabID>() })
             },
             new object[] {
                 typeof(MoveToQuarantineChore),
-                new Func<object[]>(() => new object[] { target, target })
+                new Func<object[]>(() => new object[] { Minion, Minion })
             },
             new object[] {
                 typeof(PartyChore),
                 new Func<object[]>(
                     () => new object[] {
-                        target, medicinalPillWorkable, constructable.UpdateBuildState, constructable.UpdateBuildState,
+                        Minion, medicinalPillWorkable, constructable.UpdateBuildState, constructable.UpdateBuildState,
                         constructable.UpdateBuildState
                     }
                 )
             },
             new object[] {
                 typeof(PeeChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(PutOnHatChore),
-                new Func<object[]>(() => new object[] { target, choreType })
+                new Func<object[]>(() => new object[] { Minion, astronautChoreType })
             },
             new object[] {
                 typeof(RancherChore),
-                new Func<object[]>(() => new object[] { kPrefabID })
+                new Func<object[]>(() => new object[] { Minion.GetComponent<KPrefabID>() })
             },
             new object[] {
                 typeof(ReactEmoteChore),
                 new Func<object[]>(
                     () => new object[] {
-                        target, choreType, null!, new HashedString(1),
+                        Minion, astronautChoreType, null!, new HashedString(1),
                         new[] { new HashedString(2) }, KAnim.PlayMode.Loop, testMonoBehaviour.TestStressEmoteFunc
                     }
                 )
             },
             new object[] {
                 typeof(RescueIncapacitatedChore),
-                new Func<object[]>(() => new object[] { target, gameObject })
+                new Func<object[]>(() => new object[] { Minion, PickupableGameObject })
             },
             new object[] {
                 typeof(RescueSweepBotChore),
-                new Func<object[]>(() => new object[] { target, gameObject, gameObject })
+                new Func<object[]>(() => new object[] { Minion, PickupableGameObject, PickupableGameObject })
             },
             new object[] {
                 typeof(SighChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(StressIdleChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(SwitchRoleHatChore),
-                new Func<object[]>(() => new object[] { target, choreType })
+                new Func<object[]>(() => new object[] { Minion, astronautChoreType })
             },
             new object[] {
                 typeof(TakeMedicineChore),
@@ -216,17 +245,17 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(TakeOffHatChore),
-                new Func<object[]>(() => new object[] { target, choreType })
+                new Func<object[]>(() => new object[] { Minion, astronautChoreType })
             },
             new object[] {
                 typeof(UglyCryChore),
-                new Func<object[]>(() => new object[] { choreType, target, constructable.UpdateBuildState })
+                new Func<object[]>(() => new object[] { astronautChoreType, Minion, constructable.UpdateBuildState })
             },
             new object[] {
                 typeof(WaterCoolerChore),
                 new Func<object[]>(
                     () => new object[] {
-                        target, medicinalPillWorkable, constructable.UpdateBuildState, constructable.UpdateBuildState,
+                        Minion, medicinalPillWorkable, constructable.UpdateBuildState, constructable.UpdateBuildState,
                         constructable.UpdateBuildState
                     }
                 )
@@ -235,7 +264,8 @@ public class AbstractChoreTest : AbstractGameTest {
                 typeof(WorkChore<MedicinalPillWorkable>),
                 new Func<object[]>(
                     () => new object[] {
-                        choreType, medicinalPillWorkable, target.GetComponent<ChoreProvider>(), true, ChoreCallback,
+                        astronautChoreType, medicinalPillWorkable, Minion.GetComponent<ChoreProvider>(), true,
+                        ChoreCallback,
                         ChoreCallback, ChoreCallback, true, db.ScheduleBlockTypes.Eat, false, true,
                         Assets.GetAnim("test"), false, true, true, PriorityScreen.PriorityClass.basic,
                         5, false, true
@@ -244,43 +274,61 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(AggressiveChore),
-                new Func<object[]>(() => new object[] { target, ChoreCallback }),
-                new Func<object[]>(
-                    () => new object[] { "root.move_notarget", new Dictionary<int, object> { { 2, 1 }, { 1, null! } } }
-                )
+                new Func<object[]>(() => new object[] { Minion, ChoreCallback }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(AggressiveChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 2, 0 }, { 1, null } }
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(BeIncapacitatedChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(BeIncapacitatedChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 0, null } }
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(BingeEatChore),
-                new Func<object[]>(() => new object[] { target, ChoreCallback }),
-                new Func<object[]>(
-                    () => new object[] { "root.cantFindFood", new Dictionary<int, object> { { 1, null! } } }
-                )
+                new Func<object[]>(() => new object[] { Minion, ChoreCallback }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(BingeEatChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 1, null } }
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(EatChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(EmoteChore),
                 new Func<object[]>(
                     () => new object[]
-                        { target, choreType, db.Emotes.Minion.Cheer, 1, testMonoBehaviour.TestStressEmoteFunc }
+                        { Minion, astronautChoreType, db.Emotes.Minion.Cheer, 1, testMonoBehaviour.TestStressEmoteFunc }
                 )
             },
             new object[] {
                 typeof(EntombedChore),
-                new Func<object[]>(() => new object[] { target, "override" })
+                new Func<object[]>(() => new object[] { Minion, "override" })
             },
             new object[] {
                 typeof(FetchAreaChore),
                 new Func<object[]>(
                     () => {
                         var fetchChore = new FetchChore(
-                            choreType,
+                            astronautChoreType,
                             storage,
                             0f,
                             new HashSet<Tag>(),
@@ -291,19 +339,38 @@ public class AbstractChoreTest : AbstractGameTest {
                         return new object[] {
                             new Chore.Precondition.Context {
                                 chore = fetchChore,
-                                consumerState = new ChoreConsumerState(target.GetComponent<ChoreConsumer>()) {
-                                    choreProvider = target.GetComponent<ChoreProvider>()
+                                consumerState = new ChoreConsumerState(Minion.GetComponent<ChoreConsumer>()) {
+                                    choreProvider = Minion.GetComponent<ChoreProvider>()
                                 },
                                 masterPriority = new PrioritySetting(PriorityScreen.PriorityClass.basic, 5)
                             }
                         };
                     }
-                )
+                ),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(FetchAreaChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 4, null }, { 5, null } }
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(FetchAreaChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 1, null }, { 2, null }, { 3, new float() } }
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(FleeChore),
-                new Func<object[]>(() => new object[] { target, gameObject }),
-                new Func<object[]>(() => new object[] { "root.cower", new Dictionary<int, object> { { 1, null! } } })
+                new Func<object[]>(() => new object[] { Minion, PickupableGameObject }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(FleeChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?> { { 1, null! } })
+                    }
+                }
             },
             new object[] {
                 typeof(MournChore),
@@ -314,63 +381,92 @@ public class AbstractChoreTest : AbstractGameTest {
                         grave.transform.position = new Vector3(20, 0.5f, 0);
                         Components.Graves.Clear();
                         Components.Graves.Add(grave);
-                        target.GetComponent<Navigator>().NavGrid.NavTable.SetValid(19, NavType.Floor, true);
-                        return new object[] { target };
+                        return new object[] { Minion };
                     }
                 ),
-                new Func<object[]>(
-                    () => new object[] { "root.moveto", new Dictionary<int, object> { { 1, gameObject } } }
-                )
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(MournChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?> { { 1, null } })
+                    }
+                }
             },
             new object[] {
                 typeof(FoodFightChore),
-                new Func<object[]>(() => new object[] { target, gameObject })
+                new Func<object[]>(() => new object[] { Minion, PickupableGameObject }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(FoodFightChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?> { { 3, null } })
+                    }
+                }
             },
             new object[] {
                 typeof(MoveChore),
                 new Func<object[]>(
-                    () => new object[] { target, choreType, new Func<MoveChore.StatesInstance, int>(_ => 15), false }
+                    () => new object[]
+                        { Minion, astronautChoreType, new Func<MoveChore.StatesInstance, int>(_ => 15), false }
                 )
             },
             new object[] {
                 typeof(MovePickupableChore),
-                new Func<object[]>(() => new object[] { target, gameObject, ChoreCallback })
+                new Func<object[]>(() => new object[] { Minion, PickupableGameObject, ChoreCallback }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(MovePickupableChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>
+                                { { 5, 1.0f }, { 1, PickupableGameObject }, { 4, 1.0f } }
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(MoveToSafetyChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(RecoverBreathChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(SleepChore),
-                new Func<object[]>(() => new object[] { choreType, target, gameObject, false, false })
+                new Func<object[]>(
+                    () => new object[] { astronautChoreType, Minion, PickupableGameObject, false, false }
+                ),
             },
             new object[] {
                 typeof(StressEmoteChore),
                 new Func<object[]>(
                     () => new object[] {
-                        target, choreType, new HashedString(1), new HashedString[] { new(2) },
+                        Minion, astronautChoreType, new HashedString(1), new HashedString[] { new(2) },
                         KAnim.PlayMode.Paused, testMonoBehaviour.TestStressEmoteFunc
                     }
-                )
+                ),
             },
             new object[] {
                 typeof(BalloonArtistChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion }),
             },
             new object[] {
                 typeof(BansheeChore),
-                new Func<object[]>(() => new object[] { choreType, target, notification, ChoreCallback })
+                new Func<object[]>(() => new object[] { astronautChoreType, Minion, notification, ChoreCallback }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(BansheeChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 1, 0 } }
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(FetchChore),
                 new Func<object[]>(
                     () => new object[] {
-                        choreType, storage, 0f, new HashSet<Tag>(), FetchChore.MatchCriteria.MatchTags, new Tag(),
-                        Array.Empty<Tag>(), target.GetComponent<ChoreProvider>(), true, ChoreCallback, ChoreCallback,
+                        astronautChoreType, storage, 0f, new HashSet<Tag>(), FetchChore.MatchCriteria.MatchTags,
+                        new Tag(),
+                        Array.Empty<Tag>(), Minion.GetComponent<ChoreProvider>(), true, ChoreCallback, ChoreCallback,
                         ChoreCallback,
                         Operational.State.Operational, 0
                     }
@@ -378,15 +474,17 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(IdleChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(MingleChore),
-                new Func<object[]>(() => new object[] { target })
+                new Func<object[]>(() => new object[] { Minion })
             },
             new object[] {
                 typeof(VomitChore),
-                new Func<object[]>(() => new object[] { choreType, target, statusItem, notification, ChoreCallback })
+                new Func<object[]>(
+                    () => new object[] { astronautChoreType, Minion, statusItem, notification, ChoreCallback }
+                )
             },
         };
         var expectedChoreTypes = ChoreList.Config.Keys

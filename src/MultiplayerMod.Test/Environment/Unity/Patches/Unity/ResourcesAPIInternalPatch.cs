@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 using JetBrains.Annotations;
+using UnityEngine;
+using Object = System.Object;
 
 namespace MultiplayerMod.Test.Environment.Unity.Patches.Unity;
 
@@ -25,6 +27,18 @@ public class ResourcesAPIInternalPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
+    [HarmonyPatch("FindShaderByName")]
+    private static IEnumerable<CodeInstruction> ResourcesAPIInternal_FindShaderByName(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            CodeInstruction.Call(typeof(ResourcesAPIInternalPatch), nameof(FindShaderByName)),
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
     [HarmonyPatch("FindObjectsOfTypeAll")]
     private static IEnumerable<CodeInstruction> ResourcesAPIInternal_FindObjectsOfTypeAll(
         IEnumerable<CodeInstruction> instructions
@@ -37,6 +51,10 @@ public class ResourcesAPIInternalPatch {
 
     public static object Load(Type type) {
         return Activator.CreateInstance(type);
+    }
+
+    public static Shader FindShaderByName() {
+        return null!;
     }
 
     public static Object[] FindObjectsOfTypeAll() {

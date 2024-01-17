@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
@@ -13,40 +12,47 @@ public class ChoreStateEventsTest : AbstractChoreTest {
 
     [SetUp]
     public void SetUp() {
-        SetUpGame(new HashSet<Type> { typeof(ChoreStateEvents) });
+        CreateTestData(new HashSet<Type> { typeof(ChoreStateEvents) });
 
         Assets.AnimTable[new HashedString(1525736797)] = new KAnimFile {
             data = new KAnimFileData("")
         };
         Grid.BuildMasks[123] = Grid.BuildFlags.Solid;
+        StateMachine.Instance.error = false;
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void TestEventFiring(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> stateTransitionArgsFunc) {
-        ChoreTransitStateArgs? firedArgs = null;
-        ChoreStateEvents.OnStateTransition += args => firedArgs = args;
+    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
+    public void TestEventFiring(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> expectedDictionaryFunc,
+        ChoreList.StateTransitionConfig config
+    ) {
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var choreId = new MultiplayerId(123);
         chore.Register(choreId);
-        var config = ChoreList.Config[choreType];
         var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
+        smi.stateMachine.GetState("root").enterActions?.Clear();
+        smi.stateMachine.GetState("root.delivering")?.enterActions?.Clear();
+        var state = smi.stateMachine.GetState("root." + config.StateToMonitorName);
+        state.enterActions?.Clear();
         chore.Begin(
             new Chore.Precondition.Context {
-                consumerState = new ChoreConsumerState(target.GetComponent<ChoreConsumer>())
+                consumerState = new ChoreConsumerState(Minion.GetComponent<ChoreConsumer>()),
+                data = PickupableGameObject.GetComponent<Pickupable>()
             }
         );
+        ChoreTransitStateArgs? firedArgs = null;
+        ChoreStateEvents.OnStateTransition += args => firedArgs = args;
+        smi.GoTo(state);
 
-        smi.GoTo("root." + config.StateTransitionSync.StateToMonitorName);
+        smi.GoTo("root");
 
-        var expectedArgs = stateTransitionArgsFunc.Invoke();
-        var expectedDictionary = (Dictionary<int, object>) expectedArgs[1];
+        var expectedDictionary = expectedDictionaryFunc.Invoke();
         Assert.NotNull(firedArgs);
         Assert.AreEqual(chore, firedArgs!.Chore);
-        Assert.AreEqual(expectedArgs[0], firedArgs!.TargetState);
+        Assert.AreEqual("root", firedArgs!.TargetState);
         Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
-        Assert.AreEqual(
-            expectedDictionary.Values.Select(a => a?.GetType()).ToList(),
-            firedArgs.Args.Values.Select(a => a?.GetType()).ToList()
-        );
+        Assert.AreEqual(expectedDictionary.Values, firedArgs.Args.Values);
     }
 }

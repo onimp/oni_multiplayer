@@ -9,6 +9,9 @@ using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Multiplayer.Commands.Chores;
 
+[Obsolete(
+    "Approach has been changed to go with smaller patches. See https://github.com/onimp/oni_multiplayer/discussions/301"
+)]
 [Serializable]
 public class SetHostChore : MultiplayerCommand {
 

@@ -17,20 +17,23 @@ public static class DisableChoreStateTransition {
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
         return ChoreList.Config.Values.Where(
-                config => config.StateTransitionSync.Status == ChoreList.StateTransitionConfig.SyncStatus.On
+                config => config.StatesTransitionSync.Status == ChoreList.StatesTransitionConfig.SyncStatus.On
             )
-            .Select(config => config.StateTransitionSync.StateType.GetMethod("InitializeStates"));
+            .Select(config => config.StatesTransitionSync.StateType.GetMethod("InitializeStates"));
     }
 
     [UsedImplicitly]
     [HarmonyPostfix]
     [RequireMultiplayerMode(MultiplayerMode.Client)]
     [RequireExecutionLevel(ExecutionLevel.Game)]
-    public static void InitializeStatesPatch(object __instance) {
-        var config = ChoreList.Config[__instance.GetType().DeclaringType].StateTransitionSync;
+    public static void InitializeStatesPatch(StateMachine.Instance __instance) {
+        var config = ChoreList.Config[__instance.GetType().DeclaringType].StatesTransitionSync;
 
-        var stateToBeSynced =
-            (StateMachine.BaseState) __instance.GetType().GetField(config.StateToMonitorName).GetValue(__instance);
-        Runtime.Instance.Dependencies.Get<StatesManager>().DisableChoreStateTransition(stateToBeSynced);
+        foreach (var stateTransitionConfig in config.StateTransitionConfigs.Where(
+                     it => it.TransitionType == ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit
+                 )) {
+            var stateToBeSynced = stateTransitionConfig.GetMonitoredState(__instance);
+            Runtime.Instance.Dependencies.Get<StatesManager>().DisableChoreStateTransition(stateToBeSynced);
+        }
     }
 }

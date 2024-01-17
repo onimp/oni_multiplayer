@@ -11,13 +11,13 @@ public class
 
     [UsedImplicitly] public WaitStateParam<bool> TransitionAllowed { get; }
     [UsedImplicitly] public WaitStateParam<string?> TargetState { get; }
-    [UsedImplicitly] public WaitStateParam<Dictionary<int, object>> ParametersArgs { get; }
+    [UsedImplicitly] public WaitStateParam<Dictionary<int, object?>> ParametersArgs { get; }
 
     public WaitHostState(StateMachine sm) {
         name = StatesManager.StateName;
         TransitionAllowed = InitParam(sm, false);
         TargetState = InitParam(sm, (string?) null);
-        ParametersArgs = InitParam(sm, new Dictionary<int, object>());
+        ParametersArgs = InitParam(sm, new Dictionary<int, object?>());
 
         enterActions = new List<StateMachine.Action>
             { new("Wait for host transition", new Callback(TransitIfAllowed)) };
@@ -27,7 +27,7 @@ public class
     }
 
     [UsedImplicitly]
-    public void AllowTransition(StateMachine.Instance smi, string? target, Dictionary<int, object> args) {
+    public void AllowTransition(StateMachine.Instance smi, string? target, Dictionary<int, object?> args) {
         TransitionAllowed.Set(true, smi);
         TargetState.Set(target, smi);
         ParametersArgs.Set(args, smi);
