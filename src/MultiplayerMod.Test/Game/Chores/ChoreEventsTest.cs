@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using MultiplayerMod.Game.Chores;
-using MultiplayerMod.Multiplayer.Objects;
 using NUnit.Framework;
 
 namespace MultiplayerMod.Test.Game.Chores;
@@ -11,7 +10,7 @@ public class ChoreEventsTest : AbstractChoreTest {
 
     [SetUp]
     public void SetUp() {
-        SetUpGame(new HashSet<Type> { typeof(ChoreEvents) });
+        CreateTestData(new HashSet<Type> { typeof(ChoreEvents) });
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]

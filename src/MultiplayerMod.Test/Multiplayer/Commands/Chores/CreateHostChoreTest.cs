@@ -15,7 +15,7 @@ public class CreateHostChoreTest : AbstractChoreTest {
 
     [SetUp]
     public void SetUp() {
-        SetUpGame();
+        CreateTestData();
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]

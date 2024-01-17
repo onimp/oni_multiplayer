@@ -37,7 +37,9 @@ public static class UnityTestRuntime {
         typeof(KPrefabID),
         typeof(PathProber),
         typeof(Facing),
-        typeof(Notifier)
+        typeof(Notifier),
+        typeof(Clearable),
+        typeof(Prioritizable)
     };
 
     public static void RegisterGameObject(GameObject gameObject) {
@@ -137,7 +139,7 @@ public static class UnityTestRuntime {
             return assignableTypes.Single();
         }
         var exactTypes = assignableTypes.Where(component => type == component.GetType()).ToList();
-        return exactTypes.Count > 0 ? exactTypes.First() : null;
+        return exactTypes.Count > 0 ? exactTypes.First() : assignableTypes.FirstOrDefault();
     }
 
     public static Array GetComponentsInternal(GameObject gameObject, Type type) {

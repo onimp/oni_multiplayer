@@ -19,7 +19,6 @@ public class AssetsPatch {
         batchGroupData.textureStartIndex.Remove(hash);
         batchGroupData.AddNewBuildFile(hash);
         batchGroupData.builds[0].symbols = Array.Empty<KAnim.Build.Symbol>();
-        //      HashCache.Get().Add("cheek_005");
         initialized = true;
     }
 

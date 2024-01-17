@@ -21,6 +21,15 @@ public class MaterialPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
+    [HarmonyPatch("CreateWithShader")]
+    private static IEnumerable<CodeInstruction> Material_CreateWithShader(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
     [HarmonyPatch("GetFirstPropertyNameIdByAttribute")]
     private static IEnumerable<CodeInstruction> Material_GetFirstPropertyNameIdByAttribute(
         IEnumerable<CodeInstruction> instructions

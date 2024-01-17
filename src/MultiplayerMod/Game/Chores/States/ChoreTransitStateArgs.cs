@@ -7,5 +7,5 @@ namespace MultiplayerMod.Game.Chores.States;
 public record ChoreTransitStateArgs(
     Chore Chore,
     string? TargetState,
-    Dictionary<int, object> Args
+    Dictionary<int, object?> Args
 );

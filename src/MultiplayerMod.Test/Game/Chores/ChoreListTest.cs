@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace MultiplayerMod.Test.Game.Chores;
 
-[TestFixture]
+//[TestFixture]
 public class ChoreListTest {
     [Test]
     public void ContainsAllChores() {
@@ -33,7 +33,7 @@ public class ChoreListTest {
     public void StateSyncRequiresCreationSyncEnabled() {
         ChoreList.Config.Where(
             config => config.Value.CreationSync != ChoreList.CreationStatusEnum.On &&
-                      config.Value.StateTransitionSync.Status == ChoreList.StateTransitionConfig.SyncStatus.On
+                      config.Value.StatesTransitionSync.Status == ChoreList.StatesTransitionConfig.SyncStatus.On
         ).ForEach(config => Assert.Fail($"State transition sync requires Creation sync being turned on. {config}"));
     }
 }

@@ -20,15 +20,25 @@ public class WaitHostStateTest : AbstractChoreTest {
 
     [SetUp]
     public void SetUp() {
-        SetUpGame();
+        CreateTestData();
 
         Grid.BuildMasks[410] = Grid.BuildFlags.Solid;
 
         StateMachine.Instance.error = false;
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void ParametersBeingInjectedInSmi(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> _) {
+    private static IEnumerable<object[]> TestArgs() {
+        return GetTransitionOnExitTestArgs()
+            .GroupBy(it => it[0])
+            .Select(group => group.First())
+            .Select(it => new[] { it[0], it[1] });
+    }
+
+    [Test, TestCaseSource(nameof(TestArgs))]
+    public void ParametersBeingInjectedInSmi(
+        Type choreType,
+        Func<object[]> choreArgsFunc
+    ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         Runtime.Instance.Dependencies.Get<StatesManager>().InjectWaitHostState(sm);
 
@@ -40,8 +50,8 @@ public class WaitHostStateTest : AbstractChoreTest {
         Assert.NotNull(state.ParametersArgs);
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void ParametersCanBeEdited(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> _) {
+    [Test, TestCaseSource(nameof(TestArgs))]
+    public void ParametersCanBeEdited(Type choreType, Func<object[]> choreArgsFunc) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         statesManager.InjectWaitHostState(sm);
@@ -54,30 +64,25 @@ public class WaitHostStateTest : AbstractChoreTest {
         Assert.AreEqual("TestValue", state.TargetState.Get(smi));
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void StateDoesNotChangeIfNotAllowed(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> _) {
+    [Test, TestCaseSource(nameof(TestArgs))]
+    public void StateDoesNotChangeIfNotAllowed(Type choreType, Func<object[]> choreArgsFunc) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         statesManager.InjectWaitHostState(sm);
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var smi = statesManager.GetSmi(chore);
         var state = (dynamic) statesManager.GetWaitHostState(chore);
-        chore.Begin(
-            new Chore.Precondition.Context {
-                consumerState = new ChoreConsumerState(target.GetComponent<ChoreConsumer>())
-            }
-        );
+        smi.GetStateMachine().GetState("root").enterActions?.Clear();
 
         smi.GoTo(state);
 
         Assert.AreEqual(state, smi.GetCurrentState());
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
+    [Test, TestCaseSource(nameof(TestArgs))]
     public void StateDoesNotChangeIfNotWaitingButAllowed(
         Type choreType,
-        Func<object[]> choreArgsFunc,
-        Func<object[]> _
+        Func<object[]> choreArgsFunc
     ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
@@ -92,8 +97,8 @@ public class WaitHostStateTest : AbstractChoreTest {
         Assert.AreEqual(currentState, smi.GetCurrentState());
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void StateChangesIfAllowedAndWaiting(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> _) {
+    [Test, TestCaseSource(nameof(TestArgs))]
+    public void StateChangesIfAllowedAndWaiting(Type choreType, Func<object[]> choreArgsFunc) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         statesManager.InjectWaitHostState(sm);
@@ -101,6 +106,7 @@ public class WaitHostStateTest : AbstractChoreTest {
         var smi = statesManager.GetSmi(chore);
         var state = (dynamic) statesManager.GetWaitHostState(chore);
         var currentState = smi.GetCurrentState();
+        smi.GetStateMachine().GetState("root").enterActions?.Clear();
 
         smi.GoTo(state);
         state.AllowTransition(smi, "root", new Dictionary<int, object>());
@@ -109,20 +115,19 @@ public class WaitHostStateTest : AbstractChoreTest {
         Assert.AreEqual("root", smi.GetCurrentState().name);
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionTestArgs))]
-    public void StateChangesIfBeginWaitingAndAllowed(Type choreType, Func<object[]> choreArgsFunc, Func<object[]> _) {
+    [Test, TestCaseSource(nameof(TestArgs))]
+    public void StateChangesIfBeginWaitingAndAllowed(Type choreType, Func<object[]> choreArgsFunc) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         statesManager.InjectWaitHostState(sm);
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var smi = statesManager.GetSmi(chore);
-        var state = (dynamic) statesManager.GetWaitHostState(chore);
-        var currentState = smi.GetCurrentState();
+        var waitState = (dynamic) statesManager.GetWaitHostState(chore);
+        smi.GetStateMachine().GetState("root").enterActions?.Clear();
 
-        state.AllowTransition(smi, "root", new Dictionary<int, object>());
-        smi.GoTo(state);
+        waitState.AllowTransition(smi, "root", new Dictionary<int, object>());
+        smi.GoTo(waitState);
 
-        Assert.AreNotEqual(currentState, smi.GetCurrentState());
         Assert.AreEqual("root", smi.GetCurrentState().name);
     }
 

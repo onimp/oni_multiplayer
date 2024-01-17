@@ -22,7 +22,7 @@ public class DisableClientChoreCreationPatchTest : AbstractChoreTest {
 
     [SetUp]
     public void SetUp() {
-        SetUpGame(new HashSet<Type>() { typeof(DisableClientChoreCreationPatch) });
+        CreateTestData(new HashSet<Type>() { typeof(DisableClientChoreCreationPatch) });
     }
 
     [Test, TestCaseSource(nameof(GetCreationTestArgs))]
