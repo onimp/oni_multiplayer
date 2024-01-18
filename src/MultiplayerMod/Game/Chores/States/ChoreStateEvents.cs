@@ -28,7 +28,7 @@ public static class ChoreStateEvents {
     [HarmonyPostfix]
     [RequireExecutionLevel(ExecutionLevel.Game)]
     [RequireMultiplayerMode(MultiplayerMode.Host)]
-    public static void Postfix(StateMachine.Instance __instance) {
+    public static void Postfix(StateMachine __instance) {
         var choreType = __instance.GetType().DeclaringType;
         var config = ChoreList.Config[choreType].StatesTransitionSync;
         foreach (var stateTransitionConfig in config.StateTransitionConfigs) {
@@ -38,8 +38,8 @@ public static class ChoreStateEvents {
         }
     }
 
-    private static void BindExitCallback(StateMachine.Instance smi, ChoreList.StateTransitionConfig config) {
-        var state = config.GetMonitoredState(smi);
+    private static void BindExitCallback(StateMachine sm, ChoreList.StateTransitionConfig config) {
+        var state = config.GetMonitoredState(sm);
         var method = state.GetType().GetMethods()
             .Single(method => method.Name == "Exit" && method.GetParameters().Length == 2);
         var dlgt = Delegate.CreateDelegate(

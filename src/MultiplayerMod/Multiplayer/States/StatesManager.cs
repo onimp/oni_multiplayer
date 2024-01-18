@@ -21,7 +21,7 @@ public class StatesManager {
         );
     }
 
-    public virtual void DisableChoreStateTransition(StateMachine.BaseState stateToBeSynced) {
+    public virtual void ReplaceWithWaitState(StateMachine.BaseState stateToBeSynced) {
         var sm = (StateMachine) stateToBeSynced.GetType().GetField("sm").GetValue(stateToBeSynced);
         InjectWaitHostState(sm);
         var callbackType = typeof(StateMachine<,,,>)

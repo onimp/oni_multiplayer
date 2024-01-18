@@ -61,67 +61,52 @@ public static class ChoreList {
             }, {
                 typeof(AggressiveChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(AggressiveChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                nameof(AggressiveChore.States.findbreakable),
-                                nameof(AggressiveChore.States.moveToWallTarget),
-                                nameof(AggressiveChore.States.breakable)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<AggressiveChore.States>(
+                        StateTransitionConfig.OnExit(
+                            nameof(AggressiveChore.States.findbreakable),
+                            nameof(AggressiveChore.States.moveToWallTarget),
+                            nameof(AggressiveChore.States.breakable)
+                        )
                     )
                 )
             }, {
                 typeof(BingeEatChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(BingeEatChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                nameof(BingeEatChore.States.findfood),
-                                nameof(BingeEatChore.States.ediblesource)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<BingeEatChore.States>(
+                        StateTransitionConfig.OnExit(
+                            nameof(BingeEatChore.States.findfood),
+                            nameof(BingeEatChore.States.ediblesource)
+                        )
                     )
                 )
             }, {
                 typeof(FleeChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(FleeChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                nameof(FleeChore.States.planFleeRoute),
-                                nameof(FleeChore.States.fleeToTarget)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<FleeChore.States>(
+                        StateTransitionConfig.OnExit(
+                            nameof(FleeChore.States.planFleeRoute),
+                            nameof(FleeChore.States.fleeToTarget)
+                        )
                     )
                 )
             }, {
                 typeof(MournChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(MournChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                nameof(MournChore.States.findOffset),
-                                nameof(MournChore.States.locator)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<MournChore.States>(
+                        StateTransitionConfig.OnExit(
+                            nameof(MournChore.States.findOffset),
+                            nameof(MournChore.States.locator)
+                        )
                     )
                 )
             }, {
                 typeof(BeIncapacitatedChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(BeIncapacitatedChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                $"{nameof(BeIncapacitatedChore.States.incapacitation_root)}.{nameof(BeIncapacitatedChore.States.incapacitation_root.lookingForBed)}",
-                                nameof(BeIncapacitatedChore.States.clinic)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<BeIncapacitatedChore.States>(
+                        StateTransitionConfig.OnExit(
+                            $"{nameof(BeIncapacitatedChore.States.incapacitation_root)}.{nameof(BeIncapacitatedChore.States.incapacitation_root.lookingForBed)}",
+                            nameof(BeIncapacitatedChore.States.clinic)
+                        )
                     )
                 )
             }, {
@@ -133,89 +118,71 @@ public static class ChoreList {
             }, {
                 typeof(FoodFightChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(FoodFightChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                nameof(FoodFightChore.States.emoteRoar),
-                                nameof(FoodFightChore.States.attackableTarget)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<FoodFightChore.States>(
+                        StateTransitionConfig.OnExit(
+                            nameof(FoodFightChore.States.emoteRoar),
+                            nameof(FoodFightChore.States.attackableTarget)
+                        )
                     )
                 )
             }, {
                 typeof(MoveToSafetyChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(MoveToSafetyChore.States),
-                        new[] {
-                            StateTransitionConfig.OnMove(nameof(MoveToSafetyChore.States.move))
-                        }
+                    StatesTransitionConfig.Enabled<MoveToSafetyChore.States>(
+                        StateTransitionConfig.OnMove(nameof(MoveToSafetyChore.States.move))
                     )
                 )
             }, {
                 typeof(RecoverBreathChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(RecoverBreathChore.States),
-                        new[] {
-                            StateTransitionConfig.OnUpdate(
-                                nameof(RecoverBreathChore.States.root),
-                                nameof(RecoverBreathChore.States.locator)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<RecoverBreathChore.States>(
+                        StateTransitionConfig.OnUpdate(
+                            nameof(RecoverBreathChore.States.root),
+                            nameof(RecoverBreathChore.States.locator)
+                        )
                     )
                 )
             }, {
                 typeof(EatChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(EatChore.States),
-                        new[] {
-                            StateTransitionConfig.OnEnter(
-                                nameof(EatChore.States.root),
-                                nameof(EatChore.States.messstation)
-                            ),
-                            StateTransitionConfig.OnEventHandler(
-                                nameof(EatChore.States.root),
-                                nameof(EatChore.States.messstation)
-                            ),
-                            StateTransitionConfig.OnEnter(
-                                nameof(EatChore.States.eatonfloorstate),
-                                nameof(EatChore.States.locator)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<EatChore.States>(
+                        StateTransitionConfig.OnEnter(
+                            nameof(EatChore.States.root),
+                            nameof(EatChore.States.messstation)
+                        ),
+                        StateTransitionConfig.OnEventHandler(
+                            nameof(EatChore.States.root),
+                            nameof(EatChore.States.messstation)
+                        ),
+                        StateTransitionConfig.OnEnter(
+                            nameof(EatChore.States.eatonfloorstate),
+                            nameof(EatChore.States.locator)
+                        )
                     )
                 )
             }, {
                 typeof(MovePickupableChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(MovePickupableChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                nameof(MovePickupableChore.States.success),
-                                nameof(MovePickupableChore.States.actualamount),
-                                nameof(MovePickupableChore.States.pickupablesource),
-                                nameof(MovePickupableChore.States.requestedamount)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<MovePickupableChore.States>(
+                        StateTransitionConfig.OnExit(
+                            nameof(MovePickupableChore.States.success),
+                            nameof(MovePickupableChore.States.actualamount),
+                            nameof(MovePickupableChore.States.pickupablesource),
+                            nameof(MovePickupableChore.States.requestedamount)
+                        )
                     )
                 )
             }, {
                 typeof(SleepChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(SleepChore.States),
-                        new[] {
-                            StateTransitionConfig.OnEventHandler(
-                                nameof(SleepChore.States.sleep),
-                                nameof(SleepChore.States.isDisturbedByLight),
-                                nameof(SleepChore.States.isDisturbedByNoise),
-                                nameof(SleepChore.States.isDisturbedByMovement),
-                                nameof(SleepChore.States.isScaredOfDark)
-                            )
-                        }
+                    StatesTransitionConfig.Enabled<SleepChore.States>(
+                        StateTransitionConfig.OnEventHandler(
+                            nameof(SleepChore.States.sleep),
+                            nameof(SleepChore.States.isDisturbedByLight),
+                            nameof(SleepChore.States.isDisturbedByNoise),
+                            nameof(SleepChore.States.isDisturbedByMovement),
+                            nameof(SleepChore.States.isScaredOfDark)
+                        )
                     )
                 )
             }, {
@@ -242,8 +209,7 @@ public static class ChoreList {
             }, {
                 typeof(FetchAreaChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(FetchAreaChore.States),
+                    StatesTransitionConfig.Enabled<FetchAreaChore.States>(
                         new[] {
                             StateTransitionConfig.OnExit(
                                 $"{nameof(FetchAreaChore.States.delivering)}.{nameof(FetchAreaChore.States.delivering.next)}",
@@ -262,24 +228,20 @@ public static class ChoreList {
             }, {
                 typeof(BalloonArtistChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(BalloonArtistChore.States),
+                    StatesTransitionConfig.Enabled<BalloonArtistChore.States>(
                         // TODO depends on HasBalloonStallCell
-                        new[] { StateTransitionConfig.OnMove(nameof(BalloonArtistChore.States.goToStand)) }
+                        StateTransitionConfig.OnMove(nameof(BalloonArtistChore.States.goToStand))
                     )
                 )
             }, {
                 typeof(BansheeChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(BansheeChore.States),
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                nameof(BansheeChore.States.findAudience),
-                                nameof(BansheeChore.States.targetWailLocation)
-                            ),
-                            StateTransitionConfig.OnMove(nameof(BansheeChore.States.wander))
-                        }
+                    StatesTransitionConfig.Enabled<BansheeChore.States>(
+                        StateTransitionConfig.OnExit(
+                            nameof(BansheeChore.States.findAudience),
+                            nameof(BansheeChore.States.targetWailLocation)
+                        ),
+                        StateTransitionConfig.OnMove(nameof(BansheeChore.States.wander))
                     )
                 )
             }, {
@@ -288,34 +250,26 @@ public static class ChoreList {
             }, {
                 typeof(IdleChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(IdleChore.States),
+                    StatesTransitionConfig.Enabled<IdleChore.States>(
                         // TODO depends on HasIdleCell
-                        new[] {
-                            StateTransitionConfig.OnMove(
-                                $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.move)}"
-                            )
-                        }
+                        StateTransitionConfig.OnMove(
+                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.move)}"
+                        )
                     )
                 )
             }, {
                 typeof(MingleChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(MingleChore.States),
-                        new[] {
-                            // TODO depends on hasMingleCell
-                            StateTransitionConfig.OnMove(nameof(MingleChore.States.move)),
-                            StateTransitionConfig.OnMove(nameof(MingleChore.States.walk))
-                        }
+                    StatesTransitionConfig.Enabled<MingleChore.States>(
+                        StateTransitionConfig.OnMove(nameof(MingleChore.States.move)),
+                        StateTransitionConfig.OnMove(nameof(MingleChore.States.walk))
                     )
                 )
             }, {
                 typeof(VomitChore),
                 ChoreSyncConfig.Dynamic(
-                    new StatesTransitionConfig(
-                        typeof(VomitChore.States),
-                        new[] { StateTransitionConfig.OnMove(nameof(VomitChore.States.moveto)) }
+                    StatesTransitionConfig.Enabled<VomitChore.States>(
+                        StateTransitionConfig.OnMove(nameof(VomitChore.States.moveto))
                     )
                 )
             }
@@ -366,10 +320,11 @@ public static class ChoreList {
             Off
         }
 
-        public StatesTransitionConfig(
-            Type StateType,
-            StateTransitionConfig[] StateTransitionConfigs
-        ) : this(SyncStatus.On, StateType, StateTransitionConfigs) { }
+        public static StatesTransitionConfig Enabled<T>(
+            params StateTransitionConfig[] stateTransitionConfigs
+        ) where T : StateMachine {
+            return new StatesTransitionConfig(SyncStatus.On, typeof(T), stateTransitionConfigs);
+        }
 
         public static StatesTransitionConfig Disabled() {
             return new StatesTransitionConfig(SyncStatus.Off, null!, Array.Empty<StateTransitionConfig>());
@@ -385,28 +340,42 @@ public static class ChoreList {
             Enter, // TODO handle this value
             Exit,
             Move, // TODO handle this value
-            Update, // TODO handle this value
+            Update,
             Event // TODO handle this value
         }
 
         public static StateTransitionConfig OnEnter(string stateName, params string[] parameterName) =>
             new(TransitionTypeEnum.Enter, stateName, parameterName);
 
+        /// Host:
+        ///  - Sends command to all clients upon exit handler call.
+        /// Client:
+        ///  - Prevents transition to specified state.
+        ///  - Transits to WaitHostState instead.
+        ///  - Transits to specified state by host upon command.
+        ///  - Sets values specified by host upon command.
         public static StateTransitionConfig OnExit(string stateName, params string[] parameterName) =>
             new(TransitionTypeEnum.Exit, stateName, parameterName);
 
         public static StateTransitionConfig OnMove(string stateName) =>
             new(TransitionTypeEnum.Move, stateName, Array.Empty<string>());
 
+        /// Host:
+        ///  - send command to all clients upon update handler call.
+        /// Client:
+        ///  - prevents update handler call.
+        ///  - Receives values from host.
+        /// TODO: Trigger command sent on the host
+        /// TODO: Execute command on the client
         public static StateTransitionConfig OnUpdate(string stateName, params string[] parameterName) =>
             new(TransitionTypeEnum.Update, stateName, parameterName);
 
         public static StateTransitionConfig OnEventHandler(string stateName, params string[] parameterName) =>
             new(TransitionTypeEnum.Event, stateName, parameterName);
 
-        public StateMachine.BaseState GetMonitoredState(StateMachine.Instance smi) {
+        public StateMachine.BaseState GetMonitoredState(StateMachine sm) {
             var stateName = StateToMonitorName;
-            object findInObject = smi;
+            object findInObject = sm;
             while (stateName.Contains(".")) {
                 var firstSplit = StateToMonitorName.IndexOf('.');
                 findInObject = findInObject.GetType().GetField(stateName.Substring(0, firstSplit))

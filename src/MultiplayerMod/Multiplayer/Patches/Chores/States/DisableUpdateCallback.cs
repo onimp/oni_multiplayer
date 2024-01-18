@@ -1,18 +1,16 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Game.Chores;
-using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations;
-using MultiplayerMod.Multiplayer.States;
 
 namespace MultiplayerMod.Multiplayer.Patches.Chores.States;
 
 [HarmonyPatch]
-public static class DisableChoreStateTransition {
+public static class DisableUpdateCallback {
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
@@ -30,10 +28,10 @@ public static class DisableChoreStateTransition {
         var config = ChoreList.Config[__instance.GetType().DeclaringType].StatesTransitionSync;
 
         foreach (var stateTransitionConfig in config.StateTransitionConfigs.Where(
-                     it => it.TransitionType == ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit
+                     it => it.TransitionType == ChoreList.StateTransitionConfig.TransitionTypeEnum.Update
                  )) {
             var stateToBeSynced = stateTransitionConfig.GetMonitoredState(__instance);
-            Runtime.Instance.Dependencies.Get<StatesManager>().ReplaceWithWaitState(stateToBeSynced);
+            stateToBeSynced.updateActions.Clear();
         }
     }
 }

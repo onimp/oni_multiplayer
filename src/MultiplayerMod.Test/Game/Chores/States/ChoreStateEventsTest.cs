@@ -21,7 +21,11 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         StateMachine.Instance.error = false;
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
+    private static IEnumerable<object[]> TestArgs() {
+        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit);
+    }
+
+    [Test, TestCaseSource(nameof(TestArgs))]
     public void TestEventFiring(
         Type choreType,
         Func<object[]> choreArgsFunc,

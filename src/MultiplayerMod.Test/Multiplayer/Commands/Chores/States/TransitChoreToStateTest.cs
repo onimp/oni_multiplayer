@@ -32,7 +32,11 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         CreateTestData();
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
+    private static IEnumerable<object[]> TestArgs() {
+        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit);
+    }
+
+    [Test, TestCaseSource(nameof(TestArgs))]
     public void ExecutionTest(
         Type choreType,
         Func<object[]> createChoreArgsFunc,
@@ -53,7 +57,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         Assert.True(Runtime.Instance.Dependencies.Get<FakeStatesManager>().WasCalled);
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
+    [Test, TestCaseSource(nameof(TestArgs))]
     public void SerializationTest(
         Type choreType,
         Func<object[]> createChoreArgsFunc,

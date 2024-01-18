@@ -24,7 +24,11 @@ public class StatesManagerTest : AbstractChoreTest {
         CreateTestData();
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
+    private static IEnumerable<object[]> TestArgs() {
+        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit);
+    }
+
+    [Test, TestCaseSource(nameof(TestArgs))]
     public void AllowTransitionPreparesWaitHostState(
         Type choreType,
         Func<object[]> choreArgsFunc,
@@ -50,7 +54,7 @@ public class StatesManagerTest : AbstractChoreTest {
         Assert.AreEqual(expectedDictionary, waitHostState.ParametersArgs.Get(smi));
     }
 
-    [Test, TestCaseSource(nameof(GetTransitionOnExitTestArgs))]
+    [Test, TestCaseSource(nameof(TestArgs))]
     public void DisableChoreStateTransition(
         Type choreType,
         Func<object[]> choreArgsFunc,
@@ -60,7 +64,7 @@ public class StatesManagerTest : AbstractChoreTest {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         statesManager
-            .DisableChoreStateTransition(sm.GetState("root"));
+            .ReplaceWithWaitState(sm.GetState("root"));
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var smi = statesManager.GetSmi(chore);
 

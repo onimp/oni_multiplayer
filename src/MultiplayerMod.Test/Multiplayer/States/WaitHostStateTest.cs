@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Game.Chores;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.States;
 using MultiplayerMod.Test.Game.Chores;
@@ -28,7 +29,7 @@ public class WaitHostStateTest : AbstractChoreTest {
     }
 
     private static IEnumerable<object[]> TestArgs() {
-        return GetTransitionOnExitTestArgs()
+        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit)
             .GroupBy(it => it[0])
             .Select(group => group.First())
             .Select(it => new[] { it[0], it[1] });

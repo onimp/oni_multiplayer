@@ -133,7 +133,9 @@ public class AbstractChoreTest : AbstractGameTest {
                 : ((Type) testArgs[0])].CreationSync == ChoreList.CreationStatusEnum.On
         ).Select(testArgs => new[] { testArgs[0], testArgs[1] }).ToArray();
 
-    protected static IEnumerable<object[]> GetTransitionOnExitTestArgs() =>
+    protected static IEnumerable<object[]> GetTransitionTestArgs(
+        ChoreList.StateTransitionConfig.TransitionTypeEnum transitionTypeEnum
+    ) =>
         GetTestArgs()
             .SelectMany(
                 testArgs => {
@@ -141,7 +143,7 @@ public class AbstractChoreTest : AbstractGameTest {
 
                     return ((object[]) testArgs[2]).Where(
                         it => ((ChoreList.StateTransitionConfig) ((object[]) it)[0]).TransitionType ==
-                              ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit
+                              transitionTypeEnum
                     ).Select(
                         it => new[] {
                             testArgs[0], testArgs[1], ((object[]) it)[1], ((object[]) it)[0]
@@ -310,7 +312,21 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(EatChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(EatChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(EatChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(EatChore)].StatesTransitionSync.StateTransitionConfigs[2],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
             new object[] {
                 typeof(EmoteChore),
@@ -423,17 +439,35 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(MoveToSafetyChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(MoveToSafetyChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
             new object[] {
                 typeof(RecoverBreathChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(RecoverBreathChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
             new object[] {
                 typeof(SleepChore),
                 new Func<object[]>(
                     () => new object[] { astronautChoreType, Minion, PickupableGameObject, false, false }
                 ),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(SleepChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
             new object[] {
                 typeof(StressEmoteChore),
@@ -447,6 +481,12 @@ public class AbstractChoreTest : AbstractGameTest {
             new object[] {
                 typeof(BalloonArtistChore),
                 new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(BalloonArtistChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
             new object[] {
                 typeof(BansheeChore),
@@ -457,6 +497,10 @@ public class AbstractChoreTest : AbstractGameTest {
                         new Func<Dictionary<int, object?>>(
                             () => new Dictionary<int, object?> { { 1, 0 } }
                         )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(BansheeChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
                     }
                 }
             },
@@ -474,17 +518,39 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(IdleChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(IdleChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
             new object[] {
                 typeof(MingleChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(MingleChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(MingleChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
             new object[] {
                 typeof(VomitChore),
                 new Func<object[]>(
                     () => new object[] { astronautChoreType, Minion, statusItem, notification, ChoreCallback }
-                )
+                ),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(VomitChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                    }
+                }
             },
         };
         var expectedChoreTypes = ChoreList.Config.Keys
@@ -494,6 +560,21 @@ public class AbstractChoreTest : AbstractGameTest {
             .Select(type => type.IsGenericType ? type.GetGenericTypeDefinition() : type)
             .OrderBy(a => a.FullName).ToList();
         Assert.AreEqual(expectedChoreTypes, actualChoreTypes);
+        foreach (var testArg in testArgs) {
+            var choreType = (Type) testArg[0];
+            var config = ChoreList.Config[choreType.IsGenericType ? choreType.GetGenericTypeDefinition() : choreType];
+            if (config.StatesTransitionSync.Status == ChoreList.StatesTransitionConfig.SyncStatus.Off) {
+                Assert.True(testArg.Length == 2, $"{testArg[0]} must contain 2 elements if state sync is off.");
+            } else {
+                Assert.True(testArg.Length == 3, $"{testArg[0]} must contain 3 elements if state sync is on.");
+                var stateSyncTypes = ((object[]) testArg[2]).Select(it => ((object[]) it)[0]).ToArray();
+                Assert.AreEqual(
+                    config.StatesTransitionSync.StateTransitionConfigs,
+                    stateSyncTypes,
+                    $"{testArg[0]} must have all state sync args in the exact order."
+                );
+            }
+        }
         return testArgs;
     }
 

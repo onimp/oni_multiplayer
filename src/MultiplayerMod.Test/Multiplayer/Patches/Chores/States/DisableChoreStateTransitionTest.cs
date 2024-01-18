@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
+using MultiplayerMod.Game.Chores;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Patches.Chores.States;
@@ -20,7 +21,6 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Client);
 
         var di = (DependencyContainer) Runtime.Instance.Dependencies;
-        di.Register(new DependencyInfo(nameof(EventDispatcher), typeof(EventDispatcher), false));
         di.Register(new DependencyInfo(nameof(FakeStatesManager), typeof(FakeStatesManager), false));
     }
 
@@ -30,7 +30,7 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
     }
 
     private static IEnumerable<object[]> TestArgs() {
-        return GetTransitionOnExitTestArgs()
+        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit)
             .GroupBy(it => it[0])
             .Select(
                 group => {
@@ -56,7 +56,7 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
     private class FakeStatesManager : StatesManager {
         public int CalledTimes;
 
-        public override void DisableChoreStateTransition(StateMachine.BaseState stateToBeSynced) {
+        public override void ReplaceWithWaitState(StateMachine.BaseState stateToBeSynced) {
             CalledTimes++;
         }
     }
