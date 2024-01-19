@@ -32,6 +32,7 @@ public abstract class AbstractGameTest {
     public static void TearDown() {
         UnityTestRuntime.Uninstall();
         PatchesSetup.Uninstall(harmony);
+        global::Game.Instance = null;
     }
 
     protected static GameObject createGameObject() {
@@ -109,12 +110,12 @@ public abstract class AbstractGameTest {
         var game = worldGameObject.AddComponent<global::Game>();
         game.maleNamesFile = new TextAsset("Bob");
         game.femaleNamesFile = new TextAsset("Alisa");
+        game.assignmentManager = new AssignmentManager();
         global::Game.Instance = game;
         game.obj = KObjectManager.Instance.GetOrCreateObject(game.gameObject);
 
         var widthInCells = 40;
         var heightInCells = 40;
-        var numCells = widthInCells * heightInCells;
 
         TuningData<CPUBudget.Tuning>._TuningData = new CPUBudget.Tuning();
 
@@ -123,14 +124,33 @@ public abstract class AbstractGameTest {
         game.electricalConduitSystem =
             new UtilityNetworkManager<ElectricalUtilityNetwork, Wire>(widthInCells, heightInCells, 27);
         game.travelTubeSystem = new UtilityNetworkTubesManager(widthInCells, heightInCells, 35);
-        game.gasConduitFlow = new ConduitFlow(ConduitType.Gas, numCells, game.gasConduitSystem, 1f, 0.25f);
-        game.liquidConduitFlow = new ConduitFlow(ConduitType.Liquid, numCells, game.liquidConduitSystem, 10f, 0.75f);
+        game.gasConduitFlow = new ConduitFlow(
+            ConduitType.Gas,
+            widthInCells * heightInCells,
+            game.gasConduitSystem,
+            1f,
+            0.25f
+        );
+        game.liquidConduitFlow = new ConduitFlow(
+            ConduitType.Liquid,
+            widthInCells * heightInCells,
+            game.liquidConduitSystem,
+            10f,
+            0.75f
+        );
         game.mingleCellTracker = worldGameObject.AddComponent<MingleCellTracker>();
 
         game.statusItemRenderer = new StatusItemRenderer();
         game.fetchManager = new FetchManager();
 
         ElementLoader.elements = new List<Element> { new() };
+        ResetGrid(widthInCells, heightInCells);
+
+        GameScenePartitioner.instance?.OnForcedCleanUp();
+    }
+
+    protected static unsafe void ResetGrid(int widthInCells, int heightInCells) {
+        var numCells = widthInCells * heightInCells;
         GridSettings.Reset(widthInCells, heightInCells);
         fixed (ushort* ptr = &(new ushort[numCells])[0]) {
             Grid.elementIdx = ptr;
@@ -140,8 +160,6 @@ public abstract class AbstractGameTest {
             Grid.radiation = ptr;
         }
         Grid.InitializeCells();
-
-        GameScenePartitioner.instance?.OnForcedCleanUp();
     }
 
     private static void SetupDependencies() {

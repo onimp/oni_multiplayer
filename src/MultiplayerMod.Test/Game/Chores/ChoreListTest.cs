@@ -2,6 +2,7 @@ using System.Linq;
 using System.Reflection;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.Types;
 using NUnit.Framework;
 
 namespace MultiplayerMod.Test.Game.Chores;
@@ -32,8 +33,8 @@ public class ChoreListTest {
     [Test]
     public void StateSyncRequiresCreationSyncEnabled() {
         ChoreList.Config.Where(
-            config => config.Value.CreationSync != ChoreList.CreationStatusEnum.On &&
-                      config.Value.StatesTransitionSync.Status == ChoreList.StatesTransitionConfig.SyncStatus.On
+            config => config.Value.CreationSync != CreationStatusEnum.On &&
+                      config.Value.StatesTransitionSync.Status == StatesTransitionStatus.On
         ).ForEach(config => Assert.Fail($"State transition sync requires Creation sync being turned on. {config}"));
     }
 }
