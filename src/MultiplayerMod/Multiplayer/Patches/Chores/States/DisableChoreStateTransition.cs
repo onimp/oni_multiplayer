@@ -4,6 +4,7 @@ using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations;
@@ -17,7 +18,7 @@ public static class DisableChoreStateTransition {
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
         return ChoreList.Config.Values.Where(
-                config => config.StatesTransitionSync.Status == ChoreList.StatesTransitionConfig.SyncStatus.On
+                config => config.StatesTransitionSync.Status == StatesTransitionStatus.On
             )
             .Select(config => config.StatesTransitionSync.StateType.GetMethod("InitializeStates"));
     }
@@ -30,7 +31,7 @@ public static class DisableChoreStateTransition {
         var config = ChoreList.Config[__instance.GetType().DeclaringType].StatesTransitionSync;
 
         foreach (var stateTransitionConfig in config.StateTransitionConfigs.Where(
-                     it => it.TransitionType == ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit
+                     it => it.TransitionType == TransitionTypeEnum.Exit
                  )) {
             var stateToBeSynced = stateTransitionConfig.GetMonitoredState(__instance);
             Runtime.Instance.Dependencies.Get<StatesManager>().ReplaceWithWaitState(stateToBeSynced);

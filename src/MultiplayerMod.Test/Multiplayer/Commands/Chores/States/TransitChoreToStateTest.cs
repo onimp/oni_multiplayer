@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
-using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.Chores.States;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Chores.States;
@@ -32,16 +32,12 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         CreateTestData();
     }
 
-    private static IEnumerable<object[]> TestArgs() {
-        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit);
-    }
-
-    [Test, TestCaseSource(nameof(TestArgs))]
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
     public void ExecutionTest(
         Type choreType,
         Func<object[]> createChoreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
-        ChoreList.StateTransitionConfig config
+        StateTransitionConfig config
     ) {
         var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
         chore.Register(new MultiplayerId(Guid.NewGuid()));
@@ -57,12 +53,12 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         Assert.True(Runtime.Instance.Dependencies.Get<FakeStatesManager>().WasCalled);
     }
 
-    [Test, TestCaseSource(nameof(TestArgs))]
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
     public void SerializationTest(
         Type choreType,
         Func<object[]> createChoreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
-        ChoreList.StateTransitionConfig config
+        StateTransitionConfig config
     ) {
         var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
         chore.Register(new MultiplayerId(Guid.NewGuid()));

@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Events;
-using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Patches.Chores.States;
@@ -30,7 +29,7 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
     }
 
     private static IEnumerable<object[]> TestArgs() {
-        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit)
+        return ExitTestArgs()
             .GroupBy(it => it[0])
             .Select(
                 group => {

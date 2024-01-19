@@ -4,6 +4,7 @@ using System.Linq;
 using HarmonyLib;
 using Klei.AI;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
@@ -121,6 +122,7 @@ public class AbstractChoreTest : AbstractGameTest {
         KPrefabIDTracker.Instance = null;
         AssetsPatch.Clear();
         ChoreObjects.Clear();
+        ResetGrid(Grid.WidthInCells, Grid.HeightInCells);
         if (harmony != null) {
             PatchesSetup.Uninstall(harmony);
         }
@@ -130,11 +132,23 @@ public class AbstractChoreTest : AbstractGameTest {
         GetTestArgs().Where(
             testArgs => ChoreList.Config[((Type) testArgs[0]).IsGenericType
                 ? ((Type) testArgs[0]).GetGenericTypeDefinition()
-                : ((Type) testArgs[0])].CreationSync == ChoreList.CreationStatusEnum.On
+                : ((Type) testArgs[0])].CreationSync == CreationStatusEnum.On
         ).Select(testArgs => new[] { testArgs[0], testArgs[1] }).ToArray();
 
-    protected static IEnumerable<object[]> GetTransitionTestArgs(
-        ChoreList.StateTransitionConfig.TransitionTypeEnum transitionTypeEnum
+    protected static IEnumerable<object[]> EnterTestArgs() {
+        return GetTransitionTestArgs(TransitionTypeEnum.Enter);
+    }
+
+    protected static IEnumerable<object[]> ExitTestArgs() {
+        return GetTransitionTestArgs(TransitionTypeEnum.Exit);
+    }
+
+    protected static IEnumerable<object[]> UpdateTestArgs() {
+        return GetTransitionTestArgs(TransitionTypeEnum.Update);
+    }
+
+    private static IEnumerable<object[]> GetTransitionTestArgs(
+        TransitionTypeEnum transitionTypeEnum
     ) =>
         GetTestArgs()
             .SelectMany(
@@ -142,7 +156,7 @@ public class AbstractChoreTest : AbstractGameTest {
                     if (testArgs.Length == 2) return Array.Empty<object[]>();
 
                     return ((object[]) testArgs[2]).Where(
-                        it => ((ChoreList.StateTransitionConfig) ((object[]) it)[0]).TransitionType ==
+                        it => ((StateTransitionConfig) ((object[]) it)[0]).TransitionType ==
                               transitionTypeEnum
                     ).Select(
                         it => new[] {
@@ -316,7 +330,7 @@ public class AbstractChoreTest : AbstractGameTest {
                 new object[] {
                     new object[] {
                         ChoreList.Config[typeof(EatChore)].StatesTransitionSync.StateTransitionConfigs[0],
-                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?> { { 3, null } })
                     },
                     new object[] {
                         ChoreList.Config[typeof(EatChore)].StatesTransitionSync.StateTransitionConfigs[1],
@@ -324,7 +338,9 @@ public class AbstractChoreTest : AbstractGameTest {
                     },
                     new object[] {
                         ChoreList.Config[typeof(EatChore)].StatesTransitionSync.StateTransitionConfigs[2],
-                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 6, PickupableGameObject } }
+                        )
                     }
                 }
             },
@@ -563,7 +579,7 @@ public class AbstractChoreTest : AbstractGameTest {
         foreach (var testArg in testArgs) {
             var choreType = (Type) testArg[0];
             var config = ChoreList.Config[choreType.IsGenericType ? choreType.GetGenericTypeDefinition() : choreType];
-            if (config.StatesTransitionSync.Status == ChoreList.StatesTransitionConfig.SyncStatus.Off) {
+            if (config.StatesTransitionSync.Status == StatesTransitionStatus.Off) {
                 Assert.True(testArg.Length == 2, $"{testArg[0]} must contain 2 elements if state sync is off.");
             } else {
                 Assert.True(testArg.Length == 3, $"{testArg[0]} must contain 3 elements if state sync is on.");

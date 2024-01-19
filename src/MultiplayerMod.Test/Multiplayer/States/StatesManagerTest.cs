@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.States;
 using MultiplayerMod.Test.Game.Chores;
@@ -24,16 +24,12 @@ public class StatesManagerTest : AbstractChoreTest {
         CreateTestData();
     }
 
-    private static IEnumerable<object[]> TestArgs() {
-        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit);
-    }
-
-    [Test, TestCaseSource(nameof(TestArgs))]
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
     public void AllowTransitionPreparesWaitHostState(
         Type choreType,
         Func<object[]> choreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
-        ChoreList.StateTransitionConfig config
+        StateTransitionConfig config
     ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
@@ -54,12 +50,12 @@ public class StatesManagerTest : AbstractChoreTest {
         Assert.AreEqual(expectedDictionary, waitHostState.ParametersArgs.Get(smi));
     }
 
-    [Test, TestCaseSource(nameof(TestArgs))]
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
     public void DisableChoreStateTransition(
         Type choreType,
         Func<object[]> choreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
-        ChoreList.StateTransitionConfig config
+        StateTransitionConfig config
     ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
@@ -19,7 +20,7 @@ public static class ChoreEvents {
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
         return ChoreList.Config
-            .Where(config => config.Value.CreationSync == ChoreList.CreationStatusEnum.On)
+            .Where(config => config.Value.CreationSync == CreationStatusEnum.On)
             .Select(config => config.Key)
             .Select(
                 type => {

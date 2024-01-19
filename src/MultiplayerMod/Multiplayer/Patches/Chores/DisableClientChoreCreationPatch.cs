@@ -5,6 +5,7 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations;
@@ -17,7 +18,7 @@ public static class DisableClientChoreCreationPatch {
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
         return ChoreList.Config
-            .Where(config => config.Value.CreationSync == ChoreList.CreationStatusEnum.On)
+            .Where(config => config.Value.CreationSync == CreationStatusEnum.On)
             .Select(config => config.Key)
             .Select(
                 type => {

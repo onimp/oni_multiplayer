@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
@@ -17,7 +18,7 @@ public static class ChoreStateEvents {
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
         var choreSyncConfigs = ChoreList.Config.Values.Where(
-            config => config.StatesTransitionSync.Status == ChoreList.StatesTransitionConfig.SyncStatus.On
+            config => config.StatesTransitionSync.Status == StatesTransitionStatus.On
         ).ToArray();
         var targetMethods = choreSyncConfigs
             .Select(config => config.StatesTransitionSync.StateType.GetMethod("InitializeStates")).ToArray();
@@ -32,13 +33,13 @@ public static class ChoreStateEvents {
         var choreType = __instance.GetType().DeclaringType;
         var config = ChoreList.Config[choreType].StatesTransitionSync;
         foreach (var stateTransitionConfig in config.StateTransitionConfigs) {
-            if (stateTransitionConfig.TransitionType == ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit) {
+            if (stateTransitionConfig.TransitionType == TransitionTypeEnum.Exit) {
                 BindExitCallback(__instance, stateTransitionConfig);
             }
         }
     }
 
-    private static void BindExitCallback(StateMachine sm, ChoreList.StateTransitionConfig config) {
+    private static void BindExitCallback(StateMachine sm, StateTransitionConfig config) {
         var state = config.GetMonitoredState(sm);
         var method = state.GetType().GetMethods()
             .Single(method => method.Name == "Exit" && method.GetParameters().Length == 2);
@@ -50,7 +51,7 @@ public static class ChoreStateEvents {
         method.Invoke(state, new object[] { "Trigger Multiplayer event", dlgt });
     }
 
-    private static void OnStateExit(ChoreList.StateTransitionConfig config, StateMachine.Instance smi) {
+    private static void OnStateExit(StateTransitionConfig config, StateMachine.Instance smi) {
         var chore = (Chore) smi.GetMaster();
         var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
         var newState = goToStack.First();

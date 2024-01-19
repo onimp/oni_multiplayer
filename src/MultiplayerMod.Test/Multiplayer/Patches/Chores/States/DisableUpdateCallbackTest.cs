@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Patches.Chores.States;
@@ -26,16 +26,12 @@ public class DisableUpdateCallbackTest : AbstractChoreTest {
         Singleton<StateMachineManager>.Instance.Clear();
     }
 
-    private static IEnumerable<object[]> TestArgs() {
-        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Update);
-    }
-
-    [Test, TestCaseSource(nameof(TestArgs))]
+    [Test, TestCaseSource(nameof(UpdateTestArgs))]
     public void ClientMustDisableUpdateCalls(
         Type choreType,
         Func<object[]> choreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
-        ChoreList.StateTransitionConfig config
+        StateTransitionConfig config
     ) {
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Client);
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
@@ -45,12 +41,12 @@ public class DisableUpdateCallbackTest : AbstractChoreTest {
         Assert.IsEmpty(config.GetMonitoredState(smi.stateMachine).updateActions);
     }
 
-    [Test, TestCaseSource(nameof(TestArgs))]
+    [Test, TestCaseSource(nameof(UpdateTestArgs))]
     public void HostMustKeepUpdateCalls(
         Type choreType,
         Func<object[]> choreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
-        ChoreList.StateTransitionConfig config
+        StateTransitionConfig config
     ) {
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());

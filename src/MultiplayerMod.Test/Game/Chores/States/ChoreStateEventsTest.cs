@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.Chores.States;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Game.Chores.Types;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace MultiplayerMod.Test.Game.Chores.States;
 
@@ -19,22 +19,17 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         };
         Grid.BuildMasks[123] = Grid.BuildFlags.Solid;
         StateMachine.Instance.error = false;
+        Minion.transform.position = new Vector3(12, 0.3f, 0);
     }
 
-    private static IEnumerable<object[]> TestArgs() {
-        return GetTransitionTestArgs(ChoreList.StateTransitionConfig.TransitionTypeEnum.Exit);
-    }
-
-    [Test, TestCaseSource(nameof(TestArgs))]
-    public void TestEventFiring(
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
+    public void StateExit_FiresEvent(
         Type choreType,
         Func<object[]> choreArgsFunc,
         Func<Dictionary<int, object?>> expectedDictionaryFunc,
-        ChoreList.StateTransitionConfig config
+        StateTransitionConfig config
     ) {
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
-        var choreId = new MultiplayerId(123);
-        chore.Register(choreId);
         var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
         smi.stateMachine.GetState("root").enterActions?.Clear();
         smi.stateMachine.GetState("root.delivering")?.enterActions?.Clear();
