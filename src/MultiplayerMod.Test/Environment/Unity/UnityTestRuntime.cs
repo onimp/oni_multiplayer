@@ -39,7 +39,8 @@ public static class UnityTestRuntime {
         typeof(Facing),
         typeof(Notifier),
         typeof(Clearable),
-        typeof(Prioritizable)
+        typeof(Prioritizable),
+        typeof(Ownables)
     };
 
     public static void RegisterGameObject(GameObject gameObject) {
@@ -90,6 +91,17 @@ public static class UnityTestRuntime {
         newComponents.Add(component);
         Trigger(component, UnityEvent.Awake);
         return component;
+    }
+
+    public static Object Clone(Object original) {
+        var newObject = (Object) Activator.CreateInstance(original.GetType(), true);
+        if (original is GameObject gameObject) {
+            var companion = GetGameObjectCompanion(gameObject);
+            foreach (var component in companion.Components) {
+                AddComponent((GameObject)newObject, component.GetType());
+            }
+        }
+        return newObject;
     }
 
     public static void Destroy(Object obj) {

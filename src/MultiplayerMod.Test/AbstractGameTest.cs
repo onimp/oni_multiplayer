@@ -77,6 +77,8 @@ public abstract class AbstractGameTest {
         SetupAssets(worldGameObject);
         worldGameObject.AddComponent<CustomGameSettings>().Awake();
         GameComps.InfraredVisualizers = new InfraredVisualizerComponents();
+        GameScreenManager.Instance = new GameScreenManager();
+        GameScreenManager.Instance.worldSpaceCanvas = new GameObject();
     }
 
     private static void SetupAssets(GameObject worldGameObject) {
@@ -142,6 +144,7 @@ public abstract class AbstractGameTest {
 
         game.statusItemRenderer = new StatusItemRenderer();
         game.fetchManager = new FetchManager();
+        GameScheduler.Instance = worldGameObject.AddComponent<GameScheduler>();
 
         ElementLoader.elements = new List<Element> { new() };
         ResetGrid(widthInCells, heightInCells);
