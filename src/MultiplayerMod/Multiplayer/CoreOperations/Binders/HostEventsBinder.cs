@@ -46,7 +46,7 @@ public class HostEventsBinder {
             new CreateHostChore(args),
             MultiplayerCommandOptions.SkipHost
         );
-        ChoreStateEvents.OnStateTransition += args => server.Send(
+        ChoreStateEvents.OnStateExit += args => server.Send(
             new TransitChoreToState(args),
             MultiplayerCommandOptions.SkipHost
         );

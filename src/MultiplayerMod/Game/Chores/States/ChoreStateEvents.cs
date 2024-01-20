@@ -13,13 +13,15 @@ namespace MultiplayerMod.Game.Chores.States;
 
 [HarmonyPatch]
 public static class ChoreStateEvents {
-    public static event Action<ChoreTransitStateArgs>? OnStateTransition;
+    public static event Action<ChoreTransitStateArgs>? OnStateEnter;
+    public static event Action<ChoreTransitStateArgs>? OnStateExit;
+    public static event Action<ChoreTransitStateArgs>? OnStateUpdate;
+    public static event Action<ChoreTransitStateArgs>? OnStateEvent;
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
-        var choreSyncConfigs = ChoreList.Config.Values.Where(
-            config => config.StatesTransitionSync.Status == StatesTransitionStatus.On
-        ).ToArray();
+        var choreSyncConfigs = ChoreList.Config.Values
+            .Where(config => config.StatesTransitionSync.Status == StatesTransitionStatus.On).ToArray();
         var targetMethods = choreSyncConfigs
             .Select(config => config.StatesTransitionSync.StateType.GetMethod("InitializeStates")).ToArray();
         return targetMethods;
@@ -33,34 +35,67 @@ public static class ChoreStateEvents {
         var choreType = __instance.GetType().DeclaringType;
         var config = ChoreList.Config[choreType].StatesTransitionSync;
         foreach (var stateTransitionConfig in config.StateTransitionConfigs) {
-            if (stateTransitionConfig.TransitionType == TransitionTypeEnum.Exit) {
-                BindExitCallback(__instance, stateTransitionConfig);
-            }
+            BindCallback(__instance, stateTransitionConfig);
         }
     }
 
-    private static void BindExitCallback(StateMachine sm, StateTransitionConfig config) {
+    private static void BindCallback(StateMachine sm, StateTransitionConfig config) {
+        if (config.TransitionType == TransitionTypeEnum.MoveTo) {
+            // TODO handle moveTo transition types.
+            return;
+        }
         var state = config.GetMonitoredState(sm);
-        var method = state.GetType().GetMethods()
-            .Single(method => method.Name == "Exit" && method.GetParameters().Length == 2);
+
+        var method = state.GetType().GetMethods().First(
+            it => config.TransitionType switch {
+                TransitionTypeEnum.Update => it.Name == config.TransitionType.ToString() &&
+                                             it.GetParameters().Length == 4,
+                _ => it.Name == config.TransitionType.ToString() && it.GetParameters().Length == 2
+            }
+        );
         var dlgt = Delegate.CreateDelegate(
             method.GetParameters()[1].ParameterType,
             config,
-            typeof(ChoreStateEvents).GetMethod(nameof(OnStateExit), BindingFlags.NonPublic | BindingFlags.Static)
+            typeof(ChoreStateEvents).GetMethod(
+                config.TransitionType != TransitionTypeEnum.Update
+                    ? nameof(OnStateEventHandler)
+                    : nameof(OnStateUpdateHandler),
+                BindingFlags.NonPublic | BindingFlags.Static
+            )!
         );
-        method.Invoke(state, new object[] { "Trigger Multiplayer event", dlgt });
+        var args = config.TransitionType switch {
+            TransitionTypeEnum.Enter => new object[] { "Trigger Multiplayer event", dlgt },
+            TransitionTypeEnum.Exit => new object[] { "Trigger Multiplayer event", dlgt },
+            TransitionTypeEnum.Update => new object[] { "Trigger Multiplayer event", dlgt, UpdateRate.SIM_200ms, true },
+            TransitionTypeEnum.EventHandler => new object[] { config.EventGameHash!, dlgt },
+            TransitionTypeEnum.MoveTo => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+        method.Invoke(state, args);
     }
 
-    private static void OnStateExit(StateTransitionConfig config, StateMachine.Instance smi) {
+    private static void OnStateUpdateHandler(StateTransitionConfig config, StateMachine.Instance smi, float dt) {
+        OnStateEventHandler(config, smi);
+    }
+
+    private static void OnStateEventHandler(StateTransitionConfig config, StateMachine.Instance smi) {
         var chore = (Chore) smi.GetMaster();
         var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
-        var newState = goToStack.First();
+        var newState = goToStack.FirstOrDefault();
         var args = config.ParameterName
             .ToDictionary(
                 parameter => GetParameterIndex(smi, parameter),
                 parameter => GetParameterValue(smi, parameter)
             );
-        OnStateTransition?.Invoke(new ChoreTransitStateArgs(chore, newState?.name, args));
+        var eventCallback = config.TransitionType switch {
+            TransitionTypeEnum.Enter => OnStateEnter,
+            TransitionTypeEnum.Exit => OnStateExit,
+            TransitionTypeEnum.MoveTo => throw new ArgumentOutOfRangeException(),
+            TransitionTypeEnum.Update => OnStateUpdate,
+            TransitionTypeEnum.EventHandler => OnStateEvent,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+        eventCallback?.Invoke(new ChoreTransitStateArgs(chore, newState?.name, args));
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {

@@ -5,6 +5,7 @@ namespace MultiplayerMod.Game.Chores.Types;
 public record StateTransitionConfig(
     TransitionTypeEnum TransitionType,
     string StateToMonitorName,
+    GameHashes? EventGameHash,
     string[] ParameterName
 ) {
 
@@ -12,7 +13,7 @@ public record StateTransitionConfig(
     ///
     /// TODO: Execute command on the client
     public static StateTransitionConfig OnEnter(string stateName, params string[] parameterName) =>
-        new(TransitionTypeEnum.Enter, stateName, parameterName);
+        new(TransitionTypeEnum.Enter, stateName, null, parameterName);
 
     /// Host:
     ///  - Sends command to all clients upon exit handler call.
@@ -22,12 +23,12 @@ public record StateTransitionConfig(
     ///  - Transits to specified state by host upon command.
     ///  - Sets values specified by host upon command.
     public static StateTransitionConfig OnExit(string stateName, params string[] parameterName) =>
-        new(TransitionTypeEnum.Exit, stateName, parameterName);
+        new(TransitionTypeEnum.Exit, stateName, null, parameterName);
 
     /// TODO: Adjust client logic (prevent / postpone execution of original handler)
     /// TODO: Execute command on the client
     public static StateTransitionConfig OnMove(string stateName) =>
-        new(TransitionTypeEnum.MoveTo, stateName, Array.Empty<string>());
+        new(TransitionTypeEnum.MoveTo, stateName, null, Array.Empty<string>());
 
     /// Host:
     ///  - send command to all clients upon update handler call.
@@ -37,12 +38,16 @@ public record StateTransitionConfig(
     /// TODO: Trigger command sent on the host
     /// TODO: Execute command on the client
     public static StateTransitionConfig OnUpdate(string stateName, params string[] parameterName) =>
-        new(TransitionTypeEnum.Update, stateName, parameterName);
+        new(TransitionTypeEnum.Update, stateName, null, parameterName);
 
     /// TODO: Adjust client logic (prevent / postpone execution of original handler)
     /// TODO: Execute command on the client
-    public static StateTransitionConfig OnEventHandler(string stateName, params string[] parameterName) =>
-        new(TransitionTypeEnum.EventHandler, stateName, parameterName);
+    public static StateTransitionConfig OnEventHandler(
+        string stateName,
+        GameHashes eventGameHash,
+        params string[] parameterName
+    ) =>
+        new(TransitionTypeEnum.EventHandler, stateName, eventGameHash, parameterName);
 
     public StateMachine.BaseState GetMonitoredState(StateMachine sm) {
         var stateName = StateToMonitorName;

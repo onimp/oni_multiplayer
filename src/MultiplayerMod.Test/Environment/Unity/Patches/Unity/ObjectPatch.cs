@@ -51,6 +51,20 @@ public class ObjectPatch {
     ) {
         return new List<CodeInstruction> {
             new(OpCodes.Ldarg_0),
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.Clone)),
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("Internal_CloneSingle")]
+    private static IEnumerable<CodeInstruction> Object_Internal_CloneSingle(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0),
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.Clone)),
             new(OpCodes.Ret)
         };
     }

@@ -128,11 +128,8 @@ public static class ChoreList {
                 )
             }, {
                 typeof(MoveToSafetyChore),
-                ChoreSyncConfig.Dynamic(
-                    StatesTransitionConfig.Enabled<MoveToSafetyChore.States>(
-                        StateTransitionConfig.OnMove(nameof(MoveToSafetyChore.States.move))
-                    )
-                )
+                // TODO sync SafeCellSensor instead
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(RecoverBreathChore),
                 ChoreSyncConfig.Dynamic(
@@ -153,6 +150,7 @@ public static class ChoreList {
                         ),
                         StateTransitionConfig.OnEventHandler(
                             nameof(EatChore.States.root),
+                            GameHashes.AssignablesChanged,
                             nameof(EatChore.States.messstation)
                         ),
                         StateTransitionConfig.OnEnter(
@@ -179,10 +177,23 @@ public static class ChoreList {
                     StatesTransitionConfig.Enabled<SleepChore.States>(
                         StateTransitionConfig.OnEventHandler(
                             nameof(SleepChore.States.sleep),
-                            nameof(SleepChore.States.isDisturbedByLight),
-                            nameof(SleepChore.States.isDisturbedByNoise),
-                            nameof(SleepChore.States.isDisturbedByMovement),
+                            GameHashes.SleepDisturbedByLight,
+                            nameof(SleepChore.States.isDisturbedByLight)
+                        ),
+                        StateTransitionConfig.OnEventHandler(
+                            nameof(SleepChore.States.sleep),
+                            GameHashes.SleepDisturbedByNoise,
+                            nameof(SleepChore.States.isDisturbedByNoise)
+                        ),
+                        StateTransitionConfig.OnEventHandler(
+                            nameof(SleepChore.States.sleep),
+                            GameHashes.SleepDisturbedByFearOfDark,
                             nameof(SleepChore.States.isScaredOfDark)
+                        ),
+                        StateTransitionConfig.OnEventHandler(
+                            nameof(SleepChore.States.sleep),
+                            GameHashes.SleepDisturbedByMovement,
+                            nameof(SleepChore.States.isDisturbedByMovement)
                         )
                     )
                 )
@@ -228,12 +239,8 @@ public static class ChoreList {
                 )
             }, {
                 typeof(BalloonArtistChore),
-                ChoreSyncConfig.Dynamic(
-                    StatesTransitionConfig.Enabled<BalloonArtistChore.States>(
-                        // TODO depends on HasBalloonStallCell
-                        StateTransitionConfig.OnMove(nameof(BalloonArtistChore.States.goToStand))
-                    )
-                )
+                // TODO sync balloonArtistCellSensor instead
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(BansheeChore),
                 ChoreSyncConfig.Dynamic(
@@ -250,22 +257,12 @@ public static class ChoreList {
                 ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(IdleChore),
-                ChoreSyncConfig.Dynamic(
-                    StatesTransitionConfig.Enabled<IdleChore.States>(
-                        // TODO depends on HasIdleCell
-                        StateTransitionConfig.OnMove(
-                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.move)}"
-                        )
-                    )
-                )
+                // TODO sync idleCellSensor instead
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(MingleChore),
-                ChoreSyncConfig.Dynamic(
-                    StatesTransitionConfig.Enabled<MingleChore.States>(
-                        StateTransitionConfig.OnMove(nameof(MingleChore.States.move)),
-                        StateTransitionConfig.OnMove(nameof(MingleChore.States.walk))
-                    )
-                )
+                // TODO sync mingleCellSensor instead
+                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(VomitChore),
                 ChoreSyncConfig.Dynamic(
