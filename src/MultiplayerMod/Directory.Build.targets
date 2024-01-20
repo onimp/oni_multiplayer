@@ -90,7 +90,10 @@
     </Target>
 
     <Target Name="ProcessAttributes" AfterTargets="PostBuildEvent">
-        <ProcessAttributes AssemblyPath="$(TargetPath)"/>
+        <ItemGroup>
+            <SearchPaths Include="$(ManagedPath)"/>
+        </ItemGroup>
+        <ProcessAttributes AssemblyPath="$(TargetPath)" AssemblySearchPaths="@(SearchPaths)"/>
     </Target>
 
 </Project>
