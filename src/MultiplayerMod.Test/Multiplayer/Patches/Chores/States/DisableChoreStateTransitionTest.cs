@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
@@ -26,37 +25,31 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
     [SetUp]
     public void SetUp() {
         CreateTestData(new HashSet<Type> { typeof(DisableChoreStateTransition) });
+        Singleton<StateMachineManager>.Instance.Clear();
     }
 
-    private static IEnumerable<object[]> TestArgs() {
-        return ExitTestArgs()
-            .GroupBy(it => it[0])
-            .Select(
-                group => {
-                    var allConfigs = group.Select(it => it[3]).Count();
-                    return new[] { group.First()[0], group.First()[1], allConfigs };
-                }
-            );
-    }
-
-    [Test, TestCaseSource(nameof(TestArgs))]
-    public void ClientMustDisableTransitionViaManager(
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
+    public void ClientStateExit_DisablesTransition(
         Type choreType,
         Func<object[]> choreArgsFunc,
-        int configCounts
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        StateTransitionConfig config
     ) {
-        Runtime.Instance.Dependencies.Get<FakeStatesManager>().CalledTimes = 0;
+        var statesManager = Runtime.Instance.Dependencies.Get<FakeStatesManager>();
+        statesManager.CalledWithStates.Clear();
 
-        CreateChore(choreType, choreArgsFunc.Invoke());
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
 
-        Assert.AreEqual(configCounts, Runtime.Instance.Dependencies.Get<FakeStatesManager>().CalledTimes);
+        var smi = statesManager.GetSmi(chore);
+        var expectedState = config.GetMonitoredState(smi.stateMachine);
+        Assert.Contains(expectedState, statesManager.CalledWithStates);
     }
 
     private class FakeStatesManager : StatesManager {
-        public int CalledTimes;
+        public readonly List<StateMachine.BaseState> CalledWithStates = new();
 
         public override void ReplaceWithWaitState(StateMachine.BaseState stateToBeSynced) {
-            CalledTimes++;
+            CalledWithStates.Add(stateToBeSynced);
         }
     }
 

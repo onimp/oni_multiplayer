@@ -35,19 +35,19 @@ public record StateTransitionConfig(
     /// Client:
     ///  - prevents update handler call.
     ///  - Receives values from host.
-    /// TODO: Trigger command sent on the host
-    /// TODO: Execute command on the client
     public static StateTransitionConfig OnUpdate(string stateName, params string[] parameterName) =>
         new(TransitionTypeEnum.Update, stateName, null, parameterName);
 
-    /// TODO: Adjust client logic (prevent / postpone execution of original handler)
-    /// TODO: Execute command on the client
+    /// Host:
+    ///  - send command to all clients upon event.
+    /// Client:
+    ///  - prevents event handler call.
+    ///  - Receives values from host.
     public static StateTransitionConfig OnEventHandler(
         string stateName,
         GameHashes eventGameHash,
         params string[] parameterName
-    ) =>
-        new(TransitionTypeEnum.EventHandler, stateName, eventGameHash, parameterName);
+    ) => new(TransitionTypeEnum.EventHandler, stateName, eventGameHash, parameterName);
 
     public StateMachine.BaseState GetMonitoredState(StateMachine sm) {
         var stateName = StateToMonitorName;

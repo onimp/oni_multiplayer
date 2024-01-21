@@ -487,6 +487,12 @@ public class AbstractChoreTest : AbstractGameTest {
                         new Func<Dictionary<int, object?>>(
                             () => new Dictionary<int, object?> { { 1, PickupableGameObject } }
                         )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(RecoverBreathChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?> { { 1, PickupableGameObject } }
+                        )
                     }
                 }
             },
