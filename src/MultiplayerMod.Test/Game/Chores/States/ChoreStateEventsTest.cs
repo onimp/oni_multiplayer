@@ -115,7 +115,7 @@ public class ChoreStateEventsTest : AbstractChoreTest {
             }
         );
         ChoreTransitStateArgs? firedArgs = null;
-        ChoreStateEvents.OnStateEvent += args => firedArgs = args;
+        ChoreStateEvents.OnStateEventHandler += args => firedArgs = args;
 
         smi.GoTo(state);
         Minion.GetComponent<KMonoBehaviour>().Trigger((int) config.EventGameHash!);

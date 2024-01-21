@@ -134,6 +134,10 @@ public static class ChoreList {
                 typeof(RecoverBreathChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<RecoverBreathChore.States>(
+                        StateTransitionConfig.OnEnter(
+                            nameof(RecoverBreathChore.States.root),
+                            nameof(RecoverBreathChore.States.locator)
+                        ),
                         StateTransitionConfig.OnUpdate(
                             nameof(RecoverBreathChore.States.root),
                             nameof(RecoverBreathChore.States.locator)

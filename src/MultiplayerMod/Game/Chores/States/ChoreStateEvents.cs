@@ -13,10 +13,18 @@ namespace MultiplayerMod.Game.Chores.States;
 
 [HarmonyPatch]
 public static class ChoreStateEvents {
+
+    // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateEnter;
+
+    // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateExit;
+
+    // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateUpdate;
-    public static event Action<ChoreTransitStateArgs>? OnStateEvent;
+
+    // TODO filter duplicate events to reduce network load
+    public static event Action<ChoreTransitStateArgs>? OnStateEventHandler;
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
@@ -58,8 +66,8 @@ public static class ChoreStateEvents {
             config,
             typeof(ChoreStateEvents).GetMethod(
                 config.TransitionType != TransitionTypeEnum.Update
-                    ? nameof(OnStateEventHandler)
-                    : nameof(OnStateUpdateHandler),
+                    ? nameof(EventHandlerCallback)
+                    : nameof(UpdateHandlerCallback),
                 BindingFlags.NonPublic | BindingFlags.Static
             )!
         );
@@ -74,11 +82,11 @@ public static class ChoreStateEvents {
         method.Invoke(state, args);
     }
 
-    private static void OnStateUpdateHandler(StateTransitionConfig config, StateMachine.Instance smi, float dt) {
-        OnStateEventHandler(config, smi);
+    private static void UpdateHandlerCallback(StateTransitionConfig config, StateMachine.Instance smi, float dt) {
+        EventHandlerCallback(config, smi);
     }
 
-    private static void OnStateEventHandler(StateTransitionConfig config, StateMachine.Instance smi) {
+    private static void EventHandlerCallback(StateTransitionConfig config, StateMachine.Instance smi) {
         var chore = (Chore) smi.GetMaster();
         var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
         var newState = goToStack.FirstOrDefault();
@@ -92,7 +100,7 @@ public static class ChoreStateEvents {
             TransitionTypeEnum.Exit => OnStateExit,
             TransitionTypeEnum.MoveTo => throw new ArgumentOutOfRangeException(),
             TransitionTypeEnum.Update => OnStateUpdate,
-            TransitionTypeEnum.EventHandler => OnStateEvent,
+            TransitionTypeEnum.EventHandler => OnStateEventHandler,
             _ => throw new ArgumentOutOfRangeException()
         };
         eventCallback?.Invoke(new ChoreTransitStateArgs(chore, newState?.name, args));
