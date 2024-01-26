@@ -138,7 +138,7 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
         smi.stateMachine.GetState("root").enterActions?.Clear();
         smi.stateMachine.GetState("root.delivering")?.enterActions?.Clear();
-        var state = smi.stateMachine.GetState("root." + config.StateToMonitorName);
+        var state = config.GetMonitoredState(smi.stateMachine);
         state.enterActions?.Clear();
         chore.Begin(
             new Chore.Precondition.Context {

@@ -45,7 +45,7 @@ public class StatesManager {
         Activator.CreateInstance(genericType, sm);
     }
 
-    public object GetWaitHostState(Chore chore) {
+    public StateMachine.BaseState GetWaitHostState(Chore chore) {
         return GetWaitHostState(GetSmi(chore));
     }
 
@@ -54,10 +54,11 @@ public class StatesManager {
             .GetValue(chore);
     }
 
-    private object GetWaitHostState(StateMachine.Instance smi) => smi.stateMachine.GetState("root." + StateName);
+    private static StateMachine.BaseState GetWaitHostState(StateMachine.Instance smi) =>
+        smi.stateMachine.GetState("root." + StateName);
 
     private static void TransitToWaitState(StateMachine.Instance smi) {
-        smi.GoTo("root." + StateName);
+        smi.GoTo(GetWaitHostState(smi));
     }
 
 }

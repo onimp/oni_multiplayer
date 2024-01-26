@@ -28,6 +28,23 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
         Singleton<StateMachineManager>.Instance.Clear();
     }
 
+    [Test, TestCaseSource(nameof(EnterTestArgs))]
+    public void ClientStateEnter_DisablesTransition(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        StateTransitionConfig config
+    ) {
+        var statesManager = Runtime.Instance.Dependencies.Get<FakeStatesManager>();
+        statesManager.CalledWithStates.Clear();
+
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+
+        var smi = statesManager.GetSmi(chore);
+        var expectedState = config.GetMonitoredState(smi.stateMachine);
+        Assert.Contains(expectedState, statesManager.CalledWithStates);
+    }
+
     [Test, TestCaseSource(nameof(ExitTestArgs))]
     public void ClientStateExit_DisablesTransition(
         Type choreType,
