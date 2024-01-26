@@ -31,7 +31,7 @@ public static class DisableChoreStateTransition {
         var config = ChoreList.Config[__instance.GetType().DeclaringType].StatesTransitionSync;
 
         foreach (var stateTransitionConfig in config.StateTransitionConfigs.Where(
-                     it => it.TransitionType == TransitionTypeEnum.Exit
+                     it => it.TransitionType is TransitionTypeEnum.Exit or TransitionTypeEnum.Enter
                  )) {
             var stateToBeSynced = stateTransitionConfig.GetMonitoredState(__instance);
             Runtime.Instance.Dependencies.Get<StatesManager>().ReplaceWithWaitState(stateToBeSynced);

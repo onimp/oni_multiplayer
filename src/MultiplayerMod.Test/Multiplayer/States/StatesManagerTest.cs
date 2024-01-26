@@ -22,9 +22,14 @@ public class StatesManagerTest : AbstractChoreTest {
     [SetUp]
     public void SetUp() {
         CreateTestData();
+        StateMachine.Instance.error = false;
     }
 
-    [Test, TestCaseSource(nameof(ExitTestArgs))]
+    protected static IEnumerable<object[]> TestCases() {
+        return ExitTestArgs().Union(EnterTestArgs());
+    }
+
+    [Test, TestCaseSource(nameof(TestCases))]
     public void AllowTransitionPreparesWaitHostState(
         Type choreType,
         Func<object[]> choreArgsFunc,
@@ -50,21 +55,50 @@ public class StatesManagerTest : AbstractChoreTest {
         Assert.AreEqual(expectedDictionary, waitHostState.ParametersArgs.Get(smi));
     }
 
-    [Test, TestCaseSource(nameof(ExitTestArgs))]
-    public void DisableChoreStateTransition(
+    [Test, TestCaseSource(nameof(EnterTestArgs))]
+    public void EnterArgs_DisableChoreStateTransition(
         Type choreType,
         Func<object[]> choreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
         StateTransitionConfig config
     ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
+        sm.GetState("root").events?.Clear();
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
-        statesManager
-            .ReplaceWithWaitState(sm.GetState("root"));
+        var stateToBeSynced = config.GetMonitoredState(sm);
+        statesManager.ReplaceWithWaitState(stateToBeSynced);
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var smi = statesManager.GetSmi(chore);
 
-        smi.GoTo("root." + config.StateToMonitorName);
+        smi.GoTo(stateToBeSynced);
+
+        var waitHostState = (dynamic) statesManager.GetWaitHostState(chore);
+        Assert.AreEqual(waitHostState, smi.GetCurrentState());
+    }
+
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
+    public void ExitArgs_DisableChoreStateTransition(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        StateTransitionConfig config
+    ) {
+        var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
+        sm.defaultState = sm.GetState("root");
+        sm.GetState("root.delivering")?.enterActions?.Clear();
+        var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
+        var stateToBeSynced = config.GetMonitoredState(sm);
+        statesManager.ReplaceWithWaitState(stateToBeSynced);
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+        var smi = statesManager.GetSmi(chore);
+        chore.Begin(
+            new Chore.Precondition.Context {
+                consumerState = new ChoreConsumerState(Minion.GetComponent<ChoreConsumer>()),
+                data = PickupableGameObject.GetComponent<Pickupable>()
+            }
+        );
+
+        smi.GoTo(stateToBeSynced);
 
         var waitHostState = (dynamic) statesManager.GetWaitHostState(chore);
         Assert.AreEqual(waitHostState, smi.GetCurrentState());
