@@ -34,6 +34,7 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
         var state = config.GetMonitoredState(smi.stateMachine);
+        state.defaultState = null;
         var amountInstance = new AmountInstance(Db.Get().Amounts.Calories, Minion.gameObject);
         amountInstance.maxAttribute.Attribute.BaseValue = 50;
         Minion.gameObject.GetAmounts().ModifierList.Add(amountInstance);
@@ -51,6 +52,10 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         var expectedDictionary = expectedDictionaryFunc.Invoke();
         Assert.NotNull(firedArgs);
         Assert.AreEqual(chore, firedArgs!.Chore);
+        Assert.AreEqual(
+            config.StateToMonitorName != "root" ? "root." + config.StateToMonitorName : config.StateToMonitorName,
+            firedArgs!.TargetState
+        );
         Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
         Assert.AreEqual(
             expectedDictionary.Values.Select(it => it?.GetType()).ToArray(),

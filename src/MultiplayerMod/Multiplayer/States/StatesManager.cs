@@ -9,7 +9,8 @@ namespace MultiplayerMod.Multiplayer.States;
 [Dependency, UsedImplicitly]
 public class StatesManager {
 
-    public const string StateName = "WaitHostState";
+    public const string WaitStateName = "WaitHostState";
+    public const string ContinuationName = "ContinuationState";
 
     public virtual void AllowTransition(Chore chore, string? targetState, Dictionary<int, object?> args) {
         var smi = GetSmi(chore);
@@ -38,6 +39,15 @@ public class StatesManager {
         stateToBeSynced.enterActions.Add(new StateMachine.Action("Transit to waiting state", callback));
     }
 
+    public virtual StateMachine.BaseState AddContinuationState(StateMachine.BaseState stateToBeSynced) {
+        var sm = (StateMachine) stateToBeSynced.GetType().GetField("sm").GetValue(stateToBeSynced);
+
+        var genericType = typeof(ContinuationState<,,,>).MakeGenericType(
+            sm.GetType().BaseType.GetGenericArguments().Append(typeof(object))
+        );
+        return (StateMachine.BaseState) Activator.CreateInstance(genericType, sm, stateToBeSynced);
+    }
+
     public void InjectWaitHostState(StateMachine sm) {
         var genericType = typeof(WaitHostState<,,,>).MakeGenericType(
             sm.GetType().BaseType.GetGenericArguments().Append(typeof(object))
@@ -55,7 +65,7 @@ public class StatesManager {
     }
 
     private static StateMachine.BaseState GetWaitHostState(StateMachine.Instance smi) =>
-        smi.stateMachine.GetState("root." + StateName);
+        smi.stateMachine.GetState("root." + WaitStateName);
 
     private static void TransitToWaitState(StateMachine.Instance smi) {
         smi.GoTo(GetWaitHostState(smi));
