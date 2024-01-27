@@ -30,11 +30,20 @@ public static class DisableChoreStateTransition {
     public static void InitializeStatesPatch(StateMachine __instance) {
         var config = ChoreList.Config[__instance.GetType().DeclaringType].StatesTransitionSync;
 
-        foreach (var stateTransitionConfig in config.StateTransitionConfigs.Where(
-                     it => it.TransitionType is TransitionTypeEnum.Exit or TransitionTypeEnum.Enter
-                 )) {
+        foreach (var stateTransitionConfig in config.StateTransitionConfigs) {
+            var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
             var stateToBeSynced = stateTransitionConfig.GetMonitoredState(__instance);
-            Runtime.Instance.Dependencies.Get<StatesManager>().ReplaceWithWaitState(stateToBeSynced);
+            switch (stateTransitionConfig.TransitionType) {
+                case TransitionTypeEnum.Exit: {
+                    statesManager.ReplaceWithWaitState(stateToBeSynced);
+                    break;
+                }
+                case TransitionTypeEnum.Enter: {
+                    statesManager.ReplaceWithWaitState(stateToBeSynced);
+                    statesManager.AddContinuationState(stateToBeSynced);
+                    break;
+                }
+            }
         }
     }
 }

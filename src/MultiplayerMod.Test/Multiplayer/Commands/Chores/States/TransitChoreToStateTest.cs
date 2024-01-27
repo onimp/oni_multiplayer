@@ -32,8 +32,8 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         CreateTestData();
     }
 
-    [Test, TestCaseSource(nameof(ExitTestArgs))]
-    public void ExecutionTest(
+    [Test, TestCaseSource(nameof(EnterTestArgs))]
+    public void ExecutionTestEnter(
         Type choreType,
         Func<object[]> createChoreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
@@ -46,15 +46,18 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = new TransitChoreToState(arg);
+        var command = TransitChoreToState.EnterTransition(arg);
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
-        Assert.True(Runtime.Instance.Dependencies.Get<FakeStatesManager>().WasCalled);
+        Assert.AreEqual(
+            config.StateToMonitorName + "_" + StatesManager.ContinuationName,
+            Runtime.Instance.Dependencies.Get<FakeStatesManager>().TransitToState
+        );
     }
 
     [Test, TestCaseSource(nameof(ExitTestArgs))]
-    public void SerializationTest(
+    public void ExecutionTestExit(
         Type choreType,
         Func<object[]> createChoreArgsFunc,
         Func<Dictionary<int, object?>> stateTransitionArgsFunc,
@@ -67,7 +70,60 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = new TransitChoreToState(arg);
+        var command = TransitChoreToState.ExitTransition(arg);
+
+        command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
+
+        Assert.AreEqual(
+            config.StateToMonitorName,
+            Runtime.Instance.Dependencies.Get<FakeStatesManager>().TransitToState
+        );
+    }
+
+    [Test, TestCaseSource(nameof(EnterTestArgs))]
+    public void SerializationTestEnter(
+        Type choreType,
+        Func<object[]> createChoreArgsFunc,
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        StateTransitionConfig config
+    ) {
+        var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
+        chore.Register(new MultiplayerId(Guid.NewGuid()));
+        var arg = new ChoreTransitStateArgs(
+            chore,
+            config.StateToMonitorName,
+            stateTransitionArgsFunc.Invoke()
+        );
+        var command = TransitChoreToState.EnterTransition(arg);
+        var messageFactory = new NetworkMessageFactory();
+        var messageProcessor = new NetworkMessageProcessor();
+        NetworkMessage? networkMessage = null;
+
+        foreach (var messageHandle in messageFactory.Create(command, MultiplayerCommandOptions.SkipHost).ToArray()) {
+            networkMessage = messageProcessor.Process(1u, messageHandle);
+        }
+
+        Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
+        Assert.AreEqual(command.ChoreId, ((TransitChoreToState) networkMessage!.Command).ChoreId);
+        Assert.AreEqual(command.TargetState, ((TransitChoreToState) networkMessage.Command).TargetState);
+        Assert.AreEqual(command.Args.Keys, ((TransitChoreToState) networkMessage.Command).Args.Keys);
+    }
+
+    [Test, TestCaseSource(nameof(ExitTestArgs))]
+    public void SerializationTestExit(
+        Type choreType,
+        Func<object[]> createChoreArgsFunc,
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        StateTransitionConfig config
+    ) {
+        var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
+        chore.Register(new MultiplayerId(Guid.NewGuid()));
+        var arg = new ChoreTransitStateArgs(
+            chore,
+            config.StateToMonitorName,
+            stateTransitionArgsFunc.Invoke()
+        );
+        var command = TransitChoreToState.ExitTransition(arg);
         var messageFactory = new NetworkMessageFactory();
         var messageProcessor = new NetworkMessageProcessor();
         NetworkMessage? networkMessage = null;
@@ -83,10 +139,10 @@ public class TransitChoreToStateTest : AbstractChoreTest {
     }
 
     private class FakeStatesManager : StatesManager {
-        public bool WasCalled;
+        public string? TransitToState;
 
         public override void AllowTransition(Chore chore, string? targetState, Dictionary<int, object?> args) {
-            WasCalled = true;
+            TransitToState = targetState;
         }
     }
 }

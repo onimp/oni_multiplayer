@@ -36,13 +36,15 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
         StateTransitionConfig config
     ) {
         var statesManager = Runtime.Instance.Dependencies.Get<FakeStatesManager>();
-        statesManager.CalledWithStates.Clear();
+        statesManager.WaitArgs.Clear();
+        statesManager.ContinuationArgs.Clear();
 
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
 
         var smi = statesManager.GetSmi(chore);
-        var expectedState = config.GetMonitoredState(smi.stateMachine);
-        Assert.Contains(expectedState, statesManager.CalledWithStates);
+        var expectedState = config.GetMonitoredState(smi.GetStateMachine());
+        Assert.Contains(expectedState, statesManager.WaitArgs);
+        Assert.Contains(expectedState, statesManager.ContinuationArgs);
     }
 
     [Test, TestCaseSource(nameof(ExitTestArgs))]
@@ -53,20 +55,26 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
         StateTransitionConfig config
     ) {
         var statesManager = Runtime.Instance.Dependencies.Get<FakeStatesManager>();
-        statesManager.CalledWithStates.Clear();
+        statesManager.WaitArgs.Clear();
 
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
 
         var smi = statesManager.GetSmi(chore);
-        var expectedState = config.GetMonitoredState(smi.stateMachine);
-        Assert.Contains(expectedState, statesManager.CalledWithStates);
+        var expectedState = config.GetMonitoredState(smi.GetStateMachine());
+        Assert.Contains(expectedState, statesManager.WaitArgs);
     }
 
     private class FakeStatesManager : StatesManager {
-        public readonly List<StateMachine.BaseState> CalledWithStates = new();
+        public readonly List<StateMachine.BaseState> WaitArgs = new();
+        public readonly List<StateMachine.BaseState> ContinuationArgs = new();
 
         public override void ReplaceWithWaitState(StateMachine.BaseState stateToBeSynced) {
-            CalledWithStates.Add(stateToBeSynced);
+            WaitArgs.Add(stateToBeSynced);
+        }
+
+        public override StateMachine.BaseState AddContinuationState(StateMachine.BaseState stateToBeSynced) {
+            ContinuationArgs.Add(stateToBeSynced);
+            return null!;
         }
     }
 

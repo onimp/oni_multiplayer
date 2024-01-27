@@ -14,7 +14,7 @@ public class
     [UsedImplicitly] public WaitStateParam<Dictionary<int, object?>> ParametersArgs { get; }
 
     public WaitHostState(StateMachine sm) {
-        name = StatesManager.StateName;
+        name = StatesManager.WaitStateName;
         TransitionAllowed = InitParam(sm, false);
         TargetState = InitParam(sm, (string?) null);
         ParametersArgs = InitParam(sm, new Dictionary<int, object?>());

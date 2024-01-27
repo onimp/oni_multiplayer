@@ -9,7 +9,6 @@ public record StateTransitionConfig(
     string[] ParameterName
 ) {
 
-    /// TODO: Execute command on the client
     public static StateTransitionConfig OnEnter(string stateName, params string[] parameterName) =>
         new(TransitionTypeEnum.Enter, stateName, null, parameterName);
 

@@ -55,6 +55,30 @@ public class StatesManagerTest : AbstractChoreTest {
         Assert.AreEqual(expectedDictionary, waitHostState.ParametersArgs.Get(smi));
     }
 
+    [Test]
+    public void AddContinuationState_CopiesArgumentsFromOriginal() {
+        var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
+        var stateToBeSynced =
+            new GameStateMachine<AggressiveChore.States, AggressiveChore.StatesInstance, AggressiveChore, object>.State {
+                defaultState = new StateMachine.BaseState(),
+                enterActions = new List<StateMachine.Action> { new() },
+                exitActions = new List<StateMachine.Action> { new() },
+                updateActions = new List<StateMachine.UpdateAction> { new() },
+                events = new List<StateEvent> {
+                    new GameStateMachine<AggressiveChore.States, AggressiveChore.StatesInstance, AggressiveChore, object>.GameEvent(GameHashes.Absorb, null, null, null)
+                },
+                sm = new AggressiveChore.States()
+            };
+
+        var createdState = statesManager.AddContinuationState(stateToBeSynced);
+
+        Assert.AreEqual(stateToBeSynced.defaultState, createdState.defaultState);
+        Assert.Null(createdState.enterActions);
+        Assert.AreEqual(stateToBeSynced.exitActions, createdState.exitActions);
+        Assert.Null(createdState.updateActions);
+        Assert.Null(createdState.events);
+    }
+
     [Test, TestCaseSource(nameof(EnterTestArgs))]
     public void EnterArgs_DisableChoreStateTransition(
         Type choreType,
