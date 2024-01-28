@@ -29,7 +29,11 @@ public record StateTransitionConfig(
     public static StateTransitionConfig OnExit(string stateName, params string[] parameterName) =>
         new(TransitionTypeEnum.Exit, stateName, null, parameterName);
 
-    // TODO implement handling (discard enter and update handlers, subscribe to onExit and act as OnExit)
+    /// Host:
+    ///  - Sends command to all clients upon exit handler call.
+    /// Client:
+    ///  - Removes Transition OnEnter and Update handlers.
+    ///  - Transits to specified state by host upon command.
     public static StateTransitionConfig OnTransition(string stateName) =>
         new(TransitionTypeEnum.Transition, stateName, null, Array.Empty<string>());
 
