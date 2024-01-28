@@ -21,6 +21,9 @@ public static class ChoreStateEvents {
     public static event Action<ChoreTransitStateArgs>? OnStateExit;
 
     // TODO filter duplicate events to reduce network load
+    public static event Action<ChoreTransitStateArgs>? OnStateTransition;
+
+    // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateUpdate;
 
     // TODO filter duplicate events to reduce network load
@@ -48,9 +51,8 @@ public static class ChoreStateEvents {
     }
 
     private static void BindCallback(StateMachine sm, StateTransitionConfig config) {
-        if (config.TransitionType == TransitionTypeEnum.MoveTo ||
-            config.TransitionType == TransitionTypeEnum.Transition) {
-            // TODO handle moveTo and transition types.
+        if (config.TransitionType == TransitionTypeEnum.MoveTo) {
+            // TODO handle moveTo types.
             return;
         }
         var state = config.GetMonitoredState(sm);
@@ -59,6 +61,8 @@ public static class ChoreStateEvents {
             it => config.TransitionType switch {
                 TransitionTypeEnum.Update => it.Name == config.TransitionType.ToString() &&
                                              it.GetParameters().Length == 4,
+                // Transition being trigger upon state exit.
+                TransitionTypeEnum.Transition => it.Name == "Exit" && it.GetParameters().Length == 2,
                 _ => it.Name == config.TransitionType.ToString() && it.GetParameters().Length == 2
             }
         );
@@ -75,6 +79,7 @@ public static class ChoreStateEvents {
         var args = config.TransitionType switch {
             TransitionTypeEnum.Enter => new object[] { "Trigger Multiplayer event", dlgt },
             TransitionTypeEnum.Exit => new object[] { "Trigger Multiplayer event", dlgt },
+            TransitionTypeEnum.Transition => new object[] { "Trigger Multiplayer event", dlgt },
             TransitionTypeEnum.Update => new object[] { "Trigger Multiplayer event", dlgt, UpdateRate.SIM_200ms, true },
             TransitionTypeEnum.EventHandler => new object[] { config.EventGameHash!, dlgt },
             TransitionTypeEnum.MoveTo => throw new ArgumentOutOfRangeException(),
@@ -99,6 +104,7 @@ public static class ChoreStateEvents {
         var eventCallback = config.TransitionType switch {
             TransitionTypeEnum.Enter => OnStateEnter,
             TransitionTypeEnum.Exit => OnStateExit,
+            TransitionTypeEnum.Transition => OnStateTransition,
             TransitionTypeEnum.MoveTo => throw new ArgumentOutOfRangeException(),
             TransitionTypeEnum.Update => OnStateUpdate,
             TransitionTypeEnum.EventHandler => OnStateEventHandler,
