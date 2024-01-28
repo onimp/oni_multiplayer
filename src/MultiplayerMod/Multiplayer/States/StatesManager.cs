@@ -22,15 +22,13 @@ public class StatesManager {
         );
     }
 
-    public virtual void ReplaceWithWaitState(StateMachine.BaseState stateToBeSynced) {
+    public virtual void AddAndTransitToWaiStateUponEnter(StateMachine.BaseState stateToBeSynced) {
         var sm = (StateMachine) stateToBeSynced.GetType().GetField("sm").GetValue(stateToBeSynced);
         InjectWaitHostState(sm);
         var callbackType = typeof(StateMachine<,,,>)
             .GetNestedType("State")
             .GetNestedType("Callback")
             .MakeGenericType(sm.GetType().BaseType.GetGenericArguments().Append(typeof(object)));
-        stateToBeSynced.enterActions ??= new List<StateMachine.Action>();
-        stateToBeSynced.enterActions.Clear();
         var method = typeof(StatesManager).GetMethod(
             nameof(TransitToWaitState),
             BindingFlags.NonPublic | BindingFlags.Static
