@@ -154,8 +154,69 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
 
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         var smi = statesManager.GetSmi(chore);
-        Assert.IsNotEmpty(config.GetMonitoredState(smi.stateMachine).enterActions);
-        Assert.IsNotEmpty(config.GetMonitoredState(smi.stateMachine).updateActions);
+        var state = config.GetMonitoredState(smi.stateMachine);
+        Assert.True(state.enterActions.Any(it => it.name.Contains("Transition")));
+        Assert.True(state.updateActions.Any(it => it.buckets.Any(bucket => bucket.name.Contains("Transition"))));
+    }
+
+    [Test, TestCaseSource(nameof(MoveToTestArgs))]
+    public void ClientMustDisableMoveCalls(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        StateTransitionConfig config
+    ) {
+        Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Client);
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+
+        var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
+        var smi = statesManager.GetSmi(chore);
+        var state = config.GetMonitoredState(smi.stateMachine);
+        Assert.False(
+            state.transitions.Any(it => it.name.Equals(GameHashes.DestinationReached.ToString())),
+            "Transition DestinationReached must be removed "
+        );
+        Assert.False(
+            state.transitions.Any(it => it.name.Equals(GameHashes.NavigationFailed.ToString())),
+            "Transition NavigationFailed must be removed"
+        );
+        Assert.False(state.enterActions.Any(it => it.name.Contains("MoveTo")), "Enter handler must be removed");
+        if (chore.GetType() == typeof(MoveToSafetyChore)) {
+            Assert.False(
+                state.updateActions.Any(it => it.buckets.Any(bucket => bucket.name.Contains("MoveTo"))),
+                "Update handler must be removed"
+            );
+        }
+    }
+
+    [Test, TestCaseSource(nameof(MoveToTestArgs))]
+    public void HostMustKeepMoveCalls(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> stateTransitionArgsFunc,
+        StateTransitionConfig config
+    ) {
+        Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+
+        var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
+        var smi = statesManager.GetSmi(chore);
+        var state = config.GetMonitoredState(smi.stateMachine);
+        Assert.True(
+            state.transitions.Any(it => it.name.Equals(GameHashes.DestinationReached.ToString())),
+            "DestinationReached handler must be present"
+        );
+        Assert.True(
+            state.transitions.Any(it => it.name.Equals(GameHashes.NavigationFailed.ToString())),
+            "NavigationFailed handler must be present"
+        );
+        Assert.True(state.enterActions.Any(it => it.name.Contains("MoveTo")), "Enter handler must be present");
+        if (chore.GetType() == typeof(MoveToSafetyChore)) {
+            Assert.True(
+                state.updateActions.Any(it => it.buckets.Any(bucket => bucket.name.Contains("MoveTo"))),
+                "Update handler must be present"
+            );
+        }
     }
 
     private class FakeStatesManager : StatesManager {

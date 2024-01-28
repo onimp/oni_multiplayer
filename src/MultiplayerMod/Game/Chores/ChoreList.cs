@@ -130,7 +130,6 @@ public static class ChoreList {
                 typeof(MoveToSafetyChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<MoveToSafetyChore.States>(
-                        // TODO update cell as well
                         StateTransitionConfig.OnMove(nameof(MoveToSafetyChore.States.move))
                     )
                 )
