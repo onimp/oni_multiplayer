@@ -164,4 +164,31 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
         Assert.AreEqual(expectedDictionary.Values, firedArgs.Args.Values);
     }
+
+    [Test, TestCaseSource(nameof(TransitionTestArgs))]
+    public void StateTransition_FiresEvent(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> expectedDictionaryFunc,
+        StateTransitionConfig config
+    ) {
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+        var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
+        smi.stateMachine.GetState("root").transitions?.Clear();
+        var state = config.GetMonitoredState(smi.stateMachine);
+        state.enterActions?.Clear();
+        state.updateActions?.Clear();
+        ChoreTransitStateArgs? firedArgs = null;
+        ChoreStateEvents.OnStateTransition += args => firedArgs = args;
+        smi.GoTo(state);
+
+        smi.GoTo("root");
+
+        var expectedDictionary = expectedDictionaryFunc.Invoke();
+        Assert.NotNull(firedArgs);
+        Assert.AreEqual(chore, firedArgs!.Chore);
+        Assert.AreEqual("root", firedArgs!.TargetState);
+        Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
+        Assert.AreEqual(expectedDictionary.Values, firedArgs.Args.Values);
+    }
 }

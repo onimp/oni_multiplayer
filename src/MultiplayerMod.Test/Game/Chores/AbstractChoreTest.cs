@@ -149,6 +149,10 @@ public class AbstractChoreTest : AbstractGameTest {
         return GetTransitionTestArgs(TransitionTypeEnum.Exit);
     }
 
+    protected static IEnumerable<object[]> TransitionTestArgs() {
+        return GetTransitionTestArgs(TransitionTypeEnum.Transition);
+    }
+
     protected static IEnumerable<object[]> MoveToTestArgs() {
         return GetTransitionTestArgs(TransitionTypeEnum.MoveTo);
     }
