@@ -54,6 +54,10 @@ public class HostEventsBinder {
             TransitChoreToState.ExitTransition(args),
             MultiplayerCommandOptions.SkipHost
         );
+        ChoreStateEvents.OnStateTransition += args => server.Send(
+            TransitChoreToState.ExitTransition(args),
+            MultiplayerCommandOptions.SkipHost
+        );
         ChoreStateEvents.OnStateUpdate += args => server.Send(
             new SetStateArguments(args),
             MultiplayerCommandOptions.SkipHost
