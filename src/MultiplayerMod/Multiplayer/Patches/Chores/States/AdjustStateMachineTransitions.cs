@@ -52,6 +52,16 @@ public static class AdjustStateMachineTransitions {
                     break;
                 }
                 case TransitionTypeEnum.MoveTo:
+                    stateToBeSynced.transitions.RemoveAll(
+                        it => it.name.Equals(GameHashes.DestinationReached.ToString())
+                    );
+                    stateToBeSynced.transitions.RemoveAll(
+                        it => it.name.Equals(GameHashes.NavigationFailed.ToString())
+                    );
+                    stateToBeSynced.enterActions.RemoveAll(action => action.name.Equals("MoveTo()"));
+                    stateToBeSynced.updateActions?.RemoveAll(
+                        action => action.buckets.Any(bucket => bucket.name.Equals("MoveTo()"))
+                    );
                     break;
                 case TransitionTypeEnum.Update:
                     stateToBeSynced.updateActions.Clear();
