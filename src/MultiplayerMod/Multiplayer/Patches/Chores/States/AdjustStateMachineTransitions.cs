@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -13,13 +14,11 @@ using MultiplayerMod.Multiplayer.States;
 namespace MultiplayerMod.Multiplayer.Patches.Chores.States;
 
 [HarmonyPatch]
-public static class DisableChoreStateTransition {
+public static class AdjustStateMachineTransitions {
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
-        return ChoreList.Config.Values.Where(
-                config => config.StatesTransitionSync.Status == StatesTransitionStatus.On
-            )
+        return ChoreList.Config.Values.Where(config => config.StatesTransitionSync.Status == StatesTransitionStatus.On)
             .Select(config => config.StatesTransitionSync.StateType.GetMethod("InitializeStates"));
     }
 
@@ -35,14 +34,34 @@ public static class DisableChoreStateTransition {
             var stateToBeSynced = stateTransitionConfig.GetMonitoredState(__instance);
             switch (stateTransitionConfig.TransitionType) {
                 case TransitionTypeEnum.Exit: {
-                    statesManager.ReplaceWithWaitState(stateToBeSynced);
+                    stateToBeSynced.enterActions.Clear();
+                    statesManager.AddAndTransitToWaiStateUponEnter(stateToBeSynced);
                     break;
                 }
                 case TransitionTypeEnum.Enter: {
-                    statesManager.ReplaceWithWaitState(stateToBeSynced);
+                    stateToBeSynced.enterActions.Clear();
+                    statesManager.AddAndTransitToWaiStateUponEnter(stateToBeSynced);
                     statesManager.AddContinuationState(stateToBeSynced);
                     break;
                 }
+                case TransitionTypeEnum.Transition: {
+                    stateToBeSynced.enterActions.RemoveAll(action => action.name.Contains("Transition"));
+                    stateToBeSynced.updateActions.RemoveAll(
+                        action => action.buckets.Any(bucket => bucket.name.Contains("Transition"))
+                    );
+                    break;
+                }
+                case TransitionTypeEnum.MoveTo:
+                    break;
+                case TransitionTypeEnum.Update:
+                    stateToBeSynced.updateActions.Clear();
+                    break;
+                case TransitionTypeEnum.EventHandler: {
+                    stateToBeSynced.events.Clear();
+                    break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
     }

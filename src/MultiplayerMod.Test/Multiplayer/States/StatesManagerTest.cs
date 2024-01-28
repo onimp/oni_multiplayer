@@ -90,7 +90,8 @@ public class StatesManagerTest : AbstractChoreTest {
         sm.GetState("root").events?.Clear();
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         var stateToBeSynced = config.GetMonitoredState(sm);
-        statesManager.ReplaceWithWaitState(stateToBeSynced);
+        stateToBeSynced.enterActions.Clear();
+        statesManager.AddAndTransitToWaiStateUponEnter(stateToBeSynced);
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var smi = statesManager.GetSmi(chore);
 
@@ -112,7 +113,8 @@ public class StatesManagerTest : AbstractChoreTest {
         sm.GetState("root.delivering")?.enterActions?.Clear();
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         var stateToBeSynced = config.GetMonitoredState(sm);
-        statesManager.ReplaceWithWaitState(stateToBeSynced);
+        stateToBeSynced.enterActions.Clear();
+        statesManager.AddAndTransitToWaiStateUponEnter(stateToBeSynced);
         var chore = CreateChore(choreType, choreArgsFunc.Invoke());
         var smi = statesManager.GetSmi(chore);
         chore.Begin(
