@@ -9,6 +9,13 @@ public record StateTransitionConfig(
     string[] ParameterName
 ) {
 
+    /// Host:
+    ///  - Sends command to all clients upon enter handler call.
+    /// Client:
+    ///  - Prevents transition to specified state.
+    ///  - Transits to WaitHostState instead.
+    ///  - Transits to specified Continuation state (artificial copy of original) upon host command.
+    ///  - Sets values specified by host upon command.
     public static StateTransitionConfig OnEnter(string stateName, params string[] parameterName) =>
         new(TransitionTypeEnum.Enter, stateName, null, parameterName);
 
@@ -21,6 +28,10 @@ public record StateTransitionConfig(
     ///  - Sets values specified by host upon command.
     public static StateTransitionConfig OnExit(string stateName, params string[] parameterName) =>
         new(TransitionTypeEnum.Exit, stateName, null, parameterName);
+
+    // TODO implement handling (discard enter and update handlers, subscribe to onExit and act as OnExit)
+    public static StateTransitionConfig OnTransition(string stateName) =>
+        new(TransitionTypeEnum.Transition, stateName, null, Array.Empty<string>());
 
     /// TODO: Adjust client logic (prevent / postpone execution of original handler)
     /// TODO: Execute command on the client

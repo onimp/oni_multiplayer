@@ -476,7 +476,15 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(MoveToSafetyChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(MoveToSafetyChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(RecoverBreathChore),
@@ -531,7 +539,21 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(BalloonArtistChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(BalloonArtistChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(BalloonArtistChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(BansheeChore),
@@ -564,11 +586,69 @@ public class AbstractChoreTest : AbstractGameTest {
             },
             new object[] {
                 typeof(IdleChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(IdleChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(IdleChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(IdleChore)].StatesTransitionSync.StateTransitionConfigs[2],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(IdleChore)].StatesTransitionSync.StateTransitionConfigs[3],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    }
+                }
             },
             new object[] {
                 typeof(MingleChore),
-                new Func<object[]>(() => new object[] { Minion })
+                new Func<object[]>(() => new object[] { Minion }),
+                new object[] {
+                    new object[] {
+                        ChoreList.Config[typeof(MingleChore)].StatesTransitionSync.StateTransitionConfigs[0],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(MingleChore)].StatesTransitionSync.StateTransitionConfigs[1],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(MingleChore)].StatesTransitionSync.StateTransitionConfigs[2],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(MingleChore)].StatesTransitionSync.StateTransitionConfigs[3],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                    new object[] {
+                        ChoreList.Config[typeof(MingleChore)].StatesTransitionSync.StateTransitionConfigs[4],
+                        new Func<Dictionary<int, object?>>(
+                            () => new Dictionary<int, object?>()
+                        )
+                    },
+                }
             },
             new object[] {
                 typeof(VomitChore),

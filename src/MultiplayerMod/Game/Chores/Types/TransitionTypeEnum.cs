@@ -6,5 +6,6 @@ public enum TransitionTypeEnum {
     Exit,
     MoveTo,
     Update,
-    EventHandler
+    EventHandler,
+    Transition
 }

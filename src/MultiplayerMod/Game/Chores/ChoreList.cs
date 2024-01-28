@@ -128,8 +128,12 @@ public static class ChoreList {
                 )
             }, {
                 typeof(MoveToSafetyChore),
-                // TODO sync SafeCellSensor instead
-                ChoreSyncConfig.FullyDeterminedByInput()
+                ChoreSyncConfig.Dynamic(
+                    StatesTransitionConfig.Enabled<MoveToSafetyChore.States>(
+                        // TODO update cell as well
+                        StateTransitionConfig.OnMove(nameof(MoveToSafetyChore.States.move))
+                    )
+                )
             }, {
                 typeof(RecoverBreathChore),
                 ChoreSyncConfig.Dynamic(
@@ -243,8 +247,12 @@ public static class ChoreList {
                 )
             }, {
                 typeof(BalloonArtistChore),
-                // TODO sync balloonArtistCellSensor instead
-                ChoreSyncConfig.FullyDeterminedByInput()
+                ChoreSyncConfig.Dynamic(
+                    StatesTransitionConfig.Enabled<BalloonArtistChore.States>(
+                        StateTransitionConfig.OnTransition(nameof(BalloonArtistChore.States.goToStand)),
+                        StateTransitionConfig.OnMove(nameof(BalloonArtistChore.States.goToStand))
+                    )
+                )
             }, {
                 typeof(BansheeChore),
                 ChoreSyncConfig.Dynamic(
@@ -261,12 +269,34 @@ public static class ChoreList {
                 ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(IdleChore),
-                // TODO sync idleCellSensor instead
-                ChoreSyncConfig.FullyDeterminedByInput()
+                ChoreSyncConfig.Dynamic(
+                    StatesTransitionConfig.Enabled<IdleChore.States>(
+                        // To prevent update callback on client
+                        StateTransitionConfig.OnUpdate(
+                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.ontube)}"
+                        ),
+                        StateTransitionConfig.OnExit(
+                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.ontube)}"
+                        ),
+                        StateTransitionConfig.OnTransition(
+                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.move)}"
+                        ),
+                        StateTransitionConfig.OnMove(
+                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.move)}"
+                        )
+                    )
+                )
             }, {
                 typeof(MingleChore),
-                // TODO sync mingleCellSensor instead
-                ChoreSyncConfig.FullyDeterminedByInput()
+                ChoreSyncConfig.Dynamic(
+                    StatesTransitionConfig.Enabled<MingleChore.States>(
+                        StateTransitionConfig.OnTransition(nameof(MingleChore.States.mingle)),
+                        StateTransitionConfig.OnTransition(nameof(MingleChore.States.move)),
+                        StateTransitionConfig.OnTransition(nameof(MingleChore.States.walk)),
+                        StateTransitionConfig.OnMove(nameof(MingleChore.States.move)),
+                        StateTransitionConfig.OnMove(nameof(MingleChore.States.walk))
+                    )
+                )
             }, {
                 typeof(VomitChore),
                 ChoreSyncConfig.Dynamic(

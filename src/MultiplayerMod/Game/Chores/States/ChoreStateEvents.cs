@@ -48,8 +48,9 @@ public static class ChoreStateEvents {
     }
 
     private static void BindCallback(StateMachine sm, StateTransitionConfig config) {
-        if (config.TransitionType == TransitionTypeEnum.MoveTo) {
-            // TODO handle moveTo transition types.
+        if (config.TransitionType == TransitionTypeEnum.MoveTo ||
+            config.TransitionType == TransitionTypeEnum.Transition) {
+            // TODO handle moveTo and transition types.
             return;
         }
         var state = config.GetMonitoredState(sm);
