@@ -38,6 +38,9 @@ public record StateTransitionConfig(
         new(TransitionTypeEnum.Transition, stateName, null, Array.Empty<string>());
 
     /// Host:
+    ///  - Triggers event to send command to all clients upon enter to state.
+    ///  - Triggers event to send command to all clients upon update (if set up).
+    ///  - Triggers event to send command to all clients upon exit handler call.
     ///  - TODO: Sends command to all clients upon enter to state.
     ///  - TODO: Sends command to all clients upon update (if set up).
     ///  - TODO: Sends command to all clients upon exit handler call.
@@ -45,9 +48,6 @@ public record StateTransitionConfig(
     ///  - Removes EventTransition handlers.
     ///  - Removes Enter handlers.
     ///  - Removes update handlers.
-    ///  - TODO: Moves to specified location upon command.
-    ///  - TODO: Transits to specified state by host upon command.
-    ///  - TODO: Sets values specified by host upon command.
     public static StateTransitionConfig OnMove(string stateName) =>
         new(TransitionTypeEnum.MoveTo, stateName, null, Array.Empty<string>());
 

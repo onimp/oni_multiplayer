@@ -14,13 +14,8 @@ namespace MultiplayerMod.Game.Chores.States;
 [HarmonyPatch]
 public static class ChoreStateEvents {
 
-    // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateEnter;
-
-    // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateExit;
-
-    // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateTransition;
 
     // TODO filter duplicate events to reduce network load
@@ -28,6 +23,10 @@ public static class ChoreStateEvents {
 
     // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateEventHandler;
+    public static event Action<MoveToArgs>? OnStartMoveTo;
+
+    // TODO filter duplicate events to reduce network load
+    public static event Action<MoveToArgs>? OnUpdateMoveTo;
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
@@ -52,9 +51,12 @@ public static class ChoreStateEvents {
 
     private static void BindCallback(StateMachine sm, StateTransitionConfig config) {
         if (config.TransitionType == TransitionTypeEnum.MoveTo) {
-            // TODO handle moveTo types.
+            BindMoveEnter(sm, config);
+            BindMoveUpdate(sm, config);
+            BindCallback(sm, config with { TransitionType = TransitionTypeEnum.Exit });
             return;
         }
+
         var state = config.GetMonitoredState(sm);
 
         var method = state.GetType().GetMethods().First(
@@ -88,6 +90,44 @@ public static class ChoreStateEvents {
         method.Invoke(state, args);
     }
 
+    private static void BindMoveEnter(StateMachine sm, StateTransitionConfig config) {
+        var state = config.GetMonitoredState(sm);
+
+        var enterMethod = state.GetType().GetMethods()
+            .First(it => it.Name == "Enter" && it.GetParameters().Length == 2);
+        var enterDelegate = Delegate.CreateDelegate(
+            enterMethod.GetParameters()[1].ParameterType,
+            config,
+            typeof(ChoreStateEvents).GetMethod(
+                nameof(MoveEnterHandler),
+                BindingFlags.NonPublic | BindingFlags.Static
+            )!
+        );
+        enterMethod.Invoke(state, new object[] { "Trigger Multiplayer move event", enterDelegate });
+    }
+
+    private static void BindMoveUpdate(StateMachine sm, StateTransitionConfig config) {
+        var state = config.GetMonitoredState(sm);
+        if (!state.updateActions?.Any(it => it.buckets.Any(bucket => bucket.name.Equals("MoveTo()"))) ?? true) {
+            return;
+        }
+
+        var updateMethod = state.GetType().GetMethods()
+            .First(it => it.Name == "Update" && it.GetParameters().Length == 4);
+        var updateDelegate = Delegate.CreateDelegate(
+            updateMethod.GetParameters()[1].ParameterType,
+            config,
+            typeof(ChoreStateEvents).GetMethod(
+                nameof(MoveUpdateHandler),
+                BindingFlags.NonPublic | BindingFlags.Static
+            )!
+        );
+        updateMethod.Invoke(
+            state,
+            new object[] { "Trigger Multiplayer move event", updateDelegate, UpdateRate.SIM_200ms, true }
+        );
+    }
+
     private static void UpdateHandlerCallback(StateTransitionConfig config, StateMachine.Instance smi, float dt) {
         EventHandlerCallback(config, smi);
     }
@@ -111,6 +151,30 @@ public static class ChoreStateEvents {
             _ => throw new ArgumentOutOfRangeException()
         };
         eventCallback?.Invoke(new ChoreTransitStateArgs(chore, newState?.name, args));
+    }
+
+    private static void MoveEnterHandler(StateTransitionConfig config, StateMachine.Instance smi) {
+        var chore = (Chore) smi.GetMaster();
+        var state = config.GetMonitoredState(smi.stateMachine);
+        var target = state.GetType().GetMethod("GetStateTarget")!.Invoke(state, new object[] { });
+        var navigator = (Navigator) target.GetType().GetMethod("Get")
+            .MakeGenericMethod(typeof(Navigator))
+            .Invoke(target, new object[] { smi });
+        var cell = Grid.PosToCell(navigator.targetLocator);
+
+        OnStartMoveTo?.Invoke(new MoveToArgs(chore, cell, navigator.targetOffsets));
+    }
+
+    private static void MoveUpdateHandler(StateTransitionConfig config, StateMachine.Instance smi, float dt) {
+        var chore = (Chore) smi.GetMaster();
+        var state = config.GetMonitoredState(smi.stateMachine);
+        var target = state.GetType().GetMethod("GetStateTarget")!.Invoke(state, new object[] { });
+        var navigator = (Navigator) target.GetType().GetMethod("Get")
+            .MakeGenericMethod(typeof(Navigator))
+            .Invoke(target, new object[] { smi });
+        var cell = Grid.PosToCell(navigator.targetLocator);
+
+        OnUpdateMoveTo?.Invoke(new MoveToArgs(chore, cell, navigator.targetOffsets));
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {
