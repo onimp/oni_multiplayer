@@ -41,9 +41,9 @@ public record StateTransitionConfig(
     ///  - Triggers event to send command to all clients upon enter to state.
     ///  - Triggers event to send command to all clients upon update (if set up).
     ///  - Triggers event to send command to all clients upon exit handler call.
-    ///  - TODO: Sends command to all clients upon enter to state.
-    ///  - TODO: Sends command to all clients upon update (if set up).
-    ///  - TODO: Sends command to all clients upon exit handler call.
+    ///  - Sends command to all clients upon enter to state.
+    ///  - Sends command to all clients upon update (if set up).
+    ///  - Sends command to all clients upon exit handler call.
     /// Client:
     ///  - Removes EventTransition handlers.
     ///  - Removes Enter handlers.

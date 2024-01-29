@@ -50,14 +50,13 @@ public static class ChoreStateEvents {
     }
 
     private static void BindCallback(StateMachine sm, StateTransitionConfig config) {
+        var state = config.GetMonitoredState(sm);
         if (config.TransitionType == TransitionTypeEnum.MoveTo) {
-            BindMoveEnter(sm, config);
-            BindMoveUpdate(sm, config);
+            BindMoveEnter(state);
+            BindMoveUpdate(state);
             BindCallback(sm, config with { TransitionType = TransitionTypeEnum.Exit });
             return;
         }
-
-        var state = config.GetMonitoredState(sm);
 
         var method = state.GetType().GetMethods().First(
             it => config.TransitionType switch {
@@ -90,14 +89,11 @@ public static class ChoreStateEvents {
         method.Invoke(state, args);
     }
 
-    private static void BindMoveEnter(StateMachine sm, StateTransitionConfig config) {
-        var state = config.GetMonitoredState(sm);
-
+    private static void BindMoveEnter(StateMachine.BaseState state) {
         var enterMethod = state.GetType().GetMethods()
             .First(it => it.Name == "Enter" && it.GetParameters().Length == 2);
         var enterDelegate = Delegate.CreateDelegate(
             enterMethod.GetParameters()[1].ParameterType,
-            config,
             typeof(ChoreStateEvents).GetMethod(
                 nameof(MoveEnterHandler),
                 BindingFlags.NonPublic | BindingFlags.Static
@@ -106,8 +102,7 @@ public static class ChoreStateEvents {
         enterMethod.Invoke(state, new object[] { "Trigger Multiplayer move event", enterDelegate });
     }
 
-    private static void BindMoveUpdate(StateMachine sm, StateTransitionConfig config) {
-        var state = config.GetMonitoredState(sm);
+    private static void BindMoveUpdate(StateMachine.BaseState state) {
         if (!state.updateActions?.Any(it => it.buckets.Any(bucket => bucket.name.Equals("MoveTo()"))) ?? true) {
             return;
         }
@@ -116,7 +111,6 @@ public static class ChoreStateEvents {
             .First(it => it.Name == "Update" && it.GetParameters().Length == 4);
         var updateDelegate = Delegate.CreateDelegate(
             updateMethod.GetParameters()[1].ParameterType,
-            config,
             typeof(ChoreStateEvents).GetMethod(
                 nameof(MoveUpdateHandler),
                 BindingFlags.NonPublic | BindingFlags.Static
@@ -153,28 +147,32 @@ public static class ChoreStateEvents {
         eventCallback?.Invoke(new ChoreTransitStateArgs(chore, newState?.name, args));
     }
 
-    private static void MoveEnterHandler(StateTransitionConfig config, StateMachine.Instance smi) {
+    private static void MoveEnterHandler(StateMachine.Instance smi) {
         var chore = (Chore) smi.GetMaster();
-        var state = config.GetMonitoredState(smi.stateMachine);
-        var target = state.GetType().GetMethod("GetStateTarget")!.Invoke(state, new object[] { });
+        var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
+        var newState = goToStack.FirstOrDefault();
+        var sm = smi.stateMachine;
+        var target = sm.GetType().GetField("stateTarget")!.GetValue(sm);
         var navigator = (Navigator) target.GetType().GetMethod("Get")
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
         var cell = Grid.PosToCell(navigator.targetLocator);
 
-        OnStartMoveTo?.Invoke(new MoveToArgs(chore, cell, navigator.targetOffsets));
+        OnStartMoveTo?.Invoke(new MoveToArgs(chore, newState.name, cell, navigator.targetOffsets));
     }
 
-    private static void MoveUpdateHandler(StateTransitionConfig config, StateMachine.Instance smi, float dt) {
+    private static void MoveUpdateHandler(StateMachine.Instance smi, float dt) {
         var chore = (Chore) smi.GetMaster();
-        var state = config.GetMonitoredState(smi.stateMachine);
-        var target = state.GetType().GetMethod("GetStateTarget")!.Invoke(state, new object[] { });
+        var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
+        var newState = goToStack.FirstOrDefault();
+        var sm = smi.stateMachine;
+        var target = sm.GetType().GetField("stateTarget")!.GetValue(sm);
         var navigator = (Navigator) target.GetType().GetMethod("Get")
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
         var cell = Grid.PosToCell(navigator.targetLocator);
 
-        OnUpdateMoveTo?.Invoke(new MoveToArgs(chore, cell, navigator.targetOffsets));
+        OnUpdateMoveTo?.Invoke(new MoveToArgs(chore, newState.name, cell, navigator.targetOffsets));
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {
