@@ -205,18 +205,15 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         smi.stateMachine.GetState("root").transitions?.Clear();
         state.enterActions?.Clear();
         state.updateActions?.Clear();
-        ChoreTransitStateArgs? firedArgs = null;
-        ChoreStateEvents.OnStateExit += args => firedArgs = args;
+        MoveToArgs? firedArgs = null;
+        ChoreStateEvents.OnExitMoveTo += args => firedArgs = args;
         smi.GoTo(state);
 
         smi.GoTo("root");
 
-        var expectedDictionary = expectedDictionaryFunc.Invoke();
         Assert.NotNull(firedArgs);
         Assert.AreEqual(chore, firedArgs!.Chore);
         Assert.AreEqual("root", firedArgs!.TargetState);
-        Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
-        Assert.AreEqual(expectedDictionary.Values, firedArgs.Args.Values);
     }
 
     [Test, TestCaseSource(nameof(MoveToTestArgs))]
@@ -240,7 +237,7 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         state.transitions.Clear();
         smi.stateMachine.GetState("root").transitions?.Clear();
         MoveToArgs? firedArgs = null;
-        ChoreStateEvents.OnStartMoveTo += args => firedArgs = args;
+        ChoreStateEvents.OnEnterMoveTo += args => firedArgs = args;
 
         smi.GoTo(state);
 

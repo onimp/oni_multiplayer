@@ -8,26 +8,26 @@ using MultiplayerMod.Multiplayer.States;
 namespace MultiplayerMod.Multiplayer.Commands.Chores.States;
 
 [Serializable]
-public class TransitChoreToState : MultiplayerCommand {
+public class AllowStateTransition : MultiplayerCommand {
 
     public readonly MultiplayerId ChoreId;
     public readonly string? TargetState;
     public readonly Dictionary<int, object?> Args;
 
-    private TransitChoreToState(MultiplayerId choreId, string? targetState, Dictionary<int, object?> args) {
+    private AllowStateTransition(MultiplayerId choreId, string? targetState, Dictionary<int, object?> args) {
         ChoreId = choreId;
         TargetState = targetState;
         Args = args;
     }
 
-    public static TransitChoreToState EnterTransition(ChoreTransitStateArgs transitData) =>
+    public static AllowStateTransition EnterTransition(ChoreTransitStateArgs transitData) =>
         new(
             transitData.Chore.MultiplayerId(),
             transitData.TargetState! + "_" + StatesManager.ContinuationName,
             transitData.Args.ToDictionary(a => a.Key, a => ArgumentUtils.WrapObject(a.Value))
         );
 
-    public static TransitChoreToState ExitTransition(ChoreTransitStateArgs transitData) =>
+    public static AllowStateTransition ExitTransition(ChoreTransitStateArgs transitData) =>
         new(
             transitData.Chore.MultiplayerId(),
             transitData.TargetState,

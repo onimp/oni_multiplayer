@@ -23,10 +23,11 @@ public static class ChoreStateEvents {
 
     // TODO filter duplicate events to reduce network load
     public static event Action<ChoreTransitStateArgs>? OnStateEventHandler;
-    public static event Action<MoveToArgs>? OnStartMoveTo;
+    public static event Action<MoveToArgs>? OnEnterMoveTo;
 
     // TODO filter duplicate events to reduce network load
     public static event Action<MoveToArgs>? OnUpdateMoveTo;
+    public static event Action<MoveToArgs>? OnExitMoveTo;
 
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
@@ -54,7 +55,7 @@ public static class ChoreStateEvents {
         if (config.TransitionType == TransitionTypeEnum.MoveTo) {
             BindMoveEnter(state);
             BindMoveUpdate(state);
-            BindCallback(sm, config with { TransitionType = TransitionTypeEnum.Exit });
+            BindMoveExit(state);
             return;
         }
 
@@ -122,6 +123,19 @@ public static class ChoreStateEvents {
         );
     }
 
+    private static void BindMoveExit(StateMachine.BaseState state) {
+        var enterMethod = state.GetType().GetMethods()
+            .First(it => it.Name == "Exit" && it.GetParameters().Length == 2);
+        var exitDelegate = Delegate.CreateDelegate(
+            enterMethod.GetParameters()[1].ParameterType,
+            typeof(ChoreStateEvents).GetMethod(
+                nameof(MoveExitHandler),
+                BindingFlags.NonPublic | BindingFlags.Static
+            )!
+        );
+        enterMethod.Invoke(state, new object[] { "Trigger Multiplayer move event", exitDelegate });
+    }
+
     private static void UpdateHandlerCallback(StateTransitionConfig config, StateMachine.Instance smi, float dt) {
         EventHandlerCallback(config, smi);
     }
@@ -158,7 +172,7 @@ public static class ChoreStateEvents {
             .Invoke(target, new object[] { smi });
         var cell = Grid.PosToCell(navigator.targetLocator);
 
-        OnStartMoveTo?.Invoke(new MoveToArgs(chore, newState.name, cell, navigator.targetOffsets));
+        OnEnterMoveTo?.Invoke(new MoveToArgs(chore, newState.name, cell, navigator.targetOffsets));
     }
 
     private static void MoveUpdateHandler(StateMachine.Instance smi, float dt) {
@@ -173,6 +187,14 @@ public static class ChoreStateEvents {
         var cell = Grid.PosToCell(navigator.targetLocator);
 
         OnUpdateMoveTo?.Invoke(new MoveToArgs(chore, newState.name, cell, navigator.targetOffsets));
+    }
+
+    private static void MoveExitHandler(StateMachine.Instance smi) {
+        var chore = (Chore) smi.GetMaster();
+        var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
+        var newState = goToStack.FirstOrDefault();
+
+        OnExitMoveTo?.Invoke(new MoveToArgs(chore, newState.name, 0, null!));
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {

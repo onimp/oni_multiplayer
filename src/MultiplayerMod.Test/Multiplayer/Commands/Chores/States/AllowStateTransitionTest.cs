@@ -18,7 +18,7 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Multiplayer.Commands.Chores.States;
 
 [TestFixture]
-public class TransitChoreToStateTest : AbstractChoreTest {
+public class AllowStateTransitionTest : AbstractChoreTest {
 
     [OneTimeSetUp]
     public static void OneTimeSetUp() {
@@ -46,7 +46,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = TransitChoreToState.EnterTransition(arg);
+        var command = AllowStateTransition.EnterTransition(arg);
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
@@ -70,7 +70,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = TransitChoreToState.ExitTransition(arg);
+        var command = AllowStateTransition.ExitTransition(arg);
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
@@ -94,7 +94,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = TransitChoreToState.ExitTransition(arg);
+        var command = AllowStateTransition.ExitTransition(arg);
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
@@ -118,7 +118,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = TransitChoreToState.EnterTransition(arg);
+        var command = AllowStateTransition.EnterTransition(arg);
         var messageFactory = new NetworkMessageFactory();
         var messageProcessor = new NetworkMessageProcessor();
         NetworkMessage? networkMessage = null;
@@ -128,9 +128,9 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         }
 
         Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
-        Assert.AreEqual(command.ChoreId, ((TransitChoreToState) networkMessage!.Command).ChoreId);
-        Assert.AreEqual(command.TargetState, ((TransitChoreToState) networkMessage.Command).TargetState);
-        Assert.AreEqual(command.Args.Keys, ((TransitChoreToState) networkMessage.Command).Args.Keys);
+        Assert.AreEqual(command.ChoreId, ((AllowStateTransition) networkMessage!.Command).ChoreId);
+        Assert.AreEqual(command.TargetState, ((AllowStateTransition) networkMessage.Command).TargetState);
+        Assert.AreEqual(command.Args.Keys, ((AllowStateTransition) networkMessage.Command).Args.Keys);
     }
 
     [Test, TestCaseSource(nameof(ExitTestArgs))]
@@ -147,7 +147,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = TransitChoreToState.ExitTransition(arg);
+        var command = AllowStateTransition.ExitTransition(arg);
         var messageFactory = new NetworkMessageFactory();
         var messageProcessor = new NetworkMessageProcessor();
         NetworkMessage? networkMessage = null;
@@ -157,9 +157,9 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         }
 
         Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
-        Assert.AreEqual(command.ChoreId, ((TransitChoreToState) networkMessage!.Command).ChoreId);
-        Assert.AreEqual(command.TargetState, ((TransitChoreToState) networkMessage.Command).TargetState);
-        Assert.AreEqual(command.Args.Keys, ((TransitChoreToState) networkMessage.Command).Args.Keys);
+        Assert.AreEqual(command.ChoreId, ((AllowStateTransition) networkMessage!.Command).ChoreId);
+        Assert.AreEqual(command.TargetState, ((AllowStateTransition) networkMessage.Command).TargetState);
+        Assert.AreEqual(command.Args.Keys, ((AllowStateTransition) networkMessage.Command).Args.Keys);
     }
 
     [Test, TestCaseSource(nameof(TransitionTestArgs))]
@@ -176,7 +176,7 @@ public class TransitChoreToStateTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = TransitChoreToState.ExitTransition(arg);
+        var command = AllowStateTransition.ExitTransition(arg);
         var messageFactory = new NetworkMessageFactory();
         var messageProcessor = new NetworkMessageProcessor();
         NetworkMessage? networkMessage = null;
@@ -186,9 +186,9 @@ public class TransitChoreToStateTest : AbstractChoreTest {
         }
 
         Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
-        Assert.AreEqual(command.ChoreId, ((TransitChoreToState) networkMessage!.Command).ChoreId);
-        Assert.AreEqual(command.TargetState, ((TransitChoreToState) networkMessage.Command).TargetState);
-        Assert.AreEqual(command.Args.Keys, ((TransitChoreToState) networkMessage.Command).Args.Keys);
+        Assert.AreEqual(command.ChoreId, ((AllowStateTransition) networkMessage!.Command).ChoreId);
+        Assert.AreEqual(command.TargetState, ((AllowStateTransition) networkMessage.Command).TargetState);
+        Assert.AreEqual(command.Args.Keys, ((AllowStateTransition) networkMessage.Command).Args.Keys);
     }
 
     private class FakeStatesManager : StatesManager {
