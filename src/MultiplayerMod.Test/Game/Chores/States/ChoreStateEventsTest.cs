@@ -191,4 +191,112 @@ public class ChoreStateEventsTest : AbstractChoreTest {
         Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
         Assert.AreEqual(expectedDictionary.Values, firedArgs.Args.Values);
     }
+
+    [Test, TestCaseSource(nameof(MoveToTestArgs))]
+    public void MoveStateTransition_FiresExitEvent(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> expectedDictionaryFunc,
+        StateTransitionConfig config
+    ) {
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+        var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
+        var state = config.GetMonitoredState(smi.stateMachine);
+        smi.stateMachine.GetState("root").transitions?.Clear();
+        state.enterActions?.Clear();
+        state.updateActions?.Clear();
+        ChoreTransitStateArgs? firedArgs = null;
+        ChoreStateEvents.OnStateExit += args => firedArgs = args;
+        smi.GoTo(state);
+
+        smi.GoTo("root");
+
+        var expectedDictionary = expectedDictionaryFunc.Invoke();
+        Assert.NotNull(firedArgs);
+        Assert.AreEqual(chore, firedArgs!.Chore);
+        Assert.AreEqual("root", firedArgs!.TargetState);
+        Assert.AreEqual(expectedDictionary.Keys, firedArgs!.Args.Keys);
+        Assert.AreEqual(expectedDictionary.Values, firedArgs.Args.Values);
+    }
+
+    [Test, TestCaseSource(nameof(MoveToTestArgs))]
+    public void MoveStateTransition_FiresEnterEvent(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> _,
+        StateTransitionConfig config
+    ) {
+        Minion.transform.position = Grid.CellToPos(50);
+        var sensors = Minion.GetComponent<Sensors>();
+        sensors.sensors.Remove(sensors.GetSensor<BalloonStandCellSensor>());
+        sensors.Add(new FakeBalloonStandCellSensor(sensors));
+        sensors.sensors.Remove(sensors.GetSensor<MingleCellSensor>());
+        sensors.Add(new FakeMingleCellSensor(sensors));
+        sensors.sensors.Remove(sensors.GetSensor<IdleCellSensor>());
+        sensors.Add(new FakeIdleCellSensor(sensors));
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+        var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
+        var state = config.GetMonitoredState(smi.stateMachine);
+        state.transitions.Clear();
+        smi.stateMachine.GetState("root").transitions?.Clear();
+        MoveToArgs? firedArgs = null;
+        ChoreStateEvents.OnStartMoveTo += args => firedArgs = args;
+
+        smi.GoTo(state);
+
+        Assert.NotNull(firedArgs);
+        Assert.AreEqual(chore, firedArgs!.Chore);
+    }
+
+    [Test, TestCaseSource(nameof(MoveToTestArgs))]
+    public void MoveStateTransition_FiresUpdateEvent(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> _,
+        StateTransitionConfig config
+    ) {
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+        var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
+        var state = config.GetMonitoredState(smi.stateMachine);
+        if (!state.updateActions?.Any(it => it.buckets.Any(bucket => bucket.name.Equals("MoveTo()"))) ?? true) {
+            return;
+        }
+        state.transitions.Clear();
+        MoveToArgs? firedArgs = null;
+        ChoreStateEvents.OnUpdateMoveTo += args => firedArgs = args;
+        smi.GoTo(state);
+
+        // There are 12 buckets and all should be advanced
+        for (var i = 0; i < 12; i++) {
+            Singleton<StateMachineUpdater>.Instance.simBucketGroups[2].AdvanceOneSubTick(0f);
+        }
+
+        Assert.NotNull(firedArgs);
+        Assert.AreEqual(chore, firedArgs!.Chore);
+        Assert.AreEqual(chore, firedArgs!.Chore);
+    }
+
+    private class FakeBalloonStandCellSensor : BalloonStandCellSensor {
+        public FakeBalloonStandCellSensor(Sensors sensors) : base(sensors) { }
+
+        public override void Update() {
+            cell = 0;
+        }
+    }
+
+    private class FakeMingleCellSensor : MingleCellSensor {
+        public FakeMingleCellSensor(Sensors sensors) : base(sensors) { }
+
+        public override void Update() {
+            cell = 0;
+        }
+    }
+
+    private class FakeIdleCellSensor : IdleCellSensor {
+        public FakeIdleCellSensor(Sensors sensors) : base(sensors) { }
+
+        public override void Update() {
+            cell = 0;
+        }
+    }
 }

@@ -119,6 +119,7 @@ public class AbstractChoreTest : AbstractGameTest {
         sensors.Add(new MingleCellSensor(sensors));
         sensors.Add(new PickupableSensor(sensors));
         sensors.Add(new ClosestEdibleSensor(sensors));
+        sensors.Add(new BalloonStandCellSensor(sensors));
 
         return minion;
     }
@@ -571,7 +572,7 @@ public class AbstractChoreTest : AbstractGameTest {
                     },
                     new object[] {
                         ChoreList.Config[typeof(BansheeChore)].StatesTransitionSync.StateTransitionConfigs[1],
-                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>() { { 1, 0 } })
+                        new Func<Dictionary<int, object?>>(() => new Dictionary<int, object?>())
                     }
                 }
             },
