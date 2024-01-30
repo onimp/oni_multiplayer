@@ -17,7 +17,7 @@ public class ObjectPatch {
     [HarmonyPostfix]
     [HarmonyPatch(MethodType.Constructor)]
     private static void Object_Constructor(Object __instance) {
-        UnityObject.MarkAsNotNull(__instance);
+        UnityPlayerObjectManager.Allocate(__instance);
         if (__instance is not GameObject) {
             UnityTestRuntime.RegisterObject(__instance, null);
         }

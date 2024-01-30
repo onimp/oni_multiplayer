@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using HarmonyLib;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Scheduling;
@@ -128,7 +129,6 @@ public static class UnityTestRuntime {
                     }
                 );
                 RemoveCompanion(obj);
-                gameObject.m_CachedPtr = IntPtr.Zero;
                 return;
             }
             default:
@@ -287,6 +287,7 @@ public static class UnityTestRuntime {
 
     private static void RemoveCompanion(Object obj) {
         companionData.Remove(GenerateKey(obj));
+        UnityPlayerObjectManager.Release(obj);
     }
 
     private static IntPtr GenerateKey(Object obj) {

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 using JetBrains.Annotations;
-using MultiplayerMod.Core.Unity;
 using UnityEngine;
 
 namespace MultiplayerMod.Test.Environment.Unity.Patches.Unity;
@@ -16,7 +15,7 @@ public class ScriptableObjectPatch {
     [HarmonyPrefix]
     [HarmonyPatch(MethodType.Constructor)]
     private static bool ScriptableObject_Constructor(ScriptableObject __instance) {
-        UnityObject.MarkAsNotNull(__instance);
+        UnityPlayerObjectManager.Allocate(__instance);
         UnityTestRuntime.RegisterObject(__instance, null);
         return false;
     }
