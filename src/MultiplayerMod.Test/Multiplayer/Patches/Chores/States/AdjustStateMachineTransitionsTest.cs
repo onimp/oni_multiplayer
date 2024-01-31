@@ -223,12 +223,12 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
         public readonly List<StateMachine.BaseState> WaitArgs = new();
         public readonly List<StateMachine.BaseState> ContinuationArgs = new();
 
-        public override void AddAndTransitToWaiStateUponEnter(StateMachine.BaseState stateToBeSynced) {
-            WaitArgs.Add(stateToBeSynced);
+        public override void AddAndTransitToWaiStateUponEnter(StateMachine.BaseState state) {
+            WaitArgs.Add(state);
         }
 
-        public override StateMachine.BaseState AddContinuationState(StateMachine.BaseState stateToBeSynced) {
-            ContinuationArgs.Add(stateToBeSynced);
+        public override StateMachine.BaseState AddContinuationState(StateMachine.BaseState state) {
+            ContinuationArgs.Add(state);
             return null!;
         }
     }

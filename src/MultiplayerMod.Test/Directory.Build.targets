@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
+    <Target Name="AfterBuild">
+        <Copy SourceFiles="$(ManagedPath)\Assembly-CSharp.dll" DestinationFolder="$(OutputPath)"/>
+        <Copy SourceFiles="$(ManagedPath)\Assembly-CSharp-firstpass.dll" DestinationFolder="$(OutputPath)"/>
+    </Target>
 </Project>

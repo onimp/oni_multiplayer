@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Reflection;
 
 namespace MultiplayerMod.Multiplayer.States;
 
@@ -22,8 +23,8 @@ public class StatesManager {
         );
     }
 
-    public virtual void AddAndTransitToWaiStateUponEnter(StateMachine.BaseState stateToBeSynced) {
-        var sm = (StateMachine) stateToBeSynced.GetType().GetField("sm").GetValue(stateToBeSynced);
+    public virtual void AddAndTransitToWaiStateUponEnter(StateMachine.BaseState state) {
+        var sm = GetSm(state);
         InjectWaitHostState(sm);
         var callbackType = typeof(StateMachine<,,,>)
             .GetNestedType("State")
@@ -34,16 +35,15 @@ public class StatesManager {
             BindingFlags.NonPublic | BindingFlags.Static
         )!;
         var callback = Delegate.CreateDelegate(callbackType, method);
-        stateToBeSynced.enterActions.Add(new StateMachine.Action("Transit to waiting state", callback));
+        state.enterActions.Add(new StateMachine.Action("Transit to waiting state", callback));
     }
 
-    public virtual StateMachine.BaseState AddContinuationState(StateMachine.BaseState stateToBeSynced) {
-        var sm = (StateMachine) stateToBeSynced.GetType().GetField("sm").GetValue(stateToBeSynced);
-
+    public virtual StateMachine.BaseState AddContinuationState(StateMachine.BaseState state) {
+        var sm = GetSm(state);
         var genericType = typeof(ContinuationState<,,,>).MakeGenericType(
             sm.GetType().BaseType.GetGenericArguments().Append(typeof(object))
         );
-        return (StateMachine.BaseState) Activator.CreateInstance(genericType, sm, stateToBeSynced);
+        return (StateMachine.BaseState) Activator.CreateInstance(genericType, sm, state);
     }
 
     public void InjectWaitHostState(StateMachine sm) {
@@ -60,6 +60,10 @@ public class StatesManager {
     public StateMachine.Instance GetSmi(Chore chore) {
         return (StateMachine.Instance) chore.GetType().GetProperty(nameof(Chore<StateMachine.Instance>.smi))
             .GetValue(chore);
+    }
+
+    private static StateMachine GetSm(StateMachine.BaseState state) {
+        return state.GetFieldValue<StateMachine>("sm");
     }
 
     private static StateMachine.BaseState GetWaitHostState(StateMachine.Instance smi) =>

@@ -17,7 +17,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
         <PackageReference Include="NUnit" Version="3.13.3"/>
-        <PackageReference Include="AssemblyExposer.MSBuild.Task" Version="0.1.5" Private="true" />
+        <PackageReference Include="AssemblyExposer.MSBuild.Task" Version="0.1.5" Private="true"/>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Assembly-CSharp" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp.dll"/>

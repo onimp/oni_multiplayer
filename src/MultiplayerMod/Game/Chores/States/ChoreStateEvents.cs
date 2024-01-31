@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Reflection;
 using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
@@ -142,7 +143,7 @@ public static class ChoreStateEvents {
 
     private static void EventHandlerCallback(StateTransitionConfig config, StateMachine.Instance smi) {
         var chore = (Chore) smi.GetMaster();
-        var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
+        var goToStack = GetGoToStack(smi);
         var newState = goToStack.FirstOrDefault();
         var args = config.ParameterName
             .ToDictionary(
@@ -163,10 +164,9 @@ public static class ChoreStateEvents {
 
     private static void MoveEnterHandler(StateMachine.Instance smi) {
         var chore = (Chore) smi.GetMaster();
-        var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
+        var goToStack = GetGoToStack(smi);
         var newState = goToStack.FirstOrDefault();
-        var sm = smi.stateMachine;
-        var target = sm.GetType().GetField("stateTarget")!.GetValue(sm);
+        var target = GetStateTarget(smi);
         var navigator = (Navigator) target.GetType().GetMethod("Get")
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
@@ -177,10 +177,9 @@ public static class ChoreStateEvents {
 
     private static void MoveUpdateHandler(StateMachine.Instance smi, float dt) {
         var chore = (Chore) smi.GetMaster();
-        var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
+        var goToStack = GetGoToStack(smi);
         var newState = goToStack.FirstOrDefault();
-        var sm = smi.stateMachine;
-        var target = sm.GetType().GetField("stateTarget")!.GetValue(sm);
+        var target = GetStateTarget(smi);
         var navigator = (Navigator) target.GetType().GetMethod("Get")
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
@@ -191,7 +190,7 @@ public static class ChoreStateEvents {
 
     private static void MoveExitHandler(StateMachine.Instance smi) {
         var chore = (Chore) smi.GetMaster();
-        var goToStack = (Stack<StateMachine.BaseState>) smi.GetType().GetField("gotoStack").GetValue(smi);
+        var goToStack = GetGoToStack(smi);
         var newState = goToStack.FirstOrDefault();
 
         OnExitMoveTo?.Invoke(new MoveToArgs(chore, newState.name, 0, null!));
@@ -209,5 +208,13 @@ public static class ChoreStateEvents {
         var parameterIndex = (int) parameter.GetType().GetField("idx").GetValue(parameter);
         var parameterContext = smi.parameterContexts[parameterIndex];
         return parameterContext.GetType().GetField("value").GetValue(parameterContext);
+    }
+
+    private static object GetStateTarget(StateMachine.Instance smi) {
+        return smi.stateMachine.GetFieldValue("stateTarget");
+    }
+
+    private static Stack<StateMachine.BaseState> GetGoToStack(StateMachine.Instance smi) {
+        return smi.GetFieldValue<Stack<StateMachine.BaseState>>("gotoStack");
     }
 }
