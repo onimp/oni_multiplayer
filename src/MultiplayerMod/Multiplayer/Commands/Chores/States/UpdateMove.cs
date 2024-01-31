@@ -1,4 +1,5 @@
 ﻿using System;
+using MultiplayerMod.Core.Reflection;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.States;
@@ -20,7 +21,7 @@ public class UpdateMove : MultiplayerCommand {
         var smi = context.Runtime.Dependencies.Get<StatesManager>().GetSmi(chore);
 
         var sm = smi.stateMachine;
-        var target = sm.GetType().GetField("stateTarget")!.GetValue(sm);
+        var target = sm.GetFieldValue("stateTarget");
         var navigator = (Navigator) target.GetType().GetMethod("Get")
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
+using MultiplayerMod.Core.Reflection;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
@@ -49,7 +50,7 @@ public class UpdateMoveTest : AbstractChoreTest {
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
         var sm = smi.stateMachine;
-        var target = sm.GetType().GetField("stateTarget")!.GetValue(sm);
+        var target = sm.GetFieldValue("stateTarget");
         var navigator = (Navigator) target.GetType().GetMethod("Get")
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
