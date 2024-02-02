@@ -42,7 +42,7 @@ public class CreateHostChore : MultiplayerCommand {
         if (ChoreType == typeof(FetchAreaChore)) {
             var context = (Chore.Precondition.Context) args[0]!;
             return new object[] {
-                context.chore.MultiplayerId()!, context.consumerState.consumer, context.consumerState.choreProvider,
+                context.chore.MultiplayerId(), context.consumerState.consumer, context.consumerState.choreProvider,
                 context.masterPriority.priority_class, context.masterPriority.priority_value
             };
         }

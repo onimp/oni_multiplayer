@@ -26,7 +26,6 @@ public class DisableChoreStateTransitionTest : AbstractChoreTest {
     [SetUp]
     public void SetUp() {
         CreateTestData(new HashSet<Type> { typeof(AdjustStateMachineTransitions) });
-        Singleton<StateMachineManager>.Instance.Clear();
     }
 
     [Test, TestCaseSource(nameof(EnterTestArgs))]

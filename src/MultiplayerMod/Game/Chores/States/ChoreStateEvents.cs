@@ -172,20 +172,19 @@ public static class ChoreStateEvents {
             .Invoke(target, new object[] { smi });
         var cell = Grid.PosToCell(navigator.targetLocator);
 
-        OnEnterMoveTo?.Invoke(new MoveToArgs(chore, newState.name, cell, navigator.targetOffsets));
+        OnEnterMoveTo?.Invoke(new MoveToArgs(chore, newState!.name, cell, navigator.targetOffsets));
     }
 
     private static void MoveUpdateHandler(StateMachine.Instance smi, float dt) {
         var chore = (Chore) smi.GetMaster();
-        var goToStack = GetGoToStack(smi);
-        var newState = goToStack.FirstOrDefault();
+        var currentState = smi.GetCurrentState();
         var target = GetStateTarget(smi);
         var navigator = (Navigator) target.GetType().GetMethod("Get")
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
         var cell = Grid.PosToCell(navigator.targetLocator);
 
-        OnUpdateMoveTo?.Invoke(new MoveToArgs(chore, newState.name, cell, navigator.targetOffsets));
+        OnUpdateMoveTo?.Invoke(new MoveToArgs(chore, currentState.name, cell, navigator.targetOffsets));
     }
 
     private static void MoveExitHandler(StateMachine.Instance smi) {
@@ -193,7 +192,7 @@ public static class ChoreStateEvents {
         var goToStack = GetGoToStack(smi);
         var newState = goToStack.FirstOrDefault();
 
-        OnExitMoveTo?.Invoke(new MoveToArgs(chore, newState.name, 0, null!));
+        OnExitMoveTo?.Invoke(new MoveToArgs(chore, newState?.name, 0, null!));
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {

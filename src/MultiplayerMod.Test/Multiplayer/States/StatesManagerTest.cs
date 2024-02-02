@@ -88,6 +88,7 @@ public class StatesManagerTest : AbstractChoreTest {
     ) {
         var sm = Singleton<StateMachineManager>.Instance.CreateStateMachine(GetStatesType(choreType));
         sm.GetState("root").events?.Clear();
+        sm.GetState("root").enterActions?.Clear();
         var statesManager = Runtime.Instance.Dependencies.Get<StatesManager>();
         var stateToBeSynced = config.GetMonitoredState(sm);
         stateToBeSynced.enterActions.Clear();
