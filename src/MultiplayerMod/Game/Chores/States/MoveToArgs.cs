@@ -2,7 +2,7 @@
 
 public record MoveToArgs(
     Chore Chore,
-    string TargetState,
+    string? TargetState,
     int Cell,
     CellOffset[] Offsets
 );

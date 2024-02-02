@@ -31,6 +31,11 @@ public class AbstractChoreTest : AbstractGameTest {
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
 
+    [SetUp]
+    public void SetUp() {
+        Singleton<StateMachineManager>.Instance.Clear();
+    }
+
     protected void CreateTestData(HashSet<Type>? additionalPatches = null) {
         if (additionalPatches != null) {
             harmony = new Harmony("AbstractChoreTest");

@@ -217,6 +217,30 @@ public class ChoreStateEventsTest : AbstractChoreTest {
     }
 
     [Test, TestCaseSource(nameof(MoveToTestArgs))]
+    public void MoveStop_FiresExitEvent(
+        Type choreType,
+        Func<object[]> choreArgsFunc,
+        Func<Dictionary<int, object?>> expectedDictionaryFunc,
+        StateTransitionConfig config
+    ) {
+        var chore = CreateChore(choreType, choreArgsFunc.Invoke());
+        var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
+        var state = config.GetMonitoredState(smi.stateMachine);
+        smi.stateMachine.GetState("root").transitions?.Clear();
+        state.enterActions?.Clear();
+        state.updateActions?.Clear();
+        MoveToArgs? firedArgs = null;
+        ChoreStateEvents.OnExitMoveTo += args => firedArgs = args;
+        smi.GoTo(state);
+
+        smi.StopSM("test");
+
+        Assert.NotNull(firedArgs);
+        Assert.AreEqual(chore, firedArgs!.Chore);
+        Assert.AreEqual(null, firedArgs!.TargetState);
+    }
+
+    [Test, TestCaseSource(nameof(MoveToTestArgs))]
     public void MoveStateTransition_FiresEnterEvent(
         Type choreType,
         Func<object[]> choreArgsFunc,
