@@ -23,8 +23,6 @@ public class WaitHostStateTest : AbstractChoreTest {
         CreateTestData();
 
         Grid.BuildMasks[410] = Grid.BuildFlags.Solid;
-
-        StateMachine.Instance.error = false;
     }
 
     private static IEnumerable<object[]> TestArgs() {

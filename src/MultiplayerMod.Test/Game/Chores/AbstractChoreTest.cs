@@ -32,8 +32,15 @@ public class AbstractChoreTest : AbstractGameTest {
     private static Db db = null!;
 
     [SetUp]
-    public void SetUp() {
+    public void AbstractSetUp() {
         Singleton<StateMachineManager>.Instance.Clear();
+        Singleton<StateMachineUpdater>.Instance.Clear();
+        StateMachine.Instance.error = false;
+    }
+
+    [TearDown]
+    public void AbstractTearDown() {
+        Assert.False(StateMachine.Instance.error, "There was state machine error. Check log.");
     }
 
     protected void CreateTestData(HashSet<Type>? additionalPatches = null) {

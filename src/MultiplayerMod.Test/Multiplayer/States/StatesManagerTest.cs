@@ -22,7 +22,6 @@ public class StatesManagerTest : AbstractChoreTest {
     [SetUp]
     public void SetUp() {
         CreateTestData();
-        StateMachine.Instance.error = false;
     }
 
     protected static IEnumerable<object[]> TestCases() {
