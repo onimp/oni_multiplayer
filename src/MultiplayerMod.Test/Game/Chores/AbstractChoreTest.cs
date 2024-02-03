@@ -5,7 +5,10 @@ using HarmonyLib;
 using Klei.AI;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.Chores.Types;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Network;
+using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
 using NUnit.Framework;
@@ -28,6 +31,7 @@ public class AbstractChoreTest : AbstractGameTest {
 
     private static Storage storage = null!;
     private static Constructable constructable = null!;
+    private static FetchOrder2 fetchOrder2 = null!;
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
 
@@ -62,6 +66,22 @@ public class AbstractChoreTest : AbstractGameTest {
         storage.Awake();
         constructable = createGameObject().AddComponent<Constructable>();
         testMonoBehaviour = createGameObject().AddComponent<TestMonoBehaviour>();
+
+        constructable.fetchList = new FetchList2(storage, null!) {
+            OnComplete = constructable.OnFetchListComplete
+        };
+        fetchOrder2 = new FetchOrder2(
+            null!,
+            new HashSet<Tag> { new("copper") },
+            FetchChore.MatchCriteria.MatchTags,
+            null!,
+            null!,
+            null!,
+            2f
+        ) {
+            OnComplete = constructable.fetchList.OnFetchOrderComplete
+        };
+        constructable.fetchList.FetchOrders.Add(fetchOrder2);
     }
 
     private static GameObject CreatePickupableGameObject() {
@@ -594,10 +614,14 @@ public class AbstractChoreTest : AbstractGameTest {
                     () => new object[] {
                         astronautChoreType, storage, 0f, new HashSet<Tag>(), FetchChore.MatchCriteria.MatchTags,
                         new Tag(),
-                        Array.Empty<Tag>(), Minion.GetComponent<ChoreProvider>(), true, ChoreCallback,
-                        ChoreCallback,
-                        ChoreCallback,
-                        Operational.State.Operational, 0
+                        Array.Empty<Tag>(),
+                        Minion.GetComponent<ChoreProvider>(),
+                        true,
+                        new Action<Chore>(fetchOrder2.OnFetchChoreComplete),
+                        new Action<Chore>(fetchOrder2.OnFetchChoreBegin),
+                        new Action<Chore>(fetchOrder2.OnFetchChoreEnd),
+                        Operational.State.Operational,
+                        0
                     }
                 )
             },
@@ -704,6 +728,17 @@ public class AbstractChoreTest : AbstractGameTest {
             }
         }
         return testArgs;
+    }
+
+    protected IMultiplayerCommand SerializeDeserializeCommand(IMultiplayerCommand command) {
+        var messageFactory = new NetworkMessageFactory();
+        var messageProcessor = new NetworkMessageProcessor();
+        NetworkMessage? networkMessage = null;
+
+        foreach (var messageHandle in messageFactory.Create(command, MultiplayerCommandOptions.SkipHost).ToArray()) {
+            networkMessage = messageProcessor.Process(1u, messageHandle);
+        }
+        return networkMessage?.Command!;
     }
 
     private class TestMonoBehaviour : KMonoBehaviour {

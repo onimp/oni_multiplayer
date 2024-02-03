@@ -10,8 +10,6 @@ using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.States;
-using MultiplayerMod.Network;
-using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Game.Chores;
 using NUnit.Framework;
 
@@ -50,7 +48,7 @@ public class SetStateArgumentsTest : AbstractChoreTest {
             config.StateToMonitorName,
             stateTransitionArgsFunc.Invoke()
         );
-        var command = new SetStateArguments(arg);
+        var command = SerializeDeserializeCommand(new SetStateArguments(arg));
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
     }
@@ -70,17 +68,12 @@ public class SetStateArgumentsTest : AbstractChoreTest {
             stateTransitionArgsFunc.Invoke()
         );
         var command = new SetStateArguments(arg);
-        var messageFactory = new NetworkMessageFactory();
-        var messageProcessor = new NetworkMessageProcessor();
-        NetworkMessage? networkMessage = null;
 
-        foreach (var messageHandle in messageFactory.Create(command, MultiplayerCommandOptions.SkipHost).ToArray()) {
-            networkMessage = messageProcessor.Process(1u, messageHandle);
-        }
+        var networkCommand = SerializeDeserializeCommand(command);
 
-        Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
-        Assert.AreEqual(command.ChoreId, ((SetStateArguments) networkMessage!.Command).ChoreId);
-        Assert.AreEqual(command.Args.Keys, ((SetStateArguments) networkMessage.Command).Args.Keys);
+        Assert.AreEqual(command.GetType(), networkCommand.GetType());
+        Assert.AreEqual(command.ChoreId, ((SetStateArguments) networkCommand).ChoreId);
+        Assert.AreEqual(command.Args.Keys, ((SetStateArguments) networkCommand).Args.Keys);
     }
 
 }

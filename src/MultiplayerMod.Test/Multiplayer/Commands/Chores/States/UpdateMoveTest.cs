@@ -45,7 +45,7 @@ public class UpdateMoveTest : AbstractChoreTest {
         var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
         const int cell = 12;
         var arg = new MoveToArgs(chore, null!, cell, null!);
-        var command = new UpdateMove(arg);
+        var command = SerializeDeserializeCommand(new UpdateMove(arg));
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
@@ -68,17 +68,12 @@ public class UpdateMoveTest : AbstractChoreTest {
         chore.Register(new MultiplayerId(Guid.NewGuid()));
         var arg = new MoveToArgs(chore, null!, 12, null!);
         var command = new UpdateMove(arg);
-        var messageFactory = new NetworkMessageFactory();
-        var messageProcessor = new NetworkMessageProcessor();
-        NetworkMessage? networkMessage = null;
 
-        foreach (var messageHandle in messageFactory.Create(command, MultiplayerCommandOptions.SkipHost).ToArray()) {
-            networkMessage = messageProcessor.Process(1u, messageHandle);
-        }
+        var networkCommand = SerializeDeserializeCommand(command);
 
-        Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
-        Assert.AreEqual(command.ChoreId, ((UpdateMove) networkMessage!.Command).ChoreId);
-        Assert.AreEqual(command.Cell, ((UpdateMove) networkMessage.Command).Cell);
+        Assert.AreEqual(command.GetType(), networkCommand.GetType());
+        Assert.AreEqual(command.ChoreId, ((UpdateMove) networkCommand).ChoreId);
+        Assert.AreEqual(command.Cell, ((UpdateMove) networkCommand).Cell);
     }
 
 }
