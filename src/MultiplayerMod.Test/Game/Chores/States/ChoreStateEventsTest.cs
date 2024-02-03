@@ -20,7 +20,6 @@ public class ChoreStateEventsTest : AbstractChoreTest {
             data = new KAnimFileData("")
         };
         Grid.BuildMasks[123] = Grid.BuildFlags.Solid;
-        StateMachine.Instance.error = false;
         Minion.transform.position = new Vector3(12, 0.3f, 0);
     }
 

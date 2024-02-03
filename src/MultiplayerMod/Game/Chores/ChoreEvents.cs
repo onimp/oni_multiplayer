@@ -35,7 +35,7 @@ public static class ChoreEvents {
 
     [UsedImplicitly]
     [HarmonyPostfix]
-    [RequireExecutionLevel(ExecutionLevel.Game)]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     [RequireMultiplayerMode(MultiplayerMode.Host)]
     private static void Chore_Constructor(Chore __instance, object[] __args) {
         var choreId = __instance.Register();
