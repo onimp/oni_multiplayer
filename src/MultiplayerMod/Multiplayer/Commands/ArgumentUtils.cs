@@ -71,7 +71,17 @@ public static class ArgumentUtils {
             if (fetchOrders == null) {
                 return new FetchOrder2(null, null, FetchChore.MatchCriteria.MatchTags, null, null, null, 0);
             }
-            return fetchOrders.Single(order => order.Tags == Tags);
+            return fetchOrders.Single(order => order.Tags.SequenceEqual(Tags));
+        }
+
+        public virtual bool Equals(FetchOrder2Ref? other) {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Tags.SequenceEqual(other.Tags) && Equals(List2Ref, other.List2Ref) && Equals(
+                CreatureDeliveryPointReference,
+                other.CreatureDeliveryPointReference
+            );
         }
     };
 

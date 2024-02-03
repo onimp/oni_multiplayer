@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Game.Chores.Types;
@@ -9,8 +8,6 @@ using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.States;
-using MultiplayerMod.Network;
-using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Game.Chores;
 using NUnit.Framework;
 
@@ -43,7 +40,7 @@ public class TransitToStateTest : AbstractChoreTest {
         var smi = (StateMachine.Instance) chore.GetType().GetProperty("smi").GetValue(chore);
         smi.stateMachine.GetState("root").transitions?.Clear();
         var stateName = config.StateToMonitorName != "root" ? "root" : "random";
-        var command = new TransitToState(chore, stateName);
+        var command = SerializeDeserializeCommand(new TransitToState(chore, stateName));
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
@@ -60,17 +57,12 @@ public class TransitToStateTest : AbstractChoreTest {
         var chore = CreateChore(choreType, createChoreArgsFunc.Invoke());
         chore.Register(new MultiplayerId(Guid.NewGuid()));
         var command = new TransitToState(chore, config.StateToMonitorName != "root" ? "root" : "random");
-        var messageFactory = new NetworkMessageFactory();
-        var messageProcessor = new NetworkMessageProcessor();
-        NetworkMessage? networkMessage = null;
 
-        foreach (var messageHandle in messageFactory.Create(command, MultiplayerCommandOptions.SkipHost).ToArray()) {
-            networkMessage = messageProcessor.Process(1u, messageHandle);
-        }
+        var networkCommand = SerializeDeserializeCommand(command);
 
-        Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
-        Assert.AreEqual(command.ChoreId, ((TransitToState) networkMessage!.Command).ChoreId);
-        Assert.AreEqual(command.State, ((TransitToState) networkMessage.Command).State);
+        Assert.AreEqual(command.GetType(), networkCommand.GetType());
+        Assert.AreEqual(command.ChoreId, ((TransitToState) networkCommand).ChoreId);
+        Assert.AreEqual(command.State, ((TransitToState) networkCommand).State);
     }
 
 }

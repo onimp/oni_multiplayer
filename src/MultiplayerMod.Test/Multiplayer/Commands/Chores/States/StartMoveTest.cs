@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Reflection;
@@ -11,8 +10,6 @@ using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.States;
-using MultiplayerMod.Network;
-using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Game.Chores;
 using NUnit.Framework;
 
@@ -51,7 +48,7 @@ public class StartMoveTest : AbstractChoreTest {
         var cellOffsets = new[] { new CellOffset(1, 1) };
         const int cell = 12;
         var arg = new MoveToArgs(chore, config.StateToMonitorName, cell, cellOffsets);
-        var command = new StartMove(arg);
+        var command = SerializeDeserializeCommand(new StartMove(arg));
 
         command.Execute(new MultiplayerCommandContext(null, new MultiplayerCommandRuntimeAccessor(Runtime.Instance)));
 
@@ -74,19 +71,14 @@ public class StartMoveTest : AbstractChoreTest {
         chore.Register(new MultiplayerId(Guid.NewGuid()));
         var arg = new MoveToArgs(chore, config.StateToMonitorName, 12, new[] { new CellOffset(1, 1) });
         var command = new StartMove(arg);
-        var messageFactory = new NetworkMessageFactory();
-        var messageProcessor = new NetworkMessageProcessor();
-        NetworkMessage? networkMessage = null;
 
-        foreach (var messageHandle in messageFactory.Create(command, MultiplayerCommandOptions.SkipHost).ToArray()) {
-            networkMessage = messageProcessor.Process(1u, messageHandle);
-        }
+        var networkCommand = SerializeDeserializeCommand(command);
 
-        Assert.AreEqual(command.GetType(), networkMessage?.Command.GetType());
-        Assert.AreEqual(command.ChoreId, ((StartMove) networkMessage!.Command).ChoreId);
-        Assert.AreEqual(command.TargetState, ((StartMove) networkMessage.Command).TargetState);
-        Assert.AreEqual(command.Cell, ((StartMove) networkMessage.Command).Cell);
-        Assert.AreEqual(command.Offsets, ((StartMove) networkMessage.Command).Offsets);
+        Assert.AreEqual(command.GetType(), networkCommand.GetType());
+        Assert.AreEqual(command.ChoreId, ((StartMove) networkCommand).ChoreId);
+        Assert.AreEqual(command.TargetState, ((StartMove) networkCommand).TargetState);
+        Assert.AreEqual(command.Cell, ((StartMove) networkCommand).Cell);
+        Assert.AreEqual(command.Offsets, ((StartMove) networkCommand).Offsets);
     }
 
 }
