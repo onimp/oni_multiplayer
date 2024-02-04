@@ -25,7 +25,7 @@ public static class AdjustStateMachineTransitions {
     [UsedImplicitly]
     [HarmonyPostfix]
     [RequireMultiplayerMode(MultiplayerMode.Client)]
-    [RequireExecutionLevel(ExecutionLevel.Game)]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     public static void InitializeStatesPatch(StateMachine __instance) {
         var config = ChoreList.Config[__instance.GetType().DeclaringType].StatesTransitionSync;
 

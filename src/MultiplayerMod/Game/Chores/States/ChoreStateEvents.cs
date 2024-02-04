@@ -41,7 +41,7 @@ public static class ChoreStateEvents {
 
     [UsedImplicitly]
     [HarmonyPostfix]
-    [RequireExecutionLevel(ExecutionLevel.Game)]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     [RequireMultiplayerMode(MultiplayerMode.Host)]
     public static void Postfix(StateMachine __instance) {
         var choreType = __instance.GetType().DeclaringType;
