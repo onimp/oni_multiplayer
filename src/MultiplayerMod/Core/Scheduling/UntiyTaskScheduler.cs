@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,8 +24,14 @@ public class UnityTaskScheduler : TaskScheduler {
 
     public void Tick() {
         var length = CreateSnapshot();
-        for (var i = 0; i < length; ++i)
-            TryExecuteTask(snapshot[i]);
+        for (var i = 0; i < length; ++i) {
+            var task = snapshot[i];
+            TryExecuteTask(task);
+            if (task.Status == TaskStatus.RanToCompletion)
+                continue;
+            if (task.Exception != null)
+                throw new Exception("Scheduled task threw an exception", task.Exception);
+        }
     }
 
     public void Run(System.Action action) => Task.Factory.StartNew(
