@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 using JetBrains.Annotations;
-using MultiplayerMod.Core.Unity;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -69,6 +68,9 @@ public class ObjectPatch {
         };
     }
 
+    // Just for consistency the value is based on the UnityPlayer!Object structure.
+    public static readonly int OffsetOfInstanceIDInCPlusPlusObject = 0x08;
+
     [UsedImplicitly]
     [HarmonyTranspiler]
     [HarmonyPatch("GetOffsetOfInstanceIDInCPlusPlusObject")]
@@ -76,7 +78,7 @@ public class ObjectPatch {
         IEnumerable<CodeInstruction> instructions
     ) {
         return new List<CodeInstruction> {
-            new(OpCodes.Ldc_I4_0),
+            new(OpCodes.Ldc_I4, OffsetOfInstanceIDInCPlusPlusObject),
             new(OpCodes.Ret)
         };
     }
