@@ -27,8 +27,11 @@ public class UnityTaskScheduler : TaskScheduler {
             TryExecuteTask(snapshot[i]);
     }
 
-    public void Run(System.Action action) => tasks.Enqueue(
-        Task.Factory.StartNew(action, CancellationToken.None, TaskCreationOptions.None, this)
+    public void Run(System.Action action) => Task.Factory.StartNew(
+        action,
+        CancellationToken.None,
+        TaskCreationOptions.None,
+        this
     );
 
     private int CreateSnapshot() {
