@@ -72,6 +72,8 @@ public class BidirectionalMap<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TVa
 
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => keyMap.GetEnumerator();
 
+    public IEnumerator<KeyValuePair<TValue, TKey>> GetEnumeratorByValue() => valueMap.GetEnumerator();
+
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 }

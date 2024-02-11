@@ -64,7 +64,8 @@ public class DevToolMultiplayerObjects : DevTool {
             it => {
                 ImGui.TableNextRow();
                 ImGui.PushID($"ID_row_{index++}");
-                RenderRow(it.Key, it.Value);
+                if (it.Value is GameObject gameObject)
+                    RenderRow(it.Key, gameObject);
                 ImGui.PopID();
             }
         );

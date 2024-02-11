@@ -1,37 +1,48 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
+using MultiplayerMod.Core.Collections;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-public class MultiplayerObjects : IEnumerable<KeyValuePair<MultiplayerId, GameObject>> {
+public class MultiplayerObjects : IEnumerable<KeyValuePair<MultiplayerId, object>> {
 
-    private Dictionary<MultiplayerId, GameObject> objects = new();
+    private IndexedObjectExtensionMap<object, MultiplayerId> extensions = new();
 
     public MultiplayerId Register(MultiplayerInstance instance) {
         instance.Id ??= new MultiplayerId(Guid.NewGuid());
-        objects[instance.Id] = instance.gameObject;
+        extensions[instance.Id] = instance.gameObject;
         return instance.Id;
     }
 
-    public void Remove(MultiplayerId id) => objects.Remove(id);
+    public MultiplayerId Register(object instance) {
+        var id = new MultiplayerId(Guid.NewGuid());
+        extensions[id] = instance;
+        return id;
+    }
 
-    public GameObject? this[MultiplayerId id] {
+    public void Remove(MultiplayerId id) => extensions.Remove(id);
+
+    public object? this[MultiplayerId id] {
         get {
-            objects.TryGetValue(id, out var result);
+            extensions.TryGetKey(id, out var result);
             return result;
         }
         set {
             if (value != null)
-                objects[id] = value;
+                extensions[id] = value;
             else
-                objects.Remove(id);
+                extensions.Remove(id);
         }
     }
 
+    public void Synchronize() {
+        extensions = new IndexedObjectExtensionMap<object, MultiplayerId>();
+        SynchronizeWithTracker();
+        // TODO: Sync chores
+    }
+
     public void SynchronizeWithTracker() {
-        objects = new Dictionary<MultiplayerId, GameObject>();
         var kPrefabIds = KPrefabIDTracker.Get().prefabIdMap.Values;
         foreach (var kPrefabId in kPrefabIds) {
             if (kPrefabId == null)
@@ -43,7 +54,7 @@ public class MultiplayerObjects : IEnumerable<KeyValuePair<MultiplayerId, GameOb
         }
     }
 
-    public IEnumerator<KeyValuePair<MultiplayerId, GameObject>> GetEnumerator() => objects.GetEnumerator();
+    public IEnumerator<KeyValuePair<MultiplayerId, object>> GetEnumerator() => extensions.GetEnumeratorByValue();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

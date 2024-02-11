@@ -13,7 +13,7 @@ public class MultiplayerIdReference : GameObjectReference {
         Id = id;
     }
 
-    public override GameObject? Resolve() => Dependencies.Get<MultiplayerGame>().Objects[Id];
+    public override GameObject? Resolve() => Dependencies.Get<MultiplayerGame>().Objects[Id] as GameObject;
 
     public override string ToString() => Id.ToString();
 

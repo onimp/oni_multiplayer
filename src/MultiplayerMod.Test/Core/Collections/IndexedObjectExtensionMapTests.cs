@@ -5,12 +5,12 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Core.Collections;
 
 [TestFixture]
-public class ObjectExtensionMapTests {
+public class IndexedObjectExtensionMapTests {
 
     [Test]
     public void MustIndexValuesByIdentity() {
         var objects = new List<Base> { new(0), new(0), new(0), new(0) };
-        var map = new ObjectExtensionMap<Base, Extension> {
+        var map = new IndexedObjectExtensionMap<Base, Extension> {
             [objects[0]] = new("one"),
             [objects[1]] = new("two"),
             [objects[2]] = new("three"),
