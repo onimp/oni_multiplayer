@@ -1,6 +1,7 @@
 ﻿using System;
 using MultiplayerMod.Core.Reflection;
 using MultiplayerMod.Game.Chores.States;
+using MultiplayerMod.Game.NameOf;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.States;
 
@@ -28,7 +29,7 @@ public class StartMove : MultiplayerCommand {
 
         var sm = smi.stateMachine;
         var target = sm.GetFieldValue("stateTarget");
-        var navigator = (Navigator) target.GetType().GetMethod("Get")
+        var navigator = (Navigator) target.GetType().GetMethod(nameof(StateMachineMemberReference.TargetParameter.Get))!
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
         navigator.GoTo(Cell, Offsets);

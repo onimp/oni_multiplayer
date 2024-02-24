@@ -17,7 +17,7 @@ public class StatesManager {
         var smi = GetSmi(chore);
 
         var waitHostState = GetWaitHostState(smi);
-        waitHostState.GetType().GetMethod("AllowTransition").Invoke(
+        waitHostState.GetType().GetMethod(nameof(IWaitHostState.AllowTransition))!.Invoke(
             waitHostState,
             new object?[] { smi, targetState, args }
         );

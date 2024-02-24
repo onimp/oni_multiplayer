@@ -6,6 +6,7 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Reflection;
 using MultiplayerMod.Game.Chores.Types;
+using MultiplayerMod.Game.NameOf;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
@@ -35,7 +36,8 @@ public static class ChoreStateEvents {
         var choreSyncConfigs = ChoreList.Config.Values
             .Where(config => config.StatesTransitionSync.Status == StatesTransitionStatus.On).ToArray();
         var targetMethods = choreSyncConfigs
-            .Select(config => config.StatesTransitionSync.StateType.GetMethod("InitializeStates")).ToArray();
+            .Select(config => config.StatesTransitionSync.StateType.GetMethod(nameof(StateMachine.InitializeStates)))
+            .ToArray();
         return targetMethods;
     }
 
@@ -167,7 +169,7 @@ public static class ChoreStateEvents {
         var goToStack = GetGoToStack(smi);
         var newState = goToStack.FirstOrDefault();
         var target = GetStateTarget(smi);
-        var navigator = (Navigator) target.GetType().GetMethod("Get")
+        var navigator = (Navigator) target.GetType().GetMethod(nameof(StateMachineMemberReference.TargetParameter.Get))!
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
         var cell = Grid.PosToCell(navigator.targetLocator);
@@ -179,7 +181,7 @@ public static class ChoreStateEvents {
         var chore = (Chore) smi.GetMaster();
         var currentState = smi.GetCurrentState();
         var target = GetStateTarget(smi);
-        var navigator = (Navigator) target.GetType().GetMethod("Get")
+        var navigator = (Navigator) target.GetType().GetMethod(nameof(StateMachineMemberReference.TargetParameter.Get))!
             .MakeGenericMethod(typeof(Navigator))
             .Invoke(target, new object[] { smi });
         var cell = Grid.PosToCell(navigator.targetLocator);
@@ -196,24 +198,30 @@ public static class ChoreStateEvents {
     }
 
     private static int GetParameterIndex(StateMachine.Instance smi, string parameterName) {
-        var sm = smi.GetType().GetProperty("sm").GetValue(smi);
+        var sm = smi.GetType().GetProperty(nameof(StateMachineMemberReference.Instance.sm))!.GetValue(smi);
         var parameter = sm.GetType().GetField(parameterName).GetValue(sm);
-        return (int) parameter.GetType().GetField("idx").GetValue(parameter);
+        return (int) parameter.GetType()
+            .GetField(nameof(StateMachineMemberReference.Parameter.idx))
+            .GetValue(parameter);
     }
 
     private static object? GetParameterValue(StateMachine.Instance smi, string parameterName) {
-        var sm = smi.GetType().GetProperty("sm").GetValue(smi);
+        var sm = smi.GetType().GetProperty(nameof(StateMachineMemberReference.Instance.sm))!.GetValue(smi);
         var parameter = sm.GetType().GetField(parameterName).GetValue(sm);
-        var parameterIndex = (int) parameter.GetType().GetField("idx").GetValue(parameter);
+        var parameterIndex = (int) parameter.GetType()
+            .GetField(nameof(StateMachineMemberReference.Parameter.idx))
+            .GetValue(parameter);
         var parameterContext = smi.parameterContexts[parameterIndex];
-        return parameterContext.GetType().GetField("value").GetValue(parameterContext);
+        return parameterContext.GetType()
+            .GetField(nameof(StateMachineMemberReference.Parameter.Context.value))
+            .GetValue(parameterContext);
     }
 
     private static object GetStateTarget(StateMachine.Instance smi) {
-        return smi.stateMachine.GetFieldValue("stateTarget");
+        return smi.stateMachine.GetFieldValue(nameof(StateMachineMemberReference.stateTarget));
     }
 
     private static Stack<StateMachine.BaseState> GetGoToStack(StateMachine.Instance smi) {
-        return smi.GetFieldValue<Stack<StateMachine.BaseState>>("gotoStack");
+        return smi.GetFieldValue<Stack<StateMachine.BaseState>>(nameof(StateMachineMemberReference.Instance.gotoStack));
     }
 }

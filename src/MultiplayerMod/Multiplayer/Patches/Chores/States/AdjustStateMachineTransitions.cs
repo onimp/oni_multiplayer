@@ -19,7 +19,7 @@ public static class AdjustStateMachineTransitions {
     [UsedImplicitly]
     private static IEnumerable<MethodBase> TargetMethods() {
         return ChoreList.Config.Values.Where(config => config.StatesTransitionSync.Status == StatesTransitionStatus.On)
-            .Select(config => config.StatesTransitionSync.StateType.GetMethod("InitializeStates"));
+            .Select(config => config.StatesTransitionSync.StateType.GetMethod(nameof(StateMachine.InitializeStates)));
     }
 
     [UsedImplicitly]

@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.IO;
 using JetBrains.Annotations;
+using MultiplayerMod.Game.NameOf;
 
 namespace MultiplayerMod.Multiplayer.States;
 
 public class
-    WaitHostState<StateMachineType, StateMachineInstanceType, MasterType, DefType> : StateMachine<StateMachineType, StateMachineInstanceType, MasterType, DefType>.State
+    WaitHostState<StateMachineType, StateMachineInstanceType, MasterType, DefType> : StateMachine<StateMachineType,
+    StateMachineInstanceType, MasterType, DefType>.State, IWaitHostState
     where StateMachineInstanceType : StateMachine.Instance
     where MasterType : IStateMachineTarget {
 
@@ -22,11 +24,10 @@ public class
         enterActions = new List<StateMachine.Action>
             { new("Wait for host transition", new Callback(TransitIfAllowed)) };
 
-        var root = sm.GetType().GetField("root").GetValue(sm);
-        sm.GetType().GetMethod("BindState").Invoke(sm, new[] { root, this, name });
+        var root = sm.GetType().GetField(nameof(StateMachineMemberReference.root)).GetValue(sm);
+        sm.GetType().GetMethod(nameof(StateMachineMemberReference.BindState))!.Invoke(sm, new[] { root, this, name });
     }
 
-    [UsedImplicitly]
     public void AllowTransition(StateMachine.Instance smi, string? target, Dictionary<int, object?> args) {
         TransitionAllowed.Set(true, smi);
         TargetState.Set(target, smi);
@@ -43,7 +44,10 @@ public class
         }
         foreach (var (parameterIndex, value) in ParametersArgs.Get(smi)) {
             var parameterContext = smi.parameterContexts[parameterIndex];
-            parameterContext.GetType().GetMethod("Set")!.Invoke(parameterContext, new[] { value, smi, false });
+            parameterContext.GetType().GetMethod(nameof(StateMachineMemberReference.Parameter.Context.Set))!.Invoke(
+                parameterContext,
+                new[] { value, smi, false }
+            );
         }
         smi.GoTo(TargetState.Get(smi));
     }

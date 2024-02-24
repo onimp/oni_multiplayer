@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Game.Chores.States;
+using MultiplayerMod.Game.NameOf;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.States;
 using UnityEngine;
@@ -38,7 +39,10 @@ public class SetStateArguments : MultiplayerCommand {
 
         foreach (var (parameterIndex, value) in args) {
             var parameterContext = smi.parameterContexts[parameterIndex];
-            parameterContext.GetType().GetMethod("Set")!.Invoke(parameterContext, new[] { value, smi, false });
+            parameterContext.GetType().GetMethod(nameof(StateMachineMemberReference.Parameter.Context.Set))!.Invoke(
+                parameterContext,
+                new[] { value, smi, false }
+            );
         }
     }
 
