@@ -6,7 +6,7 @@ using Klei.AI;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.Multiplayer.Commands;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Environment.Patches;
@@ -160,7 +160,6 @@ public class AbstractChoreTest : AbstractGameTest {
     public void Teardown() {
         KPrefabIDTracker.Instance = null;
         AssetsPatch.Clear();
-        ChoreObjects.Clear();
         ResetGrid(Grid.WidthInCells, Grid.HeightInCells);
         if (harmony != null) {
             PatchesSetup.Uninstall(harmony);

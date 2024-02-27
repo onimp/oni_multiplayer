@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using STRINGS;
 
 namespace MultiplayerMod.Multiplayer.Commands.Chores;
@@ -25,7 +26,7 @@ public class CreateHostChore : MultiplayerCommand {
 
     public override void Execute(MultiplayerCommandContext context) {
         var args = ArgumentUtils.UnWrapObjects(Args);
-        args = SpecialUnWrap(args);
+        args = SpecialUnWrap(context, args);
 
         log.Debug($"Create chore {ChoreType} - {ChoreId}");
         var chore = (Chore) ChoreType.GetConstructors()[0].Invoke(args);
@@ -53,7 +54,7 @@ public class CreateHostChore : MultiplayerCommand {
         return args;
     }
 
-    private object?[] SpecialUnWrap(object?[] args) {
+    private object?[] SpecialUnWrap(MultiplayerCommandContext context, object?[] args) {
         if (ChoreType == typeof(MoveChore)) {
             var targetCell = (int) args[2]!;
             args[2] = new Func<MoveChore.StatesInstance, int>(_ => targetCell);
@@ -85,7 +86,7 @@ public class CreateHostChore : MultiplayerCommand {
             var priorityValue = (int) args[4]!;
             args = new object[] {
                 new Chore.Precondition.Context {
-                    chore = ChoreObjects.GetChore(choreId),
+                    chore = context.Multiplayer.Objects.Get<Chore>(choreId),
                     consumerState = new ChoreConsumerState(choreConsumer) {
                         choreProvider = choreProvider
                     },

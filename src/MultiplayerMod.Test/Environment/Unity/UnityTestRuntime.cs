@@ -190,6 +190,12 @@ public static class UnityTestRuntime {
             .Select(it => ((GameObjectCompanion) it.Value).GameObject)
             .FirstOrDefault(it => it.name == name);
 
+    public static object[] FindObjectsOfType(Type type, bool includeInactive) =>
+        enabledComponents
+            .Where(type.IsInstanceOfType)
+            .Cast<object>()
+            .ToArray();
+
     public static void NextFrame() {
         FrameCount++;
 
@@ -303,11 +309,9 @@ public static class UnityTestRuntime {
             Name = name;
             Parent = parent;
         }
-
     }
 
     private class GameObjectCompanion : ObjectCompanion {
-
         public List<Component> Components { get; }
         public Vector3 Position { get; set; }
 
@@ -324,4 +328,5 @@ public static class UnityTestRuntime {
             GameObject = gameObject;
         }
     }
+
 }

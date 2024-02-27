@@ -9,6 +9,7 @@ using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.States;
 using MultiplayerMod.Test.Game.Chores;
 using NUnit.Framework;
@@ -21,7 +22,6 @@ public class StartMoveTest : AbstractChoreTest {
     [OneTimeSetUp]
     public static void OneTimeSetUp() {
         var di = (DependencyContainer) Runtime.Instance.Dependencies;
-        di.Register(new DependencyInfo(nameof(EventDispatcher), typeof(EventDispatcher), false));
         di.Register(new DependencyInfo(nameof(StatesManager), typeof(StatesManager), false));
     }
 

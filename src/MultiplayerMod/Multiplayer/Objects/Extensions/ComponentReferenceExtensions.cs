@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
-namespace MultiplayerMod.Multiplayer.Objects;
+namespace MultiplayerMod.Multiplayer.Objects.Extensions;
 
 public static class ComponentReferenceExtensions {
 
@@ -14,4 +14,5 @@ public static class ComponentReferenceExtensions {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComponentReference<T> GetReference<T>(this T component) where T : KMonoBehaviour =>
         new(component.gameObject.GetReference());
+
 }

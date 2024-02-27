@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.States;
 
 namespace MultiplayerMod.Multiplayer.Commands.Chores.States;
@@ -36,7 +37,7 @@ public class AllowStateTransition : MultiplayerCommand {
 
     public override void Execute(MultiplayerCommandContext context) {
         var args = Args.ToDictionary(a => a.Key, a => ArgumentUtils.UnWrapObject(a.Value));
-        var chore = ChoreObjects.GetChore(ChoreId);
+        var chore = context.Multiplayer.Objects.Get<Chore>(ChoreId);
         context.Runtime.Dependencies.Get<StatesManager>().AllowTransition(chore, TargetState, args);
     }
 }

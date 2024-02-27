@@ -2,7 +2,7 @@
 using System.Reflection;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
 

@@ -11,7 +11,6 @@ using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.World;
 using MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
-using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 using MultiplayerMod.Multiplayer.UI.Overlays;
@@ -48,7 +47,7 @@ public class WorldManager {
 
         var resume = !SpeedControlScreen.Instance.IsPaused;
         server.Send(new PauseGame());
-        multiplayer.Objects.Synchronize();
+        multiplayer.Objects.Reset();
         multiplayer.Players.ForEach(it => server.Send(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
         server.Send(new ChangePlayerStateCommand(multiplayer.Players.Current.Id, PlayerState.Ready));
         server.Send(new NotifyWorldSavePreparing(), MultiplayerCommandOptions.SkipHost);

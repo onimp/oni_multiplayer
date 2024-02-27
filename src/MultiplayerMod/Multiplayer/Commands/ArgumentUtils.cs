@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using MultiplayerMod.Platform.Steam.Network.Messaging.Surrogates;
 using UnityEngine;

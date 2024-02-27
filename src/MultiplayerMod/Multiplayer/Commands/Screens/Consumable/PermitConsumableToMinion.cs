@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Consumable;

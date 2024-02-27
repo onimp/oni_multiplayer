@@ -1,7 +1,7 @@
 ﻿using System;
 using HarmonyLib;
 using MultiplayerMod.ModRuntime.Context;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
 namespace MultiplayerMod.Game.UI.SideScreens;

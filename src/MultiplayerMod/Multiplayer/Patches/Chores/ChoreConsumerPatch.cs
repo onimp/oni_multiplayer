@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.World;
 
 namespace MultiplayerMod.Multiplayer.Patches.Chores;

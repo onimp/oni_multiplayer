@@ -106,4 +106,19 @@ public class ObjectPatch {
         UnityTestRuntime.SetName(__instance, value);
         return false;
     }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("FindObjectsOfType", typeof(Type), typeof(bool))]
+    private static IEnumerable<CodeInstruction> Object_FindObjectsOfType(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0), // type
+            new(OpCodes.Ldarg_1), // includeInactive
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.FindObjectsOfType)),
+            new(OpCodes.Ret)
+        };
+    }
+
 }

@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
 
-namespace MultiplayerMod.Multiplayer.Objects;
+namespace MultiplayerMod.Multiplayer.Objects.Extensions;
 
 public static class GameObjectExtensions {
 

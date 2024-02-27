@@ -16,7 +16,7 @@ public class MultiplayerInstance : MultiplayerKMonoBehaviour {
             multiplayer.Objects.Remove(Id);
     }
 
-    public MultiplayerId Register() => multiplayer.Objects.Register(this);
+    public MultiplayerId Register() => multiplayer.Objects.Register(gameObject, Id);
 
     public void Redirect(MultiplayerInstance destination) {
         if (Id == null)

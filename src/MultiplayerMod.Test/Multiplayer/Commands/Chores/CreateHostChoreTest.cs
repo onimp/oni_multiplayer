@@ -1,5 +1,9 @@
 using System;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.ModRuntime;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
+using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Chores;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Test.Game.Chores;
@@ -21,8 +25,9 @@ public class CreateHostChoreTest : AbstractChoreTest {
         var arg = new CreateNewChoreArgs(choreId, choreType, choreArgsFunc.Invoke());
         var command = SerializeDeserializeCommand(new CreateHostChore(arg));
 
-        command.Execute(null!);
-        var chore = ChoreObjects.GetChore(choreId);
+        var context = new MultiplayerCommandContext(null!, new MultiplayerCommandRuntimeAccessor(Runtime.Instance));
+        command.Execute(context);
+        var chore = Dependencies.Get<MultiplayerGame>().Objects.Get<Chore>(choreId);
 
         Assert.NotNull(chore);
     }

@@ -7,6 +7,7 @@ using MultiplayerMod.Game.Mechanics.Minions;
 using MultiplayerMod.Game.UI.Screens;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using UnityEngine;
 

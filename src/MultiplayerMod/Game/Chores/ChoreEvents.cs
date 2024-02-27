@@ -8,7 +8,7 @@ using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
-using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 
 namespace MultiplayerMod.Game.Chores;
 

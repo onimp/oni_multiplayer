@@ -1,7 +1,7 @@
 using MultiplayerMod.Core.Reflection;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
-namespace MultiplayerMod.Multiplayer.Objects;
+namespace MultiplayerMod.Multiplayer.Objects.Extensions;
 
 public static class StateMachineReferenceExtensions {
 
@@ -14,4 +14,5 @@ public static class StateMachineReferenceExtensions {
     // generic argument types. So reflection is the most handy way to get its value :(
     private static StateMachineController GetStateMachineController(StateMachine.Instance instance) =>
         instance.GetFieldValue<StateMachineController>("controller");
+
 }

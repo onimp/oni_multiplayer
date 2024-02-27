@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
 using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
@@ -166,18 +168,16 @@ public abstract class AbstractGameTest {
     }
 
     private static void SetupDependencies() {
-        var dependencyContainer = new DependencyContainer();
-        dependencyContainer.Register(new DependencyInfo(nameof(MultiplayerGame), typeof(MultiplayerGame), false));
-        dependencyContainer.Register(
-            new DependencyInfo(nameof(ExecutionLevelManager), typeof(ExecutionLevelManager), false)
-        );
-        dependencyContainer.Register(
-            new DependencyInfo(nameof(ExecutionContextManager), typeof(ExecutionContextManager), false)
-        );
-        dependencyContainer.Register(
-            new DependencyInfo(nameof(DependencyContainer), typeof(DependencyContainer), false)
-        );
-        new Runtime(dependencyContainer);
+        var builder = new DependencyContainerBuilder()
+            .AddType<MultiplayerGame>()
+            .AddType<ExecutionLevelManager>()
+            .AddType<ExecutionContextManager>()
+            .AddType<EventDispatcher>()
+            .AddType<TestRuntime>();
+
+        var container = builder.Build();
+        container.Get<TestRuntime>().Activate();
+
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
         Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().EnterOverrideSection(ExecutionLevel.Game);
     }

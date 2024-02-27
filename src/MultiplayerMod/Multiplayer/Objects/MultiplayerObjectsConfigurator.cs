@@ -11,7 +11,7 @@ public class MultiplayerObjectsConfigurator {
 
     public MultiplayerObjectsConfigurator(MultiplayerGame multiplayer, EventDispatcher events) {
         GameEvents.GameObjectCreated += it => it.AddComponent<MultiplayerInstance>();
-        events.Subscribe<GameStartedEvent>(_ => multiplayer.Objects.Synchronize());
+        events.Subscribe<GameStartedEvent>(_ => multiplayer.Objects.Reset());
     }
 
 }

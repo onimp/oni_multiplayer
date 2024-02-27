@@ -8,10 +8,10 @@ public class MultiplayerId {
 
     public long UuidA { get; }
     public long UuidB { get; }
-    public int InstanceId { get; }
+    public long InternalId { get; }
 
-    public MultiplayerId(int instanceId) {
-        InstanceId = instanceId;
+    public MultiplayerId(long internalId) {
+        InternalId = internalId;
     }
 
     public MultiplayerId(Guid guid) {
@@ -33,7 +33,7 @@ public class MultiplayerId {
     }
 
     protected bool Equals(MultiplayerId other) {
-        return UuidA == other.UuidA && UuidB == other.UuidB && InstanceId == other.InstanceId;
+        return UuidA == other.UuidA && UuidB == other.UuidB && InternalId == other.InternalId;
     }
 
     public override bool Equals(object? other) {
@@ -48,7 +48,7 @@ public class MultiplayerId {
     public override int GetHashCode() {
         var hashCode = UuidA.GetHashCode();
         hashCode = hashCode * 397 ^ UuidB.GetHashCode();
-        hashCode = hashCode * 397 ^ InstanceId;
+        hashCode = hashCode * 397 ^ InternalId.GetHashCode();
         return hashCode;
     }
 
@@ -57,7 +57,7 @@ public class MultiplayerId {
     public static bool operator !=(MultiplayerId? left, MultiplayerId? right) => !Equals(left, right);
 
     public override string ToString() {
-        return $"MultiplayerId {{ UUID = {UuidA:x16}{UuidB:x16}, InstanceId = {InstanceId} }}";
+        return $"MultiplayerId {{ UUID = {UuidA:x16}{UuidB:x16}, InternalId = {InternalId} }}";
     }
 
 }
