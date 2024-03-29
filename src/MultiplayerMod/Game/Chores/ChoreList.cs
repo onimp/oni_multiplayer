@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using MultiplayerMod.Game.Chores.Types;
 
 namespace MultiplayerMod.Game.Chores;
@@ -105,7 +107,7 @@ public static class ChoreList {
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<BeIncapacitatedChore.States>(
                         StateTransitionConfig.OnExit(
-                            $"{nameof(BeIncapacitatedChore.States.incapacitation_root)}.{nameof(BeIncapacitatedChore.States.incapacitation_root.lookingForBed)}",
+                            State(nameof(BeIncapacitatedChore.States.incapacitation_root.lookingForBed)),
                             nameof(BeIncapacitatedChore.States.clinic)
                         )
                     )
@@ -229,19 +231,17 @@ public static class ChoreList {
                 typeof(FetchAreaChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<FetchAreaChore.States>(
-                        new[] {
-                            StateTransitionConfig.OnExit(
-                                $"{nameof(FetchAreaChore.States.delivering)}.{nameof(FetchAreaChore.States.delivering.next)}",
-                                nameof(FetchAreaChore.States.deliveryDestination),
-                                nameof(FetchAreaChore.States.deliveryObject)
-                            ),
-                            StateTransitionConfig.OnExit(
-                                $"{nameof(FetchAreaChore.States.fetching)}.{nameof(FetchAreaChore.States.fetching.next)}",
-                                nameof(FetchAreaChore.States.fetchTarget),
-                                nameof(FetchAreaChore.States.fetchResultTarget),
-                                nameof(FetchAreaChore.States.fetchAmount)
-                            ),
-                        }
+                        StateTransitionConfig.OnExit(
+                            State(nameof(FetchAreaChore.States.delivering.next)),
+                            nameof(FetchAreaChore.States.deliveryDestination),
+                            nameof(FetchAreaChore.States.deliveryObject)
+                        ),
+                        StateTransitionConfig.OnExit(
+                            State(nameof(FetchAreaChore.States.fetching.next)),
+                            nameof(FetchAreaChore.States.fetchTarget),
+                            nameof(FetchAreaChore.States.fetchResultTarget),
+                            nameof(FetchAreaChore.States.fetchAmount)
+                        )
                     )
                 )
             }, {
@@ -272,16 +272,16 @@ public static class ChoreList {
                     StatesTransitionConfig.Enabled<IdleChore.States>(
                         // To prevent update callback on client
                         StateTransitionConfig.OnUpdate(
-                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.ontube)}"
+                            State(nameof(IdleChore.States.idle.ontube))
                         ),
                         StateTransitionConfig.OnExit(
-                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.ontube)}"
+                            State(nameof(IdleChore.States.idle.ontube))
                         ),
                         StateTransitionConfig.OnTransition(
-                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.move)}"
+                            State(nameof(IdleChore.States.idle.move))
                         ),
                         StateTransitionConfig.OnMove(
-                            $"{nameof(IdleChore.States.idle)}.{nameof(IdleChore.States.idle.move)}"
+                            State(nameof(IdleChore.States.idle.move))
                         )
                     )
                 )
@@ -305,5 +305,11 @@ public static class ChoreList {
                 )
             }
         };
+
+    private static readonly Regex stateNameRegex = new(@"nameof\(.*?\..*?\.(.*?)\)"); // Chore.State.(chained.name)
+
+    // ReSharper disable once EntityNameCapturedOnly.Local
+    private static string State(string value, [CallerArgumentExpression(nameof(value))] string expression = default!) =>
+        stateNameRegex.Match(expression).Groups[1].Value;
 
 }
