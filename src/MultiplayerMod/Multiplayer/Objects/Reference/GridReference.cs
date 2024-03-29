@@ -18,32 +18,23 @@ public class GridReference : GameObjectReference {
     public GridReference(GameObject gameObject) {
         var extension = gameObject.GetComponent<GameObjectExtension>();
         Cell = Grid.PosToCell(gameObject);
-        Layer = extension?.GridLayer ?? 0;
+        Layer = extension != null ? extension.GridLayer : 0;
     }
 
     public override GameObject Resolve() => Grid.Objects[Cell, Layer];
 
     public override string ToString() => $"{{ Cell = {Cell}, Layer = {Layer} }}";
 
-    protected bool Equals(GridReference other)
-    {
-        return Cell == other.Cell && Layer == other.Layer;
+    protected bool Equals(GridReference other) => Cell == other.Cell && Layer == other.Layer;
+
+    public override bool Equals(object? obj) {
+        if (ReferenceEquals(null, obj))
+            return false;
+        if (ReferenceEquals(this, obj))
+            return true;
+        return obj.GetType() == GetType() && Equals((GridReference) obj);
     }
 
-    public override bool Equals(object? obj)
-    {
-        if (ReferenceEquals(null, obj)) return false;
-        if (ReferenceEquals(this, obj)) return true;
-        if (obj.GetType() != this.GetType()) return false;
-        return Equals((GridReference)obj);
-    }
-
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            return (Cell * 397) ^ Layer;
-        }
-    }
+    public override int GetHashCode() => Cell * 397 ^ Layer;
 
 }

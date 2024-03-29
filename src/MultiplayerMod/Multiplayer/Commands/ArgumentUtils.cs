@@ -32,15 +32,16 @@ public static class ArgumentUtils {
         };
     }
 
-    public static object? UnWrapObject(object? obj) => obj is Reference reference ? reference.ResolveRaw() : obj;
+    public static object? UnWrapObject(object? obj) => obj is Reference reference ? reference.Resolve() : obj;
 
+    // TODO: Mitigate RCE
     [Serializable]
     public record DelegateRef(
         Type DelegateType,
         object? Target,
         MethodInfo MethodInfo
     ) : Reference {
-        public object ResolveRaw() {
+        public object Resolve() {
             return Delegate.CreateDelegate(
                 DelegateType,
                 UnWrapObject(Target),
@@ -63,7 +64,7 @@ public static class ArgumentUtils {
                 : null
         ) { }
 
-        public object ResolveRaw() {
+        public object Resolve() {
             var list = List2Ref?.GetFetchList2();
             var creatureDeliveryPoint = CreatureDeliveryPointReference?.GetComponent();
 
@@ -83,7 +84,16 @@ public static class ArgumentUtils {
                 other.CreatureDeliveryPointReference
             );
         }
-    };
+
+        public override int GetHashCode() {
+            var hashCode = Tags.GetHashCode();
+            hashCode = hashCode * 397 ^ (List2Ref != null ? List2Ref.GetHashCode() : 0);
+            hashCode = hashCode * 397 ^ (CreatureDeliveryPointReference != null
+                ? CreatureDeliveryPointReference.GetHashCode()
+                : 0);
+            return hashCode;
+        }
+    }
 
     [Serializable]
     public record FetchList2Ref(
@@ -139,5 +149,6 @@ public static class ArgumentUtils {
     }
 
     [Serializable]
-    public record GameStateMachineFetchListRef() { }
+    public record GameStateMachineFetchListRef;
+
 }

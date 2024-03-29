@@ -8,6 +8,7 @@ namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
 public class CallMethod : MultiplayerCommand {
+
     private readonly Reference target;
     private readonly Type methodType;
     private readonly string methodName;
@@ -28,16 +29,14 @@ public class CallMethod : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var method = methodType
-            .GetMethod(
-                methodName,
-                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance |
-                BindingFlags.DeclaredOnly
-            );
-        var obj = target.ResolveRaw();
-        if (obj != null) {
-            method?.Invoke(obj, ArgumentUtils.UnWrapObjects(this.args));
-        }
+        var method = methodType.GetMethod(
+            methodName,
+            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance |
+            BindingFlags.DeclaredOnly
+        );
+        var obj = target.Resolve();
+        if (obj != null)
+            method?.Invoke(obj, ArgumentUtils.UnWrapObjects(args));
     }
 
     public override string ToString() => $"{base.ToString()} (Type = {methodType.FullName}, Method = {methodName})";

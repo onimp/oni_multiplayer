@@ -3,7 +3,7 @@ using System;
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
 
 [Serializable]
-public class StateMachineReference : Reference<StateMachine.Instance> {
+public class StateMachineReference : TypedReference<StateMachine.Instance> {
 
     private ComponentReference<StateMachineController> ControllerReference { get; set; }
     private Type StateMachineType { get; set; }
