@@ -69,7 +69,7 @@ public static class ArgumentUtils {
 
             var fetchOrders = list?.FetchOrders ?? creatureDeliveryPoint?.fetches;
             if (fetchOrders == null) {
-                return new FetchOrder2(null, null, FetchChore.MatchCriteria.MatchTags, null, null, null, 0);
+                return new FetchOrder2(null, Tags, FetchChore.MatchCriteria.MatchTags, null, null, null, 1);
             }
             return fetchOrders.Single(order => order.Tags.SequenceEqual(Tags));
         }

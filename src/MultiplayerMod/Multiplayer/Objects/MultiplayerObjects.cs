@@ -23,8 +23,7 @@ public class MultiplayerObjects : IEnumerable<KeyValuePair<MultiplayerId, object
     public void Remove(MultiplayerId id) => extensions.Remove(id);
 
     public T Get<T>(MultiplayerId id) {
-        extensions.TryGetKey(id, out var result);
-        return (T) result!;
+        return (T)extensions[id];
     }
 
     public object? this[MultiplayerId id] {
