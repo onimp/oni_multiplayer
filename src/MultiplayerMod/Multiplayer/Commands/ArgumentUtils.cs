@@ -134,6 +134,8 @@ public static class ArgumentUtils {
     [Serializable]
     public record FilteredStorageRef(ComponentReference RootReference) {
 
+        private static BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+
         public FilteredStorageRef(FilteredStorage filteredStorage) : this(
             filteredStorage.root.GetReference()
         ) { }
@@ -141,10 +143,11 @@ public static class ArgumentUtils {
         public FilteredStorage GetFilteredStorage() {
             var root = RootReference.Resolve();
             var type = root!.GetType();
-            var field = type.GetField("storageFilter") ??
-                        type.GetField("filteredStorage") ??
-                        type.GetField("foodStorageFilter");
-            return (FilteredStorage) field.GetValue(root);
+
+            var field = type.GetField("storageFilter", bindingFlags) ??
+                        type.GetField("filteredStorage", bindingFlags) ??
+                        type.GetField("foodStorageFilter", bindingFlags);
+            return (FilteredStorage) field!.GetValue(root);
         }
     }
 
