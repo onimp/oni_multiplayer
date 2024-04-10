@@ -8,6 +8,12 @@ namespace MultiplayerMod.Game.Chores;
 
 public static class ChoreList {
 
+    private static readonly Regex stateNameRegex = new(@"nameof\(.*?\..*?\.(.*?)\)"); // Chore.State.(chained.name)
+
+    // ReSharper disable once EntityNameCapturedOnly.Local
+    private static string State(string value, [CallerArgumentExpression(nameof(value))] string expression = default!) =>
+        stateNameRegex.Match(expression).Groups[1].Value;
+
     public static readonly Dictionary<Type, ChoreSyncConfig> Config =
         new() {
             {
@@ -305,11 +311,5 @@ public static class ChoreList {
                 )
             }
         };
-
-    private static readonly Regex stateNameRegex = new(@"nameof\(.*?\..*?\.(.*?)\)"); // Chore.State.(chained.name)
-
-    // ReSharper disable once EntityNameCapturedOnly.Local
-    private static string State(string value, [CallerArgumentExpression(nameof(value))] string expression = default!) =>
-        stateNameRegex.Match(expression).Groups[1].Value;
 
 }
