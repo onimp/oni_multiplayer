@@ -52,7 +52,7 @@ public class DelayedModLoader {
     }
 
     private void PrioritizedPatch() => AccessTools.GetTypesFromAssembly(assembly)
-        .Where(it => it != typeof(LaunchInitializerPatch))
+        .Where(it => it.GetCustomAttribute<HarmonyManualAttribute>() == null)
         .Select(TryCreateClassProcessor)
         .NotNull()
         .Where(it => it.containerAttributes != null)
