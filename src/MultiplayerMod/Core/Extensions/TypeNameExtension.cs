@@ -30,8 +30,11 @@ public static class TypeNameExtension {
         var includeNamespace = (options & TypeNameOptions.IncludeNamespace) != 0 && !type.IsNested;
         var name = includeNamespace ? $"{type.Namespace}.{type.Name}" : type.Name;
 
-        if (!type.IsGenericType)
-            return name;
+        if (!type.IsGenericType) {
+            return type.IsNested
+                ? $"{GetTypeName(type.DeclaringType!, options, genericArguments, endOffset)}.{name}"
+                : name;
+        }
 
         var genericParametersCount = type.GetGenericTypeDefinition().GetGenericArguments().Length;
         if (type.IsNested) {

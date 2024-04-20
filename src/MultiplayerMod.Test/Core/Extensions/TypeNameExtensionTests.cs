@@ -31,7 +31,8 @@ public class TypeNameExtensionTests {
         var name = typeof(SimpleGenericClass<int>.InnerClass<string, long>.NestedClass)
             .GetPrettyName(TypeNameOptions.IncludeNamespace);
         Assert.AreEqual(
-            expected: "MultiplayerMod.Test.Core.Extensions.SimpleGenericClass<System.Int32>.InnerClass<System.String, System.Int64>.NestedClass",
+            expected:
+            "MultiplayerMod.Test.Core.Extensions.SimpleGenericClass<System.Int32>.InnerClass<System.String, System.Int64>.NestedClass",
             actual: name
         );
     }
@@ -56,6 +57,12 @@ public class TypeNameExtensionTests {
 
     [Test]
     public void SimpleInnerClassName() {
+        var name = typeof(SimpleClass.InnerSimpleClass).GetPrettyName();
+        Assert.AreEqual(expected: "SimpleClass.InnerSimpleClass", actual: name);
+    }
+
+    [Test]
+    public void SimpleInnerGenericClassName() {
         var name = typeof(SimpleClass.InnerClass<string, long>).GetPrettyName();
         Assert.AreEqual(expected: "SimpleClass.InnerClass<String, Int64>", actual: name);
     }
@@ -81,6 +88,8 @@ public class TypeNameExtensionTests {
 }
 
 public class SimpleClass {
+    public class InnerSimpleClass { }
+
     public class InnerClass<InnerType1, InnerType2> {
         public class NestedClass { }
     }
