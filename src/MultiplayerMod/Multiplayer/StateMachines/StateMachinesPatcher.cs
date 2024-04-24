@@ -51,12 +51,12 @@ public class StateMachinesPatcher {
 
     private static void InitializeStatesPrefix(StateMachine __instance) {
         var executor = executors[__instance.GetType()];
-        executor.Start(__instance);
-        executor.Execute(StateMachineConfigurationPhase.PreConfiguration);
+        executor.Apply(__instance);
     }
 
     private static void InitializeStatesPostfix(StateMachine __instance) {
         var executor = executors[__instance.GetType()];
+        executor.Execute(StateMachineConfigurationPhase.ControlFlowReset);
         executor.Execute(StateMachineConfigurationPhase.PostConfiguration);
     }
 
@@ -64,7 +64,7 @@ public class StateMachinesPatcher {
 
         private StateMachineConfiguration configuration = null!;
 
-        public void Start(StateMachine sm) => configuration = configurer.Configure(sm);
+        public void Apply(StateMachine sm) => configuration = configurer.Configure(sm);
 
         public void Execute(StateMachineConfigurationPhase phase) => configuration.Actions
             .Where(it => it.Phase == phase)

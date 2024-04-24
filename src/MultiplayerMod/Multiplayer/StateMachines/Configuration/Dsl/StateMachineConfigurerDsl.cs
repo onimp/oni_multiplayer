@@ -23,15 +23,13 @@ public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMa
     public void Phase(StateMachineConfigurationPhase phase, System.Action action) =>
         actions.Add(new StateMachineConfigurationAction(phase, action));
 
-    public void PreConfigure(System.Action action) => Phase(StateMachineConfigurationPhase.PreConfiguration, action);
-
     public void PostConfigure(System.Action action) => Phase(StateMachineConfigurationPhase.PostConfiguration, action);
 
     public void Suppress(Expression<System.Action> expression) {
         var customizer = Dependencies.Get<ControlFlowCustomizer>();
         var (state, method) = ExtractMethodCallInfo(expression);
-        PreConfigure(() => customizer.DisableMethod(state, method, state));
-        PostConfigure(() => customizer.EnableMethods(state));
+        customizer.DisableMethod(state, method, state);
+        Phase(StateMachineConfigurationPhase.ControlFlowReset, () => customizer.EnableMethods(state));
     }
 
     public StateMachineConfiguration GetConfiguration() => new(typeof(TMaster), typeof(TStateMachine), actions);
