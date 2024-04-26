@@ -4,7 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.Core.Patch;
+using MultiplayerMod.Core.Patch.ControlFlow;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 
 namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Dsl;
@@ -28,8 +28,8 @@ public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMa
     public void Suppress(Expression<System.Action> expression) {
         var customizer = Dependencies.Get<ControlFlowCustomizer>();
         var (state, method) = ExtractMethodCallInfo(expression);
-        customizer.DisableMethod(state, method, state);
-        Phase(StateMachineConfigurationPhase.ControlFlowReset, () => customizer.EnableMethods(state));
+        customizer.Detour(state, method, state);
+        Phase(StateMachineConfigurationPhase.ControlFlowReset, () => customizer.Reset(state));
     }
 
     public StateMachineConfiguration GetConfiguration() => new(typeof(TMaster), typeof(TStateMachine), actions);

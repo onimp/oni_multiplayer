@@ -1,5 +1,6 @@
-﻿using HarmonyLib;
-using MultiplayerMod.Core.Patch;
+﻿using System.Runtime.CompilerServices;
+using HarmonyLib;
+using MultiplayerMod.Core.Patch.ControlFlow;
 using NUnit.Framework;
 
 namespace MultiplayerMod.Test.Core.Patch;
@@ -14,82 +15,81 @@ public class ControlFlowCustomizerTests {
     public static void TearDown() => harmony.UnpatchAll("Test");
 
     [Test]
-    public void MustDisableMethodWithVoidReturn() {
+    public void MustSkipMethodWithVoidReturn() {
         Container<int> container = new();
         container.SetValue(1);
         Assert.AreEqual(expected: 1, actual: container.Value);
         var setValue = typeof(Container<int>).GetMethod(nameof(Container<int>.SetValue))!;
-        customizer.DisableMethod(container, setValue);
+        customizer.Detour(container, setValue);
         container.SetValue(2);
         Assert.AreEqual(expected: 1, actual: container.Value);
-        customizer.EnableMethods(container);
+        customizer.Reset(container);
         container.SetValue(3);
         Assert.AreEqual(expected: 3, actual: container.Value);
     }
 
     [Test]
-    public void MustDisableMethodWithValueTypeReturn() {
+    public void MustSkipMethodWithValueTypeReturn() {
         Container<int> container = new();
         Assert.AreEqual(expected: 1, actual: container.SetValueRet(1));
         var setValue = typeof(Container<int>).GetMethod(nameof(Container<int>.SetValueRet))!;
-        customizer.DisableMethod(container, setValue);
+        customizer.Detour(container, setValue);
         Assert.AreEqual(expected: 0, actual: container.SetValueRet(2));
         Assert.AreEqual(expected: 1, actual: container.Value);
-        customizer.EnableMethods(container);
+        customizer.Reset(container);
         Assert.AreEqual(expected: 3, actual: container.SetValueRet(3));
         Assert.AreEqual(expected: 3, actual: container.Value);
     }
 
     [Test]
-    public void MustDisableMethodWithValueTypeReturnAndOverrideReturnValue() {
+    public void MustSkipMethodWithValueTypeReturnAndOverrideReturnValue() {
         Container<int> container = new();
         Assert.AreEqual(expected: 1, actual: container.SetValueRet(1));
         var setValue = typeof(Container<int>).GetMethod(nameof(Container<int>.SetValueRet))!;
-        customizer.DisableMethod(container, setValue, 10);
+        customizer.Detour(container, setValue, returnValue: 10);
         Assert.AreEqual(expected: 10, actual: container.SetValueRet(2));
         Assert.AreEqual(expected: 1, actual: container.Value);
-        customizer.EnableMethods(container);
+        customizer.Reset(container);
         Assert.AreEqual(expected: 3, actual: container.SetValueRet(3));
         Assert.AreEqual(expected: 3, actual: container.Value);
     }
 
     [Test]
-    public void MustDisableMethodWithNullableTypeReturn() {
+    public void MustSkipMethodWithNullableTypeReturn() {
         Container<string> container = new();
         Assert.AreEqual(expected: "Earth", actual: container.SetValueRet("Earth"));
         var setValue = typeof(Container<string>).GetMethod(nameof(Container<string>.SetValueRet))!;
-        customizer.DisableMethod(container, setValue);
+        customizer.Detour(container, setValue);
         Assert.AreEqual(expected: null, actual: container.SetValueRet("Mars"));
         Assert.AreEqual(expected: "Earth", actual: container.Value);
-        customizer.EnableMethods(container);
+        customizer.Reset(container);
         Assert.AreEqual(expected: "Jupiter", actual: container.SetValueRet("Jupiter"));
         Assert.AreEqual(expected: "Jupiter", actual: container.Value);
     }
 
     [Test]
-    public void MustDisableMethodWithNullableTypeReturnAndOverrideReturnValue() {
+    public void MustSkipMethodWithNullableTypeReturnAndOverrideReturnValue() {
         Container<string> container = new();
         Assert.AreEqual(expected: "Earth", actual: container.SetValueRet("Earth"));
         var setValue = typeof(Container<string>).GetMethod(nameof(Container<string>.SetValueRet))!;
-        customizer.DisableMethod(container, setValue, "Mercury");
+        customizer.Detour(container, setValue, returnValue: "Mercury");
         Assert.AreEqual(expected: "Mercury", actual: container.SetValueRet("Mars"));
         Assert.AreEqual(expected: "Earth", actual: container.Value);
-        customizer.EnableMethods(container);
+        customizer.Reset(container);
         Assert.AreEqual(expected: "Jupiter", actual: container.SetValueRet("Jupiter"));
         Assert.AreEqual(expected: "Jupiter", actual: container.Value);
     }
 
-    class Container<T> {
+    private class Container<T> {
+
         public T? Value { get; private set; }
 
-        public virtual void SetValue(T value) {
-            Value = value;
-        }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void SetValue(T value) => Value = value;
 
-        public virtual T SetValueRet(T value) {
-            Value = value;
-            return Value;
-        }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public T SetValueRet(T value) => Value = value;
+
     }
 
 }
