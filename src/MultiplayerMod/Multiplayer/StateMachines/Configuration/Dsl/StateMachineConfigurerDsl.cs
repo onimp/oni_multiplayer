@@ -36,29 +36,32 @@ public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMa
 
     public StateMachineConfiguration GetConfiguration() => new(typeof(TMaster), typeof(TStateMachine), actions);
 
+    private StateMachine.BaseState ExtractStateInstance(MemberExpression memberExpression) {
+        var chain = new LinkedList<FieldInfo>();
+
+        System.Linq.Expressions.Expression current = memberExpression;
+        while (current is MemberExpression expression) {
+            if (expression.Member.MemberType != MemberTypes.Field)
+                throw new InvalidStateExpressionException("Only a closure field access chain is supported");
+
+            chain.AddFirst((FieldInfo) expression.Member);
+            current = expression.Expression;
+        }
+
+        if (current is not ConstantExpression constantExpression)
+            throw new InvalidStateExpressionException("Only a constant expression of closure instance is supported");
+
+        return (StateMachine.BaseState) chain.Aggregate(constantExpression.Value, (obj, field) => field.GetValue(obj));
+    }
+
     private (StateMachine.BaseState, MethodInfo) ExtractMethodCallInfo(LambdaExpression expression) {
         if (expression.Body is not MethodCallExpression body)
             throw new InvalidStateExpressionException("Only a method call expression is supported");
 
-        if (body.Object is not MemberExpression member)
+        if (body.Object is not MemberExpression memberExpression)
             throw new InvalidStateExpressionException("Only a field or property access is supported");
 
-        if (member.Expression is not ConstantExpression constantExpression)
-            throw new InvalidStateExpressionException("Only a constant expression of closure instance is supported");
-
-        var closure = constantExpression.Value;
-        var stateType = typeof(StateMachine.BaseState);
-        var stateField = closure.GetType()
-            .GetFields()
-            .FirstOrDefault(it => stateType.IsAssignableFrom(it.FieldType));
-
-        if (stateField == null)
-            throw new InvalidStateExpressionException(
-                $"Unable to find a field of type \"{stateType.GetPrettyName()}\" in the closure \"{closure.GetType()}\""
-            );
-
-        var state = stateField.GetValue(closure);
-        return ((StateMachine.BaseState) state, body.Method);
+        return (ExtractStateInstance(memberExpression), body.Method);
     }
 
 }
