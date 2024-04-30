@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch.ControlFlow;
+using MultiplayerMod.Core.Patch.Generics;
 using NUnit.Framework;
 
 namespace MultiplayerMod.Test.Core.Patch;
@@ -8,11 +9,16 @@ namespace MultiplayerMod.Test.Core.Patch;
 [TestFixture]
 public class ControlFlowCustomizerTests {
 
-    private static readonly Harmony harmony = new("Test");
+    private static readonly Harmony harmony = new(nameof(ControlFlowCustomizerTests));
     private static readonly ControlFlowCustomizer customizer = new(harmony);
 
+    [OneTimeSetUp]
+    public static void SetUp() {
+        harmony.CreateClassProcessor(typeof(HarmonyGenericsRouter)).Patch();
+    }
+
     [OneTimeTearDown]
-    public static void TearDown() => harmony.UnpatchAll("Test");
+    public static void TearDown() => harmony.UnpatchAll(nameof(ControlFlowCustomizerTests));
 
     [Test]
     public void MustSkipMethodWithVoidReturn() {

@@ -1,13 +1,13 @@
 ﻿using System.Linq;
-using static MultiplayerMod.Core.Patch.ControlFlow.ControlAdviceBehavior;
+using static MultiplayerMod.Core.Patch.ControlFlow.ExecutionFlow;
 
 namespace MultiplayerMod.Core.Patch.ControlFlow.Evaluators;
 
 public class CompositeDetour(params IDetourEvaluator[] evaluators) : IDetourEvaluator {
 
-    public ControlAdviceBehavior Evaluate(ControlFlowContext context) {
+    public ExecutionFlow Evaluate(ControlFlowContext context) {
         var newContext = new ControlFlowContext(context.AdviceStackDepth + 3);
-        return evaluators.Any(evaluator => evaluator.Evaluate(newContext) == Invoke) ? Invoke : Detour;
+        return evaluators.Any(evaluator => evaluator.Evaluate(newContext) == Continue) ? Continue : Break;
     }
 
 }

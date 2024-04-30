@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Patch.Generics;
 
 namespace MultiplayerMod.Core.Patch.ControlFlow;
 
@@ -17,6 +18,8 @@ public class ControlFlowCustomizer(Harmony harmony) {
 
     private static readonly ConditionalWeakTable<object, Dictionary<MethodInfo, ControlBlock>> blocks = new();
     private static readonly HashSet<MethodInfo> patchedMethods = [];
+    private static readonly MethodInfo adviceMethod = AccessTools.Method(typeof(ControlFlowCustomizer), nameof(Advice));
+    private static readonly MethodInfo adviceRetMethod = AccessTools.Method(typeof(ControlFlowCustomizer), nameof(AdviceWithRet));
 
     public void Detour<T>(T instance, MethodInfo method, IDetourEvaluator? evaluator = null) where T : notnull {
         var defaultValue = method.ReturnType.IsValueType
@@ -46,52 +49,48 @@ public class ControlFlowCustomizer(Harmony harmony) {
 
     public void Reset(object instance) => blocks.Remove(instance);
 
-    private HarmonyMethod ResolveAdvice(MethodInfo method) {
-        if (method.ReturnType == typeof(void))
-            return new HarmonyMethod(AccessTools.Method(typeof(ControlFlowCustomizer), nameof(Advice)));
+    private static HarmonyMethod ResolveAdvice(MethodInfo method) => method.ReturnType == typeof(void)
+        ? new HarmonyMethod(adviceMethod)
+        : new HarmonyMethod(adviceRetMethod);
 
-        return new HarmonyMethod(
-            AccessTools
-                .Method(typeof(ControlFlowCustomizer), nameof(AdviceWithRet))
-                .MakeGenericMethod(method.ReturnType)
-        );
+    [UsedImplicitly]
+    private static bool Advice(MethodInfo __originalMethod, object __instance, object[] __args) {
+        if (ResolveFlow(__originalMethod, __instance, out _) == ExecutionFlow.Continue)
+            return !HarmonyGenericsRouter.TryRoute(__originalMethod, __instance, __args);
+        return false;
     }
 
     [UsedImplicitly]
-    private static bool Advice(MethodInfo __originalMethod, object __instance) {
-        return Resolve(__originalMethod, __instance, out _) == ControlAdviceBehavior.Invoke;
-    }
+    private static bool AdviceWithRet(
+        MethodInfo __originalMethod,
+        object __instance,
+        object[] __args,
+        ref object? __result
+    ) {
+        if (ResolveFlow(__originalMethod, __instance, out var returnValue) == ExecutionFlow.Continue)
+            return !HarmonyGenericsRouter.TryRoute(__originalMethod, __instance, __args, ref __result);
 
-    [UsedImplicitly]
-    private static bool AdviceWithRet<R>(MethodInfo __originalMethod, object __instance, ref R? __result) {
-        if (Resolve(__originalMethod, __instance, out var returnValue) == ControlAdviceBehavior.Invoke)
-            return true;
-
-        __result = (R?) returnValue;
+        __result = returnValue;
         return false;
     }
 
     private static readonly ControlFlowContext context = new(2);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static ControlAdviceBehavior Resolve(
-        MethodInfo __originalMethod,
-        object __instance,
-        out object? returnValue
-    ) {
+    private static ExecutionFlow ResolveFlow(MethodInfo __originalMethod, object __instance, out object? returnValue) {
         returnValue = null;
 
         if (!blocks.TryGetValue(__instance, out var methods))
-            return ControlAdviceBehavior.Invoke;
+            return ExecutionFlow.Continue;
 
         if (!methods.TryGetValue(__originalMethod, out var controlBlock))
-            return ControlAdviceBehavior.Invoke;
+            return ExecutionFlow.Continue;
 
-        if (controlBlock.Evaluator?.Evaluate(context) == ControlAdviceBehavior.Invoke)
-            return ControlAdviceBehavior.Invoke;
+        if (controlBlock.Evaluator?.Evaluate(context) == ExecutionFlow.Continue)
+            return ExecutionFlow.Continue;
 
         returnValue = controlBlock.ReturnValue;
-        return ControlAdviceBehavior.Detour;
+        return ExecutionFlow.Break;
     }
 
 }

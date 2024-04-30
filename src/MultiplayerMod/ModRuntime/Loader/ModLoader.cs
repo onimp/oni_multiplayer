@@ -3,6 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using KMod;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Core.Patch.Generics;
 
 namespace MultiplayerMod.ModRuntime.Loader;
 
@@ -15,6 +16,7 @@ public class ModLoader : UserMod2 {
         var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
         log.Info($"Multiplayer mod version: {version}");
         harmony.CreateClassProcessor(typeof(LaunchInitializerPatch)).Patch();
+        harmony.CreateClassProcessor(typeof(HarmonyGenericsRouter)).Patch();
     }
 
     public override void OnAllModsLoaded(Harmony harmony, IReadOnlyList<Mod> mods) {
