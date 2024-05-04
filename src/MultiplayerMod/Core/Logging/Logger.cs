@@ -39,10 +39,17 @@ public class Logger {
         if (level < Level)
             return;
 
-        var timestamp = System.DateTime.UtcNow.ToString("HH:mm:ss.fff");
+        var timestamp = System.DateTime.UtcNow;
         var threadId = Thread.CurrentThread.ManagedThreadId;
         var levelId = level.ToString().ToUpper();
-        Console.WriteLine($"[{timestamp}] [{threadId}] [{levelId}] [{group}] {message()}");
+        var value = message();
+        var text = $"[{timestamp:HH:mm:ss.fff}] [{threadId}] [{levelId}] [{group}] {value}";
+
+#if TCP_LOGGING
+        TcpLogger.Log(timestamp, level, value);
+#endif
+
+        Console.WriteLine(text);
     }
 
 }
