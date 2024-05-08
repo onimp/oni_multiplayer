@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Extensions;
 
 namespace MultiplayerMod.Core.Patch.Generics;
 
@@ -107,7 +108,7 @@ public static class HarmonyGenericsRouter {
 
     private static MethodInfo FindSameMethod(MethodBase original, Type targetGenericType) {
         var ptr = Memory.GetMethodStart(original, out _);
-        var method = targetGenericType.GetMethods()
+        var method = targetGenericType.GetAllMethods()
             .Where(it => it.Name == original.Name)
             .First(it => Memory.GetMethodStart(it, out _) == ptr);
         return method;
