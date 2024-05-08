@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using MultiplayerMod.Core.Extensions;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
@@ -56,8 +57,7 @@ public class MultiplayerId {
 
     public static bool operator !=(MultiplayerId? left, MultiplayerId? right) => !Equals(left, right);
 
-    public override string ToString() {
-        return $"MultiplayerId {{ UUID = {UuidA:x16}{UuidB:x16}, InternalId = {InternalId} }}";
-    }
+    public override string ToString()
+        => $"{UuidA.ToString(radix: 36)}:{UuidB.ToString(radix: 36)}:{InternalId.ToString(radix: 36)}";
 
 }
