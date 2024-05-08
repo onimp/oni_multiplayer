@@ -1,5 +1,6 @@
 ﻿#if TCP_LOGGING
 
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Sockets;
@@ -30,6 +31,7 @@ public class TcpLogger {
         public string LevelName { get; set; } = null!;
         public string PlayerName { get; set; } = null!;
         public string Mode { get; set; } = null!;
+        public string[]? StackTrace { get; set; }
         public string Message { get; set; } = null!;
     }
 
@@ -51,7 +53,10 @@ public class TcpLogger {
         });
     }
 
-    public static void Log(System.DateTime time, LogLevel level, string message) {
+    public static void Log(string message, string[]? stackTrace = null)
+        => Log(System.DateTime.Now, LogLevel.Trace, message, stackTrace);
+
+    public static void Log(System.DateTime time, LogLevel level, string message, string[]? stackTrace = null) {
         if (!started)
             return;
 
@@ -63,7 +68,8 @@ public class TcpLogger {
             Mode = Dependencies.Get<ExecutionLevelManager>().LevelIsActive(ExecutionLevel.Multiplayer)
                 ? Dependencies.Get<MultiplayerGame>().Mode.ToString()
                 : "Single",
-            Message = message
+            Message = message,
+            StackTrace = stackTrace
         };
         messages.Add(data);
     }
@@ -79,8 +85,13 @@ public class TcpLogger {
         while (true) {
             EnsureConnected();
             var message = messages.Take();
-            writer.WriteLine(JsonConvert.SerializeObject(message));
+            try {
+                writer.WriteLine(JsonConvert.SerializeObject(message));
+            } catch (Exception e) {
+                //
+            }
         }
+        // ReSharper disable once FunctionNeverReturns
     }
 
     private static void EnsureConnected() {
