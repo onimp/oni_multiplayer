@@ -20,7 +20,7 @@ public class MethodBoundedDetourTests {
         Calc calc = new();
         var setValue = typeof(Calc).GetMethod(nameof(Calc.Set))!;
         var currentMethod = MethodBase.GetCurrentMethod()!;
-        customizer.Detour(calc, setValue, new MethodBoundedDetour(currentMethod));
+        customizer.Detour(calc, setValue, evaluator: new MethodBoundedDetour(currentMethod));
         Assert.AreEqual(expected: 0, actual: calc.Set(5));
         Assert.AreEqual(expected: 5, actual: calc.Add(5));
         Assert.AreEqual(expected: 0, actual: calc.Set(6));
