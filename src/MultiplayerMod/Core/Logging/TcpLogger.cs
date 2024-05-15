@@ -26,6 +26,7 @@ public class TcpLogger {
     }
 
     private class MessageData {
+        public long Sequence { get; set; }
         public System.DateTime Time { get; set; }
         public int Level { get; set; }
         public string LevelName { get; set; } = null!;
@@ -40,7 +41,7 @@ public class TcpLogger {
     private static readonly BlockingCollection<MessageData> messages = new();
     private static readonly Thread worker = new(Worker);
     private static bool started;
-
+    private static long sequence;
 
     public TcpLogger(EventDispatcher events, MultiplayerGame multiplayer) {
         events.Subscribe<RuntimeReadyEvent>(_ => {
@@ -61,6 +62,7 @@ public class TcpLogger {
             return;
 
         var data = new MessageData {
+            Sequence = sequence++,
             Time = time,
             Level = (int) level,
             LevelName = level.ToString(),
