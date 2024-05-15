@@ -173,7 +173,8 @@ public abstract class AbstractGameTest {
             .AddType<ExecutionLevelManager>()
             .AddType<ExecutionContextManager>()
             .AddType<EventDispatcher>()
-            .AddType<TestRuntime>();
+            .AddType<TestRuntime>()
+            .AddSingleton(harmony);
 
         var container = builder.Build();
         container.Get<TestRuntime>().Activate();
