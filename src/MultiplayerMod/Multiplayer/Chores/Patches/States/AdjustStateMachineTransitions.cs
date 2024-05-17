@@ -11,7 +11,7 @@ using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations;
 using MultiplayerMod.Multiplayer.States;
 
-namespace MultiplayerMod.Multiplayer.Patches.Chores.States;
+namespace MultiplayerMod.Multiplayer.Chores.Patches.States;
 
 [HarmonyPatch]
 public static class AdjustStateMachineTransitions {

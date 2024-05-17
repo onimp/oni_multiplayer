@@ -6,6 +6,7 @@ using MultiplayerMod.Game.Chores.Types;
 
 namespace MultiplayerMod.Game.Chores;
 
+[Obsolete]
 public static class ChoreList {
 
     private static readonly Regex stateNameRegex = new(@"nameof\(.*?\..*?\.(.*?)\)"); // Chore.State.(chained.name)

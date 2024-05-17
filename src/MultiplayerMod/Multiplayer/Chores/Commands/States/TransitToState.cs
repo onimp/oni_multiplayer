@@ -1,9 +1,10 @@
 ﻿using System;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.States;
 
-namespace MultiplayerMod.Multiplayer.Commands.Chores.States;
+namespace MultiplayerMod.Multiplayer.Chores.Commands.States;
 
 [Serializable]
 public class TransitToState : MultiplayerCommand {

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Game.NameOf;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.States;
 using UnityEngine;
 
-namespace MultiplayerMod.Multiplayer.Commands.Chores.States;
+namespace MultiplayerMod.Multiplayer.Chores.Commands.States;
 
 [Serializable]
 public class SetStateArguments : MultiplayerCommand {

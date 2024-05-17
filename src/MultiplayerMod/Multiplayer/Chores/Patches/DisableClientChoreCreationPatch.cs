@@ -10,7 +10,7 @@ using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.CoreOperations;
 
-namespace MultiplayerMod.Multiplayer.Patches.Chores;
+namespace MultiplayerMod.Multiplayer.Chores.Patches;
 
 [HarmonyPatch(typeof(Chore))]
 public static class DisableClientChoreCreationPatch {

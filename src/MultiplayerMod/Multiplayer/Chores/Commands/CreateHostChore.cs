@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using STRINGS;
 
-namespace MultiplayerMod.Multiplayer.Commands.Chores;
+namespace MultiplayerMod.Multiplayer.Chores.Commands;
 
 [Serializable]
 public class CreateHostChore : MultiplayerCommand {
