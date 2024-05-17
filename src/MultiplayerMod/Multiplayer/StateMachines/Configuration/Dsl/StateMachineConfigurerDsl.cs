@@ -1,40 +1,54 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Patch.ControlFlow;
 using MultiplayerMod.Core.Patch.ControlFlow.Evaluators;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
+using static MultiplayerMod.Multiplayer.StateMachines.Configuration.StateMachineConfigurationPhase;
 
 namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Dsl;
 
-public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>
+[SuppressMessage("ReSharper", "UnusedTypeParameter")]
+// ReSharper disable once TypeParameterCanBeVariant
+public interface IStateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef> {
+    void PreConfigure(Action<TStateMachine> action);
+    void PostConfigure(Action<TStateMachine> action);
+    void Suppress(Expression<System.Action> expression);
+    void Inline(StateMachineConfigurer configurer);
+}
+
+public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(
+    StateMachineConfigurationContext context
+) : IStateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.GameInstance
-    where TMaster : IStateMachineTarget
-{
+    where TMaster : IStateMachineTarget {
 
-    private readonly List<StateMachineConfigurationAction> actions = [];
+    private readonly StateMachineConfiguration configuration = context.GetConfiguration<TStateMachine>();
 
-    private readonly Lazy<MultiplayerGame> game = new(Dependencies.Get<MultiplayerGame>);
-    public MultiplayerGame Game => game.Value;
+    private readonly ControlFlowCustomizer customizer = Dependencies.Get<ControlFlowCustomizer>();
+    public MultiplayerGame Game { get; init; } = Dependencies.Get<MultiplayerGame>();
 
-    public void Phase(StateMachineConfigurationPhase phase, System.Action action) =>
-        actions.Add(new StateMachineConfigurationAction(phase, action));
+    private void AddAction(StateMachineConfigurationPhase phase, Action<TStateMachine> action) =>
+        configuration.Actions.Add(
+            new StateMachineConfigurationAction(phase, stateMachine => action((TStateMachine) stateMachine))
+        );
 
-    public void PostConfigure(System.Action action) => Phase(StateMachineConfigurationPhase.PostConfiguration, action);
+    public void PreConfigure(Action<TStateMachine> action) => AddAction(PreConfiguration, action);
+
+    public void PostConfigure(Action<TStateMachine> action) => AddAction(PostConfiguration, action);
 
     public void Suppress(Expression<System.Action> expression) {
-        var customizer = Dependencies.Get<ControlFlowCustomizer>();
         var (state, method) = ExtractMethodCallInfo(expression);
         var scope = typeof(TStateMachine).GetMethod(nameof(StateMachine.InitializeStates))!;
-        customizer.Detour(state, method, state, new MethodBoundedDetour(scope));
-        Phase(StateMachineConfigurationPhase.ControlFlowReset, () => customizer.Reset(state));
+        AddAction(ControlFlowApply, _ => customizer.Detour(state, method, state, new MethodBoundedDetour(scope)));
+        AddAction(ControlFlowReset, _ => customizer.Reset(state));
     }
 
-    public StateMachineConfiguration GetConfiguration() => new(typeof(TMaster), typeof(TStateMachine), actions);
+    public void Inline(StateMachineConfigurer configurer) => configurer.Configure(context);
 
     private StateMachine.BaseState ExtractStateInstance(MemberExpression memberExpression) {
         var chain = new LinkedList<FieldInfo>();

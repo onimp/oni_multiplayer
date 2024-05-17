@@ -7,7 +7,7 @@ public abstract class StateMachineConfigurer(Type masterType, Type stateMachineT
     public Type MasterType { get; } = masterType;
     public Type StateMachineType { get; } = stateMachineType;
 
-    public abstract StateMachineConfiguration Configure(StateMachine stateMachine);
+    public abstract StateMachineConfiguration Configure(StateMachineConfigurationContext context);
 }
 
 public class StateMachineConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>(
@@ -19,10 +19,11 @@ public class StateMachineConfigurer<TStateMachine, TStateMachineInstance, TMaste
     where TMaster : IStateMachineTarget
 {
 
-    public override StateMachineConfiguration Configure(StateMachine stateMachine) {
-        var dsl = new StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>();
-        scopedAction(dsl, (TStateMachine) stateMachine);
-        return dsl.GetConfiguration();
+    public override StateMachineConfiguration Configure(StateMachineConfigurationContext context) {
+        var configuration = context.CreateConfiguration<TStateMachine, TMaster>();
+        var dsl = new StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(context);
+        scopedAction(dsl);
+        return configuration;
     }
 
 }

@@ -53,33 +53,79 @@ public class StateMachineDslTests : AbstractGameTest {
         var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
         smi.StartSM();
         smi.StopSM("Done");
-        Assert.AreEqual(expected: new[] { "+A", "-A", "+B", "+B.A", "-B.A", "-B" }, actual: smi.sm.Trace.Get(smi));
+        Assert.AreEqual(
+            expected: new[] { "+A", "-A", "+B", "+B.A", "-B.A", "-B" },
+            actual: smi.sm.Trace.Get(smi)
+        );
+        var secondSmi = CreateStateMachineInstance<SecondTestStateMachine.Instance>();
+        secondSmi.StartSM();
+        secondSmi.StopSM("Done");
+        Assert.AreEqual(
+            expected: new[] { "+A", "-A" },
+            actual: secondSmi.sm.Trace.Get(secondSmi)
+        );
     }
 
     [Test]
     public void MustSuppressEnterAction() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>((dsl, sm) => {
-                dsl.Suppress(() => sm.StateA.Enter("", null));
-            })
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+                dsl => { dsl.PreConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter("", null)); }); }
+            )
         );
         var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
         smi.StartSM();
         smi.StopSM("Done");
-        Assert.AreEqual(expected: new[] { "-A", "+B", "+B.A", "-B.A", "-B" }, actual: smi.sm.Trace.Get(smi));
+        Assert.AreEqual(
+            expected: new[] { "-A", "+B", "+B.A", "-B.A", "-B" },
+            actual: smi.sm.Trace.Get(smi)
+        );
     }
 
     [Test]
     public void CheckConfigurationPhases() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>((dsl, sm) => {
-                Assert.IsNull(sm.StateA.enterActions);
-                Assert.IsNull(sm.StateA.exitActions);
-                dsl.PostConfigure(() => {
-                    Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
-                    Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
-                });
-            })
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+                dsl => {
+                    dsl.PreConfigure(
+                        sm => {
+                            Assert.IsNull(sm.StateA.enterActions);
+                            Assert.IsNull(sm.StateA.exitActions);
+                        }
+                    );
+                    dsl.PostConfigure(
+                        sm => {
+                            Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
+                            Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
+                        }
+                    );
+                }
+            )
+        );
+        var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
+        smi.StartSM();
+        smi.StopSM("Done");
+    }
+
+    [Test]
+    public void MustFailOnIncorrectlyProducedActionPhase() {
+        RunStateMachinesPatcher(
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+                dsl => {
+                    dsl.PreConfigure(
+                        sm => {
+                            Assert.IsNull(sm.StateA.enterActions);
+                            Assert.IsNull(sm.StateA.exitActions);
+                        }
+                    );
+                    dsl.PostConfigure(
+                        sm => {
+                            Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
+                            Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
+                        }
+                    );
+                }
+            )
         );
         var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
         smi.StartSM();
@@ -89,12 +135,12 @@ public class StateMachineDslTests : AbstractGameTest {
     [Test]
     public void MustAddNewBehavior() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>((dsl, sm) => {
-                sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X"));
-                dsl.PostConfigure(() => {
-                    sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X"));
-                });
-            })
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+                dsl => {
+                    dsl.PreConfigure(sm => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure(sm => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                }
+            )
         );
         var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
         smi.StartSM();
@@ -102,6 +148,93 @@ public class StateMachineDslTests : AbstractGameTest {
         Assert.AreEqual(
             expected: new[] { "+X", "+A", "-X", "-A", "+B", "+B.A", "-B.A", "-B" },
             actual: smi.sm.Trace.Get(smi)
+        );
+    }
+
+    [Test]
+    public void MustAggregateInlineConfigurations() {
+        RunStateMachinesPatcher(
+            new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
+                dsl => {
+                    dsl.PreConfigure(sm => { sm.StateA.Enter("Test", smi => sm.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure(sm => { sm.StateA.Exit("Test", smi => sm.Trace.Get(smi).Add("-X")); });
+                }
+            ),
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+                dsl => {
+                    dsl.Inline(
+                        new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
+                            dsl => { dsl.PreConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter(null, null)); }); }
+                        )
+                    );
+                    dsl.PreConfigure(sm => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure(sm => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                }
+            )
+        );
+        var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
+        smi.StartSM();
+        smi.StopSM("Done");
+        Assert.AreEqual(
+            expected: new[] { "+X", "+A", "-X", "-A", "+B", "+B.A", "-B.A", "-B" },
+            actual: smi.sm.Trace.Get(smi)
+        );
+        var secondSmi = CreateStateMachineInstance<SecondTestStateMachine.Instance>();
+        secondSmi.StartSM();
+        secondSmi.StopSM("Done");
+        Assert.AreEqual(
+            expected: new[] { "+X", "-X", "-A" },
+            actual: secondSmi.sm.Trace.Get(secondSmi)
+        );
+    }
+
+    [Test]
+    public void MustFailOnImproperUseOfInlineConfiguration() {
+        RunStateMachinesPatcher(
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+                dsl => {
+                    dsl.PreConfigure(
+                        sm => {
+                            dsl.Inline(
+                                new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
+                                    dsl => {
+                                        dsl.PreConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter(null, null)); });
+                                    }
+                                )
+                            );
+                            sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X"));
+                        }
+                    );
+                    dsl.PostConfigure(sm => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                }
+            )
+        );
+
+        Assert.That(
+            () => {
+                var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
+                smi.StartSM();
+                smi.StopSM("Done");
+            },
+            Throws.InnerException.InstanceOf<ConfigurationContextLockedException>()
+        );
+    }
+
+    [Test]
+    public void MustFailOnPhaseInconsistency() {
+        RunStateMachinesPatcher(
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+                dsl => { dsl.PostConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter("", null)); }); }
+            )
+        );
+
+        Assert.That(
+            () => {
+                var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
+                smi.StartSM();
+                smi.StopSM("Done");
+            },
+            Throws.InnerException.InstanceOf<InvalidConfigurationPhaseException>()
         );
     }
 
@@ -149,6 +282,42 @@ public class StateMachineDslTests : AbstractGameTest {
             default_state = InitState;
         }
 
+        [UsedImplicitly]
+        public new class Instance(TestTarget master) : GameInstance(master);
+
+    }
+
+    public class SecondTestStateMachine : GameStateMachine<SecondTestStateMachine, SecondTestStateMachine.Instance,
+        TestTarget, object> {
+
+        public class SubStates : State {
+            [UsedImplicitly]
+            public State StateA = null!;
+        }
+
+        [UsedImplicitly]
+        public State InitState = null!;
+
+        [UsedImplicitly]
+        public State StateA = null!;
+
+        [UsedImplicitly]
+        public ObjectParameter<List<string>> Trace = null!;
+
+        // ReSharper disable once InconsistentNaming
+        public override void InitializeStates(out BaseState default_state) {
+            InitState
+                .Enter(smi => Trace.Set([], smi))
+                .Transition(StateA, _ => true);
+
+            StateA
+                .Enter("Enter", smi => Trace.Get(smi).Add("+A"))
+                .Exit(smi => Trace.Get(smi).Add("-A"));
+
+            default_state = InitState;
+        }
+
+        [UsedImplicitly]
         public new class Instance(TestTarget master) : GameInstance(master);
 
     }

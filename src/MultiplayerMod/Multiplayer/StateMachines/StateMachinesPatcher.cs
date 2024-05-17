@@ -9,19 +9,19 @@ using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
+using static MultiplayerMod.Multiplayer.StateMachines.Configuration.StateMachineConfigurationPhase;
 
 namespace MultiplayerMod.Multiplayer.StateMachines;
 
 [Dependency, UsedImplicitly]
 public class StateMachinesPatcher {
 
-    private static Dictionary<Type, ConfigurerExecutor> executors = new();
+    private static Dictionary<Type, Runner> runners = new();
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<StateMachinesPatcher>();
     private readonly Harmony harmony;
     private readonly List<StateMachineConfigurer> configurers = [];
-
-    private bool configured;
+    private readonly StateMachineConfigurationContext context = new();
 
     public StateMachinesPatcher(EventDispatcher events, Harmony harmony) {
         this.harmony = harmony;
@@ -29,7 +29,7 @@ public class StateMachinesPatcher {
     }
 
     public void Register(StateMachineConfigurer configurer) {
-        if (configured) {
+        if (context.Locked) {
             var name = configurer.StateMachineType.GetPrettyName();
             throw new StateMachineConfigurationException(
                 $"Unable to register a configurer for {name}: state machines already configured"
@@ -39,36 +39,52 @@ public class StateMachinesPatcher {
     }
 
     private void OnRuntimeReady(RuntimeReadyEvent @event) {
-        executors = configurers.ToDictionary(it => it.StateMachineType, it => new ConfigurerExecutor(it));
         var prefix = new HarmonyMethod(SymbolExtensions.GetMethodInfo(() => InitializeStatesPrefix(null!)));
         var postfix = new HarmonyMethod(SymbolExtensions.GetMethodInfo(() => InitializeStatesPostfix(null!)));
-        configurers.Select(it => it.StateMachineType)
+        configurers.ForEach(it => it.Configure(context));
+        runners = context.Configurations.ToDictionary(it => it.StateMachineType, it => new Runner(it));
+        runners.Keys
             .Select(it => it.GetMethod(nameof(StateMachine.InitializeStates)))
             .ForEach(it => harmony.CreateProcessor(it).AddPrefix(prefix).AddPostfix(postfix).Patch());
-        configured = true;
+        context.Lock();
         log.Info($"{configurers.Count} state machine types patched");
     }
 
     private static void InitializeStatesPrefix(StateMachine __instance) {
-        var executor = executors[__instance.GetType()];
-        executor.Apply(__instance);
+        var runner = runners[__instance.GetType()];
+        runner.StartPhase(PreConfiguration, __instance);
+        runner.StartPhase(ControlFlowApply, __instance);
     }
 
     private static void InitializeStatesPostfix(StateMachine __instance) {
-        var executor = executors[__instance.GetType()];
-        executor.Execute(StateMachineConfigurationPhase.ControlFlowReset);
-        executor.Execute(StateMachineConfigurationPhase.PostConfiguration);
+        var runner = runners[__instance.GetType()];
+        runner.StartPhase(ControlFlowReset, __instance);
+        runner.StartPhase(PostConfiguration, __instance);
     }
 
-    private class ConfigurerExecutor(StateMachineConfigurer configurer) {
+    private class Runner(StateMachineConfiguration configuration) {
 
-        private StateMachineConfiguration configuration = null!;
+        public void StartPhase(StateMachineConfigurationPhase phase, StateMachine stateMachine) =>
+            AssertConsistency(phase, RunActions(phase, stateMachine));
 
-        public void Apply(StateMachine sm) => configuration = configurer.Configure(sm);
+        private int RunActions(StateMachineConfigurationPhase phase, StateMachine stateMachine) {
+            var length = configuration.Actions.Count;
+            for (var i = 0; i < length; i++) {
+                var action = configuration.Actions[i];
+                if (action.Phase == phase)
+                    action.Configure(stateMachine);
+            }
+            return length;
+        }
 
-        public void Execute(StateMachineConfigurationPhase phase) => configuration.Actions
-            .Where(it => it.Phase == phase)
-            .ForEach(it => it.Action());
+        private void AssertConsistency(StateMachineConfigurationPhase phase, int length) {
+            var newLength = configuration.Actions.Count;
+            for (var i = length; i < newLength; i++) {
+                var action = configuration.Actions[i];
+                if (action.Phase <= phase)
+                    throw new InvalidConfigurationPhaseException(configuration.StateMachineType, action.Phase, phase);
+            }
+        }
 
     }
 
