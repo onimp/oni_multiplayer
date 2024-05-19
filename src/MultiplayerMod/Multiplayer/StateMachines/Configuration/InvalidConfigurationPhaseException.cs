@@ -8,7 +8,7 @@ public class InvalidConfigurationPhaseException(
     StateMachineConfigurationPhase targetPhase,
     StateMachineConfigurationPhase currentPhase
 ) : StateMachineConfigurationException(
-    $"Configuration for {stateMachineType.GetPrettyName()} " +
+    $"Configuration for {stateMachineType.GetSignature()} " +
     $"produced an action targeting \"{targetPhase}\" phase " +
     $"that wouldn't be run after the current \"{currentPhase}\" phase"
 );

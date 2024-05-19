@@ -63,7 +63,7 @@ public class ChoresPatcher {
 
     [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void CancelChore(Chore chore) => Dependencies.Get<UnityTaskScheduler>().Run(
-        () => { chore.Cancel($"Chore instantiation of type \"{chore.GetType().GetPrettyName()}\" is disabled"); }
+        () => { chore.Cancel($"Chore instantiation of type \"{chore.GetType().GetSignature()}\" is disabled"); }
     );
 
 }

@@ -13,7 +13,7 @@ public record StateMachineConfigurationContext {
     public StateMachineConfiguration CreateConfiguration(Type stateMachineType, Type masterType) {
         if (Locked)
             throw new ConfigurationContextLockedException(
-                $"Unable to create / update a configuration for {stateMachineType.GetPrettyName()}: context locked"
+                $"Unable to create / update a configuration for {stateMachineType.GetSignature()}: context locked"
             );
 
         return configurations.GetOrAdd(

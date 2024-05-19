@@ -30,7 +30,7 @@ public class StateMachinesPatcher {
 
     public void Register(StateMachineConfigurer configurer) {
         if (context.Locked) {
-            var name = configurer.StateMachineType.GetPrettyName();
+            var name = configurer.StateMachineType.GetSignature();
             throw new StateMachineConfigurationException(
                 $"Unable to register a configurer for {name}: state machines already configured"
             );
