@@ -61,6 +61,9 @@ public static class TypeSignatureExtension {
         if (type.IsArray)
             return $"{GetTypeName(type.GetElementType()!, options)}[]";
 
+        if (type.IsByRef)
+            return $"{GetTypeName(type.GetElementType()!, options)}&";
+
         var includeNamespace = (options & SignatureOptions.IncludeNamespace) != 0 && !type.IsNested;
         var name = includeNamespace ? $"{type.Namespace}.{type.Name}" : type.Name;
 

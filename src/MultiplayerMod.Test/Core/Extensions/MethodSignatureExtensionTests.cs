@@ -27,6 +27,28 @@ public class MethodSignatureExtensionTests {
     }
 
     [Test]
+    public void SimpleMethodWithOutParametersSignature() {
+        var signature = typeof(MethodSignatureClass<>)
+            .GetMethod(nameof(MethodSignatureClass<object>.SimpleMethodWithOutParameters))!
+            .GetSignature();
+        Assert.AreEqual(
+            expected: "MethodSignatureClass<T>:SimpleMethodWithOutParameters(int&, int&)",
+            actual: signature
+        );
+    }
+
+    [Test]
+    public void SimpleMethodWithRefParametersSignature() {
+        var signature = typeof(MethodSignatureClass<>)
+            .GetMethod(nameof(MethodSignatureClass<object>.SimpleMethodWithRefParameters))!
+            .GetSignature();
+        Assert.AreEqual(
+            expected: "MethodSignatureClass<T>:SimpleMethodWithRefParameters(int&, int&)",
+            actual: signature
+        );
+    }
+
+    [Test]
     public void SimpleMethodWithParametersAndNamesSignature() {
         var signature = typeof(MethodSignatureClass<>)
             .GetMethod(nameof(MethodSignatureClass<object>.SimpleMethodWithParameters))!
@@ -97,6 +119,13 @@ public class MethodSignatureExtensionTests {
 public class MethodSignatureClass<T> {
 
     public void SimpleMethod() { }
+
+    public void SimpleMethodWithOutParameters(out int a, out int b) {
+        a = 1;
+        b = 2;
+    }
+
+    public void SimpleMethodWithRefParameters(ref int a, ref int b) { }
 
     public void SimpleMethodWithParameters(int a, int b) { }
 
