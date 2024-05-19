@@ -7,9 +7,10 @@ namespace MultiplayerMod.Core.Extensions;
 [Flags]
 public enum SignatureOptions {
     None = 0,
-    IncludeNamespace = 1,
-    IncludeInheritanceChain = 2,
-    IncludeParametersName = 4
+    Namespace = 1,
+    Inheritance = 2,
+    ParametersName = 4,
+    NoDeclaringType = 8
 }
 
 public static class TypeSignatureExtension {
@@ -36,8 +37,8 @@ public static class TypeSignatureExtension {
     };
 
     public static string GetSignature(this Type type, SignatureOptions options = SignatureOptions.None) {
-        return options.HasFlag(SignatureOptions.IncludeInheritanceChain)
-            ? string.Join(" : ", GetTypeInheritanceChain(type).Select(it => GetTypeName(it, options)))
+        return options.HasFlag(SignatureOptions.Inheritance)
+            ? string.Join(" : ", type.GetInheritedTypes().Select(it => GetTypeName(it, options)))
             : GetTypeName(type, options);
     }
 
@@ -64,8 +65,9 @@ public static class TypeSignatureExtension {
         if (type.IsByRef)
             return $"{GetTypeName(type.GetElementType()!, options)}&";
 
-        var includeNamespace = (options & SignatureOptions.IncludeNamespace) != 0 && !type.IsNested;
-        var name = includeNamespace ? $"{type.Namespace}.{type.Name}" : type.Name;
+        var name = type.Name;
+        if (options.HasFlag(SignatureOptions.Namespace) && !type.IsNested && !string.IsNullOrEmpty(type.Namespace))
+            name = $"{type.Namespace}.{type.Name}";
 
         if (!type.IsGenericType) {
             return type.IsNested
@@ -98,15 +100,6 @@ public static class TypeSignatureExtension {
             : $"{name}<{string.Join(", ", arguments.Select(it => GetTypeName(it, options)))}>";
 
         return name;
-    }
-
-    public static IEnumerable<Type> GetTypeInheritanceChain(Type type) {
-        var current = type;
-        while (current != typeof(object) && current != null) {
-            yield return current;
-
-            current = current.BaseType;
-        }
     }
 
 }

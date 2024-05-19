@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
+using MultiplayerMod.Core.Patch.ControlFlow;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
@@ -174,6 +175,7 @@ public abstract class AbstractGameTest {
             .AddType<ExecutionContextManager>()
             .AddType<EventDispatcher>()
             .AddType<TestRuntime>()
+            .AddType<ControlFlowCustomizer>()
             .AddSingleton(harmony);
 
         var container = builder.Build();

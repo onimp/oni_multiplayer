@@ -35,7 +35,7 @@ public class TypeSignatureExtensionTests {
     [Test]
     public void SimpleGenericNestedClassSignatureWithNamespace() {
         var signature = typeof(SimpleGenericClass<int>.InnerClass<string, long>.NestedClass)
-            .GetSignature(SignatureOptions.IncludeNamespace);
+            .GetSignature(SignatureOptions.Namespace);
         Assert.AreEqual(
             expected:
             "MultiplayerMod.Test.Core.Extensions.SimpleGenericClass<int>.InnerClass<string, long>.NestedClass",
@@ -81,13 +81,13 @@ public class TypeSignatureExtensionTests {
 
     [Test]
     public void DerivedClassSignatureWithInheritanceChain() {
-        var signature = typeof(DerivedClass).GetSignature(SignatureOptions.IncludeInheritanceChain);
+        var signature = typeof(DerivedClass).GetSignature(SignatureOptions.Inheritance);
         Assert.AreEqual(expected: "DerivedClass : SimpleClass", actual: signature);
     }
 
     [Test]
     public void DerivedGenericClassSignatureWithInheritanceChain() {
-        var signature = typeof(DerivedGenericClass<string>).GetSignature(SignatureOptions.IncludeInheritanceChain);
+        var signature = typeof(DerivedGenericClass<string>).GetSignature(SignatureOptions.Inheritance);
         Assert.AreEqual(expected: "DerivedGenericClass<string> : SimpleGenericClass<string>", actual: signature);
     }
 

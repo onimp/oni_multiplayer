@@ -16,6 +16,13 @@ public class MethodSignatureExtensionTests {
     }
 
     [Test]
+    public void SimpleMethodSignatureWithoutDeclaringType() {
+        var signature = typeof(MethodSignatureClass<>).GetMethod(nameof(MethodSignatureClass<object>.SimpleMethod))!
+            .GetSignature(SignatureOptions.NoDeclaringType);
+        Assert.AreEqual(expected: "SimpleMethod()", actual: signature);
+    }
+
+    [Test]
     public void SimpleMethodWithParametersSignature() {
         var signature = typeof(MethodSignatureClass<>)
             .GetMethod(nameof(MethodSignatureClass<object>.SimpleMethodWithParameters))!
@@ -52,7 +59,7 @@ public class MethodSignatureExtensionTests {
     public void SimpleMethodWithParametersAndNamesSignature() {
         var signature = typeof(MethodSignatureClass<>)
             .GetMethod(nameof(MethodSignatureClass<object>.SimpleMethodWithParameters))!
-            .GetSignature(SignatureOptions.IncludeParametersName);
+            .GetSignature(SignatureOptions.ParametersName);
         Assert.AreEqual(
             expected: "MethodSignatureClass<T>:SimpleMethodWithParameters(int a, int b)",
             actual: signature

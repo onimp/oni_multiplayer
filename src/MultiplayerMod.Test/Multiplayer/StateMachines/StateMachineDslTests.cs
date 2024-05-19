@@ -2,12 +2,9 @@ using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using JetBrains.Annotations;
-using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Extensions;
-using MultiplayerMod.Core.Patch.ControlFlow;
 using MultiplayerMod.ModRuntime;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.StateMachines;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
 using NUnit.Framework;
@@ -19,13 +16,6 @@ namespace MultiplayerMod.Test.Multiplayer.StateMachines;
 public class StateMachineDslTests : AbstractGameTest {
 
     private static readonly Harmony harmony = new("StateMachinesDSL");
-
-    [OneTimeSetUp]
-    public static void SetUp() {
-        Dependencies.Get<DependencyContainer>().Register(
-            new DependencyInfo(nameof(ControlFlowCustomizer), typeof(ControlFlowCustomizer), false)
-        );
-    }
 
     [TearDown]
     public void TearDownDsl() {
