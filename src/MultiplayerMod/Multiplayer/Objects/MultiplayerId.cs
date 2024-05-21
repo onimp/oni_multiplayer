@@ -7,9 +7,9 @@ namespace MultiplayerMod.Multiplayer.Objects;
 [Serializable]
 public class MultiplayerId {
 
-    public long UuidA { get; }
-    public long UuidB { get; }
-    public long InternalId { get; }
+    private long UuidA { get; }
+    private long UuidB { get; }
+    private long InternalId { get; }
 
     public MultiplayerId(long internalId) {
         InternalId = internalId;

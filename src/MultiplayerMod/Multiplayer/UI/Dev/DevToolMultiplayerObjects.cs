@@ -52,8 +52,7 @@ public class DevToolMultiplayerObjects : DevTool {
         if (!ImGui.BeginTable("Multiplayer objects:", 5, flags))
             return;
 
-        ImGui.TableSetupColumn("Internal Id", ImGuiTableColumnFlags.WidthFixed);
-        ImGui.TableSetupColumn("UUID", ImGuiTableColumnFlags.WidthFixed);
+        ImGui.TableSetupColumn("Id", ImGuiTableColumnFlags.WidthFixed);
         ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed);
         ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed);
@@ -61,7 +60,7 @@ public class DevToolMultiplayerObjects : DevTool {
         ImGui.TableHeadersRow();
 
         var index = 0;
-        multiplayer.Objects.Where(it => !generatedOnly || generatedOnly && it.Key.InternalId == 0).ForEach(
+        multiplayer.Objects.Where(it => !generatedOnly || generatedOnly && it.Key.ToString().EndsWith(":0")).ForEach(
             it => {
                 ImGui.TableNextRow();
                 ImGui.PushID($"ID_row_{index++}");
@@ -97,9 +96,7 @@ public class DevToolMultiplayerObjects : DevTool {
 
     private void RenderUnsupportedObjectRow(MultiplayerId id, object instance) {
         ImGui.TableNextColumn();
-        ImGui.Text(id.InternalId.ToString());
-        ImGui.TableNextColumn();
-        ImGui.Text($"{id.UuidA:x16}{id.UuidB:x16}");
+        ImGui.Text(id.ToString());
         ImGui.TableNextColumn();
         ImGui.Text($"[Unsupported] {instance.GetType().Name}");
         ImGui.TableNextColumn();
@@ -109,9 +106,7 @@ public class DevToolMultiplayerObjects : DevTool {
 
     private void RenderChoreRow(MultiplayerId id, Chore chore) {
         ImGui.TableNextColumn();
-        ImGui.Text(id.InternalId.ToString());
-        ImGui.TableNextColumn();
-        ImGui.Text($"{id.UuidA:x16}{id.UuidB:x16}");
+        ImGui.Text(id.ToString());
         ImGui.TableNextColumn();
         ImGui.Text(nameof(Chore));
         ImGui.TableNextColumn();
@@ -121,9 +116,7 @@ public class DevToolMultiplayerObjects : DevTool {
 
     private void RenderGameObjectRow(MultiplayerId id, GameObject gameObject) {
         ImGui.TableNextColumn();
-        ImGui.Text(id.InternalId.ToString());
-        ImGui.TableNextColumn();
-        ImGui.Text($"{id.UuidA:x16}{id.UuidB:x16}");
+        ImGui.Text(id.ToString());
         ImGui.TableNextColumn();
         ImGui.Text(nameof(GameObject));
         ImGui.TableNextColumn();
