@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
@@ -10,28 +9,25 @@ using STRINGS;
 namespace MultiplayerMod.Multiplayer.Chores.Commands;
 
 [Serializable]
-public class CreateHostChore : MultiplayerCommand {
+public class CreateChore : MultiplayerCommand {
 
-    private static Core.Logging.Logger log = LoggerFactory.GetLogger<CreateHostChore>();
+    private static Core.Logging.Logger log = LoggerFactory.GetLogger<CreateChore>();
 
-    public readonly MultiplayerId ChoreId;
+    public new readonly MultiplayerId Id;
     public readonly Type ChoreType;
-    public readonly object?[] Args;
+    public readonly object?[] Arguments;
 
-    public CreateHostChore(CreateNewChoreArgs args) {
-        ChoreId = args.ChoreId;
-        ChoreType = args.ChoreType;
-        Args = SpecialWrap(args.Args);
-        Args = ArgumentUtils.WrapObjects(Args);
+    public CreateChore(MultiplayerId id, Type choreType, object?[] arguments) {
+        Id = id;
+        ChoreType = choreType;
+        Arguments = ArgumentUtils.WrapObjects(SpecialWrap(arguments));
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var args = ArgumentUtils.UnWrapObjects(Args);
-        args = SpecialUnWrap(context, args);
-
-        log.Debug($"Create chore {ChoreType} - {ChoreId}");
+        var args = SpecialUnWrap(context, ArgumentUtils.UnWrapObjects(Arguments));
+        log.Debug($"Create chore {ChoreType} [id={Id}]");
         var chore = (Chore) ChoreType.GetConstructors()[0].Invoke(args);
-        chore.Register(ChoreId);
+        chore.Register(Id);
     }
 
     private object?[] SpecialWrap(object?[] args) {
@@ -85,7 +81,7 @@ public class CreateHostChore : MultiplayerCommand {
             var choreProvider = (ChoreProvider) args[2]!;
             var priorityClass = (PriorityScreen.PriorityClass) args[3]!;
             var priorityValue = (int) args[4]!;
-            args = new object[] {
+            args = [
                 new Chore.Precondition.Context {
                     chore = context.Multiplayer.Objects.Get<Chore>(choreId),
                     consumerState = new ChoreConsumerState(choreConsumer) {
@@ -93,8 +89,9 @@ public class CreateHostChore : MultiplayerCommand {
                     },
                     masterPriority = new PrioritySetting(priorityClass, priorityValue)
                 }
-            };
+            ];
         }
         return args;
     }
+
 }

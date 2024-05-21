@@ -17,58 +17,7 @@ public static class ChoreList {
 
     public static readonly Dictionary<Type, ChoreSyncConfig> Config =
         new() {
-            {
-                typeof(AttackChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(DeliverFoodChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(DieChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(DropUnusedInventoryChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(EntombedChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(MoveChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(MoveToQuarantineChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(PartyChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(PeeChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(PutOnHatChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(SighChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(StressIdleChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(SwitchRoleHatChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(TakeOffHatChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(UglyCryChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(WaterCoolerChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(ReactEmoteChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
+           {
                 typeof(AggressiveChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<AggressiveChore.States>(
@@ -119,12 +68,6 @@ public static class ChoreList {
                         )
                     )
                 )
-            }, {
-                typeof(EmoteChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(StressEmoteChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
             }, {
                 typeof(FoodFightChore),
                 ChoreSyncConfig.Dynamic(
@@ -214,27 +157,6 @@ public static class ChoreList {
                     )
                 )
             }, {
-                typeof(EquipChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(FixedCaptureChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(RancherChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(RescueIncapacitatedChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(RescueSweepBotChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(TakeMedicineChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(WorkChore<>),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
                 typeof(FetchAreaChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<FetchAreaChore.States>(
@@ -270,9 +192,6 @@ public static class ChoreList {
                         StateTransitionConfig.OnMove(nameof(BansheeChore.States.wander))
                     )
                 )
-            }, {
-                typeof(FetchChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(IdleChore),
                 ChoreSyncConfig.Dynamic(

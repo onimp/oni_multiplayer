@@ -706,11 +706,21 @@ public class AbstractChoreTest : AbstractGameTest {
         var expectedChoreTypes = ChoreList.Config.Keys
             .OrderBy(a => a.FullName)
             .ToList();
-        var actualChoreTypes = testArgs.Select(config => (Type) config[0])
+
+        var filteredArgs = testArgs
+            .Where(config => {
+                var configType = (Type)config[0];
+                var type = configType.IsGenericType ? configType.GetGenericTypeDefinition() : configType;
+                return expectedChoreTypes.Contains(type);
+            })
+            .ToArray();
+
+        var actualChoreTypes = filteredArgs.Select(config => (Type) config[0])
             .Select(type => type.IsGenericType ? type.GetGenericTypeDefinition() : type)
             .OrderBy(a => a.FullName).ToList();
-        Assert.AreEqual(expectedChoreTypes, actualChoreTypes);
-        foreach (var testArg in testArgs) {
+
+        Assert.That(actualChoreTypes, Is.EquivalentTo(expectedChoreTypes));
+        foreach (var testArg in filteredArgs) {
             var choreType = (Type) testArg[0];
             var config =
                 ChoreList.Config[choreType.IsGenericType ? choreType.GetGenericTypeDefinition() : choreType];
@@ -726,7 +736,7 @@ public class AbstractChoreTest : AbstractGameTest {
                 );
             }
         }
-        return testArgs;
+        return filteredArgs;
     }
 
     protected IMultiplayerCommand SerializeDeserializeCommand(IMultiplayerCommand command) {

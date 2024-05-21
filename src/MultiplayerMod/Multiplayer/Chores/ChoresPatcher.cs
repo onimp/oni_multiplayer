@@ -15,7 +15,7 @@ using MultiplayerMod.Multiplayer.StateMachines;
 
 namespace MultiplayerMod.Multiplayer.Chores;
 
-[Dependency(Lazy = true), UsedImplicitly]
+[Dependency, UsedImplicitly]
 public class ChoresPatcher {
 
     private static EventDispatcher events = null!;

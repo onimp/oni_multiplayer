@@ -24,8 +24,8 @@ public class ChoreEventsTest : AbstractChoreTest {
         Assert.NotNull(firedArgs);
         Assert.NotNull(firedArgs!.ChoreId);
         Assert.AreEqual(choreType, firedArgs!.ChoreType);
-        Assert.AreNotEqual(0, firedArgs!.ChoreId.UuidA);
-        Assert.AreNotEqual(0, firedArgs!.ChoreId.UuidB);
+        Assert.IsFalse(firedArgs!.ChoreId.ToString().StartsWith("0:0:"));
         Assert.AreEqual(expected, firedArgs.Args);
     }
+
 }

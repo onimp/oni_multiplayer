@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Patch.ControlFlow;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
@@ -19,22 +22,25 @@ namespace MultiplayerMod.Test;
 
 public abstract class AbstractGameTest {
 
-    private static Harmony harmony = null!;
+    protected static Harmony Harmony = null!;
+    protected static DependencyContainer Dependencies = null!;
+    protected static EventDispatcher Events => Dependencies.Get<EventDispatcher>();
 
     [OneTimeSetUp]
     public static void SetUpGame() {
-        harmony = new Harmony("AbstractGameTest");
+        Harmony = new Harmony("AbstractGameTest");
         var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch) });
         UnityTestRuntime.Install();
-        PatchesSetup.Install(harmony, patches);
+        PatchesSetup.Install(Harmony, patches);
         SetUpUnityAndGame();
         SetupDependencies();
+        Events.Dispatch(new RuntimeReadyEvent(Runtime.Instance));
     }
 
     [OneTimeTearDown]
     public static void TearDown() {
         UnityTestRuntime.Uninstall();
-        PatchesSetup.Uninstall(harmony);
+        PatchesSetup.Uninstall(Harmony);
         global::Game.Instance = null;
     }
 
@@ -168,6 +174,8 @@ public abstract class AbstractGameTest {
         Grid.InitializeCells();
     }
 
+    protected static event Action<DependencyContainerBuilder>? DependencyContainerConfiguring;
+
     private static void SetupDependencies() {
         var builder = new DependencyContainerBuilder()
             .AddType<MultiplayerGame>()
@@ -176,12 +184,26 @@ public abstract class AbstractGameTest {
             .AddType<EventDispatcher>()
             .AddType<TestRuntime>()
             .AddType<ControlFlowCustomizer>()
-            .AddSingleton(harmony);
+            .AddSingleton(Harmony);
+
+        Type.GetType(TestContext.CurrentContext.Test.ClassName!)
+            .GetInheritedTypes()
+            .Reverse()
+            .SelectMany(it => it.GetAllMethods())
+            .Where(it => it.IsStatic)
+            .Where(it => it.GetCustomAttribute<ConfigureDependenciesAttribute>() != null)
+            .Where(it => it.GetParameters().Length == 1)
+            .Where(it => it.GetParameters()[0].ParameterType == typeof(DependencyContainerBuilder))
+            .ForEach(it => it.Invoke(null, [builder]));
 
         var container = builder.Build();
         container.Get<TestRuntime>().Activate();
+        Dependencies = container;
 
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
         Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().EnterOverrideSection(ExecutionLevel.Game);
     }
+
+    protected class ConfigureDependenciesAttribute : Attribute;
+
 }
