@@ -47,7 +47,7 @@ public class StateMachinesPatcher {
             .Select(it => it.GetMethod(nameof(StateMachine.InitializeStates)))
             .ForEach(it => harmony.CreateProcessor(it).AddPrefix(prefix).AddPostfix(postfix).Patch());
         context.Lock();
-        log.Info($"{configurers.Count} state machine types patched");
+        log.Info($"{context.Configurations.Count} state machine types patched");
     }
 
     private static void InitializeStatesPrefix(StateMachine __instance) {

@@ -33,7 +33,7 @@ public record StateMachineConfigurationContext {
 
     public StateMachineConfiguration GetConfiguration<TStateMachine>() => configurations[typeof(TStateMachine)];
 
-    public IEnumerable<StateMachineConfiguration> Configurations => configurations.Values;
+    public ICollection<StateMachineConfiguration> Configurations => configurations.Values;
 
     public void Lock() => Locked = true;
 
