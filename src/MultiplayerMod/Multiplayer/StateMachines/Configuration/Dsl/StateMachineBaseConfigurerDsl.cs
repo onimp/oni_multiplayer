@@ -13,4 +13,14 @@ public abstract class StateMachineBaseConfigurerDsl<TStateMachine, TStateMachine
     public readonly MultiplayerGame Game = Dependencies.Get<MultiplayerGame>();
     public MultiplayerMode MultiplayerMode => Game.Mode;
 
+    public GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.State CreateState(
+        GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.State parent,
+        string name
+    ) {
+        var state = new GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.State();
+        parent.sm.BindState(parent, state, name);
+        state.sm = parent.sm;
+        return state;
+    }
+
 }

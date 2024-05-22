@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Events;
@@ -221,6 +222,37 @@ public class StateMachineDslTests : AbstractGameTest {
                 smi.StopSM("Done");
             },
             Throws.InnerException.InstanceOf<InvalidConfigurationPhaseException>()
+        );
+    }
+
+    [Test]
+    public void MustCreateAndAttachNewState() {
+        RunStateMachinesPatcher(
+            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(root => {
+                root.PreConfigure((pre, sm) => {
+                    pre.Suppress(() => sm.InitState.Transition(null, null, 0));
+                });
+                root.PostConfigure((post, sm) => {
+                    var newState = post.CreateState(sm.root, "new_state");
+
+                    newState
+                        .Enter("Enter", smi => sm.Trace.Get(smi).Add("+N"))
+                        .Exit(smi => sm.Trace.Get(smi).Add("-N"));
+
+                    sm.InitState.Transition(newState, _ => true);
+                });
+            })
+        );
+        var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
+
+        var state = smi.sm.states.FirstOrDefault(it => it.name == "root.new_state");
+        Assert.IsNotNull(state);
+
+        smi.StartSM();
+        smi.StopSM("Done");
+        Assert.AreEqual(
+            expected: new[] { "+N", "-N" },
+            actual: smi.sm.Trace.Get(smi)
         );
     }
 
