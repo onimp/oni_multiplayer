@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -11,44 +10,26 @@ using static MultiplayerMod.Multiplayer.StateMachines.Configuration.StateMachine
 
 namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Dsl;
 
-[SuppressMessage("ReSharper", "UnusedTypeParameter")]
-// ReSharper disable once TypeParameterCanBeVariant
-public interface IStateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef> {
-    void PreConfigure(Action<TStateMachine> action);
-    void PostConfigure(Action<TStateMachine> action);
-    void Suppress(Expression<System.Action> expression);
-    void Inline(StateMachineConfigurer configurer);
-}
-
-public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(
+public class StateMachinePreConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(
+    StateMachineRootConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef> root,
     StateMachineConfigurationContext context
-) : IStateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>
+) : StateMachineBaseConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(root, context)
     where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.GameInstance
     where TMaster : IStateMachineTarget {
 
-    private readonly StateMachineConfiguration configuration = context.GetConfiguration<TStateMachine>();
-
     private readonly ControlFlowCustomizer customizer = Dependencies.Get<ControlFlowCustomizer>();
-    public MultiplayerGame Game { get; init; } = Dependencies.Get<MultiplayerGame>();
 
-    private void AddAction(StateMachineConfigurationPhase phase, Action<TStateMachine> action) =>
-        configuration.Actions.Add(
-            new StateMachineConfigurationAction(phase, stateMachine => action((TStateMachine) stateMachine))
-        );
-
-    public void PreConfigure(Action<TStateMachine> action) => AddAction(PreConfiguration, action);
-
-    public void PostConfigure(Action<TStateMachine> action) => AddAction(PostConfiguration, action);
+    public void PostConfigure(
+        Action<StateMachinePostConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>, TStateMachine> action
+    ) => root.PostConfigure(action);
 
     public void Suppress(Expression<System.Action> expression) {
         var (state, method) = ExtractMethodCallInfo(expression);
         var scope = typeof(TStateMachine).GetMethod(nameof(StateMachine.InitializeStates))!;
-        AddAction(ControlFlowApply, _ => customizer.Detour(state, method, state, new MethodBoundedDetour(scope)));
-        AddAction(ControlFlowReset, _ => customizer.Reset(state));
+        root.AddAction(ControlFlowApply, _ => customizer.Detour(state, method, state, new MethodBoundedDetour(scope)));
+        root.AddAction(ControlFlowReset, _ => customizer.Reset(state));
     }
-
-    public void Inline(StateMachineConfigurer configurer) => configurer.Configure(context);
 
     private StateMachine.BaseState ExtractStateInstance(MemberExpression memberExpression) {
         var chain = new LinkedList<FieldInfo>();

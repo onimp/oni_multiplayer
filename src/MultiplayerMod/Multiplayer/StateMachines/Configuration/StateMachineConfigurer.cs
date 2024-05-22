@@ -21,8 +21,8 @@ public class StateMachineConfigurer<TStateMachine, TStateMachineInstance, TMaste
 
     public override StateMachineConfiguration Configure(StateMachineConfigurationContext context) {
         var configuration = context.CreateConfiguration<TStateMachine, TMaster>();
-        var dsl = new StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(context);
-        scopedAction(dsl);
+        var root = new StateMachineRootConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(context);
+        scopedAction(root);
         return configuration;
     }
 

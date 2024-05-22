@@ -60,7 +60,7 @@ public class StateMachineDslTests : AbstractGameTest {
     public void MustSuppressEnterAction() {
         RunStateMachinesPatcher(
             new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
-                dsl => { dsl.PreConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter("", null)); }); }
+                dsl => { dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter("", null)); }); }
             )
         );
         var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
@@ -76,19 +76,15 @@ public class StateMachineDslTests : AbstractGameTest {
     public void CheckConfigurationPhases() {
         RunStateMachinesPatcher(
             new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
-                dsl => {
-                    dsl.PreConfigure(
-                        sm => {
-                            Assert.IsNull(sm.StateA.enterActions);
-                            Assert.IsNull(sm.StateA.exitActions);
-                        }
-                    );
-                    dsl.PostConfigure(
-                        sm => {
-                            Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
-                            Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
-                        }
-                    );
+                root => {
+                    root.PreConfigure((_, sm) => {
+                        Assert.IsNull(sm.StateA.enterActions);
+                        Assert.IsNull(sm.StateA.exitActions);
+                    });
+                    root.PostConfigure((_, sm) => {
+                        Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
+                        Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
+                    });
                 }
             )
         );
@@ -102,18 +98,14 @@ public class StateMachineDslTests : AbstractGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
-                    dsl.PreConfigure(
-                        sm => {
-                            Assert.IsNull(sm.StateA.enterActions);
-                            Assert.IsNull(sm.StateA.exitActions);
-                        }
-                    );
-                    dsl.PostConfigure(
-                        sm => {
-                            Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
-                            Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
-                        }
-                    );
+                    dsl.PreConfigure((_, sm) => {
+                        Assert.IsNull(sm.StateA.enterActions);
+                        Assert.IsNull(sm.StateA.exitActions);
+                    });
+                    dsl.PostConfigure((_, sm) => {
+                        Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
+                        Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
+                    });
                 }
             )
         );
@@ -127,8 +119,8 @@ public class StateMachineDslTests : AbstractGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
-                    dsl.PreConfigure(sm => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
-                    dsl.PostConfigure(sm => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                    dsl.PreConfigure((_, sm) => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure((_, sm) => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
                 }
             )
         );
@@ -146,19 +138,19 @@ public class StateMachineDslTests : AbstractGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
                 dsl => {
-                    dsl.PreConfigure(sm => { sm.StateA.Enter("Test", smi => sm.Trace.Get(smi).Add("+X")); });
-                    dsl.PostConfigure(sm => { sm.StateA.Exit("Test", smi => sm.Trace.Get(smi).Add("-X")); });
+                    dsl.PreConfigure((_, sm) => { sm.StateA.Enter("Test", smi => sm.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure((_, sm) => { sm.StateA.Exit("Test", smi => sm.Trace.Get(smi).Add("-X")); });
                 }
             ),
             new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
                     dsl.Inline(
                         new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
-                            dsl => { dsl.PreConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter(null, null)); }); }
+                            dsl => { dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter(null, null)); }); }
                         )
                     );
-                    dsl.PreConfigure(sm => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
-                    dsl.PostConfigure(sm => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                    dsl.PreConfigure((_, sm) => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure((_, sm) => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
                 }
             )
         );
@@ -182,20 +174,20 @@ public class StateMachineDslTests : AbstractGameTest {
     public void MustFailOnImproperUseOfInlineConfiguration() {
         RunStateMachinesPatcher(
             new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
-                dsl => {
-                    dsl.PreConfigure(
-                        sm => {
-                            dsl.Inline(
+                root => {
+                    root.PreConfigure(
+                        (_, sm) => {
+                            root.Inline(
                                 new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
                                     dsl => {
-                                        dsl.PreConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter(null, null)); });
+                                        dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter(null, null)); });
                                     }
                                 )
                             );
                             sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X"));
                         }
                     );
-                    dsl.PostConfigure(sm => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                    root.PostConfigure((_, sm) => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
                 }
             )
         );
@@ -214,7 +206,11 @@ public class StateMachineDslTests : AbstractGameTest {
     public void MustFailOnPhaseInconsistency() {
         RunStateMachinesPatcher(
             new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
-                dsl => { dsl.PostConfigure(sm => { dsl.Suppress(() => sm.StateA.Enter("", null)); }); }
+                root => {
+                    root.PostConfigure((_, _) => {
+                        root.PreConfigure((dsl, sm) => dsl.Suppress(() => sm.StateA.Enter("", null)));
+                    });
+                }
             )
         );
 
