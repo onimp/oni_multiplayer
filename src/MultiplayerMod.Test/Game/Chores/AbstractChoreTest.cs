@@ -10,7 +10,8 @@ using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Environment.Patches;
-using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
+using MultiplayerMod.Test.GameRuntime;
+using MultiplayerMod.Test.GameRuntime.Patches;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -18,7 +19,7 @@ using UnityEngine;
 
 namespace MultiplayerMod.Test.Game.Chores;
 
-public class AbstractChoreTest : AbstractGameTest {
+public class AbstractChoreTest : PlayableGameTest {
     private Harmony? harmony;
 
     protected static KMonoBehaviour Minion = null!;

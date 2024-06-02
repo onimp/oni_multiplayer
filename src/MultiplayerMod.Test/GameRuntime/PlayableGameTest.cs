@@ -14,13 +14,13 @@ using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Test.Environment;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
-using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
+using MultiplayerMod.Test.GameRuntime.Patches;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace MultiplayerMod.Test;
+namespace MultiplayerMod.Test.GameRuntime;
 
-public abstract class AbstractGameTest {
+public abstract class PlayableGameTest {
 
     protected static Harmony Harmony = null!;
     protected static DependencyContainer Dependencies = null!;
@@ -186,15 +186,10 @@ public abstract class AbstractGameTest {
             .AddType<ControlFlowCustomizer>()
             .AddSingleton(Harmony);
 
-        Type.GetType(TestContext.CurrentContext.Test.ClassName!)
-            .GetInheritedTypes()
-            .Reverse()
-            .SelectMany(it => it.GetAllMethods())
-            .Where(it => it.IsStatic)
-            .Where(it => it.GetCustomAttribute<ConfigureDependenciesAttribute>() != null)
+        ResolveCustomizationProviders<ConfigureDependenciesAttribute>(methods => methods
             .Where(it => it.GetParameters().Length == 1)
             .Where(it => it.GetParameters()[0].ParameterType == typeof(DependencyContainerBuilder))
-            .ForEach(it => it.Invoke(null, [builder]));
+        ).Invoke([builder]);
 
         var container = builder.Build();
         container.Get<TestRuntime>().Activate();
@@ -202,6 +197,25 @@ public abstract class AbstractGameTest {
 
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
         Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().EnterOverrideSection(ExecutionLevel.Game);
+    }
+
+    protected static TestCustomizer ResolveCustomizationProviders<T>(
+        Func<IEnumerable<MethodInfo>, IEnumerable<MethodInfo>>? filter = null
+    ) where T : Attribute {
+        var methods = Type.GetType(TestContext.CurrentContext.Test.ClassName!)!
+            .GetInheritedTypes()
+            .Reverse()
+            .SelectMany(it => it.GetAllMethods())
+            .Where(it => it.IsStatic)
+            .Where(it => it.GetCustomAttribute<T>() != null);
+        if (filter != null)
+            methods = filter(methods);
+        return new TestCustomizer(methods.ToArray());
+    }
+
+    protected class TestCustomizer(IEnumerable<MethodInfo> methods) {
+        public T[] Invoke<T>(object?[] arguments) => methods.Select(it => (T) it.Invoke(null, arguments)).ToArray();
+        public void Invoke(object?[] arguments) => methods.ForEach(it => it.Invoke(null, arguments));
     }
 
     protected class ConfigureDependenciesAttribute : Attribute;

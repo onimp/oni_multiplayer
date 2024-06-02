@@ -6,7 +6,8 @@ namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Dsl;
 public interface IStateMachineRootConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.GameInstance
-    where TMaster : IStateMachineTarget {
+    where TMaster : IStateMachineTarget
+{
     void PreConfigure(
         Action<StateMachinePreConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>, TStateMachine> action
     );
@@ -18,12 +19,12 @@ public interface IStateMachineRootConfigurerDsl<TStateMachine, TStateMachineInst
     void Inline(StateMachineConfigurer configurer);
 }
 
-public class
-    StateMachineRootConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>
+public class StateMachineRootConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>
     : IStateMachineRootConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.GameInstance
-    where TMaster : IStateMachineTarget {
+    where TMaster : IStateMachineTarget
+{
 
     private readonly StateMachineConfiguration configuration;
     private readonly PhasedConfigurers configurers;

@@ -15,15 +15,17 @@ using MultiplayerMod.Multiplayer.StateMachines.Configuration;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Environment.Patches;
-using MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
+using MultiplayerMod.Test.GameRuntime;
+using MultiplayerMod.Test.GameRuntime.Patches;
 using NUnit.Framework;
 using UnityEngine;
+using Attribute = System.Attribute;
 
 #pragma warning disable CS8974 // Converting method group to non-delegate type
 
 namespace MultiplayerMod.Test.Multiplayer.Chores;
 
-public class AbstractChoreTest : AbstractGameTest {
+public abstract class ChoreTest : PlayableGameTest {
     private Harmony? harmony;
 
     protected static KMonoBehaviour Minion = null!;
@@ -45,6 +47,7 @@ public class AbstractChoreTest : AbstractGameTest {
         Singleton<StateMachineManager>.Instance.Clear();
         Singleton<StateMachineUpdater>.Instance.Clear();
         StateMachine.Instance.error = false;
+        CreateTestData();
     }
 
     [TearDown]
@@ -59,10 +62,18 @@ public class AbstractChoreTest : AbstractGameTest {
             .AddType<ChoresPatcher>();
     }
 
-    protected void CreateTestData(HashSet<Type>? additionalPatches = null) {
-        if (additionalPatches != null) {
-            harmony = new Harmony("AbstractChoreTest");
-            PatchesSetup.Install(harmony, additionalPatches);
+    protected class TestCasePatchesAttribute : Attribute;
+    private static TestCustomizer testCasePatches = ResolveCustomizationProviders<TestCasePatchesAttribute>(
+        methods => methods
+            .Where(it => it.GetParameters().Length == 0)
+            .Where(it => typeof(IEnumerable<Type>).IsAssignableFrom(it.ReturnType))
+    );
+
+    protected void CreateTestData() {
+        var patches = testCasePatches.Invoke<IEnumerable<Type>>([]).SelectMany(it => it).ToHashSet();
+        if (patches.Count > 0) {
+            harmony = new Harmony(nameof(ChoreTest));
+            PatchesSetup.Install(harmony, patches);
         }
 
         PickupableGameObject = CreatePickupableGameObject();
@@ -111,6 +122,7 @@ public class AbstractChoreTest : AbstractGameTest {
         return gameObject;
     }
 
+    [SuppressMessage("ReSharper", "ObjectCreationAsStatement")]
     private static KMonoBehaviour CreateMinion() {
         var minion = createGameObject().GetComponent<KMonoBehaviour>();
         var targetGameObject = minion.gameObject;
@@ -181,7 +193,7 @@ public class AbstractChoreTest : AbstractGameTest {
     protected static ICollection<StateMachineConfiguration> StateMachineConfigurations;
     protected static HashSet<Type> SupportedChoreTypes;
 
-    static AbstractChoreTest() {
+    static ChoreTest() {
         var context = new StateMachineConfigurationContext();
         ChoresMultiplayerConfiguration.Configuration
             .Select(it => it.StatesConfigurer)

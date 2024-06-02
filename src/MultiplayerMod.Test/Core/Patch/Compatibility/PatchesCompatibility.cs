@@ -4,13 +4,14 @@ using System.Linq;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Multiplayer.Chores;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
+using MultiplayerMod.Test.GameRuntime;
 using NUnit.Framework;
 using static MultiplayerMod.Test.Core.Patch.Compatibility.PatchesCompatibilityMetadata;
 
 namespace MultiplayerMod.Test.Core.Patch.Compatibility;
 
 [TestFixture]
-public class PatchesCompatibility : AbstractGameTest {
+public class PatchesCompatibility : PlayableGameTest {
 
     [Test]
     [Ignore("Manual run only")]

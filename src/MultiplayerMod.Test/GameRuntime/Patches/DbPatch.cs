@@ -6,7 +6,7 @@ using Amounts = Database.Amounts;
 using AttributeConverters = Database.AttributeConverters;
 using Attributes = Database.Attributes;
 
-namespace MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
+namespace MultiplayerMod.Test.GameRuntime.Patches;
 
 [UsedImplicitly]
 [HarmonyPatch(typeof(Db))]

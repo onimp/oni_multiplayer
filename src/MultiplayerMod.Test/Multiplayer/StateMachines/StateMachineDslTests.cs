@@ -8,13 +8,14 @@ using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.StateMachines;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
+using MultiplayerMod.Test.GameRuntime;
 using NUnit.Framework;
 using UnityEngine;
 
 namespace MultiplayerMod.Test.Multiplayer.StateMachines;
 
 [TestFixture]
-public class StateMachineDslTests : AbstractGameTest {
+public class StateMachineDslTests : PlayableGameTest {
 
     private static readonly Harmony harmony = new("StateMachinesDSL");
 
@@ -233,7 +234,7 @@ public class StateMachineDslTests : AbstractGameTest {
                     pre.Suppress(() => sm.InitState.Transition(null, null, 0));
                 });
                 root.PostConfigure((post, sm) => {
-                    var newState = post.CreateState(sm.root, "new_state");
+                    var newState = post.AddState(sm.root, "new_state");
 
                     newState
                         .Enter("Enter", smi => sm.Trace.Get(smi).Add("+N"))

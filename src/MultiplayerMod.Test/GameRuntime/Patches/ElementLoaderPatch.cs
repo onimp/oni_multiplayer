@@ -1,7 +1,7 @@
 using HarmonyLib;
 using JetBrains.Annotations;
 
-namespace MultiplayerMod.Test.Multiplayer.Commands.Chores.Patches;
+namespace MultiplayerMod.Test.GameRuntime.Patches;
 
 [UsedImplicitly]
 [HarmonyPatch(typeof(ElementLoader))]

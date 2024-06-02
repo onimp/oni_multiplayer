@@ -9,10 +9,7 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Multiplayer.Chores;
 
 [TestFixture]
-public class CreateChoreTest : AbstractChoreTest {
-
-    [SetUp]
-    public void SetUp() => CreateTestData();
+public class CreateChoreTest : ChoreTest {
 
     // TODO: Extract "SpecialWrap" and isolate serialization tests
     [Test, TestCaseSource(nameof(ChoresInstantiationTestCases))]

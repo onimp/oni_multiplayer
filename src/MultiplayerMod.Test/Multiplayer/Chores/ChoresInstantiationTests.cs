@@ -4,10 +4,7 @@ using NUnit.Framework;
 namespace MultiplayerMod.Test.Multiplayer.Chores;
 
 [TestFixture]
-public class ChoresInstantiationTests : AbstractChoreTest {
-
-    [SetUp]
-    public void SetUp() => CreateTestData();
+public class ChoresInstantiationTests : ChoreTest {
 
     [Test, TestCaseSource(nameof(ChoresInstantiationTestCases))]
     public void ChoreCreatedEventMustBeFired(ChoreFactory factory) {
