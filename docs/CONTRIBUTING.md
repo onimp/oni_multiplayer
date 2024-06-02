@@ -44,6 +44,37 @@ open source contributions:
 8. If you did `step 5`, then go to mods and make sure you got the `DEV` version `enabled` and the `subscribed` one `disabled`
 9. Edit your code, and repeat `step 6`, `step 7` and test ingame
 
+### Debugging
+
+To debug the mod, you will need two copies of the game on separate steam accounts, and two computers. Download the version of Unity that the game uses via:
+* https://unity.com/releases/editor/archive
+
+You can find the current game version by checking the Player.log file in this folder:
+`%appdata%\..\locallow\klei\Oxygen Not Included`
+
+As of writing, the Unity version in use was `2020.3.30f1`.
+
+Next, go to the unity installation folder and navigate to:
+```
+Editor\Data\PlaybackEngines\windowsstandalonesupport\Variations\win64_development_mono\
+```
+
+From that folder we need three files:
+* WindowsPlayer.exe
+* UnityPlayer.dll
+* WinPixEventRuntime.dll
+
+Copy these to ONI's installation folder, rename `WindowsPlayer.exe` to `OxygenNotIncluded.exe` and replace the files. Keep in mind to make a backup of the original files otherwise you would have to verify the game files to retrieve the original ones.
+
+Then, in ONI's installation folder, find `OxygenNotIncluded_Data\boot.config` and open it with a text editor. Add the following lines:
+
+```
+wait-for-managed-debugger=1
+player-connection-debug=1
+```
+
+Now when you start the game via steam it should show a message box saying that you can attach a debugger. Make sure to have the Visual Studio Tools for Unity installed. In VS you can then go to Debug -> Attach Unity Debugger and should be able to attach VS to the game.
+
 ### Issues
 
 #### Create a new issue
