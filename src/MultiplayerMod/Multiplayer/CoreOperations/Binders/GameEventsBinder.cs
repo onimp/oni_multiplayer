@@ -137,6 +137,9 @@ public class GameEventsBinder {
         CopySettingsEvents.Copy += args => client.Send(new CopySettings(args));
         DebugToolEvents.Modify += args => client.Send(new Modify(args));
         StampToolEvents.Stamp += args => client.Send(new Stamp(args));
+
+        MoveToLocationToolEvents.LocationSet += (navigator, movable, cell) =>
+            client.Send(new MoveToLocation(navigator, movable, cell));
     }
 
     private void BindOverlays() {
