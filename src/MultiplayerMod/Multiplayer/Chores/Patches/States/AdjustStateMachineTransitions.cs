@@ -13,7 +13,7 @@ using MultiplayerMod.Multiplayer.States;
 
 namespace MultiplayerMod.Multiplayer.Chores.Patches.States;
 
-[HarmonyPatch]
+// [HarmonyPatch]
 public static class AdjustStateMachineTransitions {
 
     [UsedImplicitly]

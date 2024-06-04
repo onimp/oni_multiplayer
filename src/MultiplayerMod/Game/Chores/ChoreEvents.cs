@@ -12,7 +12,7 @@ using MultiplayerMod.Multiplayer.Objects.Extensions;
 
 namespace MultiplayerMod.Game.Chores;
 
-[HarmonyPatch]
+// [HarmonyPatch]
 public static class ChoreEvents {
 
     public static event Action<CreateNewChoreArgs>? CreateNewChore;
