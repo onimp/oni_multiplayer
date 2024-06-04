@@ -13,7 +13,7 @@ public class UpdateLogicCounter : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var logicCounter = args.Target.GetComponent();
+        var logicCounter = args.Target.Resolve();
         logicCounter.maxCount = args.MaxCount;
         logicCounter.currentCount = args.CurrentCount;
         logicCounter.advancedMode = args.AdvancedMode;

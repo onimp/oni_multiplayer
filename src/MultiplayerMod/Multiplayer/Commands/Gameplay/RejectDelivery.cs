@@ -14,7 +14,7 @@ public class RejectDelivery : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        reference.GetComponent().RejectAll();
+        reference.Resolve().RejectAll();
         ImmigrantScreenPatch.Deliverables = null;
     }
 

@@ -13,7 +13,7 @@ public class UpdateCritterSensor : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var logicCritterCountSensor = args.Target.GetComponent();
+        var logicCritterCountSensor = args.Target.Resolve();
         logicCritterCountSensor.countCritters = args.CountCritters;
         logicCritterCountSensor.countEggs = args.CountEggs;
     }

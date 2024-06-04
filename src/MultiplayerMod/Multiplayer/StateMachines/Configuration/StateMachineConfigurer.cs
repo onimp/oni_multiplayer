@@ -10,6 +10,14 @@ public abstract class StateMachineConfigurer(Type masterType, Type stateMachineT
     public abstract StateMachineConfiguration Configure(StateMachineConfigurationContext context);
 }
 
+public class StateMachineConfigurer<TStateMachine, TStateMachineInstance, TMaster>(
+    StateMachineConfigurerDelegate<TStateMachine, TStateMachineInstance, TMaster, object> scopedAction
+)
+    : StateMachineConfigurer<TStateMachine, TStateMachineInstance, TMaster, object>(scopedAction)
+    where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, object>
+    where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, object>.GameInstance
+    where TMaster : IStateMachineTarget;
+
 public class StateMachineConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>(
     StateMachineConfigurerDelegate<TStateMachine, TStateMachineInstance, TMaster, TDef> scopedAction
 )

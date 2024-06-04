@@ -16,6 +16,6 @@ public class StateMachineReference : TypedReference<StateMachine.Instance> {
         StateMachineType = stateMachineType;
     }
 
-    public override StateMachine.Instance Resolve() => ControllerReference.GetComponent().GetSMI(StateMachineType);
+    public override StateMachine.Instance Resolve() => ControllerReference.Resolve().GetSMI(StateMachineType);
 
 }

@@ -13,7 +13,7 @@ public class UpdateAlarm : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var alarm = args.Target.GetComponent();
+        var alarm = args.Target.Resolve();
         alarm.notificationName = args.NotificationName;
         alarm.notificationTooltip = args.NotificationTooltip;
         alarm.pauseOnNotify = args.PauseOnNotify;

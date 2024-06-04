@@ -43,10 +43,10 @@ public class CreateChore : MultiplayerCommand {
         }
         if (ChoreType == typeof(FetchAreaChore)) {
             var context = (Chore.Precondition.Context) args[0]!;
-            return new object[] {
+            return [
                 context.chore.MultiplayerId(), context.consumerState.consumer, context.consumerState.choreProvider,
                 context.masterPriority.priority_class, context.masterPriority.priority_value
-            };
+            ];
         }
         return args;
     }

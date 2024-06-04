@@ -4,17 +4,12 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
 
 [Serializable]
-public class ComponentReference : TypedReference<Component> {
+public class ComponentReference<T>(GameObjectReference reference) : TypedReference<T> where T : Component {
 
-    private GameObjectReference GameObjectReference { get; }
-    private Type ComponentType { get; }
+    private GameObjectReference GameObjectReference { get; } = reference;
+    private Type ComponentType { get; } = typeof(T);
 
-    public ComponentReference(GameObjectReference gameObjectReference, Type type) {
-        GameObjectReference = gameObjectReference;
-        ComponentType = type;
-    }
-
-    public override Component? Resolve() => GameObjectReference.GetComponent(ComponentType);
+    public override T Resolve() => (T) GameObjectReference.GetComponent(ComponentType)!;
 
     protected bool Equals(ComponentReference other) {
         return GameObjectReference.Equals(other.GameObjectReference) && ComponentType == other.ComponentType;
@@ -25,6 +20,7 @@ public class ComponentReference : TypedReference<Component> {
             return false;
         if (ReferenceEquals(this, obj))
             return true;
+
         return obj.GetType() == GetType() && Equals((ComponentReference) obj);
     }
 
@@ -33,10 +29,10 @@ public class ComponentReference : TypedReference<Component> {
 }
 
 [Serializable]
-public class ComponentReference<T> : ComponentReference where T : KMonoBehaviour {
+public class ComponentReference(GameObjectReference reference, Type type) : ComponentReference<Component>(reference) {
 
-    public ComponentReference(GameObjectReference gameObjectReference) : base(gameObjectReference, typeof(T)) { }
+    private readonly Type type = type;
 
-    public T GetComponent() => (T) Resolve()!;
+    public override Component Resolve() => base.Resolve().GetComponent(type);
 
 }

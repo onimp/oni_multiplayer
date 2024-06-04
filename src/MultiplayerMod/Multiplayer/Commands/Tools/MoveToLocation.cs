@@ -11,8 +11,8 @@ public class MoveToLocation(Navigator? navigator, Movable? movable, int cell) : 
     private readonly ComponentReference<Movable>? movableReference = movable?.GetReference();
 
     public override void Execute(MultiplayerCommandContext context) {
-        var navigator = navigatorReference?.GetComponent();
-        var movable = movableReference?.GetComponent();
+        var navigator = navigatorReference?.Resolve();
+        var movable = movableReference?.Resolve();
 
         if (navigator != null)
             navigator.GetSMI<MoveToLocationMonitor.Instance>()?.MoveToLocation(cell);
