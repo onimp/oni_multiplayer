@@ -21,10 +21,11 @@ public class StateMachinesPatcher {
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<StateMachinesPatcher>();
     private readonly Harmony harmony;
     private readonly List<StateMachineConfigurer> configurers = [];
-    private readonly StateMachineConfigurationContext context = new();
+    private readonly StateMachineConfigurationContext context;
 
-    public StateMachinesPatcher(EventDispatcher events, Harmony harmony) {
+    public StateMachinesPatcher(EventDispatcher events, Harmony harmony, IDependencyContainer container) {
         this.harmony = harmony;
+        context = new StateMachineConfigurationContext(container);
         events.Subscribe<RuntimeReadyEvent>(OnRuntimeReady);
     }
 

@@ -27,7 +27,7 @@ public class StateMachineDslTests : PlayableGameTest {
 
     private static void RunStateMachinesPatcher(params StateMachineConfigurer[] configurers) {
         var dispatcher = new EventDispatcher();
-        var patcher = new StateMachinesPatcher(dispatcher, harmony);
+        var patcher = new StateMachinesPatcher(dispatcher, harmony, Dependencies);
         configurers.ForEach(it => patcher.Register(it));
         dispatcher.Dispatch(new RuntimeReadyEvent(Runtime.Instance));
     }
@@ -61,7 +61,7 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void MustSuppressEnterAction() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => { dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter("", null)); }); }
             )
         );
@@ -77,7 +77,7 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void CheckConfigurationPhases() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 root => {
                     root.PreConfigure((_, sm) => {
                         Assert.IsNull(sm.StateA.enterActions);
@@ -98,7 +98,7 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void MustFailOnIncorrectlyProducedActionPhase() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
                     dsl.PreConfigure((_, sm) => {
                         Assert.IsNull(sm.StateA.enterActions);
@@ -119,7 +119,7 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void MustAddNewBehavior() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
                     dsl.PreConfigure((_, sm) => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
                     dsl.PostConfigure((_, sm) => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
@@ -138,16 +138,16 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void MustAggregateInlineConfigurations() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
                 dsl => {
                     dsl.PreConfigure((_, sm) => { sm.StateA.Enter("Test", smi => sm.Trace.Get(smi).Add("+X")); });
                     dsl.PostConfigure((_, sm) => { sm.StateA.Exit("Test", smi => sm.Trace.Get(smi).Add("-X")); });
                 }
             ),
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
                     dsl.Inline(
-                        new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
+                        new StateMachineConfigurerDsl<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
                             dsl => { dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter(null, null)); }); }
                         )
                     );
@@ -175,12 +175,12 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void MustFailOnImproperUseOfInlineConfiguration() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 root => {
                     root.PreConfigure(
                         (_, sm) => {
                             root.Inline(
-                                new StateMachineConfigurer<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
+                                new StateMachineConfigurerDsl<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
                                     dsl => {
                                         dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter(null, null)); });
                                     }
@@ -207,7 +207,7 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void MustFailOnPhaseInconsistency() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 root => {
                     root.PostConfigure((_, _) => {
                         root.PreConfigure((dsl, sm) => dsl.Suppress(() => sm.StateA.Enter("", null)));
@@ -229,7 +229,7 @@ public class StateMachineDslTests : PlayableGameTest {
     [Test]
     public void MustCreateAndAttachNewState() {
         RunStateMachinesPatcher(
-            new StateMachineConfigurer<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(root => {
+            new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(root => {
                 root.PreConfigure((pre, sm) => {
                     pre.Suppress(() => sm.InitState.Transition(null, null, 0));
                 });

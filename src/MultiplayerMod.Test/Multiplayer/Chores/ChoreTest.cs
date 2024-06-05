@@ -194,7 +194,7 @@ public abstract class ChoreTest : PlayableGameTest {
     protected static HashSet<Type> SupportedChoreTypes;
 
     static ChoreTest() {
-        var context = new StateMachineConfigurationContext();
+        var context = new StateMachineConfigurationContext(Dependencies);
         ChoresMultiplayerConfiguration.Configuration
             .Select(it => it.StatesConfigurer)
             .NotNull()

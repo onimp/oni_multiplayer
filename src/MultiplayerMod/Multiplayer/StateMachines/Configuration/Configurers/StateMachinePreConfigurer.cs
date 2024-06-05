@@ -8,27 +8,34 @@ using MultiplayerMod.Core.Patch.ControlFlow.Evaluators;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using static MultiplayerMod.Multiplayer.StateMachines.Configuration.StateMachineConfigurationPhase;
 
-namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Dsl;
+namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Configurers;
 
-public class StateMachinePreConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(
-    StateMachineRootConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef> root,
+public class StateMachinePreConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>(
+    StateMachineRootConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> root,
     StateMachineConfigurationContext context
-) : StateMachineBaseConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>(root, context)
+) : StateMachineBaseConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>(root, context)
     where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.GameInstance
-    where TMaster : IStateMachineTarget {
+    where TMaster : IStateMachineTarget
+{
 
     private readonly ControlFlowCustomizer customizer = Dependencies.Get<ControlFlowCustomizer>();
 
+    private readonly StateMachineRootConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> rootConfigurer =
+        root;
+
     public void PostConfigure(
-        Action<StateMachinePostConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster, TDef>, TStateMachine> action
-    ) => root.PostConfigure(action);
+        Action<StateMachinePostConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>, TStateMachine> action
+    ) => rootConfigurer.PostConfigure(action);
 
     public void Suppress(Expression<System.Action> expression) {
         var (state, method) = ExtractMethodCallInfo(expression);
         var scope = typeof(TStateMachine).GetMethod(nameof(StateMachine.InitializeStates))!;
-        root.AddAction(ControlFlowApply, _ => customizer.Detour(state, method, state, new MethodBoundedDetour(scope)));
-        root.AddAction(ControlFlowReset, _ => customizer.Reset(state));
+        rootConfigurer.AddAction(
+            ControlFlowApply,
+            _ => customizer.Detour(state, method, state, new MethodBoundedDetour(scope))
+        );
+        rootConfigurer.AddAction(ControlFlowReset, _ => customizer.Reset(state));
     }
 
     private StateMachine.BaseState ExtractStateInstance(MemberExpression memberExpression) {

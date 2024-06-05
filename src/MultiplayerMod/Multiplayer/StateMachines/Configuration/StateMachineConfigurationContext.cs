@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 
 namespace MultiplayerMod.Multiplayer.StateMachines.Configuration;
 
-public record StateMachineConfigurationContext {
+public class StateMachineConfigurationContext(IDependencyContainer dependencies) {
 
     private readonly Dictionary<Type, StateMachineConfiguration> configurations = [];
 
+    public IDependencyContainer Dependencies { get; } = dependencies;
     public bool Locked { get; private set; }
 
     public StateMachineConfiguration CreateConfiguration(Type stateMachineType, Type masterType) {
