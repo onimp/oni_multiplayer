@@ -9,7 +9,7 @@ public class ComponentReference<T>(GameObjectReference reference) : TypedReferen
     private GameObjectReference GameObjectReference { get; } = reference;
     private Type ComponentType { get; } = typeof(T);
 
-    public override T Resolve() => (T) GameObjectReference.GetComponent(ComponentType)!;
+    public override T Resolve() => (T) GameObjectReference.Resolve().GetComponent(ComponentType);
 
     protected bool Equals(ComponentReference other) {
         return GameObjectReference.Equals(other.GameObjectReference) && ComponentType == other.ComponentType;

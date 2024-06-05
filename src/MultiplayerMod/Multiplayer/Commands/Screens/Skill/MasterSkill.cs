@@ -16,7 +16,7 @@ public class MasterSkill : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var component = minionIdentityReference.GetComponent<MinionResume>();
+        var component = minionIdentityReference.Resolve().GetComponent<MinionResume>();
         if (component == null) return;
 
         if (DebugHandler.InstantBuildMode && component.AvailableSkillpoints < 1)

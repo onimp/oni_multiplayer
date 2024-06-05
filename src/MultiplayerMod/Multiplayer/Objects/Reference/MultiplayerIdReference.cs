@@ -5,33 +5,25 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
 
 [Serializable]
-public class MultiplayerIdReference : GameObjectReference {
+public class MultiplayerIdReference(MultiplayerId id) : GameObjectReference {
 
-    public MultiplayerId Id { get; }
+    public MultiplayerId Id { get; } = id;
 
-    public MultiplayerIdReference(MultiplayerId id) {
-        Id = id;
-    }
-
-    public override GameObject? Resolve() => Dependencies.Get<MultiplayerGame>().Objects[Id] as GameObject;
+    protected override GameObject? ResolveGameObject() => Dependencies.Get<MultiplayerGame>().Objects[Id] as GameObject;
 
     public override string ToString() => Id.ToString();
 
-    protected bool Equals(MultiplayerIdReference other)
-    {
-        return Id.Equals(other.Id);
+    protected bool Equals(MultiplayerIdReference other) => Id.Equals(other.Id);
+
+    public override bool Equals(object? obj) {
+        if (ReferenceEquals(null, obj))
+            return false;
+        if (ReferenceEquals(this, obj))
+            return true;
+
+        return obj.GetType() == GetType() && Equals((MultiplayerIdReference) obj);
     }
 
-    public override bool Equals(object? obj)
-    {
-        if (ReferenceEquals(null, obj)) return false;
-        if (ReferenceEquals(this, obj)) return true;
-        return obj.GetType() == GetType() && Equals((MultiplayerIdReference)obj);
-    }
-
-    public override int GetHashCode()
-    {
-        return Id.GetHashCode();
-    }
+    public override int GetHashCode() => Id.GetHashCode();
 
 }

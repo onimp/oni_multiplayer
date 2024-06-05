@@ -29,11 +29,11 @@ public class ClickUserMenuButton : MultiplayerCommand {
                 actionName,
                 BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly,
                 null,
-                new Type[] { },
-                new ParameterModifier[] { }
+                [],
+                []
             );
-            var target = reference.GetGameObject();
-            methodInfo?.Invoke(target.GetComponent(actionDeclaringType), new object[] { });
+            var target = reference.Resolve();
+            methodInfo?.Invoke(target.GetComponent(actionDeclaringType), []);
             target.Trigger(GameHashes.RefreshUserMenu);
             target.Trigger(GameHashes.UIRefresh);
         } catch (Exception e) {

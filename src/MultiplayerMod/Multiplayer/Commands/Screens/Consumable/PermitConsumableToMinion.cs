@@ -20,7 +20,7 @@ public class PermitConsumableToMinion : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var consumableConsumer = consumableConsumerReference.GetComponent<ConsumableConsumer>();
+        var consumableConsumer = consumableConsumerReference.Resolve().GetComponent<ConsumableConsumer>();
         if (consumableConsumer == null) return;
 
         consumableConsumer.SetPermitted(consumableId, isAllowed);
