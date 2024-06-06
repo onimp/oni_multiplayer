@@ -21,7 +21,7 @@ public static class ChoresConfigurationDsl {
         );
     }
 
-    public static ChoreConfiguration Synchronize<TChore, TStateMachine, TStateMachineInstance, TConfigurer>()
+    public static ChoreConfiguration UseSynchronizer<TChore, TStateMachine, TStateMachineInstance, TConfigurer>()
         where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TChore, object>
         where TStateMachineInstance :
         GameStateMachine<TStateMachine, TStateMachineInstance, TChore, object>.GameInstance

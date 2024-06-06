@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using MultiplayerMod.Core.Collections;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 
@@ -58,9 +59,9 @@ public class DependencyContainer : IDependencyContainer, IDependencyInjector {
         instances[info.Name] = singleton;
     }
 
-    public T Get<T>() where T : notnull {
-        return (T) Get(typeof(T));
-    }
+    public T Get<T>() where T : notnull => (T) Get(typeof(T));
+
+    public Deconstructable<T1, T2> Get<T1, T2>() where T1 : notnull where T2 : notnull => new(Get<T1>(), Get<T2>());
 
     public object Get(Type type) {
         var targetType = type;

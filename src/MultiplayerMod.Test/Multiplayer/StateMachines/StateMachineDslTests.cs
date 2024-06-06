@@ -62,7 +62,7 @@ public class StateMachineDslTests : PlayableGameTest {
     public void MustSuppressEnterAction() {
         RunStateMachinesPatcher(
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
-                dsl => { dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter("", null)); }); }
+                dsl => { dsl.PreConfigure(dsl => { dsl.Suppress(() => dsl.StateMachine.StateA.Enter("", null)); }); }
             )
         );
         var smi = CreateStateMachineInstance<TestStateMachine.Instance>();
@@ -79,13 +79,13 @@ public class StateMachineDslTests : PlayableGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 root => {
-                    root.PreConfigure((_, sm) => {
-                        Assert.IsNull(sm.StateA.enterActions);
-                        Assert.IsNull(sm.StateA.exitActions);
+                    root.PreConfigure(pre => {
+                        Assert.IsNull(pre.StateMachine.StateA.enterActions);
+                        Assert.IsNull(pre.StateMachine.StateA.exitActions);
                     });
-                    root.PostConfigure((_, sm) => {
-                        Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
-                        Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
+                    root.PostConfigure(post => {
+                        Assert.AreEqual(expected: 2, actual: post.StateMachine.StateA.enterActions?.Count);
+                        Assert.AreEqual(expected: 1, actual: post.StateMachine.StateA.exitActions?.Count);
                     });
                 }
             )
@@ -100,13 +100,13 @@ public class StateMachineDslTests : PlayableGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
-                    dsl.PreConfigure((_, sm) => {
-                        Assert.IsNull(sm.StateA.enterActions);
-                        Assert.IsNull(sm.StateA.exitActions);
+                    dsl.PreConfigure(pre => {
+                        Assert.IsNull(pre.StateMachine.StateA.enterActions);
+                        Assert.IsNull(pre.StateMachine.StateA.exitActions);
                     });
-                    dsl.PostConfigure((_, sm) => {
-                        Assert.AreEqual(expected: 2, actual: sm.StateA.enterActions?.Count);
-                        Assert.AreEqual(expected: 1, actual: sm.StateA.exitActions?.Count);
+                    dsl.PostConfigure(post => {
+                        Assert.AreEqual(expected: 2, actual: post.StateMachine.StateA.enterActions?.Count);
+                        Assert.AreEqual(expected: 1, actual: post.StateMachine.StateA.exitActions?.Count);
                     });
                 }
             )
@@ -121,8 +121,8 @@ public class StateMachineDslTests : PlayableGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
-                    dsl.PreConfigure((_, sm) => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
-                    dsl.PostConfigure((_, sm) => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                    dsl.PreConfigure(pre => { pre.StateMachine.StateA.Enter(smi => pre.StateMachine.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure(post => { post.StateMachine.StateA.Exit(smi => post.StateMachine.Trace.Get(smi).Add("-X")); });
                 }
             )
         );
@@ -140,19 +140,19 @@ public class StateMachineDslTests : PlayableGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurerDsl<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
                 dsl => {
-                    dsl.PreConfigure((_, sm) => { sm.StateA.Enter("Test", smi => sm.Trace.Get(smi).Add("+X")); });
-                    dsl.PostConfigure((_, sm) => { sm.StateA.Exit("Test", smi => sm.Trace.Get(smi).Add("-X")); });
+                    dsl.PreConfigure(pre => { pre.StateMachine.StateA.Enter("Test", smi => pre.StateMachine.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure(post => { post.StateMachine.StateA.Exit("Test", smi => post.StateMachine.Trace.Get(smi).Add("-X")); });
                 }
             ),
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 dsl => {
                     dsl.Inline(
                         new StateMachineConfigurerDsl<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
-                            dsl => { dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter(null, null)); }); }
+                            dsl => { dsl.PreConfigure(dsl => { dsl.Suppress(() => dsl.StateMachine.StateA.Enter(null, null)); }); }
                         )
                     );
-                    dsl.PreConfigure((_, sm) => { sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X")); });
-                    dsl.PostConfigure((_, sm) => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                    dsl.PreConfigure(pre => { pre.StateMachine.StateA.Enter(smi => pre.StateMachine.Trace.Get(smi).Add("+X")); });
+                    dsl.PostConfigure(post => { post.StateMachine.StateA.Exit(smi => post.StateMachine.Trace.Get(smi).Add("-X")); });
                 }
             )
         );
@@ -178,18 +178,18 @@ public class StateMachineDslTests : PlayableGameTest {
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 root => {
                     root.PreConfigure(
-                        (_, sm) => {
+                        pre => {
                             root.Inline(
                                 new StateMachineConfigurerDsl<SecondTestStateMachine, SecondTestStateMachine.Instance, TestTarget, object>(
                                     dsl => {
-                                        dsl.PreConfigure((dsl, sm) => { dsl.Suppress(() => sm.StateA.Enter(null, null)); });
+                                        dsl.PreConfigure(dsl => { dsl.Suppress(() => dsl.StateMachine.StateA.Enter(null, null)); });
                                     }
                                 )
                             );
-                            sm.StateA.Enter(smi => sm.Trace.Get(smi).Add("+X"));
+                            pre.StateMachine.StateA.Enter(smi => pre.StateMachine.Trace.Get(smi).Add("+X"));
                         }
                     );
-                    root.PostConfigure((_, sm) => { sm.StateA.Exit(smi => sm.Trace.Get(smi).Add("-X")); });
+                    root.PostConfigure(post => { post.StateMachine.StateA.Exit(smi => post.StateMachine.Trace.Get(smi).Add("-X")); });
                 }
             )
         );
@@ -209,8 +209,8 @@ public class StateMachineDslTests : PlayableGameTest {
         RunStateMachinesPatcher(
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(
                 root => {
-                    root.PostConfigure((_, _) => {
-                        root.PreConfigure((dsl, sm) => dsl.Suppress(() => sm.StateA.Enter("", null)));
+                    root.PostConfigure(_ => {
+                        root.PreConfigure(pre => pre.Suppress(() => pre.StateMachine.StateA.Enter("", null)));
                     });
                 }
             )
@@ -230,17 +230,17 @@ public class StateMachineDslTests : PlayableGameTest {
     public void MustCreateAndAttachNewState() {
         RunStateMachinesPatcher(
             new StateMachineConfigurerDsl<TestStateMachine, TestStateMachine.Instance, TestTarget, object>(root => {
-                root.PreConfigure((pre, sm) => {
-                    pre.Suppress(() => sm.InitState.Transition(null, null, 0));
+                root.PreConfigure(pre => {
+                    pre.Suppress(() => pre.StateMachine.InitState.Transition(null, null, 0));
                 });
-                root.PostConfigure((post, sm) => {
-                    var newState = post.AddState(sm.root, "new_state");
+                root.PostConfigure(post => {
+                    var newState = post.AddState(post.StateMachine.root, "new_state");
 
                     newState
-                        .Enter("Enter", smi => sm.Trace.Get(smi).Add("+N"))
-                        .Exit(smi => sm.Trace.Get(smi).Add("-N"));
+                        .Enter("Enter", smi => post.StateMachine.Trace.Get(smi).Add("+N"))
+                        .Exit(smi => post.StateMachine.Trace.Get(smi).Add("-N"));
 
-                    sm.InitState.Transition(newState, _ => true);
+                    post.StateMachine.InitState.Transition(newState, _ => true);
                 });
             })
         );

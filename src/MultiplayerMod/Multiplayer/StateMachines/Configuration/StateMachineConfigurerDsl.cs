@@ -2,6 +2,13 @@
 
 namespace MultiplayerMod.Multiplayer.StateMachines.Configuration;
 
+public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance>(
+    StateMachineConfigurerDelegate<TStateMachine, TStateMachineInstance, IStateMachineTarget, object> boundedAction
+)
+    : StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, IStateMachineTarget, object>(boundedAction)
+    where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, IStateMachineTarget, object>
+    where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, IStateMachineTarget, object>.GameInstance;
+
 public class StateMachineConfigurerDsl<TStateMachine, TStateMachineInstance, TMaster>(
     StateMachineConfigurerDelegate<TStateMachine, TStateMachineInstance, TMaster, object> boundedAction
 )

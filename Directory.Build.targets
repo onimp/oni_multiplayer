@@ -33,6 +33,11 @@
                 <TargetRule>Method</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </ExposureRules>
+            <ExposureRules Include="Chore::GetSMI">
+                <PatternRule>Chore::GetSMI</PatternRule>
+                <TargetRule>Method</TargetRule>
+                <VisibilityRule>Public</VisibilityRule>
+            </ExposureRules>
         </ItemGroup>
         <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)" OutputDirectory="$(ExposedLibrariesPath)"/>
     </Target>

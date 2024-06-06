@@ -29,21 +29,23 @@ public class DriverChoresQueue {
         out var queue
     ) && queue.Busy;
 
+    // TODO: We have to sync something like a fail event to prevent hanging of non-completable chores
+    // TODO: Check Chore.runUntilComplete
     public void Enqueue(ChoreDriver driver, ref Chore.Precondition.Context context) {
-        var queue = GetQueue(driver);
-        queue.Contexts.Enqueue(context);
-        context.chore.onExit += _ => {
-            if (queue.Contexts.Count > 0)
-                driver.SetChore(queue.Contexts.Dequeue());
-            else
-                queue.Busy = false;
-        };
+        // var queue = GetQueue(driver);
+        // queue.Contexts.Enqueue(context);
+        // context.chore.onExit += _ => {
+        //     if (queue.Contexts.Count > 0)
+        //         driver.SetChore(queue.Contexts.Dequeue());
+        //     else
+        //         queue.Busy = false;
+        // };
+        //
+        // if (queue.Busy)
+        //     return;
 
-        if (queue.Busy)
-            return;
-
-        driver.SetChore(queue.Contexts.Dequeue());
-        queue.Busy = true;
+        driver.SetChore(context);
+        // queue.Busy = true;
     }
 
     public void Clear(ChoreDriver driver, bool forceStop = false) {

@@ -16,21 +16,13 @@ public abstract class StateMachineBoundedConfigurer<TStateMachine, TStateMachine
 
     protected virtual StateMachineConfigurer[] Inline() => [];
 
-    protected virtual void PreConfigure(
-        StateMachinePreConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> configurer,
-        TStateMachine stateMachine
+    protected virtual void Configure(
+        StateMachineRootConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> configurer
     ) { }
 
-    protected virtual void PostConfigure(
-        StateMachinePostConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> configurer,
-        TStateMachine stateMachine
-    ) { }
-
-    public void Configure(StateMachineRootConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> root) {
+    public void Execute(StateMachineRootConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> root) {
         Inline().ForEach(root.Inline);
-        root.PreConfigure(PreConfigure);
-        root.PostConfigure(PostConfigure);
+        Configure(root);
     }
 
 }
-

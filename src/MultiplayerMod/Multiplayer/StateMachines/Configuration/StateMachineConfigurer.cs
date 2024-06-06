@@ -40,7 +40,7 @@ public class StateMachineConfigurer<TStateMachine, TStateMachineInstance, TMaste
             )
             .ToArray();
         var configurer = (TConfigurer) constructor.Invoke(arguments);
-        configurer.Configure(root);
+        configurer.Execute(root);
     }
 
 }

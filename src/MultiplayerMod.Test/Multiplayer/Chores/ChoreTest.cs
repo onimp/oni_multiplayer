@@ -200,7 +200,7 @@ public abstract class ChoreTest : PlayableGameTest {
             .NotNull()
             .ForEach(it => it.Configure(context));
         StateMachineConfigurations = context.Configurations;
-        SupportedChoreTypes = ChoresMultiplayerConfiguration.Configuration.Select(it => it.ChoreType).ToHashSet();
+        SupportedChoreTypes = ChoresMultiplayerConfiguration.Configuration.Select(it => it.ChoreType).NotNull().ToHashSet();
     }
 
     protected static object[][] ChoresInstantiationTestCases() => GetFactories()

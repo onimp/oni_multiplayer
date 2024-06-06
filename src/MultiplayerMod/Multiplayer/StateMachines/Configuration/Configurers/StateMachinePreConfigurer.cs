@@ -12,8 +12,9 @@ namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Configurers;
 
 public class StateMachinePreConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>(
     StateMachineRootConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef> root,
-    StateMachineConfigurationContext context
-) : StateMachineBaseConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>(root, context)
+    StateMachineConfigurationContext context,
+    TStateMachine stateMachine
+) : StateMachineBaseConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>(root, context, stateMachine)
     where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>
     where TStateMachineInstance : GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.GameInstance
     where TMaster : IStateMachineTarget
@@ -25,7 +26,7 @@ public class StateMachinePreConfigurer<TStateMachine, TStateMachineInstance, TMa
         root;
 
     public void PostConfigure(
-        Action<StateMachinePostConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>, TStateMachine> action
+        Action<StateMachinePostConfigurer<TStateMachine, TStateMachineInstance, TMaster, TDef>> action
     ) => rootConfigurer.PostConfigure(action);
 
     public void Suppress(Expression<System.Action> expression) {
@@ -39,21 +40,22 @@ public class StateMachinePreConfigurer<TStateMachine, TStateMachineInstance, TMa
     }
 
     private StateMachine.BaseState ExtractStateInstance(MemberExpression memberExpression) {
-        var chain = new LinkedList<FieldInfo>();
+        var chain = new LinkedList<MemberInfo>();
 
         System.Linq.Expressions.Expression current = memberExpression;
         while (current is MemberExpression expression) {
-            if (expression.Member.MemberType != MemberTypes.Field)
-                throw new InvalidStateExpressionException("Only a closure field access chain is supported");
-
-            chain.AddFirst((FieldInfo) expression.Member);
+            chain.AddFirst(expression.Member);
             current = expression.Expression;
         }
 
         if (current is not ConstantExpression constantExpression)
             throw new InvalidStateExpressionException("Only a constant expression of closure instance is supported");
 
-        return (StateMachine.BaseState) chain.Aggregate(constantExpression.Value, (obj, field) => field.GetValue(obj));
+        return (StateMachine.BaseState) chain.Aggregate(constantExpression.Value, (obj, member) => member switch {
+            FieldInfo field => field.GetValue(obj),
+            PropertyInfo property => property.GetValue(obj),
+            _ => throw new InvalidStateExpressionException("Only a closure field or property access chain is supported")
+        });
     }
 
     private (StateMachine.BaseState, MethodInfo) ExtractMethodCallInfo(LambdaExpression expression) {
