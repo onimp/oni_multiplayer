@@ -34,4 +34,16 @@ public static class ChoresConfigurationDsl {
         );
     }
 
+    public static ChoreConfiguration UseStateMachineSynchronizer<TStateMachine, TStateMachineInstance, TDef, TConfigurer>()
+        where TStateMachine : GameStateMachine<TStateMachine, TStateMachineInstance, IStateMachineTarget, TDef>
+        where TStateMachineInstance :
+        GameStateMachine<TStateMachine, TStateMachineInstance, IStateMachineTarget, TDef>.GameInstance
+        where TConfigurer : StateMachineBoundedConfigurer<TStateMachine, TStateMachineInstance, IStateMachineTarget, TDef>
+    {
+        return new ChoreConfiguration(
+            null,
+            new StateMachineConfigurer<TStateMachine, TStateMachineInstance, IStateMachineTarget, TDef, TConfigurer>()
+        );
+    }
+
 }
