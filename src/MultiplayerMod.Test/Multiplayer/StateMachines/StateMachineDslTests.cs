@@ -27,7 +27,7 @@ public class StateMachineDslTests : PlayableGameTest {
 
     private static void RunStateMachinesPatcher(params StateMachineConfigurer[] configurers) {
         var dispatcher = new EventDispatcher();
-        var patcher = new StateMachinesPatcher(dispatcher, harmony, Dependencies);
+        var patcher = new StateMachinesPatcher(dispatcher, harmony, DependencyContainer);
         configurers.ForEach(it => patcher.Register(it));
         dispatcher.Dispatch(new RuntimeReadyEvent(Runtime.Instance));
     }

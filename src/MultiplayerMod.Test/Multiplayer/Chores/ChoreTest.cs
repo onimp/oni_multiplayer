@@ -9,11 +9,14 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Multiplayer.Chores;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Commands.Registry;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.StateMachines;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
+using MultiplayerMod.Test.Environment;
+using MultiplayerMod.Test.Environment.Network;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.GameRuntime;
 using MultiplayerMod.Test.GameRuntime.Patches;
@@ -194,7 +197,15 @@ public abstract class ChoreTest : PlayableGameTest {
     protected static HashSet<Type> SupportedChoreTypes;
 
     static ChoreTest() {
-        var context = new StateMachineConfigurationContext(Dependencies);
+        var container = new DependencyContainerBuilder()
+            .AddType<TestMultiplayerServer>()
+            .AddType<TestMultiplayerClient>()
+            .AddSingleton(new TestMultiplayerClientId(1))
+            .AddType<MultiplayerCommandRegistry>()
+            .AddType<TestRuntime>()
+            .Build();
+
+        var context = new StateMachineConfigurationContext(container);
         ChoresMultiplayerConfiguration.Configuration
             .Select(it => it.StatesConfigurer)
             .NotNull()

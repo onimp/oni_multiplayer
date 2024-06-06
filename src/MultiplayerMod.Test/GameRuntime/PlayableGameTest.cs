@@ -9,12 +9,17 @@ using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Patch.ControlFlow;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.ModRuntime.Context;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Commands.Registry;
 using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Test.Environment;
+using MultiplayerMod.Test.Environment.Network;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
 using MultiplayerMod.Test.GameRuntime.Patches;
+using MultiplayerMod.Test.Multiplayer;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -23,7 +28,7 @@ namespace MultiplayerMod.Test.GameRuntime;
 public abstract class PlayableGameTest {
 
     protected static Harmony Harmony = null!;
-    protected static DependencyContainer Dependencies = null!;
+    protected static IDependencyContainer DependencyContainer => Dependencies.Get<IDependencyContainer>();
     protected static EventDispatcher Events => Dependencies.Get<EventDispatcher>();
 
     [OneTimeSetUp]
@@ -184,6 +189,11 @@ public abstract class PlayableGameTest {
             .AddType<EventDispatcher>()
             .AddType<TestRuntime>()
             .AddType<ControlFlowCustomizer>()
+            .AddType<TestMultiplayerServer>()
+            .AddType<TestMultiplayerClient>()
+            .AddSingleton(new MultiplayerTools.TestPlayerProfileProvider(new PlayerProfile("Test")))
+            .AddSingleton(new TestMultiplayerClientId(1))
+            .AddType<MultiplayerCommandRegistry>()
             .AddSingleton(Harmony);
 
         ResolveCustomizationProviders<ConfigureDependenciesAttribute>(methods => methods
@@ -193,7 +203,6 @@ public abstract class PlayableGameTest {
 
         var container = builder.Build();
         container.Get<TestRuntime>().Activate();
-        Dependencies = container;
 
         Runtime.Instance.Dependencies.Get<MultiplayerGame>().Refresh(MultiplayerMode.Host);
         Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().EnterOverrideSection(ExecutionLevel.Game);

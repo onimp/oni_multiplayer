@@ -1,5 +1,6 @@
 using System;
 using MultiplayerMod.ModRuntime;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.Chores.Commands;
 using MultiplayerMod.Multiplayer.Commands;

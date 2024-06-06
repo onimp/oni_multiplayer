@@ -22,7 +22,7 @@ public class PatchesCompatibility : PlayableGameTest {
     }
 
     private static List<string> GetChoresStateMachines() {
-        var context = new StateMachineConfigurationContext(Dependencies);
+        var context = new StateMachineConfigurationContext(DependencyContainer);
         ChoresMultiplayerConfiguration.Configuration
             .Select(it => it.StatesConfigurer)
             .NotNull()
