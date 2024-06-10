@@ -2,10 +2,7 @@
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
-using MultiplayerMod.Game.Chores;
-using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Multiplayer.Chores.Commands;
-using MultiplayerMod.Multiplayer.Chores.Commands.States;
 using MultiplayerMod.Multiplayer.Chores.Events;
 using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
@@ -46,43 +43,6 @@ public class HostEventsBinder {
 
         events.Subscribe<GameStartedEvent>(OnGameStarted);
         events.Subscribe<StopMultiplayerEvent>(OnStopMultiplayer);
-
-        ChoreEvents.CreateNewChore += args => server.Send(
-            new CreateChore(args.ChoreId, args.ChoreType, args.Args),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnStateEnter += args => server.Send(
-            AllowStateTransition.EnterTransition(args),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnEnterMoveTo += args => server.Send(
-            new StartMove(args),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnStateExit += args => server.Send(
-            AllowStateTransition.ExitTransition(args),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnExitMoveTo += args => server.Send(
-            new TransitToState(args.Chore, args.TargetState),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnStateTransition += args => server.Send(
-            new TransitToState(args.Chore, args.TargetState),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnStateUpdate += args => server.Send(
-            new SetStateArguments(args),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnUpdateMoveTo += args => server.Send(
-            new UpdateMove(args),
-            MultiplayerCommandOptions.SkipHost
-        );
-        ChoreStateEvents.OnStateEventHandler += args => server.Send(
-            new SetStateArguments(args),
-            MultiplayerCommandOptions.SkipHost
-        );
     }
 
     private void OnGameStarted(GameStartedEvent @event) {

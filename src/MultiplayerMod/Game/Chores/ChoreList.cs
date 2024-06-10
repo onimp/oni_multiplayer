@@ -17,7 +17,58 @@ public static class ChoreList {
 
     public static readonly Dictionary<Type, ChoreSyncConfig> Config =
         new() {
-           {
+            {
+                typeof(AttackChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(DeliverFoodChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(DieChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(DropUnusedInventoryChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(EntombedChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(MoveChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(MoveToQuarantineChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(PartyChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(PeeChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(PutOnHatChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(SighChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(StressIdleChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(SwitchRoleHatChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(TakeOffHatChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(UglyCryChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(WaterCoolerChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
+                typeof(ReactEmoteChore),
+                ChoreSyncConfig.FullyDeterminedByInput()
+            }, {
                 typeof(AggressiveChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<AggressiveChore.States>(
