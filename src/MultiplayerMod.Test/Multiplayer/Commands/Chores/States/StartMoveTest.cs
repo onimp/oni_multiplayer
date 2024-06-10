@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Reflection;
 using MultiplayerMod.Game.Chores.States;
 using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
+using MultiplayerMod.Multiplayer.Chores.Commands.States;
 using MultiplayerMod.Multiplayer.Commands;
-using MultiplayerMod.Multiplayer.Commands.Chores.States;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.States;

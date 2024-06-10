@@ -5,7 +5,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Game.Chores.Types;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer;
-using MultiplayerMod.Multiplayer.Patches.Chores.States;
+using MultiplayerMod.Multiplayer.Chores.Patches.States;
 using MultiplayerMod.Multiplayer.States;
 using MultiplayerMod.Test.Game.Chores;
 using NUnit.Framework;

@@ -18,7 +18,7 @@ public class AcceptDelivery : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var telepad = args.Target.GetComponent();
+        var telepad = args.Target.Resolve();
         var capture = LocalCaptor.Capture<TelepadAcceptDeliveryCapture>(
             () => telepad.OnAcceptDelivery(args.Deliverable)
         );

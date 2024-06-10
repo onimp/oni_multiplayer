@@ -13,7 +13,7 @@ public class UpdateLogicTimeOfDaySensor : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var sensor = args.Target.GetComponent();
+        var sensor = args.Target.Resolve();
         sensor.startTime = args.StartTime;
         sensor.duration = args.Duration;
     }

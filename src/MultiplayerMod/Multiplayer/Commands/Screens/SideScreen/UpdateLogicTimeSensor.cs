@@ -13,7 +13,7 @@ public class UpdateLogicTimeSensor : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var sensor = args.Target.GetComponent();
+        var sensor = args.Target.Resolve();
         sensor.displayCyclesMode = args.DisplayCyclesMode;
         sensor.onDuration = args.OnDuration;
         sensor.offDuration = args.OffDuration;

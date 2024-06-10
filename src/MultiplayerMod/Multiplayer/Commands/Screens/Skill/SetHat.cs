@@ -16,7 +16,7 @@ public class SetHat : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var resume = minionIdentityReference.GetComponent<MinionResume>();
+        var resume = minionIdentityReference.Resolve().GetComponent<MinionResume>();
         if (resume == null)
             return;
 

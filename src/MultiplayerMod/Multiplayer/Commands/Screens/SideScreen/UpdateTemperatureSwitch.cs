@@ -13,7 +13,7 @@ public class UpdateTemperatureSwitch : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var temperatureControlledSwitch = args.Target.GetComponent();
+        var temperatureControlledSwitch = args.Target.Resolve();
         temperatureControlledSwitch.thresholdTemperature = args.ThresholdTemperature;
         temperatureControlledSwitch.activateOnWarmerThan = args.ActivateOnWarmerThan;
     }

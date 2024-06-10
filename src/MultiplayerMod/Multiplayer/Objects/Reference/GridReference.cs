@@ -21,7 +21,7 @@ public class GridReference : GameObjectReference {
         Layer = extension != null ? extension.GridLayer : 0;
     }
 
-    public override GameObject Resolve() => Grid.Objects[Cell, Layer];
+    protected override GameObject? ResolveGameObject() => Grid.Objects[Cell, Layer];
 
     public override string ToString() => $"{{ Cell = {Cell}, Layer = {Layer} }}";
 

@@ -23,7 +23,7 @@ public class SetPersonalPriority : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var choreConsumer = choreConsumerReference.GetComponent<ChoreConsumer>();
+        var choreConsumer = choreConsumerReference.Resolve().GetComponent<ChoreConsumer>();
         if (choreConsumer == null) return;
 
         choreConsumer.SetPersonalPriority(ChoreGroup, value);

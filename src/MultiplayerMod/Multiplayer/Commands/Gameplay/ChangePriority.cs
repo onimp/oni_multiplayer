@@ -14,6 +14,6 @@ public class ChangePriority : MultiplayerCommand {
         this.priority = priority;
     }
 
-    public override void Execute(MultiplayerCommandContext context) => target.GetComponent().SetMasterPriority(priority);
+    public override void Execute(MultiplayerCommandContext context) => target.Resolve().SetMasterPriority(priority);
 
 }

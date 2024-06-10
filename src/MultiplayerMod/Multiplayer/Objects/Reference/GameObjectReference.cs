@@ -6,10 +6,8 @@ namespace MultiplayerMod.Multiplayer.Objects.Reference;
 [Serializable]
 public abstract class GameObjectReference : TypedReference<GameObject> {
 
-    public GameObject GetGameObject() => Resolve() ?? throw new ObjectNotFoundException(this);
+    protected abstract GameObject? ResolveGameObject();
 
-    public T GetComponent<T>() where T : class => GetGameObject().GetComponent<T>();
-
-    public Component? GetComponent(Type type) => GetGameObject().GetComponent(type);
+    public override GameObject Resolve() => ResolveGameObject() ?? throw new ObjectNotFoundException(this);
 
 }

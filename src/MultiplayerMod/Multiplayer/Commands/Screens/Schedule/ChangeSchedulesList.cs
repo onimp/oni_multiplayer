@@ -81,7 +81,7 @@ public class ChangeSchedulesList : MultiplayerCommand {
         public List<ScheduleGroup> Groups => blocks.Select(block => groups[block]).ToList();
 
         public List<Ref<Schedulable>> Assigned =>
-            assigned.Select(reference => new Ref<Schedulable>(reference.GetComponent())).ToList();
+            assigned.Select(reference => new Ref<Schedulable>(reference.Resolve())).ToList();
     }
 
 }

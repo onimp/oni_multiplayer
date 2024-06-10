@@ -13,7 +13,7 @@ public class UpdateRailGunCapacity : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var railGun = args.Target.GetComponent();
+        var railGun = args.Target.Resolve();
         railGun.launchMass = args.LaunchMass;
     }
 

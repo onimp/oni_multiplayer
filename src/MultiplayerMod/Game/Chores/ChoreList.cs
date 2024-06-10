@@ -6,6 +6,7 @@ using MultiplayerMod.Game.Chores.Types;
 
 namespace MultiplayerMod.Game.Chores;
 
+[Obsolete]
 public static class ChoreList {
 
     private static readonly Regex stateNameRegex = new(@"nameof\(.*?\..*?\.(.*?)\)"); // Chore.State.(chained.name)
@@ -119,12 +120,6 @@ public static class ChoreList {
                     )
                 )
             }, {
-                typeof(EmoteChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
-                typeof(StressEmoteChore),
-                ChoreSyncConfig.FullyDeterminedByInput()
-            }, {
                 typeof(FoodFightChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<FoodFightChore.States>(
@@ -213,27 +208,6 @@ public static class ChoreList {
                     )
                 )
             }, {
-                typeof(EquipChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(FixedCaptureChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(RancherChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(RescueIncapacitatedChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(RescueSweepBotChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(TakeMedicineChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
-                typeof(WorkChore<>),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
-            }, {
                 typeof(FetchAreaChore),
                 ChoreSyncConfig.Dynamic(
                     StatesTransitionConfig.Enabled<FetchAreaChore.States>(
@@ -269,9 +243,6 @@ public static class ChoreList {
                         StateTransitionConfig.OnMove(nameof(BansheeChore.States.wander))
                     )
                 )
-            }, {
-                typeof(FetchChore),
-                ChoreSyncConfig.FullyDeterminedByInput(GlobalChoreProviderStatusEnum.OnTodo)
             }, {
                 typeof(IdleChore),
                 ChoreSyncConfig.Dynamic(

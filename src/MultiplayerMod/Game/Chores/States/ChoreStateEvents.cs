@@ -13,7 +13,7 @@ using MultiplayerMod.Multiplayer.CoreOperations;
 
 namespace MultiplayerMod.Game.Chores.States;
 
-[HarmonyPatch]
+// [HarmonyPatch]
 public static class ChoreStateEvents {
 
     public static event Action<ChoreTransitStateArgs>? OnStateEnter;

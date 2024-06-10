@@ -12,8 +12,6 @@ public static class Dependencies {
     public static Deconstructable<T1, T2> Get<T1, T2>()
         where T1 : notnull
         where T2 : notnull
-    {
-        return new Deconstructable<T1, T2>(Get<T1>(), Get<T2>());
-    }
+        => Container.Get<T1, T2>();
 
 }

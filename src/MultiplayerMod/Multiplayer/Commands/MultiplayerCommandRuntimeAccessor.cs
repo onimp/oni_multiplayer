@@ -1,18 +1,12 @@
-﻿using MultiplayerMod.Core.Events;
+﻿using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Commands;
 
-public class MultiplayerCommandRuntimeAccessor {
-
-    public Runtime Runtime { get; }
-    public EventDispatcher EventDispatcher { get; }
-    public MultiplayerGame Multiplayer { get; }
-
-    public MultiplayerCommandRuntimeAccessor(Runtime runtime) {
-        Runtime = runtime;
-        EventDispatcher = runtime.Dependencies.Get<EventDispatcher>();
-        Multiplayer = runtime.Dependencies.Get<MultiplayerGame>();
-    }
-
+public class MultiplayerCommandRuntimeAccessor(Runtime runtime) {
+    public Runtime Runtime { get; } = runtime;
+    public IDependencyContainer Dependencies { get; } = runtime.Dependencies;
+    public EventDispatcher EventDispatcher { get; } = runtime.Dependencies.Get<EventDispatcher>();
+    public MultiplayerGame Multiplayer { get; } = runtime.Dependencies.Get<MultiplayerGame>();
 }

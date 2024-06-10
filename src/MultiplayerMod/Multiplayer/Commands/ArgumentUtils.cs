@@ -66,7 +66,7 @@ public static class ArgumentUtils {
 
         public object Resolve() {
             var list = List2Ref?.GetFetchList2();
-            var creatureDeliveryPoint = CreatureDeliveryPointReference?.GetComponent();
+            var creatureDeliveryPoint = CreatureDeliveryPointReference?.Resolve();
 
             var fetchOrders = list?.FetchOrders ?? creatureDeliveryPoint?.fetches;
             if (fetchOrders == null) {
@@ -119,15 +119,15 @@ public static class ArgumentUtils {
         ) { }
 
         public FetchList2? GetFetchList2() {
-            var fetchListList = ComplexFabricatorReference?.GetComponent().fetchListList ??
+            var fetchListList = ComplexFabricatorReference?.Resolve().fetchListList ??
                                 StateMachineReference?.Resolve()?.dataTable.OfType<FetchList2>().ToList();
             return fetchListList?.Single(
                        fetchList => Equals(fetchList.Destination.GetReference(), StorageReference) &&
                                     fetchList.choreType == ComplexFabricatorChoreType
                    ) ??
-                   ConstructableReference?.GetComponent().fetchList ??
+                   ConstructableReference?.Resolve().fetchList ??
                    FilteredStorageReference?.GetFilteredStorage().fetchList ??
-                   ManualDeliveryKGReference?.GetComponent().fetchList;
+                   ManualDeliveryKGReference?.Resolve().fetchList;
         }
     }
 

@@ -1,3 +1,8 @@
-﻿namespace MultiplayerMod.Multiplayer.StateMachines.Configuration;
+﻿using System;
 
-public record StateMachineConfigurationAction(StateMachineConfigurationPhase Phase, System.Action Action);
+namespace MultiplayerMod.Multiplayer.StateMachines.Configuration;
+
+public record StateMachineConfigurationAction(
+    StateMachineConfigurationPhase Phase,
+    Action<StateMachine> Configure
+);

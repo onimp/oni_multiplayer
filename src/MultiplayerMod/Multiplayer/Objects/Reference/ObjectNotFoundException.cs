@@ -2,12 +2,8 @@
 
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
 
-public class ObjectNotFoundException : Exception {
+public class ObjectNotFoundException(Reference reference) : Exception {
 
-    public GameObjectReference Reference { get; }
-
-    public ObjectNotFoundException(GameObjectReference reference) {
-        Reference = reference;
-    }
+    public Reference Reference { get; } = reference;
 
 }
