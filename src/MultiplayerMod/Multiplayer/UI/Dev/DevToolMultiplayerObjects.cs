@@ -60,7 +60,7 @@ public class DevToolMultiplayerObjects : DevTool {
         ImGui.TableHeadersRow();
 
         var index = 0;
-        multiplayer.Objects.Where(it => !generatedOnly || generatedOnly && it.Key.ToString().EndsWith(":0")).ForEach(
+        multiplayer.Objects.Where(it => !generatedOnly || generatedOnly && it.Key.ToString().StartsWith("1:")).ForEach(
             it => {
                 ImGui.TableNextRow();
                 ImGui.PushID($"ID_row_{index++}");
