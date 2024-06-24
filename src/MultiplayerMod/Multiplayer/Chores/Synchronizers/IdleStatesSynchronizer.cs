@@ -9,12 +9,10 @@ using MultiplayerMod.Network;
 namespace MultiplayerMod.Multiplayer.Chores.Synchronizers;
 
 [UsedImplicitly]
-public class IdleStatesSynchronizer(IMultiplayerServer server) : StateMachineBoundedConfigurer<
-    IdleStates,
-    IdleStates.Instance,
-    IStateMachineTarget,
-    IdleStates.Def
-> {
+public class IdleStatesSynchronizer(
+    IMultiplayerServer server,
+    MultiplayerGame multiplayer
+) : StateMachineBoundedConfigurer<IdleStates, IdleStates.Instance, IStateMachineTarget, IdleStates.Def> {
 
     protected override void Configure(
         StateMachineRootConfigurer<IdleStates, IdleStates.Instance, IStateMachineTarget, IdleStates.Def> configurer
@@ -31,12 +29,22 @@ public class IdleStatesSynchronizer(IMultiplayerServer server) : StateMachineBou
         sm.move.Enter(smi => {
             var target = smi.GetComponent<Navigator>().targetLocator;
             var cell = Grid.PosToCell(target);
+
+            // TODO: Remove after critters sync (WorldGenSpawner.Spawnable + new critters)
+            if (multiplayer.Objects[smi.master.gameObject] == null)
+                return;
+
             server.Send(
                 new MoveObjectToCell(new ChoreStateMachineReference((Chore)smi.master), cell, sm.move),
                 MultiplayerCommandOptions.SkipHost
             );
         });
         sm.move.Exit(smi => {
+
+            // TODO: Remove after critters sync (WorldGenSpawner.Spawnable + new critters)
+            if (multiplayer.Objects[smi.master.gameObject] == null)
+                return;
+
             server.Send(
                 new GoToState(new ChoreStateMachineReference((Chore) smi.master), sm.loop),
                 MultiplayerCommandOptions.SkipHost
