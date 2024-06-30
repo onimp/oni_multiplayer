@@ -20,6 +20,9 @@ public class DependencyContainer : IDependencyContainer, IDependencyInjector {
     private const BindingFlags injectionMemberBindingFlags =
         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+    private const BindingFlags injectionStaticMemberBindingFlags =
+        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+
     public IEnumerable<DependencyInfo> RegisteredDependencies => dependencies.Values;
 
     public void Register(DependencyInfo info) {
@@ -84,14 +87,30 @@ public class DependencyContainer : IDependencyContainer, IDependencyInjector {
 
     public T Inject<T>(T instance) where T : notnull {
         var type = instance.GetType();
-        type.GetProperties(injectionMemberBindingFlags)
-            .Where(property => property.GetCustomAttribute<InjectDependencyAttribute>() != null)
-            .ForEach(property => property.SetValue(instance, Get(property.PropertyType)));
-        type.GetFields(injectionMemberBindingFlags)
-            .Where(field => field.GetCustomAttribute<InjectDependencyAttribute>() != null)
-            .ForEach(field => field.SetValue(instance, Get(field.FieldType)));
+        InjectMembers(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, instance);
         return instance;
     }
+
+    public void Inject(Type type) => InjectMembers(
+        type,
+        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+        instance: null
+    );
+
+    private void InjectMembers(Type type, BindingFlags bindingFlags, object? instance) => type.GetMembers(bindingFlags)
+        .Where(member => member.GetCustomAttribute<InjectDependencyAttribute>() != null)
+        .ForEach(member => {
+            switch (member) {
+                case FieldInfo field:
+                    field.SetValue(instance, Get(field.FieldType));
+                    break;
+                case PropertyInfo property:
+                    if (!property.CanWrite)
+                        break;
+                    property.SetValue(instance, Get(property.PropertyType));
+                    break;
+            }
+        });
 
     private object GetInstance(DependencyInfo info) {
         if (instances.TryGetValue(info.Name, out var instance))

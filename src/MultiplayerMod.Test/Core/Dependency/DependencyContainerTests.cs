@@ -61,6 +61,22 @@ public class DependencyContainerTests {
     }
 
     [Test]
+    public void MustInjectIntoStaticProperty() {
+        var container = new DependencyContainer();
+        container.Register(CreateInfo<DependencyA>());
+        container.Inject(typeof(StaticPropertyContainer));
+        Assert.AreSame(expected: container.Get<IDependencyA>(), actual: StaticPropertyContainer.DependencyA);
+    }
+
+    [Test]
+    public void MustInjectIntoStaticField() {
+        var container = new DependencyContainer();
+        container.Register(CreateInfo<DependencyA>());
+        container.Inject(typeof(StaticFieldContainer));
+        Assert.AreSame(expected: container.Get<IDependencyA>(), actual: StaticFieldContainer.DependencyA);
+    }
+
+    [Test]
     public void RegistersSingleton() {
         var container = new DependencyContainer();
         container.RegisterSingleton("Hello");
@@ -116,6 +132,16 @@ public class DependencyContainerTests {
         Assert.DoesNotThrow(() => container.Get<ChildDependency>());
         Assert.DoesNotThrow(() => container.Get<IDependencyA>());
         Assert.DoesNotThrow(() => container.Get<IDependencyB>());
+    }
+
+    public class StaticPropertyContainer {
+        [InjectDependency]
+        public static IDependencyA DependencyA { get; private set; } = null!;
+    }
+
+    public class StaticFieldContainer {
+        [InjectDependency]
+        public static IDependencyA DependencyA = null!;
     }
 
     private static DependencyInfo CreateInfo<T>() => new(typeof(T).FullName!, typeof(T), false);
