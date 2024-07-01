@@ -9,21 +9,18 @@ using MultiplayerMod.Network;
 namespace MultiplayerMod.Multiplayer.Chores.Synchronizers;
 
 [UsedImplicitly]
-public class IdleChoreSynchronizer(IMultiplayerServer server) : StateMachineBoundedConfigurer<
-    IdleChore.States,
-    IdleChore.StatesInstance,
-    IdleChore
-> {
+public class IdleChoreSynchronizer(
+    IMultiplayerServer server
+) : StateMachineBoundedConfigurer<IdleChore.States, IdleChore.StatesInstance, IdleChore> {
 
-    // TODO: IdleChore is not serializable - we have to sync it manually after a client is loaded
-    // protected override StateMachineConfigurer[] Inline() => [
-    //     // Disable IdleChore recurring creation
-    //     new StateMachineConfigurerDsl<IdleMonitor, IdleMonitor.Instance>(root => {
-    //         root.PreConfigure(MultiplayerMode.Client, pre => {
-    //             pre.Suppress(() => pre.StateMachine.idle.ToggleRecurringChore(null, null));
-    //         });
-    //     })
-    // ];
+    protected override StateMachineConfigurer[] Inline() => [
+        // Disable IdleChore recurring creation
+        new StateMachineConfigurerDsl<IdleMonitor, IdleMonitor.Instance>(root => {
+            root.PreConfigure(MultiplayerMode.Client, pre => {
+                pre.Suppress(() => pre.StateMachine.idle.ToggleRecurringChore(null, null));
+            });
+        })
+    ];
 
     protected override void Configure(
         StateMachineRootConfigurer<IdleChore.States, IdleChore.StatesInstance, IdleChore, object> configurer

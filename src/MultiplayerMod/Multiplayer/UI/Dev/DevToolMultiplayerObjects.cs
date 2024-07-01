@@ -52,6 +52,7 @@ public class DevToolMultiplayerObjects : DevTool {
         if (!ImGui.BeginTable("Multiplayer objects:", 5, flags))
             return;
 
+        ImGui.TableSetupColumn("Persistent", ImGuiTableColumnFlags.WidthFixed);
         ImGui.TableSetupColumn("Id", ImGuiTableColumnFlags.WidthFixed);
         ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed);
         ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
@@ -60,19 +61,20 @@ public class DevToolMultiplayerObjects : DevTool {
         ImGui.TableHeadersRow();
 
         var index = 0;
-        multiplayer.Objects.Where(it => !generatedOnly || generatedOnly && it.Key.ToString().StartsWith("1:")).ForEach(
+        var objects = multiplayer.Objects.GetEnumerable();
+        objects.Where(it => !generatedOnly || generatedOnly && it.Value.Id.Type == MultiplayerIdType.Generated).ForEach(
             it => {
                 ImGui.TableNextRow();
                 ImGui.PushID($"ID_row_{index++}");
-                switch (it.Value) {
+                switch (it.Key) {
                     case GameObject gameObject:
-                        RenderGameObjectRow(it.Key, gameObject);
+                        RenderGameObjectRow(it.Value, gameObject);
                         break;
                     case Chore chore:
-                        RenderChoreRow(it.Key, chore);
+                        RenderChoreRow(it.Value, chore);
                         break;
                     default:
-                        RenderUnsupportedObjectRow(it.Key, it.Value);
+                        RenderUnsupportedObjectRow(it.Value, it.Value);
                         break;
                 }
                 ImGui.PopID();
@@ -94,9 +96,11 @@ public class DevToolMultiplayerObjects : DevTool {
             DevToolEntity.DrawBoundingBox(screenRect.Unwrap(), target.GetDebugName(), ImGui.IsWindowFocused());
     }
 
-    private void RenderUnsupportedObjectRow(MultiplayerId id, object instance) {
+    private void RenderUnsupportedObjectRow(MultiplayerObject @object, object instance) {
         ImGui.TableNextColumn();
-        ImGui.Text(id.ToString());
+        ImGui.Text(@object.Persistent ? "*" : "");
+        ImGui.TableNextColumn();
+        ImGui.Text(@object.Id.ToString());
         ImGui.TableNextColumn();
         ImGui.Text($"[Unsupported] {instance.GetType().Name}");
         ImGui.TableNextColumn();
@@ -104,9 +108,11 @@ public class DevToolMultiplayerObjects : DevTool {
         ImGui.TableNextColumn();
     }
 
-    private void RenderChoreRow(MultiplayerId id, Chore chore) {
+    private void RenderChoreRow(MultiplayerObject @object, Chore chore) {
         ImGui.TableNextColumn();
-        ImGui.Text(id.ToString());
+        ImGui.Text(@object.Persistent ? "*" : "");
+        ImGui.TableNextColumn();
+        ImGui.Text(@object.Id.ToString());
         ImGui.TableNextColumn();
         ImGui.Text(nameof(Chore));
         ImGui.TableNextColumn();
@@ -114,9 +120,11 @@ public class DevToolMultiplayerObjects : DevTool {
         ImGui.TableNextColumn();
     }
 
-    private void RenderGameObjectRow(MultiplayerId id, GameObject gameObject) {
+    private void RenderGameObjectRow(MultiplayerObject @object, GameObject gameObject) {
         ImGui.TableNextColumn();
-        ImGui.Text(id.ToString());
+        ImGui.Text(@object.Persistent ? "*" : "");
+        ImGui.TableNextColumn();
+        ImGui.Text(@object.Id.ToString());
         ImGui.TableNextColumn();
         ImGui.Text(nameof(GameObject));
         ImGui.TableNextColumn();

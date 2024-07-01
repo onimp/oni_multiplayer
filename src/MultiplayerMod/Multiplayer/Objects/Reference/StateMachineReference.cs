@@ -1,29 +1,32 @@
 using System;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.ModRuntime;
 
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
 
 [Serializable]
 public class StateMachineReference(
     ComponentReference<StateMachineController> controllerReference,
-    Type stateMachineType
+    Type stateMachineInstanceType
 ) : TypedReference<StateMachine.Instance> {
 
     private ComponentReference<StateMachineController> ControllerReference { get; set; } = controllerReference;
-    private Type StateMachineType { get; set; } = stateMachineType;
+    private Type StateMachineInstanceType { get; set; } = stateMachineInstanceType;
 
-    public override StateMachine.Instance Resolve() => ControllerReference.Resolve().GetSMI(StateMachineType);
+    public override StateMachine.Instance Resolve() => ControllerReference.Resolve().GetSMI(StateMachineInstanceType);
 
 }
 
 [Serializable]
+[DependenciesStaticTarget]
 public class ChoreStateMachineReference(Chore chore) : TypedReference<StateMachine.Instance> {
 
-    private MultiplayerId id = Dependencies.Get<MultiplayerGame>().Objects[chore]!;
+    [InjectDependency]
+    private static MultiplayerObjects objects = null!;
 
-    public override StateMachine.Instance Resolve() => Dependencies.Get<MultiplayerGame>().Objects
-        .Get<Chore>(id)
-        .GetSMI();
+    private MultiplayerId id = objects.Get(chore)!.Id;
+
+    public override StateMachine.Instance Resolve() => objects.Get<Chore>(id)!.GetSMI();
 
     public StateMachine.Instance Get() => Resolve();
 

@@ -1,7 +1,8 @@
 ﻿using System;
+using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.UI.Overlays;
 
-namespace MultiplayerMod.Multiplayer.Commands.World;
+namespace MultiplayerMod.Multiplayer.World.Commands;
 
 [Serializable]
 [MultiplayerCommand(Type = MultiplayerCommandType.System)]

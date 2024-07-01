@@ -10,14 +10,16 @@ public class MultiplayerGame {
 
     public MultiplayerMode Mode { get; private set; }
     public MultiplayerPlayers Players { get; private set; } = null!;
-    public MultiplayerObjects Objects { get; private set; } = null!;
+    public MultiplayerObjects Objects { get; private set; }
 
-    public MultiplayerGame() => Refresh(MultiplayerMode.Client);
+    public MultiplayerGame(MultiplayerObjects multiplayerObjects) {
+        Objects = multiplayerObjects;
+        Refresh(MultiplayerMode.Client);
+    }
 
     public void Refresh(MultiplayerMode mode) {
         Mode = mode;
         Players = new MultiplayerPlayers();
-        Objects = new MultiplayerObjects();
     }
 
 }

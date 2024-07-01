@@ -1,64 +1,55 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using MultiplayerMod.Core.Collections;
+using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
+using MultiplayerMod.Game;
+using MultiplayerMod.Multiplayer.CoreOperations.Events;
+using MultiplayerMod.Multiplayer.World;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-public class MultiplayerObjects : IEnumerable<KeyValuePair<MultiplayerId, object>> {
+[Dependency, UsedImplicitly]
+public class MultiplayerObjects {
 
-    private readonly MultiplayerObjectsInitializer initializer;
-    private IndexedObjectExtensionMap<object, MultiplayerId> extensions = new();
+    private readonly MultiplayerObjectsIndex index = new();
+    private int generation;
 
-    public MultiplayerObjects() {
-        initializer = new MultiplayerObjectsInitializer(this);
+    public MultiplayerObjects(EventDispatcher events) {
+        GameEvents.GameObjectCreated += it => it.AddComponent<MultiplayerInstance>();
+        var initializer = new SaveGameObjectsInitializer(this);
+        events.Subscribe<WorldLoadingEvent>(_ => Clear());
+        events.Subscribe<GameQuitEvent>(_ => Clear());
+        events.Subscribe<WorldSyncEvent>(
+            _ => {
+                Clear(force: false);
+                initializer.Initialize();
+            }
+        );
+        events.Subscribe<GameReadyEvent>(_ => initializer.Initialize());
     }
 
-    public MultiplayerId Register(object instance, MultiplayerId? multiplayerId) {
-        var id = multiplayerId ?? new MultiplayerId(Guid.NewGuid());
-        extensions[id] = instance;
-        return id;
+    public bool Valid(MultiplayerObject @object) => @object.Persistent || @object.Generation == generation;
+
+    public MultiplayerObject Register(object instance, MultiplayerId? multiplayerId = null, bool persistent = false) {
+        var @object = new MultiplayerObject(multiplayerId ?? new MultiplayerId(Guid.NewGuid()), generation, persistent);
+        index[@object] = instance;
+        return @object;
     }
 
-    public void Remove(MultiplayerId id) => extensions.Remove(id);
-
-    public T Get<T>(MultiplayerId id) {
-        return (T)extensions[id];
+    private void Clear(bool force = true) {
+        index.Clear(force);
+        generation++;
     }
 
-    public object? this[MultiplayerId id] {
-        get {
-            extensions.TryGetKey(id, out var result);
-            return result;
-        }
-        set {
-            if (value != null)
-                extensions[id] = value;
-            else
-                extensions.Remove(id);
-        }
-    }
+    public void Remove(MultiplayerId id) => index.Remove(id);
 
-    public MultiplayerId? this[object instance] {
-        get {
-            extensions.TryGetValue(instance, out var result);
-            return result;
-        }
-        set {
-            if (value != null)
-                extensions[instance] = value;
-            else
-                extensions.Remove(instance);
-        }
-    }
+    public void RemoveObject(object instance) => index.Remove(instance);
 
-    public void Reset() {
-        extensions = new IndexedObjectExtensionMap<object, MultiplayerId>();
-        initializer.Initialize();
-    }
+    public T? Get<T>(MultiplayerId id) => !index.TryGetInstance(id, out var instance) ? default : (T) instance!;
 
-    public IEnumerator<KeyValuePair<MultiplayerId, object>> GetEnumerator() => extensions.GetEnumeratorByValue();
+    public MultiplayerObject? Get(object instance) => !index.TryGetObject(instance, out var @object) ? null : @object;
 
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    public IEnumerable<KeyValuePair<object, MultiplayerObject>> GetEnumerable() => index.GetEnumerable();
 
 }

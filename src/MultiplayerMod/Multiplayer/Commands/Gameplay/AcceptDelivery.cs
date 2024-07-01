@@ -24,14 +24,12 @@ public class AcceptDelivery : MultiplayerCommand {
         );
 
         var minionMultiplayer = capture.Instance.GetComponent<MultiplayerInstance>();
-        minionMultiplayer.Id = args.GameObjectId;
-        minionMultiplayer.Register();
+        minionMultiplayer.Register(args.GameObjectId);
 
         var minionIdentity = capture.Instance.GetComponent<MinionIdentity>();
         if (minionIdentity != null) {
             var proxyMultiplayer = minionIdentity.GetMultiplayerInstance();
-            proxyMultiplayer.Id = args.ProxyId;
-            proxyMultiplayer.Register();
+            proxyMultiplayer.Register(args.ProxyId);
         }
 
         ImmigrantScreenPatch.Deliverables = null;

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
-public class MultiplayerObjectsInitializer(MultiplayerObjects objects) {
+public class SaveGameObjectsInitializer(MultiplayerObjects objects) {
 
     public void Initialize() {
         AddPrefabs();
@@ -15,14 +15,13 @@ public class MultiplayerObjectsInitializer(MultiplayerObjects objects) {
         var kPrefabIds = KPrefabIDTracker.Get().prefabIdMap.Values;
         foreach (var kPrefabId in kPrefabIds) {
             if (kPrefabId == null)
-                return;
+                continue;
 
             var gameObject = kPrefabId.gameObject;
             var instance = gameObject.GetComponent<MultiplayerInstance>();
-            instance.Id = objects.Register(
-                gameObject,
-                new MultiplayerId(InternalMultiplayerIdType.KPrefabId, kPrefabId.InstanceID)
-            );
+            if (instance.Valid)
+                continue;
+            instance.Register(new MultiplayerId(InternalMultiplayerIdType.KPrefabId, kPrefabId.InstanceID));
         }
     }
 
@@ -30,6 +29,7 @@ public class MultiplayerObjectsInitializer(MultiplayerObjects objects) {
         Object.FindObjectsOfType<ChoreProvider>()
             .SelectMany(it => it.choreWorldMap)
             .SelectMany(it => it.Value)
+            .Where(it => !it.gameObject.GetComponent<MultiplayerInstance>().Valid)
             .ForEach(it => { objects.Register(it, new MultiplayerId(InternalMultiplayerIdType.Chore, it.id)); });
     }
 

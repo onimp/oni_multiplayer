@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using MultiplayerMod.Core.Extensions;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
@@ -13,7 +12,7 @@ public class MultiplayerId {
 
     public MultiplayerId(InternalMultiplayerIdType type, long internalId) {
         Type = MultiplayerIdType.Internal;
-        HighPart = (long)type;
+        HighPart = (long) type;
         LowPart = internalId;
     }
 
@@ -60,7 +59,6 @@ public class MultiplayerId {
 
     public static bool operator !=(MultiplayerId? left, MultiplayerId? right) => !Equals(left, right);
 
-    public override string ToString()
-        => $"{((long)Type).ToString(radix: 36)}:{HighPart.ToString(radix: 36)}:{LowPart.ToString(radix: 36)}";
+    public override string ToString() => $"{(byte)Type:x1}:{HighPart:x16}:{LowPart:x16}";
 
 }

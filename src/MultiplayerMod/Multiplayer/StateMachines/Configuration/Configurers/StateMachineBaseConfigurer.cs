@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration.Parameters;
+using MultiplayerMod.Multiplayer.StateMachines.Configuration.States;
 
 namespace MultiplayerMod.Multiplayer.StateMachines.Configuration.Configurers;
 
@@ -16,6 +17,13 @@ public abstract class StateMachineBaseConfigurer<TStateMachine, TStateMachineIns
     public readonly MultiplayerGame Game = context.Dependencies.Get<MultiplayerGame>();
     public MultiplayerMode MultiplayerMode => Game.Mode;
     public TStateMachine StateMachine { get; } = stateMachine;
+
+    public GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.State AddState(
+        GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.State parent,
+        StateMachineMultiplayerStateInfo info
+    ) {
+        return AddState(parent, info.Name);
+    }
 
     public GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.State AddState(
         GameStateMachine<TStateMachine, TStateMachineInstance, TMaster, TDef>.State parent,

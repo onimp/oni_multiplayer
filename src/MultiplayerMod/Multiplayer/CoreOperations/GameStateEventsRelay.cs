@@ -6,6 +6,7 @@ using MultiplayerMod.Game;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
+using MultiplayerMod.Multiplayer.Objects;
 
 namespace MultiplayerMod.Multiplayer.CoreOperations;
 
@@ -24,12 +25,21 @@ public class GameStateEventsRelay {
         GameEvents.GameStarted += OnGameStarted;
         PauseScreenEvents.GameQuit += OnGameQuit;
         SaveLoaderEvents.WorldSaved += OnWorldSave;
+        SaveLoaderEvents.WorldLoading += OnWorldLoading;
     }
+
+    private void OnWorldLoading() => events.Dispatch(new WorldLoadingEvent());
 
     private void OnWorldSave() => events.Dispatch(new WorldSavedEvent());
 
     private void OnGameQuit() => events.Dispatch(new GameQuitEvent());
 
-    private void OnGameStarted() => scheduler.Run(() => events.Dispatch(new GameStartedEvent(multiplayer)));
+    private void OnGameStarted() {
+        scheduler.Run(() => {
+            events.Dispatch(new GameReadyEvent());
+            events.Dispatch(new WorldStateInitializingEvent());
+            events.Dispatch(new GameStartedEvent(multiplayer));
+        });
+    }
 
 }

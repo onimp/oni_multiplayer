@@ -17,7 +17,7 @@ public class TransitToState : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var chore = context.Multiplayer.Objects.Get<Chore>(ChoreId);
+        var chore = context.Multiplayer.Objects.Get<Chore>(ChoreId)!;
         var smi = context.Runtime.Dependencies.Get<StatesManager>().GetSmi(chore);
         smi.GoTo(State);
     }
