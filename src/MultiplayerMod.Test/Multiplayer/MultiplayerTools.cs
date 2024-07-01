@@ -35,6 +35,7 @@ public static class MultiplayerTools {
             .AddType<WorldManager>()
             .AddType<UnityTaskScheduler>()
             .AddType<MultiplayerGame>()
+            .AddType<MultiplayerObjects>()
             .AddType<MultiplayerCommandExecutor>()
             .AddType<GameEventsBinder>()
             .AddType<HostEventsBinder>()

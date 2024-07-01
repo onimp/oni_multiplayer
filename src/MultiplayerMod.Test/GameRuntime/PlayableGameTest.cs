@@ -184,6 +184,7 @@ public abstract class PlayableGameTest {
     private static void SetupDependencies() {
         var builder = new DependencyContainerBuilder()
             .AddType<MultiplayerGame>()
+            .AddType<MultiplayerObjects>()
             .AddType<ExecutionLevelManager>()
             .AddType<ExecutionContextManager>()
             .AddType<EventDispatcher>()
