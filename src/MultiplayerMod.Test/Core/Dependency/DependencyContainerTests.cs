@@ -30,6 +30,13 @@ public class DependencyContainerTests {
     }
 
     [Test]
+    public void ResolvesEmptyListOfDependencies() {
+        var container = new DependencyContainer();
+        var dependencyAb = container.Get<List<IDependencyAb>>();
+        Assert.AreEqual(expected: 0, actual: dependencyAb.Count);
+    }
+
+    [Test]
     public void InstantiateWithDependencies() {
         var container = new DependencyContainer();
         container.Register(CreateInfo<DependencyA>());

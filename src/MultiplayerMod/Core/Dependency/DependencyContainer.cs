@@ -72,8 +72,11 @@ public class DependencyContainer : IDependencyContainer, IDependencyInjector {
         if (resolveMultiple)
             targetType = type.GetGenericArguments()[0];
 
-        if (!dependenciesByType.TryGetValue(targetType, out var dependencyInfos))
+        if (!dependenciesByType.TryGetValue(targetType, out var dependencyInfos)) {
+            if (resolveMultiple)
+                return Activator.CreateInstance(typeof(List<>).MakeGenericType(targetType));
             throw new MissingDependencyException(targetType);
+        }
 
         if (!resolveMultiple && dependencyInfos.Count > 1)
             throw new AmbiguousDependencyException(targetType, dependencyInfos);
