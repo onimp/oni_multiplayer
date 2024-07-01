@@ -1,5 +1,7 @@
 ﻿using JetBrains.Annotations;
 using MultiplayerMod.Multiplayer.Commands.Objects;
+using MultiplayerMod.Multiplayer.Objects;
+using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using MultiplayerMod.Multiplayer.StateMachines.Commands;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
@@ -9,12 +11,10 @@ using MultiplayerMod.Network;
 namespace MultiplayerMod.Multiplayer.Chores.Synchronizers;
 
 [UsedImplicitly]
-public class IdleStatesSynchronizer(IMultiplayerServer server) : StateMachineBoundedConfigurer<
-    IdleStates,
-    IdleStates.Instance,
-    IStateMachineTarget,
-    IdleStates.Def
-> {
+public class IdleStatesSynchronizer(
+    IMultiplayerServer server,
+    MultiplayerObjects objects
+) : StateMachineBoundedConfigurer<IdleStates, IdleStates.Instance, IStateMachineTarget, IdleStates.Def> {
 
     protected override void Configure(
         StateMachineRootConfigurer<IdleStates, IdleStates.Instance, IStateMachineTarget, IdleStates.Def> configurer
@@ -31,14 +31,24 @@ public class IdleStatesSynchronizer(IMultiplayerServer server) : StateMachineBou
         sm.move.Enter(smi => {
             var target = smi.GetComponent<Navigator>().targetLocator;
             var cell = Grid.PosToCell(target);
+
+            // TODO: Remove after critters sync (WorldGenSpawner.Spawnable + new critters)
+            if (objects.Get(smi.master.gameObject) == null)
+                return;
+
             server.Send(
-                new MoveObjectToCell(new ChoreStateMachineReference((Chore)smi.master), cell, sm.move),
+                new MoveObjectToCell(new StateMachineReference(smi.controller.GetReference(), smi.GetType()), cell, sm.move),
                 MultiplayerCommandOptions.SkipHost
             );
         });
         sm.move.Exit(smi => {
+
+            // TODO: Remove after critters sync (WorldGenSpawner.Spawnable + new critters)
+            if (objects.Get(smi.master.gameObject) == null)
+                return;
+
             server.Send(
-                new GoToState(new ChoreStateMachineReference((Chore) smi.master), sm.loop),
+                new GoToState(new StateMachineReference(smi.controller.GetReference(), smi.GetType()), sm.loop),
                 MultiplayerCommandOptions.SkipHost
             );
             server.Send(

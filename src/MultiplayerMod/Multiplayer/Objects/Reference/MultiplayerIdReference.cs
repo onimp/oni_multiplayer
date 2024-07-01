@@ -1,15 +1,20 @@
 ﻿using System;
-using MultiplayerMod.ModRuntime.StaticCompatibility;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.ModRuntime;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
 
 [Serializable]
+[DependenciesStaticTarget]
 public class MultiplayerIdReference(MultiplayerId id) : GameObjectReference {
+
+    [InjectDependency]
+    private static MultiplayerObjects objects = null!;
 
     public MultiplayerId Id { get; } = id;
 
-    protected override GameObject? ResolveGameObject() => Dependencies.Get<MultiplayerGame>().Objects[Id] as GameObject;
+    protected override GameObject? ResolveGameObject() => objects.Get<GameObject>(Id);
 
     public override string ToString() => Id.ToString();
 

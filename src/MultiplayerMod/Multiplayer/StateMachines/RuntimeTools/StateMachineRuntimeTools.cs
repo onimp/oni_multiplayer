@@ -25,8 +25,12 @@ public class StateMachineRuntimeTools {
     }
 
     public void GoToState(string? name) {
-        if (name != null)
-            instance.GoTo(name);
+        if (name != null) {
+            var state = instance.stateMachine.GetState(name);
+            if (state == null)
+                throw new StateMachineStateNotFoundException(instance.stateMachine, name);
+            instance.GoTo(state);
+        }
         else
             instance.GoTo((StateMachine.BaseState?) null);
     }

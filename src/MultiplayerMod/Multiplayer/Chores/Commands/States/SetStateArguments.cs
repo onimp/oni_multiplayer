@@ -26,7 +26,7 @@ public class SetStateArguments : MultiplayerCommand {
 
     public override void Execute(MultiplayerCommandContext context) {
         var args = Args.ToDictionary(a => a.Key, a => ArgumentUtils.UnWrapObject(a.Value));
-        var chore = context.Multiplayer.Objects.Get<Chore>(ChoreId);
+        var chore = context.Multiplayer.Objects.Get<Chore>(ChoreId)!;
         var smi = context.Runtime.Dependencies.Get<StatesManager>().GetSmi(chore);
 
         if (smi is RecoverBreathChore.StatesInstance recoverSmi) {

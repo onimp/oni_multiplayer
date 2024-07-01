@@ -30,6 +30,13 @@ public class DependencyContainerTests {
     }
 
     [Test]
+    public void ResolvesEmptyListOfDependencies() {
+        var container = new DependencyContainer();
+        var dependencyAb = container.Get<List<IDependencyAb>>();
+        Assert.AreEqual(expected: 0, actual: dependencyAb.Count);
+    }
+
+    [Test]
     public void InstantiateWithDependencies() {
         var container = new DependencyContainer();
         container.Register(CreateInfo<DependencyA>());
@@ -58,6 +65,22 @@ public class DependencyContainerTests {
         var instance = container.Inject(new DependencyInProperties());
         Assert.AreSame(expected: container.Get<IDependencyA>(), actual: instance.AInstance);
         Assert.AreSame(expected: container.Get<IDependencyB>(), actual: instance.BInstance);
+    }
+
+    [Test]
+    public void MustInjectIntoStaticProperty() {
+        var container = new DependencyContainer();
+        container.Register(CreateInfo<DependencyA>());
+        container.Inject(typeof(StaticPropertyContainer));
+        Assert.AreSame(expected: container.Get<IDependencyA>(), actual: StaticPropertyContainer.DependencyA);
+    }
+
+    [Test]
+    public void MustInjectIntoStaticField() {
+        var container = new DependencyContainer();
+        container.Register(CreateInfo<DependencyA>());
+        container.Inject(typeof(StaticFieldContainer));
+        Assert.AreSame(expected: container.Get<IDependencyA>(), actual: StaticFieldContainer.DependencyA);
     }
 
     [Test]
@@ -116,6 +139,16 @@ public class DependencyContainerTests {
         Assert.DoesNotThrow(() => container.Get<ChildDependency>());
         Assert.DoesNotThrow(() => container.Get<IDependencyA>());
         Assert.DoesNotThrow(() => container.Get<IDependencyB>());
+    }
+
+    public class StaticPropertyContainer {
+        [InjectDependency]
+        public static IDependencyA DependencyA { get; private set; } = null!;
+    }
+
+    public class StaticFieldContainer {
+        [InjectDependency]
+        public static IDependencyA DependencyA = null!;
     }
 
     private static DependencyInfo CreateInfo<T>() => new(typeof(T).FullName!, typeof(T), false);

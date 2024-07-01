@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using JetBrains.Annotations;
@@ -9,11 +10,13 @@ using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Commands.Speed;
-using MultiplayerMod.Multiplayer.Commands.World;
+using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
 using MultiplayerMod.Multiplayer.Players;
 using MultiplayerMod.Multiplayer.Players.Events;
 using MultiplayerMod.Multiplayer.UI.Overlays;
+using MultiplayerMod.Multiplayer.World.Commands;
+using MultiplayerMod.Multiplayer.World.Data;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.World;
@@ -26,20 +29,22 @@ public class WorldManager {
     private readonly EventDispatcher events;
     private readonly UnityTaskScheduler scheduler;
     private readonly ExecutionLevelManager executionLevelManager;
-
+    private readonly List<IWorldStateManager> worldStateManagers;
 
     public WorldManager(
         IMultiplayerServer server,
         MultiplayerGame multiplayer,
         EventDispatcher events,
         UnityTaskScheduler scheduler,
-        ExecutionLevelManager executionLevelManager
+        ExecutionLevelManager executionLevelManager,
+        List<IWorldStateManager> worldStateManagers
     ) {
         this.server = server;
         this.multiplayer = multiplayer;
         this.events = events;
         this.scheduler = scheduler;
         this.executionLevelManager = executionLevelManager;
+        this.worldStateManagers = worldStateManagers;
     }
 
     public void Sync() {
@@ -47,14 +52,23 @@ public class WorldManager {
 
         var resume = !SpeedControlScreen.Instance.IsPaused;
         server.Send(new PauseGame());
-        multiplayer.Objects.Reset();
+
+        events.Dispatch(new WorldSyncEvent());
+
         multiplayer.Players.ForEach(it => server.Send(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
         server.Send(new ChangePlayerStateCommand(multiplayer.Players.Current.Id, PlayerState.Ready));
         server.Send(new NotifyWorldSavePreparing(), MultiplayerCommandOptions.SkipHost);
-        server.Send(new LoadWorld(WorldName, GetWorldSave()), MultiplayerCommandOptions.SkipHost);
 
-        if (resume)
-            server.Send(new ResumeGame());
+        var world = new WorldSave(WorldName, GetWorldSave(), new WorldState());
+        worldStateManagers.ForEach(it => it.SaveState(world.State));
+        server.Send(new LoadWorld(world), MultiplayerCommandOptions.SkipHost);
+        events.Subscribe<PlayersReadyEvent>(
+            (_, subscription) => {
+                if (resume)
+                    server.Send(new ResumeGame());
+                subscription.Cancel();
+            }
+        );
     }
 
     private void SetupStatusOverlay() {
@@ -74,15 +88,19 @@ public class WorldManager {
         );
     }
 
-    public void RequestWorldLoad(string name, byte[] data) {
-        MultiplayerStatusOverlay.Show($"Loading {name}...");
+    public void RequestWorldLoad(WorldSave world) {
+        MultiplayerStatusOverlay.Show($"Loading {world.Name}...");
         events.Subscribe<PlayersReadyEvent>(
             (_, subscription) => {
                 MultiplayerStatusOverlay.Close();
                 subscription.Cancel();
             }
         );
-        scheduler.Run(() => LoadWorldSave(name, data));
+        events.Subscribe<WorldStateInitializingEvent>((_, subscription) => {
+            worldStateManagers.ForEach(it => it.LoadState(world.State));
+            subscription.Cancel();
+        });
+        scheduler.Run(() => LoadWorldSave(world.Name, world.Data));
     }
 
     private void LoadWorldSave(string name, byte[] data) {

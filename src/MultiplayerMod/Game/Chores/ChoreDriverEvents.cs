@@ -1,5 +1,8 @@
-﻿using HarmonyLib;
+﻿using System.Collections.Generic;
+using System.Reflection.Emit;
+using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Patch;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
 using MultiplayerMod.Multiplayer.CoreOperations;
@@ -10,36 +13,48 @@ namespace MultiplayerMod.Game.Chores;
 [HarmonyPatch(typeof(ChoreDriver))]
 public static class ChoreDriverEvents {
 
-    public delegate void ChoreSetEventHandler(
+    public delegate void ChoreSettingEventHandler(
         ChoreDriver driver,
         Chore? previousChore,
         ref Chore.Precondition.Context context
     );
 
-    public static event ChoreSetEventHandler? ChoreSet;
+    public static event ChoreSettingEventHandler? ChoreSetting;
 
     [UsedImplicitly]
-    [HarmonyPrefix]
+    [HarmonyTranspiler]
     [HarmonyPatch(nameof(ChoreDriver.SetChore))]
-    [RequireMultiplayerMode(MultiplayerMode.Host)]
-    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
-    private static void SetChorePrefix(ChoreDriver __instance, out Chore? __state) {
-        __state = __instance.GetCurrentChore();
-    }
-
-    [UsedImplicitly]
-    [HarmonyPostfix]
-    [HarmonyPatch(nameof(ChoreDriver.SetChore))]
-    [RequireMultiplayerMode(MultiplayerMode.Host)]
-    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
-    private static void SetChorePostfix(
-        ChoreDriver __instance,
-        Chore? __state,
-        ref Chore.Precondition.Context context
+    private static IEnumerable<CodeInstruction> ChoreDriverSetChoreTranspiler(
+        IEnumerable<CodeInstruction> instructions,
+        ILGenerator generator
     ) {
-        if (__state == context.chore)
-            return;
-        ChoreSet?.Invoke(__instance, __state, ref context);
+        using var source = instructions.GetEnumerator();
+        var result = new List<CodeInstruction>();
+
+        var contextField = AccessTools.Field(typeof(ChoreDriver), nameof(ChoreDriver.context));
+        var beforeChoreSetMethod = AccessTools.Method(typeof(ChoreDriverEvents), nameof(BeforeChoreSet));
+
+        result.AddConditional(source, it => it.StoresField(contextField));
+
+        // Add BeforeChoreSet call right before next chore property set, because the actual set can cause chore cleanup
+        // and break objects index synchronized state (e.g. when new chore is being sent to the clients there will be no
+        // chore in the index).
+        result.Add(new CodeInstruction(OpCodes.Ldarg_0)); // this
+        result.Add(new CodeInstruction(OpCodes.Ldloc_0)); // currentChore
+        result.Add(new CodeInstruction(OpCodes.Ldarga, 1)); // ref context
+        result.Add(new CodeInstruction(OpCodes.Call, beforeChoreSetMethod));
+
+        result.AddConditional(source, _ => false);
+
+        return result;
     }
+
+    [RequireMultiplayerMode(MultiplayerMode.Host)]
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
+    private static void BeforeChoreSet(
+        ChoreDriver driver,
+        Chore? previousChore,
+        ref Chore.Precondition.Context context
+    ) => ChoreSetting?.Invoke(driver, previousChore, ref context);
 
 }

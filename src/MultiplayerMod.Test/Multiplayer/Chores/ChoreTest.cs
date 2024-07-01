@@ -6,10 +6,13 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using Klei.AI;
 using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Chores;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Registry;
+using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.StateMachines;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
@@ -44,6 +47,11 @@ public abstract class ChoreTest : PlayableGameTest {
     private static FetchOrder2 fetchOrder2 = null!;
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
+
+    [OneTimeSetUp]
+    public void SetUp() {
+        Dependencies.Get<IDependencyInjector>().Inject(typeof(ChoreExtensions));
+    }
 
     [SetUp]
     public void AbstractSetUp() {
@@ -200,6 +208,8 @@ public abstract class ChoreTest : PlayableGameTest {
         var container = new DependencyContainerBuilder()
             .AddType<TestMultiplayerServer>()
             .AddType<TestMultiplayerClient>()
+            .AddType<MultiplayerObjects>()
+            .AddType<EventDispatcher>()
             .AddSingleton(new TestMultiplayerClientId(1))
             .AddType<MultiplayerCommandRegistry>()
             .AddType<TestRuntime>()

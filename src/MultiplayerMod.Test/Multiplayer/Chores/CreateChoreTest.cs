@@ -25,7 +25,7 @@ public class CreateChoreTest : ChoreTest {
         var context = new MultiplayerCommandContext(null!, new MultiplayerCommandRuntimeAccessor(Runtime.Instance));
         command.Execute(context);
 
-        var chore = (Chore?) Dependencies.Get<MultiplayerGame>().Objects[id];
+        var chore = Dependencies.Get<MultiplayerGame>().Objects.Get<Chore>(id);
 
         Assert.That(chore, Is.Not.Null);
         Assert.That(chore, Is.TypeOf(factory.Type));

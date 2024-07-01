@@ -4,6 +4,7 @@ using MultiplayerMod.Multiplayer.Objects.Reference;
 using MultiplayerMod.Multiplayer.StateMachines.Commands;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration.Configurers;
+using MultiplayerMod.Multiplayer.StateMachines.Configuration.States;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Chores.Synchronizers;
@@ -15,7 +16,7 @@ public class MoveToSafetyChoreSynchronizer(IMultiplayerServer server) : StateMac
     MoveToSafetyChore
 > {
 
-    private const string movingStateName = "__moving";
+    private readonly StateMachineMultiplayerStateInfo movingStateInfo = new(name: "__moving");
 
     protected override StateMachineConfigurer[] Inline() => [
         // Disable IdleChore recurring creation
@@ -39,7 +40,7 @@ public class MoveToSafetyChoreSynchronizer(IMultiplayerServer server) : StateMac
     ) {
         var sm = configurer.StateMachine;
         var waiting = configurer.AddState(sm.root, "__waiting");
-        var moving = configurer.AddState(sm.root, movingStateName);
+        var moving = configurer.AddState(sm.root, movingStateInfo);
 
         var targetCell = configurer.AddMultiplayerParameter(MoveObjectToCell.TargetCell);
 
@@ -55,14 +56,14 @@ public class MoveToSafetyChoreSynchronizer(IMultiplayerServer server) : StateMac
         var sm = configurer.StateMachine;
         sm.move.Enter(smi => {
             server.Send(
-                new MoveObjectToCell(new ChoreStateMachineReference(smi.master), smi.targetCell, movingStateName),
+                new MoveObjectToCell(new ChoreStateMachineReference(smi.master), smi.targetCell, movingStateInfo),
                 MultiplayerCommandOptions.SkipHost
             );
         });
 
         sm.move.Update((smi, _) => {
             server.Send(
-                new MoveObjectToCell(new ChoreStateMachineReference(smi.master), smi.targetCell, movingStateName),
+                new MoveObjectToCell(new ChoreStateMachineReference(smi.master), smi.targetCell, movingStateInfo),
                 MultiplayerCommandOptions.SkipHost
             );
         });

@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using MultiplayerMod.Core.Extensions;
 
 namespace MultiplayerMod.Multiplayer.Objects;
 
 [Serializable]
 public class MultiplayerId {
 
-    private long UuidA { get; }
-    private long UuidB { get; }
-    private long InternalId { get; }
+    public long HighPart { get; }
+    public long LowPart { get; }
+    public MultiplayerIdType Type { get; }
 
-    public MultiplayerId(long internalId) {
-        InternalId = internalId;
+    public MultiplayerId(InternalMultiplayerIdType type, long internalId) {
+        Type = MultiplayerIdType.Internal;
+        HighPart = (long) type;
+        LowPart = internalId;
     }
 
     public MultiplayerId(Guid guid) {
         var bytes = guid.ToByteArray();
-        UuidA = GetLong(bytes, 0);
-        UuidB = GetLong(bytes, 8);
+        Type = MultiplayerIdType.Generated;
+        HighPart = GetLong(bytes, 0);
+        LowPart = GetLong(bytes, 8);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -34,7 +36,7 @@ public class MultiplayerId {
     }
 
     protected bool Equals(MultiplayerId other) {
-        return UuidA == other.UuidA && UuidB == other.UuidB && InternalId == other.InternalId;
+        return Type == other.Type && HighPart == other.HighPart && LowPart == other.LowPart;
     }
 
     public override bool Equals(object? other) {
@@ -47,9 +49,9 @@ public class MultiplayerId {
     }
 
     public override int GetHashCode() {
-        var hashCode = UuidA.GetHashCode();
-        hashCode = hashCode * 397 ^ UuidB.GetHashCode();
-        hashCode = hashCode * 397 ^ InternalId.GetHashCode();
+        var hashCode = HighPart.GetHashCode();
+        hashCode = hashCode * 397 ^ LowPart.GetHashCode();
+        hashCode = hashCode * 397 ^ Type.GetHashCode();
         return hashCode;
     }
 
@@ -57,7 +59,6 @@ public class MultiplayerId {
 
     public static bool operator !=(MultiplayerId? left, MultiplayerId? right) => !Equals(left, right);
 
-    public override string ToString()
-        => $"{UuidA.ToString(radix: 36)}:{UuidB.ToString(radix: 36)}:{InternalId.ToString(radix: 36)}";
+    public override string ToString() => $"{(byte)Type:x1}:{HighPart:x16}:{LowPart:x16}";
 
 }

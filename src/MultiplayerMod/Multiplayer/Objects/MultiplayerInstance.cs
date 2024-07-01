@@ -7,23 +7,29 @@ namespace MultiplayerMod.Multiplayer.Objects;
 public class MultiplayerInstance : MultiplayerKMonoBehaviour {
 
     [InjectDependency, UsedImplicitly]
-    private MultiplayerGame multiplayer = null!;
+    private MultiplayerObjects objects = null!;
 
-    public MultiplayerId? Id { get; set; }
+    private MultiplayerObject? multiplayerObject;
+    public MultiplayerId? Id => multiplayerObject?.Id;
+
+    public bool Valid => multiplayerObject != null && objects.Valid(multiplayerObject);
 
     protected override void OnCleanUp() {
-        if (Id != null)
-            multiplayer.Objects.Remove(Id);
+        if (multiplayerObject != null)
+            objects.Remove(multiplayerObject.Id);
     }
 
-    public MultiplayerId Register() => multiplayer.Objects.Register(gameObject, Id);
+    public MultiplayerId Register(MultiplayerId? id = null) {
+        multiplayerObject = objects.Register(gameObject, id);
+        return multiplayerObject.Id;
+    }
 
     public void Redirect(MultiplayerInstance destination) {
-        if (Id == null)
+        if (multiplayerObject == null)
             return;
-        destination.Id = Id;
-        multiplayer.Objects[Id] = destination.gameObject;
-        Id = null;
+        destination.multiplayerObject = multiplayerObject;
+        objects.Register(destination.gameObject, multiplayerObject.Id, multiplayerObject.Persistent);
+        multiplayerObject = null;
     }
 
 }

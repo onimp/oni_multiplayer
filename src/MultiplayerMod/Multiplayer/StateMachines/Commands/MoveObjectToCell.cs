@@ -2,6 +2,7 @@ using System;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration.Parameters;
+using MultiplayerMod.Multiplayer.StateMachines.Configuration.States;
 using MultiplayerMod.Multiplayer.StateMachines.RuntimeTools;
 
 namespace MultiplayerMod.Multiplayer.StateMachines.Commands;
@@ -20,6 +21,12 @@ public class MoveObjectToCell : MultiplayerCommand {
 
     public MoveObjectToCell(Reference<StateMachine.Instance> reference, int cell, StateMachine.BaseState? movingState) :
         this(reference, cell, movingState?.name) { }
+
+    public MoveObjectToCell(
+        Reference<StateMachine.Instance> reference,
+        int cell,
+        StateMachineMultiplayerStateInfo? movingStateInfo
+    ) : this(reference, cell, movingStateInfo?.ReferenceName) { }
 
     public MoveObjectToCell(Reference<StateMachine.Instance> reference, int cell, string? movingStateName) {
         this.movingStateName = movingStateName;
