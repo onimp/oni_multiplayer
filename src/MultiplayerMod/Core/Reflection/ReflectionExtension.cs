@@ -11,13 +11,11 @@ public static class ReflectionExtension {
 
     public static T GetFieldValue<T>(this object obj, string fieldName) {
         var type = obj.GetType();
-        while (type != typeof(object)) {
-            var field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            if (field != null) {
-                return (T) field.GetValue(obj);
-            }
-            type = type.BaseType;
-        }
-        throw new Exception($"Field {fieldName} not found in {obj.GetType()}");
+        var field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        if (field == null)
+            throw new Exception($"Field {fieldName} not found in {obj.GetType()}");
+
+        return (T) field.GetValue(obj);
     }
+
 }

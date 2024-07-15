@@ -1,4 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
+using MultiplayerMod.Core.Reflection;
+using MultiplayerMod.Game.NameOf;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration.Parameters;
 
 namespace MultiplayerMod.Multiplayer.StateMachines.RuntimeTools;
@@ -34,6 +36,9 @@ public class StateMachineRuntimeTools {
         else
             instance.GoTo((StateMachine.BaseState?) null);
     }
+
+    public StateMachineController GetController() => (StateMachineController) instance
+        .GetFieldValue(nameof(StateMachineMemberReference.Instance.controller));
 
     public static StateMachineRuntimeTools Get(StateMachine.Instance instance) {
         if (cache.TryGetValue(instance, out var tools))

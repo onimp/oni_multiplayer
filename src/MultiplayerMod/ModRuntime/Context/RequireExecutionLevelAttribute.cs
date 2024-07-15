@@ -1,21 +1,21 @@
 using System;
 using AttributeProcessor.Annotations;
 using JetBrains.Annotations;
+using MultiplayerMod.Core.Dependency;
 
 namespace MultiplayerMod.ModRuntime.Context;
 
+[DependenciesStaticTarget]
 [AttributeUsage(AttributeTargets.Method)]
 [ConditionalInvocation(typeof(RequireExecutionLevelAttribute), nameof(CheckExecutionLevel))]
-public class RequireExecutionLevelAttribute : Attribute {
+public class RequireExecutionLevelAttribute(ExecutionLevel level) : Attribute {
+
+    [InjectDependency]
+    private static readonly ExecutionLevelManager manager = null!;
 
     [UsedImplicitly]
-    public ExecutionLevel Level { get; }
+    public ExecutionLevel Level { get; } = level;
 
-    public RequireExecutionLevelAttribute(ExecutionLevel level) {
-        Level = level;
-    }
-
-    private static bool CheckExecutionLevel(ExecutionLevel level) =>
-        Runtime.Instance.Dependencies.Get<ExecutionLevelManager>().LevelIsActive(level);
+    private static bool CheckExecutionLevel(ExecutionLevel level) => manager.LevelIsActive(level);
 
 }

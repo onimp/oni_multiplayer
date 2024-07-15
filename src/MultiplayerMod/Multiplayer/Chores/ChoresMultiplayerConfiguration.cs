@@ -15,10 +15,12 @@ public static class ChoresMultiplayerConfiguration {
                 });
             }));
         }),
-        // @formatter:on
         UseSynchronizer<IdleChore, IdleChore.States, IdleChore.StatesInstance, IdleChoreSynchronizer>(),
         UseSynchronizer<MoveToSafetyChore, MoveToSafetyChore.States, MoveToSafetyChore.StatesInstance, MoveToSafetyChoreSynchronizer>(),
         UseStateMachineSynchronizer<IdleStates, IdleStates.Instance, IdleStates.Def, IdleStatesSynchronizer>()
+        // DieChore and DeathMonitor are synchronized on the upper level (see DeathMonitorSynchronizer).
+
+        // @formatter:on
     ];
 
 }
