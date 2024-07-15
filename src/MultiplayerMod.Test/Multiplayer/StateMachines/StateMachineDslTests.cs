@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
@@ -8,21 +7,18 @@ using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.ModRuntime;
 using MultiplayerMod.Multiplayer.StateMachines;
 using MultiplayerMod.Multiplayer.StateMachines.Configuration;
-using MultiplayerMod.Test.GameRuntime;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace MultiplayerMod.Test.Multiplayer.StateMachines;
 
 [TestFixture]
-public class StateMachineDslTests : PlayableGameTest {
+public class StateMachineDslTests : StateMachinesTest {
 
     private static readonly Harmony harmony = new("StateMachinesDSL");
 
     [TearDown]
     public void TearDownDsl() {
         harmony.UnpatchAll("StateMachinesDSL");
-        StateMachineManager.Instance.stateMachines.Clear();
     }
 
     private static void RunStateMachinesPatcher(params StateMachineConfigurer[] configurers) {
@@ -30,13 +26,6 @@ public class StateMachineDslTests : PlayableGameTest {
         var patcher = new StateMachinesPatcher(dispatcher, harmony, DependencyContainer);
         configurers.ForEach(it => patcher.Register(it));
         dispatcher.Dispatch(new RuntimeReadyEvent(Runtime.Instance));
-    }
-
-    private static T CreateStateMachineInstance<T>() where T : StateMachine.Instance {
-        var go = new GameObject();
-        var target = go.AddComponent<TestTarget>();
-        target.Awake();
-        return (T) Activator.CreateInstance(typeof(T), [target]);
     }
 
     [Test]
@@ -256,8 +245,6 @@ public class StateMachineDslTests : PlayableGameTest {
             actual: smi.sm.Trace.Get(smi)
         );
     }
-
-    public class TestTarget : KMonoBehaviour;
 
     public class TestStateMachine : GameStateMachine<TestStateMachine, TestStateMachine.Instance, TestTarget, object> {
 
