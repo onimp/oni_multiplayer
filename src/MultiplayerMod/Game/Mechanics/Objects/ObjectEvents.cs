@@ -88,7 +88,7 @@ public static class ObjectEvents {
             typeof(AccessControl),
             nameof(AccessControl.SetPermission),
             nameof(AccessControl.ClearPermission),
-            nameof(AccessControl.DefaultPermission)
+            nameof(AccessControl.SetDefaultPermission)
         )
         .AddMethods(typeof(LogicBroadcastReceiver), nameof(LogicBroadcastReceiver.SetChannel))
         .AddMethods(typeof(LaunchConditionManager), nameof(LaunchConditionManager.Launch))
