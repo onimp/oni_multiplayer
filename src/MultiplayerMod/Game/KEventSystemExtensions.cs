@@ -9,7 +9,8 @@ public static class KEventSystemExtensions {
         if (kObject == null || !kObject.hasEventSystem)
             return;
 
-        kObject.GetEventSystem().Trigger(go, (int) hash, data);
+        if (kObject.GetEventSystem(out var eventSystem))
+            eventSystem.Trigger(go, (int) hash, data);
     }
 
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
@@ -93,9 +94,18 @@ public class ChoresPatcher {
         events.Dispatch(new ChoreCleanupEvent(__instance));
     }
 
+    private static readonly MethodInfo getSmiMethod = typeof(StandardChoreBase).GetMethod(
+        "GetSMI",
+        BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance,
+        null,
+        Type.EmptyTypes,
+        null
+    )!;
+
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void OnChoreCreated(Chore chore, object[] arguments) {
-        var serializable = chore.GetSMI().stateMachine.serializable;
+        var smi = (StateMachine.Instance) getSmiMethod.Invoke(chore, null)!;
+        var serializable = smi.stateMachine.serializable;
         var id = chore.Register(persistent: serializable == StateMachine.SerializeType.Never);
         events.Dispatch(new ChoreCreatedEvent(chore, id, chore.GetType(), arguments));
     }

@@ -66,4 +66,11 @@
       <PackageReference Include="AttributeProcessor.Annotations" Version="0.1.0" ExcludeAssets="runtime"/>
       <PackageReference Include="AttributeProcessor.MSBuild.Task" Version="0.1.3" />
     </ItemGroup>
+    <!-- Exclude files that reference types not present in the installed ONI version -->
+    <ItemGroup Condition="!$(DefineConstants.Contains('ONI_DEV_TOOLS'))">
+      <Compile Remove="Game\Dev\DevToolSceneInspectorPatch.cs" />
+      <Compile Remove="Multiplayer\UI\Dev\DevToolMultiplayerObjects.cs" />
+      <Compile Remove="Multiplayer\UI\Dev\DevToolsConfigurer.cs" />
+      <Compile Remove="Game\Mechanics\Schedules\ScheduleConditionalUpdatePatch.cs" />
+    </ItemGroup>
 </Project>
