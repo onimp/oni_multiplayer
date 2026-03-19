@@ -15,7 +15,7 @@
     <PropertyGroup>
         <ExposedLibrariesPath>$(MSBuildThisFileDirectory)\lib\exposed</ExposedLibrariesPath>
         <ManagedPath Condition="'$(ManagedPath)' == ''">$(SteamLibraryPath)\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ManagedPath>
-        <ModInstallationPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\dev\$(MSBuildProjectName)</ModInstallationPath>
+        <ModInstallationPath Condition="'$(ModInstallationPath)' == ''">$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\dev\$(MSBuildProjectName)</ModInstallationPath>
     </PropertyGroup>
 
 </Project>

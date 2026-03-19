@@ -57,13 +57,23 @@ public class ChoresPatcher {
 
         log.Info($"{supportedTypes.Count} chore types patched:\n\t{string.Join("\n\t", supportedTypes.Select(it => it.GetSignature()))}");
 
-        harmony.CreateProcessor(typeof(Chore).GetConstructors()[0])
+        harmony.CreateProcessor(
+                typeof(Chore).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)[0]
+            )
             .AddPostfix(SymbolExtensions.GetMethodInfo(() => AddMultiplayerPreconditions(null!)))
             .Patch();
 
-        harmony.CreateProcessor(typeof(Chore).GetMethod(nameof(Chore.Cleanup)))
-            .AddPostfix(SymbolExtensions.GetMethodInfo(() => ChoreCleanup(null!)))
-            .Patch();
+        // Chore.Cleanup() is abstract — patch the Chore<StatesInstance>.Cleanup() closed generic
+        var choreGenericBase = supportedTypes
+            .Select(it => it.BaseType)
+            .FirstOrDefault(it => it is { IsGenericType: true } && it.GetGenericTypeDefinition() == typeof(Chore<>));
+        if (choreGenericBase != null) {
+            var cleanupMethod = choreGenericBase.GetMethod(nameof(Chore.Cleanup));
+            if (cleanupMethod != null)
+                harmony.CreateProcessor(cleanupMethod)
+                    .AddPostfix(SymbolExtensions.GetMethodInfo(() => ChoreCleanup(null!)))
+                    .Patch();
+        }
     }
 
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]

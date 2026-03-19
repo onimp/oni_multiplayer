@@ -19,7 +19,7 @@ public class MoveToSafetyChoreSynchronizer(
 
     protected override void Configure(IStateMachineRootConfigurer<MoveToSafetyChore.States, MoveToSafetyChore.StatesInstance, MoveToSafetyChore, object> root) {
         // Disable IdleChore recurring creation
-        root.Inline(new StateMachineConfigurerDsl<SafeCellMonitor, SafeCellMonitor.Instance>(monitor => {
+        root.Inline(new StateMachineConfigurerDsl<SafeCellMonitor, SafeCellMonitor.Instance, IStateMachineTarget, SafeCellMonitor.Def>(monitor => {
             monitor.PreConfigure(MultiplayerMode.Client, pre => {
                 pre.Suppress(() => pre.StateMachine.danger.ToggleChore(null, null));
             });

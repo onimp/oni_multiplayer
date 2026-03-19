@@ -180,7 +180,6 @@ public abstract class ChoreTest : PlayableGameTest {
         targetGameObject.AddComponent<OxygenBreather>();
         targetGameObject.AddComponent<MinionBrain>().Awake();
         targetGameObject.AddComponent<SkillPerkMissingComplainer>();
-
         var sensors = targetGameObject.AddComponent<Sensors>();
         sensors.Add(new SafeCellSensor(sensors));
         sensors.Add(new IdleCellSensor(sensors));
