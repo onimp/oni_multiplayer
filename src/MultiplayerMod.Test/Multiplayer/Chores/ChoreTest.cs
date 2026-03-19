@@ -152,11 +152,10 @@ public abstract class ChoreTest : PlayableGameTest {
         targetGameObject.AddComponent<Effects>();
         targetGameObject.AddComponent<Modifiers>().Awake();
         targetGameObject.GetComponent<Modifiers>().attributes.Add(Db.Get().Attributes.CarryAmount);
-        targetGameObject.AddComponent<PathProber>();
         targetGameObject.AddComponent<Facing>();
         targetGameObject.AddComponent<KSelectable>();
         targetGameObject.AddComponent<ConsumableConsumer>().forbiddenTagSet = [];
-        targetGameObject.AddComponent<Worker>();
+        targetGameObject.AddComponent<StandardWorker>();
         targetGameObject.AddComponent<Storage>();
 
         Assets.PrefabsByTag[(Tag) TargetLocator.ID] = targetGameObject.GetComponent<KPrefabID>();
@@ -167,7 +166,7 @@ public abstract class ChoreTest : PlayableGameTest {
         locatorGameObject.AddComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) ApproachableLocator.ID] = locatorGameObject.GetComponent<KPrefabID>();
         var navigator = targetGameObject.AddComponent<Navigator>();
-        navigator.NavGridName = MinionConfig.MINION_NAV_GRID_NAME;
+        navigator.NavGridName = TUNING.DUPLICANTSTATS.STANDARD.BaseStats.NAV_GRID_NAME;
         navigator.CurrentNavType = NavType.Floor;
         navigator.Awake();
         navigator.Start();
