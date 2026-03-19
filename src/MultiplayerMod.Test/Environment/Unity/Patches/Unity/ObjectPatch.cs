@@ -17,7 +17,9 @@ public class ObjectPatch {
     [HarmonyPatch(MethodType.Constructor)]
     private static void Object_Constructor(Object __instance) {
         UnityPlayerObjectManager.Allocate(__instance);
-        if (__instance is not GameObject) {
+        if (__instance is GameObject gameObject) {
+            UnityTestRuntime.RegisterGameObject(gameObject);
+        } else {
             UnityTestRuntime.RegisterObject(__instance, null);
         }
     }

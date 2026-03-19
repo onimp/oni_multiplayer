@@ -33,7 +33,7 @@ public abstract class PlayableGameTest {
     [OneTimeSetUp]
     public static void SetUpGame() {
         Harmony = new Harmony("AbstractGameTest");
-        var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch) });
+        var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch), typeof(MinionIdentityPatch), typeof(SensorsPatch), typeof(ChoreConsumerStatePatch) });
         UnityTestRuntime.Install();
         PatchesSetup.Install(Harmony, patches);
         SetUpUnityAndGame();
@@ -45,7 +45,42 @@ public abstract class PlayableGameTest {
     public static void TearDown() {
         UnityTestRuntime.Uninstall();
         PatchesSetup.Uninstall(Harmony);
+
+        // Game core
         global::Game.Instance = null;
+        Global.Instance = null;
+        KObjectManager.Instance = null;
+
+        // World & navigation
+        World.Instance = null;
+        Pathfinding.Instance = null;
+        NavigationReservations.Instance = null;
+
+        // Singletons from SetUpUnityAndGame
+        DistributionPlatform.sImpl = null;
+        ReportManager.Instance = null;
+        StateMachineDebuggerSettings._Instance = null;
+        MinionGroupProber.Instance = null;
+        GameClock.Instance = null;
+        GlobalChoreProvider.Instance = null;
+        ScheduleManager.Instance = null;
+        NameDisplayScreen.Instance = null;
+        BuildingConfigManager.Instance = null;
+        CustomGameSettings.instance = null;
+        GameComps.InfraredVisualizers = null;
+        GameScreenManager.Instance = null;
+        GameScenePartitioner.instance = null;
+
+        // Assets
+        BundledAssetsLoader.instance = null;
+        BuildingLoader.Instance = null;
+        Assets.ModLoadedKAnims = null;
+        Assets.instance = null;
+
+        // InitGame singletons
+        Singleton<CellChangeMonitor>.DestroyInstance();
+        GameScheduler.Instance = null;
+        ElementLoader.elements = null;
     }
 
     protected static GameObject createGameObject() {
@@ -85,6 +120,7 @@ public abstract class PlayableGameTest {
         PathFinder.Initialize();
         new GameNavGrids(Pathfinding.Instance);
         worldGameObject.AddComponent<NavigationReservations>().Awake();
+        worldGameObject.AddComponent<ScheduleManager>().Awake();
         worldGameObject.AddComponent<NameDisplayScreen>().Awake();
         worldGameObject.AddComponent<BuildingConfigManager>().Awake();
         SetupAssets(worldGameObject);

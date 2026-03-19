@@ -17,7 +17,19 @@ public class SystemInfoPatch {
         IEnumerable<CodeInstruction> instructions
     ) {
         return new List<CodeInstruction> {
-            new(OpCodes.Ldc_I4_1), // 1
+            new(OpCodes.Ldc_I4_2), // 2 (needs > 1 for GlobalJobManager semaphore)
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("get_operatingSystem")]
+    private static IEnumerable<CodeInstruction> SystemInfo_get_operatingSystem(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldstr, "Windows 10 (10.0.19045) 64bit"),
             new(OpCodes.Ret)
         };
     }

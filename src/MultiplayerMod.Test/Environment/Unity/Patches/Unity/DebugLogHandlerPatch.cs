@@ -2,6 +2,7 @@ using System;
 using HarmonyLib;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Test.GameRuntime.Patches;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -28,6 +29,10 @@ public class DebugLogHandlerPatch {
         switch (logType) {
             case LogType.Error:
                 log.Error(message);
+                // During MinionIdentity.OnSpawn, suppress errors from missing Personality/resources
+                // in the test environment where Personalities DB is empty.
+                if (MinionIdentityPatch.SuppressErrors)
+                    break;
                 throw new Exception(message);
             case LogType.Warning:
                 log.Warning(message);

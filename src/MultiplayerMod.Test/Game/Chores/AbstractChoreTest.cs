@@ -12,6 +12,8 @@ using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.GameRuntime;
 using MultiplayerMod.Test.GameRuntime.Patches;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -35,6 +37,11 @@ public class AbstractChoreTest : PlayableGameTest {
     private static FetchOrder2 fetchOrder2 = null!;
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
+
+    [OneTimeSetUp]
+    public void InjectDependencies() {
+        Dependencies.Get<IDependencyInjector>().Inject(typeof(ChoreExtensions));
+    }
 
     [SetUp]
     public void AbstractSetUp() {
@@ -144,7 +151,6 @@ public class AbstractChoreTest : PlayableGameTest {
         targetGameObject.AddComponent<OxygenBreather>();
         targetGameObject.AddComponent<MinionBrain>().Awake();
         targetGameObject.AddComponent<SkillPerkMissingComplainer>();
-
         var sensors = targetGameObject.AddComponent<Sensors>();
         sensors.Add(new SafeCellSensor(sensors));
         sensors.Add(new IdleCellSensor(sensors));
