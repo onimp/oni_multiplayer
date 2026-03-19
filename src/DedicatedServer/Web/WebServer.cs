@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using DedicatedServer.Game;
 using Newtonsoft.Json;
 
 namespace DedicatedServer.Web;
@@ -19,6 +20,7 @@ public class WebServer {
     private readonly int port;
     private readonly string wwwrootPath;
     private readonly MockWorldState mockWorld;
+    private RealWorldState? realWorld;
 
     private static readonly Dictionary<string, string> MimeTypes = new() {
         { ".html", "text/html; charset=utf-8" },
@@ -47,6 +49,11 @@ public class WebServer {
         }
 
         mockWorld = new MockWorldState();
+    }
+
+    public void SetRealWorldState(RealWorldState state) {
+        realWorld = state;
+        Console.WriteLine("[WebServer] Switched to real game world data.");
     }
 
     public void Start(CancellationToken ct) {
@@ -84,18 +91,26 @@ public class WebServer {
     }
 
     private void HandleApiRequest(HttpListenerContext context, string path) {
+        var useReal = realWorld != null;
         switch (path) {
             case "/api/health":
-                SendJson(context.Response, 200, new { status = "ok", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+                SendJson(context.Response, 200, new {
+                    status = "ok",
+                    source = useReal ? "game" : "mock",
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                });
                 break;
             case "/api/world":
-                SendJson(context.Response, 200, mockWorld.GetWorldSnapshot());
+                SendJson(context.Response, 200,
+                    useReal ? realWorld!.GetWorldSnapshot() : mockWorld.GetWorldSnapshot());
                 break;
             case "/api/entities":
-                SendJson(context.Response, 200, mockWorld.GetEntities());
+                SendJson(context.Response, 200,
+                    useReal ? realWorld!.GetEntities() : mockWorld.GetEntities());
                 break;
             case "/api/state":
-                SendJson(context.Response, 200, mockWorld.GetGameState());
+                SendJson(context.Response, 200,
+                    useReal ? realWorld!.GetGameState() : mockWorld.GetGameState());
                 break;
             default:
                 SendJson(context.Response, 404, new { error = "Unknown API endpoint" });

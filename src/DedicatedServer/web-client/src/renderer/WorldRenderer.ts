@@ -106,6 +106,16 @@ export class WorldRenderer {
       }
     }
 
+    // World boundary outline (always visible)
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(
+      this.offsetX,
+      this.offsetY,
+      world.width * cellSize,
+      world.height * cellSize
+    );
+
     // Grid
     if (options.showGrid && cellSize >= 6) {
       ctx.strokeStyle = 'rgba(255,255,255,0.08)';
