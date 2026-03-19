@@ -26,6 +26,15 @@ namespace MultiplayerMod.Test.GameRuntime;
 
 public abstract class PlayableGameTest {
 
+    // Minimal personality CSV for the test environment.
+    // Provides a valid Personality entry so Db.Get().Personalities has data,
+    // avoiding NullReferenceException in MinionIdentity.OnSpawn and downstream lookups.
+    private const string TestPersonalitiesCsv =
+        "Name,Gender,PersonalityType,StressTrait,JoyTrait,StickerType,CongenitalTrait," +
+        "HeadShape,Mouth,Neck,Eyes,Hair,Body,Belt,Cuff,Foot,Hand,Pelvis,Leg,Arm_Skin,Leg_Skin," +
+        "ValidStarter,Grave,Model,SpeechMouth,RequiredDlcId\n" +
+        "TestDupe,Male,Sweet,UglyCrier,BalloonArtist,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,testdupe,Minion,0,";
+
     protected static Harmony Harmony = null!;
     protected static IDependencyContainer DependencyContainer => Dependencies.Get<IDependencyContainer>();
     protected static EventDispatcher Events => Dependencies.Get<EventDispatcher>();
@@ -33,7 +42,7 @@ public abstract class PlayableGameTest {
     [OneTimeSetUp]
     public static void SetUpGame() {
         Harmony = new Harmony("AbstractGameTest");
-        var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch), typeof(MinionIdentityPatch), typeof(SensorsPatch), typeof(ChoreConsumerStatePatch) });
+        var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch), typeof(SensorsPatch), typeof(ChoreConsumerStatePatch) });
         UnityTestRuntime.Install();
         PatchesSetup.Install(Harmony, patches);
         SetUpUnityAndGame();
@@ -144,7 +153,7 @@ public abstract class PlayableGameTest {
         assets.BlockTileDecorInfoAssets = new List<BlockTileDecorInfo>();
         Assets.ModLoadedKAnims = new List<KAnimFile>() { ScriptableObject.CreateInstance<KAnimFile>() };
         assets.elementAudio = new TextAsset("");
-        assets.personalitiesFile = new TextAsset("");
+        assets.personalitiesFile = new TextAsset(TestPersonalitiesCsv);
         Assets.instance = assets;
 
         AsyncLoadManager<IGlobalAsyncLoader>.Run();
