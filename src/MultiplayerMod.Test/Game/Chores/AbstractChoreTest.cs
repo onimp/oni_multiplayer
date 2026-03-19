@@ -144,9 +144,11 @@ public class AbstractChoreTest : PlayableGameTest {
         navigator.SetAbilities(new MinionPathFinderAbilities(navigator));
         minion.GetComponent<Navigator>().NavGrid.NavTable.SetValid(19, NavType.Floor, true);
 
-        targetGameObject.AddComponent<MinionIdentity>().Awake();
-        targetGameObject.GetComponent<MinionIdentity>().Start();
-        var ownables = targetGameObject.GetComponent<MinionIdentity>().assignableProxy.Get().FindOrAdd<Ownables>();
+        var minionIdentity = targetGameObject.AddComponent<MinionIdentity>();
+        minionIdentity.personalityResourceId = (HashedString) "TESTDUPE";
+        minionIdentity.Awake();
+        minionIdentity.Start();
+        var ownables = minionIdentity.assignableProxy.Get().FindOrAdd<Ownables>();
         ownables.slots.Add(new OwnableSlotInstance(ownables, (OwnableSlot) Db.Get().AssignableSlots.MessStation));
         targetGameObject.AddComponent<OxygenBreather>();
         targetGameObject.AddComponent<MinionBrain>().Awake();
