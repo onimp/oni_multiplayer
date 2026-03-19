@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <AssemblyName>DedicatedServer</AssemblyName>
+        <AssemblyTitle>ONI Multiplayer Dedicated Server</AssemblyTitle>
+        <Copyright>MIT License (C) ONIMP Team</Copyright>
+        <!-- Skip AssemblyExposer — DedicatedServer uses pre-exposed DLLs -->
+        <SkipAssemblyExposure>true</SkipAssemblyExposure>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="Assembly-CSharp" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp.dll" Private="false" />
+        <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp-firstpass.dll" Private="false" />
+        <Reference Include="UnityEngine.CoreModule" HintPath="$(ExposedLibrariesPath)\UnityEngine.CoreModule.dll" Private="false" />
+        <Reference Include="0Harmony" HintPath="$(ExposedLibrariesPath)\0Harmony.dll" Private="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" Private="false" />
+        <Reference Include="Newtonsoft.Json" HintPath="$(ManagedPath)\Newtonsoft.Json.dll" Private="true" />
+    </ItemGroup>
+
+    <!-- Embed wwwroot as resources for static file serving -->
+    <ItemGroup>
+        <EmbeddedResource Include="wwwroot\**\*" />
+        <None Remove="wwwroot\**\*" />
+    </ItemGroup>
+</Project>

@@ -6,3 +6,6 @@ src/Assembly-CSharp
 src/*/bin/
 src/*/obj/
 /lib
+
+# Decompiled game sources — NEVER commit (intellectual property of Klei Entertainment)
+/decompiled/
