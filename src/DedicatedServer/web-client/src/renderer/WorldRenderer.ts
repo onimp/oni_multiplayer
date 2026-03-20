@@ -102,7 +102,7 @@ export class WorldRenderer {
         if (screenX + cellSize < 0 || screenX > w || screenY + cellSize < 0 || screenY > h) continue;
 
         ctx.fillStyle = this.getCellColor(cell, options.overlay);
-        ctx.fillRect(screenX, screenY, cellSize + 0.5, cellSize + 0.5);
+        ctx.fillRect(Math.round(screenX), Math.round(screenY), Math.ceil(cellSize), Math.ceil(cellSize));
       }
     }
 

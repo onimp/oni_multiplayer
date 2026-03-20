@@ -58,14 +58,7 @@ public class GameLoader {
     private static GCHandle massHandle;
 
     public void Boot() {
-        // Initial size for game systems — will be overridden by WorldGen settings
-        width = 256;
-        height = 384;
-
         Console.WriteLine("[GameLoader] Installing patches...");
-        // Force Mono JIT to compile reflection/emit infrastructure before Harmony.
-        // Harmony's self-test (MonoMod _HookSelftest) deadlocks on standalone Mono
-        // if reflection/emit hasn't been warmed up yet.
         System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(System.Reflection.Emit.DynamicMethod).TypeHandle);
         System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(System.Reflection.Emit.ILGenerator).TypeHandle);
         harmony = new Harmony("DedicatedServer");
@@ -76,6 +69,10 @@ public class GameLoader {
 
         Console.WriteLine("[GameLoader] Loading elements from game YAML...");
         LoadElementsFromGame();
+
+        // Temporary grid size for game system init — overridden by WorldGen settings
+        width = 256;
+        height = 384;
 
         Console.WriteLine("[GameLoader] Initializing game world...");
         InitializeWorld();
@@ -300,9 +297,8 @@ public class GameLoader {
 
         ElementLoader.Load(ref substanceList, substanceTables);
 
-        // Fix element names and ensure stub substances
+        // Fix element names — use tag name if localization didn't resolve
         foreach (var elem in ElementLoader.elements) {
-            // Strings.Get() returns MISSING.STRINGS.* without localization — use tag name instead
             if (elem.name != null && elem.name.Contains("MISSING.STRINGS")) {
                 elem.name = elem.tag.Name;
                 elem.nameUpperCase = elem.name.ToUpper();
