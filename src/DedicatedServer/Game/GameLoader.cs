@@ -1,24 +1,37 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using Database;
 using HarmonyLib;
+using Klei;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
 using MultiplayerMod.Test.GameRuntime.Patches;
+using ProcGen;
+using ProcGenGame;
 using UnityEngine;
+using Path = System.IO.Path;
 using Random = System.Random;
 
 namespace DedicatedServer.Game;
 
 /// <summary>
-/// Boots the ONI game world from DLLs, similar to PlayableGameTest.
-/// Installs Unity patches, initializes game singletons, sets up the Grid.
+/// Boots the ONI game world from DLLs with real WorldGen and SimDLL physics.
 /// </summary>
 public class GameLoader {
 
-    private const int DefaultWidth = 64;
-    private const int DefaultHeight = 64;
+    private const int DefaultWidth = 256;
+    private const int DefaultHeight = 384;
+
+    private static readonly string GameStreamingAssetsPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "Library/Application Support/Steam/steamapps/common/OxygenNotIncluded",
+        "OxygenNotIncluded.app/Contents/Resources/Data/StreamingAssets"
+    );
 
     private Harmony harmony = null!;
     private int width;
@@ -27,6 +40,13 @@ public class GameLoader {
     public int Width => width;
     public int Height => height;
     public bool IsLoaded { get; private set; }
+    public bool SimRunning { get; private set; }
+
+    // GC handles to keep pinned arrays alive for the server lifetime
+    private static GCHandle elementIdxHandle;
+    private static GCHandle temperatureHandle;
+    private static GCHandle radiationHandle;
+    private static GCHandle massHandle;
 
     public void Boot(int worldWidth = DefaultWidth, int worldHeight = DefaultHeight) {
         width = worldWidth;
@@ -34,66 +54,268 @@ public class GameLoader {
 
         Console.WriteLine("[GameLoader] Installing patches...");
         harmony = new Harmony("DedicatedServer");
+        InstallPatches();
 
-        // Get all Unity patches from the test assembly (same as UnityTestRuntime.Install())
+        Console.WriteLine("[GameLoader] Fixing streaming assets path...");
+        FixStreamingAssetsPath();
+
+        Console.WriteLine("[GameLoader] Loading elements from game YAML...");
+        LoadElementsFromGame();
+
+        Console.WriteLine("[GameLoader] Initializing game world...");
+        InitializeWorld();
+
+        Console.WriteLine("[GameLoader] Loading WorldGen settings...");
+        LoadWorldGenSettings();
+
+        Console.WriteLine("[GameLoader] Generating world...");
+        var cells = GenerateWorld();
+
+        if (cells != null) {
+            Console.WriteLine("[GameLoader] Initializing SimDLL with WorldGen cells...");
+            InitSimDLL(cells.Value.cells, cells.Value.bgTemp, cells.Value.dc);
+        } else {
+            Console.WriteLine("[GameLoader] WorldGen failed, falling back to procedural world...");
+            AllocatePinnedGrid(width, height);
+            PopulateWorldProcedural(width, height);
+
+            // Try SimDLL even with procedural world
+            Console.WriteLine("[GameLoader] Attempting SimDLL with procedural world...");
+            var numCells = width * height;
+            var procCells = new Sim.Cell[numCells];
+            var procBgTemp = new float[numCells];
+            var procDc = new Sim.DiseaseCell[numCells];
+            unsafe {
+                for (var i = 0; i < numCells; i++) {
+                    procCells[i] = new Sim.Cell {
+                        elementIdx = Grid.elementIdx[i],
+                        temperature = Grid.temperature[i],
+                        mass = ElementLoader.elements != null && Grid.elementIdx[i] < ElementLoader.elements.Count
+                            ? ElementLoader.elements[Grid.elementIdx[i]].defaultValues.mass
+                            : 1f
+                    };
+                    procBgTemp[i] = Grid.temperature[i];
+                    procDc[i] = Sim.DiseaseCell.Invalid;
+                }
+            }
+            InitSimDLL(procCells, procBgTemp, procDc);
+        }
+
+        IsLoaded = true;
+        Console.WriteLine($"[GameLoader] World ready: {width}x{height} ({width * height} cells), SimDLL: {SimRunning}");
+    }
+
+    private void InstallPatches() {
+        // Unity patches from test assembly
         var unityPatchTypes = typeof(UnityTestRuntime).Assembly.GetTypes()
             .Where(type => type.Namespace?.StartsWith(typeof(UnityTestRuntime).Namespace + ".Patches") == true)
             .ToList();
 
         Console.WriteLine($"[GameLoader] Found {unityPatchTypes.Count} Unity patch types");
 
-        // Test Harmony init with a simple self-test first
-        Console.WriteLine("[GameLoader] Testing Harmony...");
-        Console.Out.Flush();
-        try {
-            var testPatch = harmony.CreateClassProcessor(unityPatchTypes[0]);
-            Console.WriteLine($"[GameLoader] Created processor for: {unityPatchTypes[0].Name}");
-            Console.Out.Flush();
-            testPatch.Patch();
-            Console.WriteLine($"[GameLoader] First patch OK: {unityPatchTypes[0].Name}");
-        } catch (Exception ex) {
-            Console.WriteLine($"[GameLoader] First patch failed: {ex.Message}");
-            var inner = ex;
-            while (inner.InnerException != null) {
-                inner = inner.InnerException;
-                Console.WriteLine($"[GameLoader]   → {inner.GetType().Name}: {inner.Message}");
-            }
-        }
-        Console.Out.Flush();
-
-        // Apply remaining patches
-        for (var i = 1; i < unityPatchTypes.Count; i++) {
-            var patchType = unityPatchTypes[i];
+        foreach (var patchType in unityPatchTypes) {
             try {
                 harmony.CreateClassProcessor(patchType).Patch();
-                Console.WriteLine($"[GameLoader] Patch OK: {patchType.Name}");
             } catch (Exception ex) {
                 Console.WriteLine($"[GameLoader] Patch FAIL: {patchType.Name}: {ex.Message}");
             }
         }
 
-        // Install game-specific patches
-        var gamePatches = new Type[] {
+        // Game-specific patches
+        var gamePatches = new[] {
             typeof(DbPatch),
             typeof(AssetsPatch),
-            typeof(ElementLoaderPatch),
             typeof(SensorsPatch),
             typeof(ChoreConsumerStatePatch)
         };
         foreach (var patchType in gamePatches) {
             try {
                 harmony.CreateClassProcessor(patchType).Patch();
-                Console.WriteLine($"[GameLoader] Patch OK: {patchType.Name}");
             } catch (Exception ex) {
                 Console.WriteLine($"[GameLoader] Patch FAIL: {patchType.Name}: {ex.Message}");
             }
         }
+        // NOTE: We intentionally skip ElementLoaderPatch — we want real FindElementByHash
+    }
 
-        Console.WriteLine("[GameLoader] Initializing game world...");
-        InitializeWorld();
+    /// <summary>
+    /// Override Application.streamingAssetsPath to point to the real game's StreamingAssets.
+    /// The test patches set it to "" — we use a high-priority Prefix to override.
+    /// </summary>
+    private void FixStreamingAssetsPath() {
+        var prop = typeof(Application).GetProperty("streamingAssetsPath", BindingFlags.Public | BindingFlags.Static);
+        if (prop == null) {
+            Console.WriteLine("[GameLoader] WARNING: Cannot find Application.streamingAssetsPath property");
+            return;
+        }
 
-        IsLoaded = true;
-        Console.WriteLine($"[GameLoader] World ready: {width}x{height} ({width * height} cells)");
+        var getter = prop.GetGetMethod();
+        harmony.Patch(getter,
+            prefix: new HarmonyMethod(typeof(GameLoader), nameof(StreamingAssetsPathPrefix)) { priority = Priority.Last });
+
+        // Also fix dataPath (used by some subsystems)
+        var dataProp = typeof(Application).GetProperty("dataPath", BindingFlags.Public | BindingFlags.Static);
+        if (dataProp != null) {
+            harmony.Patch(dataProp.GetGetMethod(),
+                prefix: new HarmonyMethod(typeof(GameLoader), nameof(DataPathPrefix)) { priority = Priority.Last });
+        }
+
+        Console.WriteLine($"[GameLoader] streamingAssetsPath → {GameStreamingAssetsPath}");
+
+        // Fix ElementLoader's static path field (initialized at class load time with old value)
+        var pathField = typeof(ElementLoader).GetField("path", BindingFlags.NonPublic | BindingFlags.Static);
+        if (pathField != null) {
+            pathField.SetValue(null, GameStreamingAssetsPath + "/elements/");
+            Console.WriteLine($"[GameLoader] ElementLoader.path fixed");
+        }
+    }
+
+    private static bool StreamingAssetsPathPrefix(ref string __result) {
+        __result = GameStreamingAssetsPath;
+        return false; // skip original
+    }
+
+    private static bool DataPathPrefix(ref string __result) {
+        __result = Path.GetDirectoryName(GameStreamingAssetsPath) ?? GameStreamingAssetsPath;
+        return false;
+    }
+
+    /// <summary>
+    /// Load all elements from the game's YAML files, bypassing SubstanceTable (Unity assets).
+    /// Reads YAML directly from disk — the game's FileSystem may not be initialized.
+    /// </summary>
+    private void LoadElementsFromGame() {
+        ElementLoader.elements = new List<Element>();
+        ElementLoader.elementTable = new Dictionary<int, Element>();
+
+        var elementsPath = GameStreamingAssetsPath + "/elements/";
+        Console.WriteLine($"[GameLoader] Elements path: {elementsPath}");
+        Console.WriteLine($"[GameLoader] Path exists: {Directory.Exists(elementsPath)}");
+
+        // Read YAML files directly (game's FileSystem may not be set up)
+        var entries = new List<ElementLoader.ElementEntry>();
+        if (Directory.Exists(elementsPath)) {
+            foreach (var yamlFile in Directory.GetFiles(elementsPath, "*.yaml")) {
+                if (Path.GetFileName(yamlFile).StartsWith(".")) continue;
+                try {
+                    var collection = Klei.YamlIO.LoadFile<ElementLoader.ElementEntryCollection>(yamlFile, null);
+                    if (collection?.elements != null) {
+                        entries.AddRange(collection.elements);
+                    }
+                } catch (Exception ex) {
+                    Console.WriteLine($"[GameLoader] Failed to load {Path.GetFileName(yamlFile)}: {ex.Message}");
+                }
+            }
+        }
+        Console.WriteLine($"[GameLoader] Found {entries.Count} element entries in YAML");
+
+        foreach (var entry in entries) {
+            var hash = Hash.SDBMLower(entry.elementId);
+            if (ElementLoader.elementTable.ContainsKey(hash)) continue;
+
+            // Skip DLC elements if not "vanilla" (dlcId == "")
+            // For simplicity, load all — SimDLL will ignore unused ones
+            var element = new Element();
+            element.id = (SimHashes)hash;
+            element.name = entry.elementId; // Use ID as name (no localization)
+            element.nameUpperCase = entry.elementId.ToUpper();
+            element.tag = TagManager.Create(entry.elementId, entry.elementId);
+            element.dlcId = entry.dlcId;
+
+            // Copy all physical properties
+            CopyEntryToElement(entry, element);
+
+            // Create stub Substance (needed by FinaliseElementsTable)
+            element.substance = new Substance {
+                nameTag = element.tag,
+                anim = new KAnimFile { IsBuildLoaded = true }
+            };
+
+            var defMass = entry.defaultMass;
+            if (defMass <= 0f) defMass = 1f;
+            element.defaultValues = new Sim.PhysicsData {
+                temperature = entry.defaultTemperature,
+                mass = defMass
+            };
+
+            ElementLoader.elements.Add(element);
+            ElementLoader.elementTable[hash] = element;
+        }
+
+        // Sort and index elements (like FinaliseElementsTable)
+        FinaliseElements();
+        WorldGen.SetupDefaultElements();
+
+        Console.WriteLine($"[GameLoader] Registered {ElementLoader.elements.Count} elements");
+    }
+
+    private static void CopyEntryToElement(ElementLoader.ElementEntry entry, Element elem) {
+        elem.specificHeatCapacity = entry.specificHeatCapacity;
+        elem.thermalConductivity = entry.thermalConductivity;
+        elem.molarMass = entry.molarMass;
+        elem.strength = entry.strength;
+        elem.disabled = entry.isDisabled;
+        elem.flow = entry.flow;
+        elem.maxMass = entry.maxMass;
+        elem.maxCompression = entry.liquidCompression;
+        elem.viscosity = entry.speed;
+        elem.minHorizontalFlow = entry.minHorizontalFlow;
+        elem.minVerticalFlow = entry.minVerticalFlow;
+        elem.solidSurfaceAreaMultiplier = entry.solidSurfaceAreaMultiplier;
+        elem.liquidSurfaceAreaMultiplier = entry.liquidSurfaceAreaMultiplier;
+        elem.gasSurfaceAreaMultiplier = entry.gasSurfaceAreaMultiplier;
+        elem.state = entry.state;
+        elem.hardness = entry.hardness;
+        elem.lowTemp = entry.lowTemp;
+        elem.lowTempTransitionTarget = (SimHashes)Hash.SDBMLower(entry.lowTempTransitionTarget);
+        elem.highTemp = entry.highTemp;
+        elem.highTempTransitionTarget = (SimHashes)Hash.SDBMLower(entry.highTempTransitionTarget);
+        elem.highTempTransitionOreID = (SimHashes)Hash.SDBMLower(entry.highTempTransitionOreId);
+        elem.highTempTransitionOreMassConversion = entry.highTempTransitionOreMassConversion;
+        elem.lowTempTransitionOreID = (SimHashes)Hash.SDBMLower(entry.lowTempTransitionOreId);
+        elem.lowTempTransitionOreMassConversion = entry.lowTempTransitionOreMassConversion;
+    }
+
+    /// <summary>
+    /// Simplified FinaliseElementsTable — sort, index, set transition targets.
+    /// Skips SubstanceTable/texture lookups.
+    /// </summary>
+    private static void FinaliseElements() {
+        // Set temperature-related flags
+        foreach (var elem in ElementLoader.elements) {
+            if (elem.thermalConductivity == 0f)
+                elem.state |= Element.State.TemperatureInsulated;
+            if (elem.strength == 0f)
+                elem.state |= Element.State.Unbreakable;
+        }
+
+        // Sort: solids first (descending), then by id
+        ElementLoader.elements = ElementLoader.elements
+            .OrderByDescending(e => (int)(e.state & Element.State.Solid))
+            .ThenBy(e => e.id)
+            .ToList();
+
+        // Re-index and rebuild lookup tables
+        ElementLoader.elementTable.Clear();
+        for (var i = 0; i < ElementLoader.elements.Count; i++) {
+            var elem = ElementLoader.elements[i];
+            elem.idx = (ushort)i;
+            if (elem.substance != null)
+                elem.substance.idx = i;
+            ElementLoader.elementTable[(int)elem.id] = elem;
+        }
+
+        // Resolve transition targets
+        foreach (var elem in ElementLoader.elements) {
+            if (elem.IsSolid) {
+                elem.highTempTransition = ElementLoader.FindElementByHash(elem.highTempTransitionTarget);
+            } else if (elem.IsLiquid) {
+                elem.highTempTransition = ElementLoader.FindElementByHash(elem.highTempTransitionTarget);
+                elem.lowTempTransition = ElementLoader.FindElementByHash(elem.lowTempTransitionTarget);
+            } else if (elem.IsGas) {
+                elem.lowTempTransition = ElementLoader.FindElementByHash(elem.lowTempTransitionTarget);
+            }
+        }
     }
 
     private void InitializeWorld() {
@@ -171,7 +393,8 @@ public class GameLoader {
         var game = worldGameObject.AddComponent<global::Game>();
         game.maleNamesFile = new TextAsset("Bob");
         game.femaleNamesFile = new TextAsset("Alisa");
-        game.assignmentManager = new AssignmentManager();
+        try { game.assignmentManager = new AssignmentManager(); }
+        catch (ArgumentException) { /* AssignmentGroups already initialized by Db */ }
         global::Game.Instance = game;
         game.obj = KObjectManager.Instance.GetOrCreateObject(game.gameObject);
 
@@ -190,70 +413,226 @@ public class GameLoader {
         game.fetchManager = new FetchManager();
         GameScheduler.Instance = worldGameObject.AddComponent<GameScheduler>();
 
-        RegisterElements();
-        ResetGrid();
-        PopulateWorld(width, height);
+        // Allocate temporary Grid for game init — will be replaced by WorldGen/SimDLL
+        AllocatePinnedGrid(width, height);
 
         GameScenePartitioner.instance?.OnForcedCleanUp();
-        Console.WriteLine("[GameLoader] Grid initialized and populated.");
+        Console.WriteLine("[GameLoader] Grid initialized.");
     }
 
     /// <summary>
-    /// Register elements matching the frontend's hardcoded indices (0-10).
-    /// These must match constants.ts ELEMENT_NAMES/ELEMENT_COLORS.
+    /// Load worldgen settings from the game's YAML files via SettingsCache.
     /// </summary>
-    public static void RegisterElements() {
-        var elementDefs = new (string name, SimHashes hash, Element.State state, float defaultTemp, float defaultMass)[] {
-            ("Vacuum",         SimHashes.Vacuum,              Element.State.Vacuum, 0f,      0f),
-            ("Oxygen",         SimHashes.Oxygen,              Element.State.Gas,    293.15f, 1.8f),
-            ("Carbon Dioxide", SimHashes.CarbonDioxide,       Element.State.Gas,    293.15f, 1.8f),
-            ("Hydrogen",       SimHashes.Hydrogen,            Element.State.Gas,    293.15f, 0.09f),
-            ("Water",          SimHashes.Water,               Element.State.Liquid, 293.15f, 1000f),
-            ("Dirty Water",    SimHashes.DirtyWater,          Element.State.Liquid, 293.15f, 1000f),
-            ("Granite",        SimHashes.Granite,             Element.State.Solid,  293.15f, 2500f),
-            ("Sandstone",      SimHashes.SandStone,           Element.State.Solid,  293.15f, 2000f),
-            ("Algae",          SimHashes.Algae,               Element.State.Solid,  293.15f, 200f),
-            ("Copper Ore",     SimHashes.Cuprite,             Element.State.Solid,  293.15f, 2000f),
-            ("Ice",            SimHashes.Ice,                 Element.State.Solid,  243.15f, 1000f),
+    private void LoadWorldGenSettings() {
+        try {
+            // Clear any cached paths (they may have been set with old streamingAssetsPath)
+            var cachedPaths = typeof(SettingsCache).GetField("s_cachedPaths", BindingFlags.NonPublic | BindingFlags.Static);
+            if (cachedPaths != null) {
+                ((Dictionary<string, string>)cachedPaths.GetValue(null)!).Clear();
+            }
+
+            var errors = new List<Klei.YamlIO.Error>();
+            SettingsCache.LoadFiles(errors);
+            if (errors.Count > 0) {
+                Console.WriteLine($"[GameLoader] WorldGen settings loaded with {errors.Count} errors:");
+                foreach (var err in errors.Take(5)) {
+                    Console.WriteLine($"  {err.file}: {err.text}");
+                }
+            } else {
+                Console.WriteLine("[GameLoader] WorldGen settings loaded successfully");
+            }
+        } catch (Exception ex) {
+            Console.WriteLine($"[GameLoader] Failed to load WorldGen settings: {ex.Message}");
+            Console.WriteLine($"  {ex.StackTrace?.Split('\n').FirstOrDefault()}");
+        }
+    }
+
+    public struct WorldGenResult {
+        public Sim.Cell[] cells;
+        public float[] bgTemp;
+        public Sim.DiseaseCell[] dc;
+    }
+
+    /// <summary>
+    /// Generate a real ONI world using the game's WorldGen pipeline.
+    /// </summary>
+    private WorldGenResult? GenerateWorld() {
+        try {
+            var worldName = "worlds/SandstoneDefault";
+            var seed = 42;
+
+            Console.WriteLine($"[GameLoader] Creating WorldGen for {worldName}, seed {seed}...");
+            var wg = new WorldGen(worldName, new List<string>(), new List<string>(), false);
+
+            // Set world size in Grid
+            var worldSize = wg.Settings.world.worldsize;
+            width = worldSize.x;
+            height = worldSize.y;
+            Console.WriteLine($"[GameLoader] World size from settings: {width}x{height}");
+
+            // Re-allocate Grid for the actual world size
+            AllocatePinnedGrid(width, height);
+
+            // Reinitialize game systems that depend on world size
+            var game = global::Game.Instance;
+            if (game != null) {
+                game.gasConduitSystem = new UtilityNetworkManager<FlowUtilityNetwork, Vent>(width, height, 13);
+                game.liquidConduitSystem = new UtilityNetworkManager<FlowUtilityNetwork, Vent>(width, height, 17);
+                game.electricalConduitSystem = new UtilityNetworkManager<ElectricalUtilityNetwork, Wire>(width, height, 27);
+                game.travelTubeSystem = new UtilityNetworkTubesManager(width, height, 35);
+                game.gasConduitFlow = new ConduitFlow(ConduitType.Gas, width * height, game.gasConduitSystem, 1f, 0.25f);
+                game.liquidConduitFlow = new ConduitFlow(ConduitType.Liquid, width * height, game.liquidConduitSystem, 10f, 0.75f);
+            }
+
+            wg.Initialise(
+                (key, pct, stage) => {
+                    if ((int)(pct * 10) % 1 == 0)
+                        Console.WriteLine($"[WorldGen] {stage}: {pct:P0}");
+                    return true;
+                },
+                error => Console.WriteLine($"[WorldGen] ERROR: {error.errorDesc}"),
+                worldSeed: seed, layoutSeed: seed, terrainSeed: seed, noiseSeed: seed,
+                skipPlacingTemplates: true
+            );
+
+            Console.WriteLine("[GameLoader] Running noise + layout generation...");
+            if (!wg.GenerateOffline()) {
+                Console.WriteLine("[GameLoader] WorldGen.GenerateOffline failed!");
+                return null;
+            }
+
+            Console.WriteLine("[GameLoader] Rendering world to cells...");
+            Sim.Cell[] cells = null;
+            Sim.DiseaseCell[] dc = null;
+            var placedStoryTraits = new List<ProcGen.WorldTrait>();
+
+            // RenderOffline with doSettle: false (skip SimDLL settle, we do our own)
+            using var ms = new System.IO.MemoryStream();
+            using var writer = new System.IO.BinaryWriter(ms);
+
+            var result = wg.RenderOffline(
+                doSettle: false,
+                simSeed: (uint)seed,
+                writer: writer,
+                cells: ref cells,
+                dc: ref dc,
+                baseId: 0,
+                placedStoryTraits: ref placedStoryTraits,
+                isStartingWorld: true
+            );
+
+            if (!result || cells == null) {
+                Console.WriteLine("[GameLoader] WorldGen.RenderOffline failed!");
+                return null;
+            }
+
+            Console.WriteLine($"[GameLoader] WorldGen complete: {cells.Length} cells generated");
+
+            // Build bgTemp from cells
+            var bgTemp = new float[cells.Length];
+            for (var i = 0; i < cells.Length; i++) {
+                bgTemp[i] = cells[i].temperature;
+            }
+
+            return new WorldGenResult { cells = cells, bgTemp = bgTemp, dc = dc ?? new Sim.DiseaseCell[cells.Length] };
+        } catch (Exception ex) {
+            Console.WriteLine($"[GameLoader] WorldGen failed: {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine($"  {ex.StackTrace}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Initialize SimDLL with the generated world cells.
+    /// After this, Grid pointers point to DLL-owned memory and physics simulation runs.
+    /// </summary>
+    private unsafe void InitSimDLL(Sim.Cell[] cells, float[] bgTemp, Sim.DiseaseCell[] dc) {
+        try {
+            Console.WriteLine("[SimDLL] Initializing...");
+            Sim.SIM_Initialize(Sim.DLL_MessageHandler);
+            Console.WriteLine("[SimDLL] SIM_Initialize OK");
+
+            Console.WriteLine($"[SimDLL] Creating element table ({ElementLoader.elements.Count} elements)...");
+            SimMessages.CreateSimElementsTable(ElementLoader.elements);
+            Console.WriteLine("[SimDLL] Element table created");
+
+            // Create empty disease table (no diseases in headless mode)
+            Console.WriteLine("[SimDLL] Creating disease table...");
+            var diseases = new Diseases(null, statsOnly: true);
+            SimMessages.CreateDiseaseTable(diseases);
+            Console.WriteLine("[SimDLL] Disease table created");
+
+            Console.WriteLine($"[SimDLL] Initializing from cells ({width}x{height})...");
+            SimMessages.SimDataInitializeFromCells(width, height, 42, cells, bgTemp, dc, headless: true);
+            Console.WriteLine("[SimDLL] Cell data sent to SimDLL");
+
+            Console.WriteLine("[SimDLL] Starting simulation...");
+            Sim.Start();
+            Console.WriteLine("[SimDLL] Simulation started — Grid now points to DLL-owned memory");
+
+            SimRunning = true;
+        } catch (Exception ex) {
+            Console.WriteLine($"[SimDLL] Failed: {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine($"  {ex.StackTrace}");
+            Console.WriteLine("[SimDLL] Falling back to pinned arrays (no physics)");
+            SimRunning = false;
+
+            // Restore pinned Grid arrays since SimDLL failed
+            AllocatePinnedGrid(width, height);
+            // Copy cell data into managed arrays
+            for (var i = 0; i < cells.Length && i < width * height; i++) {
+                Grid.elementIdx[i] = cells[i].elementIdx;
+                Grid.temperature[i] = cells[i].temperature;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tick the SimDLL physics by one step (200ms game time).
+    /// Call this in a loop to advance the simulation.
+    /// </summary>
+    public unsafe void TickSimulation() {
+        if (!SimRunning) return;
+
+        var activeRegions = new List<global::Game.SimActiveRegion> {
+            new() {
+                region = new Pair<Vector2I, Vector2I>(
+                    new Vector2I(0, 0),
+                    new Vector2I(width, height)
+                )
+            }
         };
 
-        ElementLoader.elements = new List<Element>();
-        ElementLoader.elementTable = new Dictionary<int, Element>();
+        SimMessages.NewGameFrame(0.2f, activeRegions);
 
-        for (ushort i = 0; i < elementDefs.Length; i++) {
-            var def = elementDefs[i];
-            var elem = new Element {
-                id = def.hash,
-                name = def.name,
-                nameUpperCase = def.name.ToUpper(),
-                idx = i,
-                state = def.state,
-                defaultValues = new Sim.PhysicsData {
-                    temperature = def.defaultTemp,
-                    mass = def.defaultMass,
-                },
-                substance = new Substance()
-            };
-            ElementLoader.elements.Add(elem);
-            ElementLoader.elementTable[(int)def.hash] = elem;
+        var visible = new byte[Grid.CellCount];
+        for (var i = 0; i < visible.Length; i++) visible[i] = byte.MaxValue;
+
+        var ptr = Sim.HandleMessage(SimMessageHashes.PrepareGameData, visible.Length, visible);
+        if (ptr != IntPtr.Zero) {
+            var update = (Sim.GameDataUpdate*)(void*)ptr;
+            Grid.elementIdx = update->elementIdx;
+            Grid.temperature = update->temperature;
+            Grid.mass = update->mass;
+            Grid.radiation = update->radiation;
+            Grid.properties = update->properties;
+            Grid.strengthInfo = update->strengthInfo;
+            Grid.insulation = update->insulation;
         }
-
-        Console.WriteLine($"[GameLoader] Registered {ElementLoader.elements.Count} elements.");
     }
 
-    // GC handles to keep pinned arrays alive for the server lifetime
-    private static GCHandle elementIdxHandle;
-    private static GCHandle temperatureHandle;
-    private static GCHandle radiationHandle;
-
     /// <summary>
-    /// Allocate pinned Grid arrays that survive GC.
-    /// The fixed() block in PlayableGameTest only pins during the block —
-    /// for a long-running server we need GCHandle.Alloc with Pinned type.
+    /// Allocate pinned Grid arrays that survive GC for long-running server.
     /// </summary>
     public static unsafe void AllocatePinnedGrid(int gridWidth, int gridHeight) {
         var numCells = gridWidth * gridHeight;
         GridSettings.Reset(gridWidth, gridHeight);
+
+        // Free previous handles if any
+        if (elementIdxHandle.IsAllocated) elementIdxHandle.Free();
+        if (temperatureHandle.IsAllocated) temperatureHandle.Free();
+        if (radiationHandle.IsAllocated) radiationHandle.Free();
+        if (massHandle.IsAllocated) massHandle.Free();
 
         var elementIdxArr = new ushort[numCells];
         elementIdxHandle = GCHandle.Alloc(elementIdxArr, GCHandleType.Pinned);
@@ -267,23 +646,35 @@ public class GameLoader {
         radiationHandle = GCHandle.Alloc(radArr, GCHandleType.Pinned);
         Grid.radiation = (float*)radiationHandle.AddrOfPinnedObject();
 
-        Grid.InitializeCells();
-        Console.WriteLine($"[GameLoader] Pinned Grid allocated: {gridWidth}x{gridHeight} ({numCells} cells).");
-    }
+        var massArr = new float[numCells];
+        massHandle = GCHandle.Alloc(massArr, GCHandleType.Pinned);
+        Grid.mass = (float*)massHandle.AddrOfPinnedObject();
 
-    public unsafe void ResetGrid() {
-        AllocatePinnedGrid(width, height);
+        Grid.InitializeCells();
+        Console.WriteLine($"[GameLoader] Pinned Grid allocated: {gridWidth}x{gridHeight}");
     }
 
     /// <summary>
-    /// Fill Grid cells with a procedural world layout.
-    /// Matches the structure of MockWorldState for visual consistency.
+    /// Fallback: fill Grid cells with a procedural world layout.
+    /// Used when WorldGen fails.
     /// </summary>
-    public static unsafe void PopulateWorld(int width, int height) {
-        const ushort VACUUM = 0, OXYGEN = 1, CO2 = 2, HYDROGEN = 3, WATER = 4;
-        const ushort DIRTY_WATER = 5, GRANITE = 6, SANDSTONE = 7, ALGAE = 8, COPPER = 9, ICE = 10;
-
+    public static unsafe void PopulateWorldProcedural(int width, int height) {
         var rng = new Random(42);
+        var elements = ElementLoader.elements;
+
+        // Find element indices by hash
+        ushort FindIdx(SimHashes hash) {
+            var elem = ElementLoader.FindElementByHash(hash);
+            return elem?.idx ?? 0;
+        }
+
+        var VACUUM = FindIdx(SimHashes.Vacuum);
+        var OXYGEN = FindIdx(SimHashes.Oxygen);
+        var CO2 = FindIdx(SimHashes.CarbonDioxide);
+        var GRANITE = FindIdx(SimHashes.Granite);
+        var SANDSTONE = FindIdx(SimHashes.SandStone);
+        var WATER = FindIdx(SimHashes.Water);
+        var ICE = FindIdx(SimHashes.Ice);
 
         for (var y = 0; y < height; y++) {
             for (var x = 0; x < width; x++) {
@@ -291,72 +682,48 @@ public class GameLoader {
                 ushort element;
                 float temp;
 
-                if (y < height / 12) {
-                    // Bottom layer: rock floor
+                if (y < height / 8) {
                     element = GRANITE;
                     temp = 310f + (float)(rng.NextDouble() * 20);
-                } else if (y < height / 4) {
-                    // Lower zone: mixed resources
-                    var r = rng.NextDouble();
-                    if (r < 0.4) element = SANDSTONE;
-                    else if (r < 0.6) element = COPPER;
-                    else if (r < 0.75) element = ALGAE;
-                    else element = OXYGEN;
-                    temp = 295f + (float)(rng.NextDouble() * 15);
                 } else if (y < height * 3 / 4) {
-                    // Middle: habitable zone
-                    var inStartingArea = x >= width / 4 && x < width * 3 / 4
-                                      && y >= height / 3 && y < height * 2 / 3;
-
-                    if (inStartingArea) {
-                        // Starting biome: oxygen-rich
+                    var inCenter = x >= width / 4 && x < width * 3 / 4
+                                && y >= height / 3 && y < height * 2 / 3;
+                    if (inCenter) {
                         element = OXYGEN;
-                        temp = 293f + (float)(rng.NextDouble() * 5);
+                        temp = 293f;
                     } else if (x < 3 || x >= width - 3) {
-                        // Side walls
-                        element = rng.NextDouble() < 0.7 ? GRANITE : SANDSTONE;
-                        temp = 300f + (float)(rng.NextDouble() * 10);
+                        element = GRANITE;
+                        temp = 300f;
                     } else {
-                        // Open area: gas mix
                         var r = rng.NextDouble();
-                        if (r < 0.5) element = OXYGEN;
-                        else if (r < 0.7) element = CO2;
-                        else if (r < 0.85) element = HYDROGEN;
-                        else element = VACUUM;
+                        element = r < 0.4 ? OXYGEN : r < 0.6 ? CO2 : r < 0.8 ? SANDSTONE : VACUUM;
                         temp = element == VACUUM ? 0f : 290f + (float)(rng.NextDouble() * 10);
                     }
 
-                    // Water pool in starting area
-                    if (x >= width / 3 && x < width * 2 / 3
-                        && y >= height / 3 && y < height / 3 + 4) {
-                        element = rng.NextDouble() < 0.9 ? WATER : DIRTY_WATER;
-                        temp = 288f + (float)(rng.NextDouble() * 5);
+                    if (x >= width / 3 && x < width * 2 / 3 && y >= height / 3 && y < height / 3 + 4) {
+                        element = WATER;
+                        temp = 288f;
                     }
-                } else if (y < height * 7 / 8) {
-                    // Upper cold zone
-                    var r = rng.NextDouble();
-                    if (r < 0.4) element = ICE;
-                    else if (r < 0.6) element = OXYGEN;
-                    else element = GRANITE;
-                    temp = element == ICE ? 243f + (float)(rng.NextDouble() * 10)
-                                         : 260f + (float)(rng.NextDouble() * 15);
                 } else {
-                    // Top: near-vacuum
-                    element = rng.NextDouble() < 0.8 ? VACUUM : OXYGEN;
-                    temp = element == VACUUM ? 0f : 250f + (float)(rng.NextDouble() * 20);
+                    element = rng.NextDouble() < 0.3 ? ICE : rng.NextDouble() < 0.5 ? VACUUM : OXYGEN;
+                    temp = element == VACUUM ? 0f : 250f;
                 }
 
                 Grid.elementIdx[cell] = element;
                 Grid.temperature[cell] = temp;
             }
         }
-
-        Console.WriteLine($"[GameLoader] World populated: {width}x{height} cells.");
+        Console.WriteLine($"[GameLoader] Procedural world populated: {width}x{height}");
     }
 
     public void Shutdown() {
         if (!IsLoaded) return;
         Console.WriteLine("[GameLoader] Shutting down...");
+
+        if (SimRunning) {
+            try { Sim.SIM_Shutdown(); } catch { /* ignore */ }
+            SimRunning = false;
+        }
 
         UnityTestRuntime.Uninstall();
         PatchesSetup.Uninstall(harmony);

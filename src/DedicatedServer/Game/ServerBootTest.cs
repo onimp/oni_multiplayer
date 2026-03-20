@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using DedicatedServer.Web;
-using MultiplayerMod.Test.GameRuntime;
+using MultiplayerMod.Test.Environment.Unity;
 using NUnit.Framework;
 
 namespace DedicatedServer.Game;
@@ -13,43 +13,66 @@ namespace DedicatedServer.Game;
 /// dotnet test uses the correct Mono runtime that supports Harmony transpilers.
 /// </summary>
 [TestFixture]
-public class ServerBootTest : PlayableGameTest {
+public class ServerBootTest {
+
+    [OneTimeSetUp]
+    public void Setup() {
+        // Install Unity patches FIRST — must happen before any game class is loaded.
+        // ElementLoader has a static initializer that calls Application.streamingAssetsPath,
+        // which is an InternalCall that doesn't exist without Unity.
+        UnityTestRuntime.Install();
+    }
 
     [Test]
     public void ServerBoot() {
         var port = 8080;
-        var gridWidth = Grid.WidthInCells;
-        var gridHeight = Grid.HeightInCells;
+        var loader = new GameLoader();
 
-        // PlayableGameTest sets up the game world but uses non-pinned memory.
-        // Re-allocate Grid with pinned arrays and register real elements.
-        Console.WriteLine("[ServerBoot] Setting up world with pinned Grid and real elements...");
-        GameLoader.RegisterElements();
-        GameLoader.AllocatePinnedGrid(gridWidth, gridHeight);
-        GameLoader.PopulateWorld(gridWidth, gridHeight);
+        Console.WriteLine("[ServerBoot] Booting game world with real WorldGen + SimDLL...");
+        loader.Boot();
 
-        Console.WriteLine($"[ServerBoot] Game world ready ({gridWidth}x{gridHeight}). Starting web server on port {port}...");
+        var gridWidth = loader.Width;
+        var gridHeight = loader.Height;
+
+        Console.WriteLine($"[ServerBoot] Game world ready ({gridWidth}x{gridHeight}), SimDLL: {loader.SimRunning}");
+        Console.WriteLine("[ServerBoot] Starting web server...");
 
         var cts = new CancellationTokenSource();
-
         var server = new WebServer(port);
-        var realWorld = new RealWorldState(gridWidth, gridHeight);
+        var realWorld = new RealWorldState(gridWidth, gridHeight, loader);
         server.SetRealWorldState(realWorld);
         server.Start(cts.Token);
 
         Console.WriteLine($"[ServerBoot] Web server running at http://localhost:{port}/");
-        Console.WriteLine("[ServerBoot] Press Ctrl+C to stop (or kill the dotnet test process).");
+        Console.WriteLine("[ServerBoot] Press Ctrl+C to stop.");
 
-        // Block forever — this "test" is actually a server
         Console.CancelKeyPress += (_, e) => {
             e.Cancel = true;
             cts.Cancel();
         };
+
+        // Tick simulation in background if SimDLL is running
+        if (loader.SimRunning) {
+            Console.WriteLine("[ServerBoot] Starting simulation tick loop (200ms per tick)...");
+            var tickThread = new Thread(() => {
+                while (!cts.IsCancellationRequested) {
+                    try {
+                        loader.TickSimulation();
+                        Thread.Sleep(200);
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[ServerBoot] Tick error: {ex.Message}");
+                    }
+                }
+            }) { IsBackground = true };
+            tickThread.Start();
+        }
 
         try {
             Thread.Sleep(Timeout.Infinite);
         } catch (ThreadInterruptedException) {
             // Cancelled
         }
+
+        loader.Shutdown();
     }
 }

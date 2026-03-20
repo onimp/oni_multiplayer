@@ -74,7 +74,7 @@ public static class Program {
                 Console.WriteLine("Loading game DLLs...");
                 gameLoader = new GameLoader();
                 gameLoader.Boot();
-                server.SetRealWorldState(new RealWorldState(gameLoader.Width, gameLoader.Height));
+                server.SetRealWorldState(new RealWorldState(gameLoader.Width, gameLoader.Height, gameLoader));
                 Console.WriteLine("Game world loaded. Visualizer showing real data.");
             } catch (Exception ex) {
                 Console.WriteLine($"[ERROR] Failed to load game: {ex.Message}");

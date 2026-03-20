@@ -5,17 +5,19 @@ namespace DedicatedServer.Game;
 
 /// <summary>
 /// Reads real world state from the loaded game's Grid.
-/// Replaces MockWorldState when game is loaded.
+/// Works with both SimDLL-owned memory and pinned managed arrays.
 /// </summary>
 public class RealWorldState {
 
     private readonly int width;
     private readonly int height;
+    private readonly GameLoader loader;
     private int tick;
 
-    public RealWorldState(int width, int height) {
+    public RealWorldState(int width, int height, GameLoader loader) {
         this.width = width;
         this.height = height;
+        this.loader = loader;
     }
 
     public unsafe object GetWorldSnapshot() {
@@ -30,9 +32,8 @@ public class RealWorldState {
 
             if (Grid.elementIdx != null) elementIdx = Grid.elementIdx[i];
             if (Grid.temperature != null) temp = Grid.temperature[i];
-
-            // Get default mass from element definition
-            if (elementIdx < ElementLoader.elements?.Count) {
+            if (Grid.mass != null) mass = Grid.mass[i];
+            else if (elementIdx < ElementLoader.elements?.Count) {
                 mass = ElementLoader.elements[elementIdx].defaultValues.mass;
             }
 
@@ -82,12 +83,12 @@ public class RealWorldState {
             tick,
             cycle,
             speed = 1,
-            paused = false,
+            paused = !loader.SimRunning,
             worldWidth = width,
             worldHeight = height,
             duplicantCount = 0,
             buildingCount = 0,
-            source = "game"
+            source = loader.SimRunning ? "simdll" : "fallback"
         };
     }
 }

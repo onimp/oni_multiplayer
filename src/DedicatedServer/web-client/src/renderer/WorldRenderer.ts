@@ -1,5 +1,5 @@
 import type { CellData, EntityData, OverlayMode, WorldData, EntitiesResponse } from '../api/types';
-import { ELEMENT_COLORS, ELEMENT_NAMES, ENTITY_COLORS } from './constants';
+import { getElementColor, getElementName, ENTITY_COLORS } from './constants';
 
 export interface CellInfo {
   x: number;
@@ -67,7 +67,7 @@ export class WorldRenderer {
     return {
       x: cellX,
       y: cellY,
-      element: ELEMENT_NAMES[cell.element] ?? `Unknown (${cell.element})`,
+      element: getElementName(cell.element),
       elementId: cell.element,
       temperature: cell.temperature,
       temperatureC: parseFloat((cell.temperature - 273.15).toFixed(1)),
@@ -145,7 +145,7 @@ export class WorldRenderer {
   private getCellColor(cell: CellData, overlay: OverlayMode): string {
     switch (overlay) {
       case 'element':
-        return ELEMENT_COLORS[cell.element] ?? '#ff00ff';
+        return getElementColor(cell.element);
 
       case 'temperature': {
         const t = cell.temperature;

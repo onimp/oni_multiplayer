@@ -36,3 +36,13 @@ export interface GameState {
 }
 
 export type OverlayMode = 'element' | 'temperature' | 'mass';
+
+export interface ElementInfo {
+  id: number;
+  name: string;
+  state: string;
+}
+
+export interface ElementsResponse {
+  elements: ElementInfo[];
+}
