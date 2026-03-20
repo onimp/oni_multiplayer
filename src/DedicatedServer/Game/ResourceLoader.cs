@@ -21,6 +21,8 @@ public class ResourceLoader {
     public static string DataPath => Path.GetDirectoryName(GameStreamingAssetsPath)!;
     public string PersonalitiesCsv { get; private set; } = "";
     public string ModifiersCsv { get; private set; } = "";
+    public string ResearchTreeExpansion1Xml { get; private set; } = "";
+    public string ResearchTreeVanillaXml { get; private set; } = "";
 
     public void Load() {
         Console.WriteLine("[Resources] Loading elements from YAML...");
@@ -28,7 +30,15 @@ public class ResourceLoader {
         Console.WriteLine("[Resources] Loading data from game assets...");
         PersonalitiesCsv = ExtractCsvFromAsset("sharedassets0.assets", "Name,Gender,Model,RequiredDlcId");
         ModifiersCsv = ExtractCsvFromAsset("resources.assets", "Id,Type,Attribute,Value");
-        Console.WriteLine($"[Resources] Personalities: {PersonalitiesCsv.Split('\n').Length} lines, Modifiers: {ModifiersCsv.Split('\n').Length} lines");
+        var xmls = ExtractAllXmlFromAsset("resources.assets", "<graphml>", "</graphml>");
+        if (xmls.Count >= 2) {
+            ResearchTreeExpansion1Xml = xmls[0]; // first has NuclearResearch
+            ResearchTreeVanillaXml = xmls[1];
+        } else if (xmls.Count == 1) {
+            ResearchTreeVanillaXml = xmls[0];
+            ResearchTreeExpansion1Xml = xmls[0];
+        }
+        Console.WriteLine($"[Resources] Personalities: {PersonalitiesCsv.Split('\n').Length} lines, Modifiers: {ModifiersCsv.Split('\n').Length} lines, ResearchTrees: {xmls.Count}");
     }
 
     private void LoadElements() {
@@ -157,8 +167,28 @@ public class ResourceLoader {
         }
     }
 
-    private static int FindBytes(byte[] haystack, byte[] needle) {
-        for (int i = 0; i <= haystack.Length - needle.Length; i++) {
+    private List<string> ExtractAllXmlFromAsset(string assetFileName, string startTag, string endTag) {
+        var results = new List<string>();
+        var assetPath = Path.Combine(DataPath, assetFileName);
+        if (!File.Exists(assetPath)) return results;
+        var data = File.ReadAllBytes(assetPath);
+        var startBytes = System.Text.Encoding.UTF8.GetBytes(startTag);
+        var endBytes = System.Text.Encoding.UTF8.GetBytes(endTag);
+        int offset = 0;
+        while (offset < data.Length) {
+            var idx = FindBytes(data, startBytes, offset);
+            if (idx == -1) break;
+            var endIdx = FindBytes(data, endBytes, idx + startBytes.Length);
+            if (endIdx == -1) break;
+            endIdx += endBytes.Length;
+            results.Add(System.Text.Encoding.UTF8.GetString(data, idx, endIdx - idx));
+            offset = endIdx;
+        }
+        return results;
+    }
+
+    private static int FindBytes(byte[] haystack, byte[] needle, int startOffset = 0) {
+        for (int i = startOffset; i <= haystack.Length - needle.Length; i++) {
             bool found = true;
             for (int j = 0; j < needle.Length; j++) {
                 if (haystack[i + j] != needle[j]) { found = false; break; }

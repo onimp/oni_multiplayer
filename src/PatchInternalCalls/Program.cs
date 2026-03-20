@@ -57,6 +57,11 @@ var callMap = new Dictionary<string, string> {
     ["UnityEngine.ResourcesAPIInternal::Load"] = "LoadResource",
     ["UnityEngine.MonoBehaviour::IsObjectMonoBehaviour"] = "IsObjectMonoBehaviour",
     ["UnityEngine.MonoBehaviour::StartCoroutineManaged2"] = "StartCoroutineManaged2",
+    ["UnityEngine.TextAsset::Internal_CreateInstance"] = "CreateTextAsset",
+    ["UnityEngine.TextAsset::get_text"] = "GetTextAssetText",
+    ["UnityEngine.TextAsset::GetText"] = "GetTextAssetText",
+    ["UnityEngine.TextAsset::get_bytes"] = "GetTextAssetBytes",
+    ["UnityEngine.TextAsset::GetBytes"] = "GetTextAssetBytes",
 };
 
 // Patch all InternalCall methods

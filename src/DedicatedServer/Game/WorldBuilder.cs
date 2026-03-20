@@ -155,15 +155,11 @@ public class WorldBuilder {
         // Db.Get() → Resources.Load → Initialize(). Initialize crashes partially
         // but core data loads fine. Set _Instance explicitly to survive partial init.
         Db._Instance = ScriptableObject.CreateInstance<Db>();
-        // Db.Initialize needs TextAsset fields — provide data from ResourceLoader
-        Db._Instance.researchTreeFileVanilla = new TextAsset("");
-        Db._Instance.researchTreeFileExpansion1 = new TextAsset("");
+        Db._Instance.researchTreeFileVanilla = new TextAsset(resources.ResearchTreeVanillaXml);
+        Db._Instance.researchTreeFileExpansion1 = new TextAsset(resources.ResearchTreeExpansion1Xml);
         Db._Instance.modifiersFile = new TextAsset(resources.ModifiersCsv);
-        try { Db._Instance.Initialize(); } catch (Exception ex) {
-            Console.WriteLine($"[WorldBuilder] Db.Initialize partial: {ex.Message}");
-        }
-        Db._Instance.Diseases ??= new Diseases(null, statsOnly: true);
-        Console.WriteLine($"[WorldBuilder] Db: Diseases={Db._Instance.Diseases != null}, Personalities={Db._Instance.Personalities != null}");
+        Db._Instance.Initialize();
+        Console.WriteLine($"[WorldBuilder] Db initialized: Diseases={Db._Instance.Diseases != null}, Personalities={Db._Instance.Personalities != null}");
 
         // CustomGameSettings must exist before Game.OnPrefabInit and Cluster constructor
         // .Awake() calls KMonoBehaviour.InitializeComponent() which calls OnPrefabInit()

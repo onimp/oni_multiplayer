@@ -94,6 +94,24 @@ public static class UnityRuntime {
         return transform;
     }
 
+    // --- TextAsset ---
+    private static readonly Dictionary<IntPtr, string> TextAssetContent = new Dictionary<IntPtr, string>();
+
+    public static void CreateTextAsset(UnityEngine.Object self, string text) {
+        self.m_CachedPtr = new IntPtr(++_nextId);
+        TextAssetContent[self.m_CachedPtr] = text ?? "";
+    }
+
+    public static string GetTextAssetText(TextAsset self) {
+        TextAssetContent.TryGetValue(self.m_CachedPtr, out var text);
+        return text ?? "";
+    }
+
+    public static byte[] GetTextAssetBytes(TextAsset self) {
+        TextAssetContent.TryGetValue(self.m_CachedPtr, out var text);
+        return System.Text.Encoding.UTF8.GetBytes(text ?? "");
+    }
+
     // --- Resources ---
 
     public static UnityEngine.Object[] FindObjectsOfTypeAll(Type type) => Array.Empty<UnityEngine.Object>();
