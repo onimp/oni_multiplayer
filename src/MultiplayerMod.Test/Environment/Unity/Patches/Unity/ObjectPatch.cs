@@ -46,6 +46,17 @@ public class ObjectPatch {
 
     [UsedImplicitly]
     [HarmonyTranspiler]
+    [HarmonyPatch("DestroyImmediate", typeof(Object), typeof(bool))]
+    private static IEnumerable<CodeInstruction> Object_DestroyImmediate(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0),
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.Destroy)),
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
     [HarmonyPatch("Internal_InstantiateSingle_Injected")]
     private static IEnumerable<CodeInstruction> Object_Internal_InstantiateSingle_Injected(
         IEnumerable<CodeInstruction> instructions

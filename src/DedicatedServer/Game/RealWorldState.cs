@@ -13,12 +13,12 @@ public class RealWorldState {
 
     private readonly int width;
     private readonly int height;
-    private readonly GameLoader loader;
+    private readonly WorldBuilder world;
 
-    public RealWorldState(int width, int height, GameLoader loader) {
+    public RealWorldState(int width, int height, WorldBuilder world) {
         this.width = width;
         this.height = height;
-        this.loader = loader;
+        this.world = world;
     }
 
     public unsafe object GetWorldSnapshot() {
@@ -47,7 +47,7 @@ public class RealWorldState {
         return new {
             width,
             height,
-            tick = loader.SimTick,
+            tick = world.SimTick,
             cells
         };
     }
@@ -69,21 +69,29 @@ public class RealWorldState {
 
     public object GetEntities() {
         var entities = new List<object>();
-        var spawnData = loader.SpawnData;
+        var spawnData = world.SpawnData;
 
         if (spawnData != null) {
-            foreach (var b in spawnData.buildings)
-                entities.Add(new { type = "building", name = b.id, x = b.location_x, y = b.location_y });
+            foreach (var b in spawnData.buildings) {
+                int w = 1, h = 1;
+                try {
+                    var def = world.GetBuildingDef(b.id);
+                    if (def != null) { w = def.WidthInCells; h = def.HeightInCells; }
+                } catch { /* BuildingDef not registered */ }
+                entities.Add(new {
+                    type = "building", name = b.id, x = b.location_x, y = b.location_y, w, h
+                });
+            }
             foreach (var e in spawnData.otherEntities)
-                entities.Add(new { type = "entity", name = e.id, x = e.location_x, y = e.location_y });
+                entities.Add(new { type = "entity", name = e.id, x = e.location_x, y = e.location_y, w = 1, h = 2 });
             foreach (var p in spawnData.pickupables)
-                entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y });
+                entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y, w = 1, h = 1 });
             foreach (var o in spawnData.elementalOres)
-                entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y });
+                entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = 1, h = 1 });
         }
 
         return new {
-            tick = loader.SimTick,
+            tick = world.SimTick,
             entities = entities.ToArray()
         };
     }
@@ -93,18 +101,18 @@ public class RealWorldState {
         var cycle = gameClock != null ? gameClock.GetCycle() + 1 : 1;
 
         return new {
-            tick = loader.SimTick,
+            tick = world.SimTick,
             cycle,
             speed = 1,
-            paused = !loader.SimRunning,
+            paused = !world.SimRunning,
             worldWidth = width,
             worldHeight = height,
             duplicantCount = 3, // starter dupes from WorldGen
-            buildingCount = loader.SpawnData?.buildings?.Count ?? 0,
-            entityCount = (loader.SpawnData?.otherEntities?.Count ?? 0) +
-                          (loader.SpawnData?.elementalOres?.Count ?? 0) +
-                          (loader.SpawnData?.pickupables?.Count ?? 0),
-            source = loader.SimRunning ? "simdll" : "fallback"
+            buildingCount = world.SpawnData?.buildings?.Count ?? 0,
+            entityCount = (world.SpawnData?.otherEntities?.Count ?? 0) +
+                          (world.SpawnData?.elementalOres?.Count ?? 0) +
+                          (world.SpawnData?.pickupables?.Count ?? 0),
+            source = world.SimRunning ? "simdll" : "fallback"
         };
     }
 }

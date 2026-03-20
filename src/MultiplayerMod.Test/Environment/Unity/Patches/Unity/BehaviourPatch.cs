@@ -20,5 +20,13 @@ public class BehaviourPatch {
         };
     }
 
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("set_enabled")]
+    private static IEnumerable<CodeInstruction> Behaviour_set_enabled(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ret)
+        };
+    }
 
 }

@@ -11,3 +11,5 @@ src/*/obj/
 /decompiled/
 # Vite build output (served at runtime, not tracked in git)
 src/DedicatedServer/wwwroot/assets/
+src/DedicatedServer/PatchInternalCalls/bin/
+src/DedicatedServer/PatchInternalCalls/obj/

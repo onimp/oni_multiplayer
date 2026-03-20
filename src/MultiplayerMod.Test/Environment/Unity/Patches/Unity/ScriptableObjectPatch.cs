@@ -33,7 +33,16 @@ public class ScriptableObjectPatch {
         };
     }
 
+    /// <summary>
+    /// Callback invoked after ScriptableObject creation.
+    /// Set this from DedicatedServer to inject TextAsset fields (modifiersFile, etc.)
+    /// that Unity normally deserializes from scene/prefab data.
+    /// </summary>
+    public static Action<ScriptableObject>? OnCreated;
+
     public static ScriptableObject CreateScriptableObjectInstanceFromType(Type type) {
-        return (ScriptableObject) Activator.CreateInstance(type);
+        var obj = (ScriptableObject) Activator.CreateInstance(type);
+        OnCreated?.Invoke(obj);
+        return obj;
     }
 }

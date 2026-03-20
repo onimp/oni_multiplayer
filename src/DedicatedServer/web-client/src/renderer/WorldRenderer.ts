@@ -66,8 +66,12 @@ export class WorldRenderer {
     const idx = cellY * world.width + cellX;
     const cell = world.cells[idx];
     const cellEntities = entities?.entities
-      ?.filter(e => e.x === cellX && e.y === cellY)
-      .map(e => `${e.name} (${e.type})`);
+      ?.filter(e => {
+        const ew = e.w ?? 1;
+        const eh = e.h ?? 1;
+        return cellX >= e.x && cellX < e.x + ew && cellY >= e.y && cellY < e.y + eh;
+      })
+      .map(e => `${e.name} (${e.type}${(e.w ?? 1) > 1 || (e.h ?? 1) > 1 ? ` ${e.w}x${e.h}` : ''})`);
     return {
       x: cellX,
       y: cellY,
@@ -187,28 +191,31 @@ export class WorldRenderer {
     const { ctx, cellSize } = this;
 
     for (const entity of entities) {
-      const screenX = this.offsetX + entity.x * cellSize + cellSize / 2;
-      const screenY = this.offsetY + (world.height - 1 - entity.y) * cellSize + cellSize / 2;
+      const ew = entity.w ?? 1;
+      const eh = entity.h ?? 1;
+      const screenX = this.offsetX + entity.x * cellSize;
+      const screenY = this.offsetY + (world.height - entity.y - eh) * cellSize;
       const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
 
-      if (screenX < -cellSize || screenX > this.canvas.width + cellSize ||
-          screenY < -cellSize || screenY > this.canvas.height + cellSize) continue;
+      if (screenX + ew * cellSize < 0 || screenX > this.canvas.width ||
+          screenY + eh * cellSize < 0 || screenY > this.canvas.height) continue;
 
-      if (entity.name === 'Minion') {
-        // Duplicants: circle with border
-        const radius = Math.max(3, cellSize * 0.4);
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+      if (entity.type === 'building' && ew > 1 || eh > 1) {
+        // Buildings with size: filled rectangle with border
         ctx.fillStyle = color;
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(screenX, screenY, ew * cellSize, eh * cellSize);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(screenX, screenY, ew * cellSize, eh * cellSize);
       } else {
-        // Everything else: small dot, no label (label on hover via cell info)
+        // Small entities: dot at center
+        const cx = screenX + ew * cellSize / 2;
+        const cy = screenY + eh * cellSize / 2;
         const size = Math.max(2, cellSize * 0.3);
         ctx.fillStyle = color;
-        ctx.fillRect(screenX - size / 2, screenY - size / 2, size, size);
+        ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
       }
     }
   }

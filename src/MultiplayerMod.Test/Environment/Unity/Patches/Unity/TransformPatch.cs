@@ -51,4 +51,27 @@ public class TransformPatch {
             new(OpCodes.Ret)
         };
     }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("SetParent", typeof(Transform), typeof(bool))]
+    private static IEnumerable<CodeInstruction> Transform_SetParent(IEnumerable<CodeInstruction> instructions) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ret)
+        };
+    }
+
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("set_localPosition_Injected")]
+    private static IEnumerable<CodeInstruction> Transform_set_localPosition_Injected(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0), // this
+            new(OpCodes.Ldarg_1), // Vector3
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.SetPositionFromTransform)),
+            new(OpCodes.Ret)
+        };
+    }
 }

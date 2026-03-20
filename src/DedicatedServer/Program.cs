@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using DedicatedServer.Game;
 using System.Threading.Tasks;
 using DedicatedServer.Game;
 using DedicatedServer.Web;
@@ -59,41 +60,27 @@ public static class Program {
             cts.Cancel();
         };
 
-        // GameLoader.Boot() handles all Harmony patches internally.
-        // Do NOT reference UnityTestRuntime here — its static initializer
-        // creates new Harmony() which triggers a self-test that hangs on standalone Mono.
         var loader = new GameLoader();
         loader.Boot();
 
         var server = new WebServer(port);
-        server.SetRealWorldState(new RealWorldState(loader.Width, loader.Height, loader));
+        server.SetRealWorldState(new RealWorldState(loader.World.Width, loader.World.Height, loader.World));
         server.Start(cts.Token);
 
         Console.WriteLine($"Web server running at http://localhost:{port}/");
 
-        // Tick simulation in background
-        if (loader.SimRunning) {
+        if (loader.World.SimRunning) {
             Console.WriteLine("Simulation tick loop started (200ms per tick)");
-            var tickThread = new Thread(() => {
+            new Thread(() => {
                 while (!cts.IsCancellationRequested) {
-                    try {
-                        loader.TickSimulation();
-                        Thread.Sleep(200);
-                    } catch (Exception ex) {
-                        Console.WriteLine($"[Tick] Error: {ex.Message}");
-                    }
+                    try { loader.World.TickSimulation(); Thread.Sleep(200); }
+                    catch (Exception ex) { Console.WriteLine($"[Tick] Error: {ex.Message}"); }
                 }
-            }) { IsBackground = true };
-            tickThread.Start();
+            }) { IsBackground = true }.Start();
         }
 
         Console.WriteLine("Press Ctrl+C to stop.");
-
-        try {
-            Task.Delay(-1, cts.Token).Wait();
-        } catch (AggregateException) {
-            // Cancelled
-        }
+        try { Task.Delay(-1, cts.Token).Wait(); } catch (AggregateException) {}
 
         loader.Shutdown();
         Console.WriteLine("Shutting down...");

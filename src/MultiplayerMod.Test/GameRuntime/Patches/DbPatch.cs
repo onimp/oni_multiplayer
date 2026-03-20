@@ -47,6 +47,16 @@ public class DbPatch {
         __instance.AccessorySlots = new AccessorySlots(root);
         __instance.Permits = new PermitResources(root);
         __instance.Stories = new Stories(root);
+        // Additional fields needed for building configs
+        __instance.CreatureStatusItems = new CreatureStatusItems(root);
+        __instance.CritterAttributes = new CritterAttributes(root);
+        __instance.Spices = new Spices(root);
+        __instance.SkillGroups = new SkillGroups(root);
+        __instance.Skills = new Skills(root);
+        __instance.TechTreeTitles = new TechTreeTitles(root);
+        __instance.Techs = new Techs(root);
+        try { __instance.Techs.Init(); } catch {}
+        try { __instance.TechItems.Init(); } catch {}
         return false;
     }
 }

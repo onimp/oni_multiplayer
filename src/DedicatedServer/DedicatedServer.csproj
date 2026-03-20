@@ -8,10 +8,6 @@
         <SkipAssemblyExposure>true</SkipAssemblyExposure>
     </PropertyGroup>
 
-    <!-- Reuse test infrastructure for Unity patches and game bootstrap -->
-    <ItemGroup>
-        <ProjectReference Include="..\MultiplayerMod.Test\MultiplayerMod.Test.csproj" PrivateAssets="All" />
-    </ItemGroup>
 
     <ItemGroup>
         <Reference Include="Assembly-CSharp" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp.dll" Private="true" />
