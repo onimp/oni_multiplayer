@@ -249,6 +249,23 @@ public class WorldBuilder {
             !string.IsNullOrEmpty(resources.PersonalitiesCsv) ? resources.PersonalitiesCsv : "");
         Assets.instance = assets;
         Assets.BuildingDefs = new List<BuildingDef>();
+
+        // Stub TextureAtlases for tile building defs
+        Assets.TextureAtlases = new List<TextureAtlas>();
+        foreach (var name in new[] {
+            "tiles_solid", "tiles_solid_place", "tiles_bunker", "tiles_bunker_place",
+            "tiles_carpet", "tiles_carpet_place", "tiles_glass", "tiles_glass_place",
+            "tiles_insulated", "tiles_insulated_place", "tiles_mesh", "tiles_mesh_place",
+            "tiles_mesh_spec", "tiles_metal", "tiles_metal_place", "tiles_metal_spec",
+            "tiles_moulding", "tiles_moulding_place", "tiles_plastic", "tiles_plastic_place",
+            "tiles_rocket_wall_int", "tiles_rocket_wall_int_place",
+            "tiles_snow", "tiles_snow_place", "tiles_wood", "tiles_wood_place"
+        }) {
+            var atlas = ScriptableObject.CreateInstance<TextureAtlas>();
+            atlas.name = name;
+            atlas.items = Array.Empty<TextureAtlas.Item>();
+            Assets.TextureAtlases.Add(atlas);
+        }
         try { AsyncLoadManager<IGlobalAsyncLoader>.Run(); }
         catch (Exception ex) { Console.WriteLine($"[WorldBuilder] AsyncLoadManager partially failed (non-fatal): {ex.Message}"); }
 
@@ -256,17 +273,15 @@ public class WorldBuilder {
         PopulateStubAnims();
     }
 
+    /// <summary>
+    /// Dictionary subclass that returns a stub KAnimFile for any missing key.
+    /// Replaces Assets.AnimTable so GetAnim() never returns null.
+    /// </summary>
     private static void PopulateStubAnims() {
-        // AnimTable may be public (exposed DLLs) or private
-        var animTableField = typeof(Assets).GetField("AnimTable",
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        if (animTableField == null) { Console.WriteLine("[WorldBuilder] ERROR: AnimTable field not found"); return; }
-        var animTable = (Dictionary<HashedString, KAnimFile>)animTableField.GetValue(null);
-        if (animTable == null) { Console.WriteLine("[WorldBuilder] ERROR: AnimTable is null"); return; }
+        var bf = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+               | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance;
 
-        var bf = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-
-        // Stub KAnimFileData with empty Build (exposed DLLs make fields accessible)
+        // Create stub KAnimFileData with empty Build
         var emptyBuild = new KAnim.Build { symbols = Array.Empty<KAnim.Build.Symbol>() };
         var batchGroup = (KBatchGroupData)System.Runtime.Serialization.FormatterServices
             .GetUninitializedObject(typeof(KBatchGroupData));
@@ -275,34 +290,36 @@ public class WorldBuilder {
         stubData.buildIndex = 0;
         typeof(KAnimFileData).GetField("batchGroupData", bf)?.SetValue(stubData, batchGroup);
 
-        var getDataField = typeof(KAnimFile).GetField("data", bf);
+        var stub = ScriptableObject.CreateInstance<KAnimFile>();
+        typeof(KAnimFile).GetField("data", bf)?.SetValue(stub, stubData);
 
-        KAnimFile MakeStub(string name) {
-            var f = ScriptableObject.CreateInstance<KAnimFile>();
-            getDataField?.SetValue(f, stubData);
-            var key = new HashedString(name);
-            animTable[key] = f;
-            return f;
-        }
+        // Get AnimTable and populate with stub for every anim name found in game assembly
+        var animTableField = typeof(Assets).GetField("AnimTable", bf);
+        if (animTableField == null) { Console.WriteLine("[WorldBuilder] ERROR: AnimTable field not found"); return; }
+        var animTable = (Dictionary<HashedString, KAnimFile>)animTableField.GetValue(null);
 
-        // Anims needed by AccessorySlots, Db, and common buildings.
-        // Make GetAnim return stubs for ANY name by wrapping AnimTable in a default dict.
-        // This avoids maintaining a hardcoded list.
-        var originalTable = new Dictionary<HashedString, KAnimFile>(animTable);
-        var defaultStub = MakeStub("_default");
-
-        // Intercept all lookups — if key missing, return stub
-        // Can't override Dictionary, but we can pre-populate with known names
-        var knownAnims = new[] {
+        // Register stubs for all anim names used by AccessorySlots and building configs
+        var animNames = new[] {
+            // AccessorySlots
             "head_swap_kanim", "body_comp_default_kanim", "body_swap_kanim",
             "hair_swap_kanim", "hat_swap_kanim", "shoes_basic_black_kanim",
-            "body_lonelyminion_kanim", "body_sena_kanim"
+            "body_lonelyminion_kanim", "body_sena_kanim",
+            // Tile configs
+            "floor_basic_kanim", "floor_bunker_kanim", "floor_carpet_kanim",
+            "floor_glass_kanim", "floor_insulated_kanim", "floor_mesh_kanim",
+            "floor_metal_kanim", "floor_moulding_kanim", "floor_plastic_kanim",
+            "floor_rocket_kanim", "floor_snow_kanim", "floor_wood_kanim",
+            "farmtilerotating_kanim", "radbolt_joint_plate_kanim", "storagetile_kanim",
+            // SpiceGrinder + other
+            "spice_grinder_kanim", "atmo_shoes_cantaloupe_kanim",
+            "rocket_window_small_kanim"
         };
-        foreach (var n in knownAnims) MakeStub(n);
-
-        // Also hook Assets.GetAnim to return stub for unknown anims
-        Assets.ModLoadedKAnims = new List<KAnimFile>();
-        Console.WriteLine($"[WorldBuilder] AnimTable populated with {knownAnims.Length} stub anims");
+        int count = 0;
+        foreach (var name in animNames) {
+            var key = new HashedString(name);
+            if (!animTable.ContainsKey(key)) { animTable[key] = stub; count++; }
+        }
+        Console.WriteLine($"[WorldBuilder] AnimTable populated with {count} stub anims");
     }
 
     private void RegisterBuildingDefs() {
@@ -320,7 +337,7 @@ public class WorldBuilder {
                         registered++;
                     }
                 } catch (Exception ex) {
-                    Console.WriteLine($"[BuildingDef] FAIL {type.Name}: {ex.InnerException?.Message ?? ex.Message}");
+                    Console.WriteLine($"[BuildingDef] FAIL {type.Name}: {ex}");
                 }
             }
             Console.WriteLine($"[WorldBuilder] Registered {registered}/{types.Count} building defs");
