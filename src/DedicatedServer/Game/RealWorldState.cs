@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using ProcGenGame;
 
 namespace DedicatedServer.Game;
 
@@ -67,6 +69,19 @@ public class RealWorldState {
 
     public object GetEntities() {
         var entities = new List<object>();
+        var spawnData = loader.SpawnData;
+
+        if (spawnData != null) {
+            foreach (var b in spawnData.buildings)
+                entities.Add(new { type = "building", name = b.id, x = b.location_x, y = b.location_y });
+            foreach (var e in spawnData.otherEntities)
+                entities.Add(new { type = "entity", name = e.id, x = e.location_x, y = e.location_y });
+            foreach (var p in spawnData.pickupables)
+                entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y });
+            foreach (var o in spawnData.elementalOres)
+                entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y });
+        }
+
         return new {
             tick = loader.SimTick,
             entities = entities.ToArray()
@@ -84,8 +99,8 @@ public class RealWorldState {
             paused = !loader.SimRunning,
             worldWidth = width,
             worldHeight = height,
-            duplicantCount = 0,
-            buildingCount = 0,
+            duplicantCount = loader.SpawnData?.otherEntities?.Count ?? 0,
+            buildingCount = loader.SpawnData?.buildings?.Count ?? 0,
             source = loader.SimRunning ? "simdll" : "fallback"
         };
     }

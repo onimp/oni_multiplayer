@@ -50,6 +50,7 @@ public class GameLoader {
     public bool IsLoaded { get; private set; }
     public bool SimRunning { get; private set; }
     public int SimTick { get; private set; }
+    public ProcGenGame.GameSpawnData SpawnData { get; private set; }
 
     // GC handles to keep pinned arrays alive for the server lifetime
     private static GCHandle elementIdxHandle;
@@ -59,6 +60,24 @@ public class GameLoader {
 
     public void Boot() {
         Console.WriteLine("[GameLoader] Installing patches...");
+
+        // Pre-set MonoMod's platform detection to avoid DeterminePlatform() hanging.
+        // On macOS under Rosetta, DeterminePlatform() spawns a process (uname) and
+        // StreamReader.ReadLine() blocks forever reading its stdout.
+        // Setting Current before any Harmony use skips the broken auto-detection.
+        try {
+            var platformHelper = typeof(Harmony).Assembly.GetType("MonoMod.Utils.PlatformHelper");
+            var currentProp = platformHelper?.GetProperty("Current", BindingFlags.Public | BindingFlags.Static);
+            if (currentProp?.GetSetMethod() != null) {
+                var platformEnum = typeof(Harmony).Assembly.GetType("MonoMod.Utils.Platform");
+                // MacOS = 73 (OS | Unix | MacOS-specific bits)
+                currentProp.SetValue(null, Enum.ToObject(platformEnum, 73));
+                Console.WriteLine("[GameLoader] Pre-set MonoMod platform to MacOS");
+            }
+        } catch (Exception ex) {
+            Console.WriteLine($"[GameLoader] Platform pre-set failed (non-fatal): {ex.Message}");
+        }
+
         System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(System.Reflection.Emit.DynamicMethod).TypeHandle);
         System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(System.Reflection.Emit.ILGenerator).TypeHandle);
         harmony = new Harmony("DedicatedServer");
@@ -104,6 +123,8 @@ public class GameLoader {
 
         foreach (var patchType in unityPatchTypes) {
             try {
+                Console.WriteLine($"[GameLoader]   Patching {patchType.Name}...");
+                Console.Out.Flush();
                 harmony.CreateClassProcessor(patchType).Patch();
             } catch (Exception ex) {
                 Console.WriteLine($"[GameLoader] Patch FAIL: {patchType.Name}: {ex.Message}");
@@ -511,7 +532,7 @@ public class GameLoader {
                 },
                 error => Console.WriteLine($"[WorldGen] ERROR: {error.errorDesc}"),
                 worldSeed: seed, layoutSeed: seed, terrainSeed: seed, noiseSeed: seed,
-                skipPlacingTemplates: true
+                skipPlacingTemplates: false
             );
 
             Console.WriteLine("[GameLoader] Running noise + layout generation...");
@@ -525,12 +546,12 @@ public class GameLoader {
             Sim.DiseaseCell[] dc = null;
             var placedStoryTraits = new List<ProcGen.WorldTrait>();
 
-            // RenderOffline with doSettle: false (skip SimDLL settle, we do our own)
+            // RenderOffline with doSettle: true (enables template/mob spawning)
             using var ms = new System.IO.MemoryStream();
             using var writer = new System.IO.BinaryWriter(ms);
 
             var result = wg.RenderOffline(
-                doSettle: false,
+                doSettle: true,
                 simSeed: (uint)seed,
                 writer: writer,
                 cells: ref cells,
@@ -546,6 +567,29 @@ public class GameLoader {
             }
 
             Console.WriteLine($"[GameLoader] WorldGen complete: {cells.Length} cells generated");
+
+            // Capture spawn data (buildings, mobs, geysers, POIs)
+            SpawnData = wg.SpawnData;
+            if (SpawnData != null) {
+                var bldg = SpawnData.buildings?.Count ?? 0;
+                var ores = SpawnData.elementalOres?.Count ?? 0;
+                var other = SpawnData.otherEntities?.Count ?? 0;
+                var picks = SpawnData.pickupables?.Count ?? 0;
+                Console.WriteLine($"[GameLoader] SpawnData: {bldg} buildings, {ores} ores, {other} entities, {picks} pickupables");
+                Console.WriteLine($"[GameLoader] Start position: {SpawnData.baseStartPos}");
+
+                // Add 3 starter duplicants near the start position
+                // Real duplicant spawning requires full Unity prefab system (NewBaseScreen.SpawnMinions)
+                // which isn't available headless. For now, add them as spawn markers.
+                var startX = SpawnData.baseStartPos.x;
+                var startY = SpawnData.baseStartPos.y;
+                for (var i = 0; i < 3; i++) {
+                    SpawnData.otherEntities.Add(new TemplateClasses.Prefab(
+                        "Minion", TemplateClasses.Prefab.Type.Other,
+                        startX + i, startY, (SimHashes)0));
+                }
+                Console.WriteLine($"[GameLoader] Added 3 starter duplicants at ({startX},{startY})");
+            }
 
             // Build bgTemp from cells
             var bgTemp = new float[cells.Length];

@@ -128,6 +128,9 @@ export function areElementsLoaded(): boolean {
 }
 
 export const ENTITY_COLORS: Record<string, string> = {
-  duplicant: '#e94560',
-  building:  '#f5a623',
+  duplicant:  '#e94560',
+  building:   '#f5a623',
+  entity:     '#2ecc71',
+  pickupable: '#9b59b6',
+  ore:        '#e67e22',
 };
