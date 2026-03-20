@@ -71,35 +71,12 @@ public class GameLoader {
         Console.WriteLine("[GameLoader] Generating world...");
         var cells = GenerateWorld();
 
-        if (cells != null) {
-            Console.WriteLine("[GameLoader] Initializing SimDLL with WorldGen cells...");
-            InitSimDLL(cells.Value.cells, cells.Value.bgTemp, cells.Value.dc);
-        } else {
-            Console.WriteLine("[GameLoader] WorldGen failed, falling back to procedural world...");
-            AllocatePinnedGrid(width, height);
-            PopulateWorldProcedural(width, height);
-
-            // Try SimDLL even with procedural world
-            Console.WriteLine("[GameLoader] Attempting SimDLL with procedural world...");
-            var numCells = width * height;
-            var procCells = new Sim.Cell[numCells];
-            var procBgTemp = new float[numCells];
-            var procDc = new Sim.DiseaseCell[numCells];
-            unsafe {
-                for (var i = 0; i < numCells; i++) {
-                    procCells[i] = new Sim.Cell {
-                        elementIdx = Grid.elementIdx[i],
-                        temperature = Grid.temperature[i],
-                        mass = ElementLoader.elements != null && Grid.elementIdx[i] < ElementLoader.elements.Count
-                            ? ElementLoader.elements[Grid.elementIdx[i]].defaultValues.mass
-                            : 1f
-                    };
-                    procBgTemp[i] = Grid.temperature[i];
-                    procDc[i] = Sim.DiseaseCell.Invalid;
-                }
-            }
-            InitSimDLL(procCells, procBgTemp, procDc);
+        if (cells == null) {
+            throw new Exception("WorldGen failed — cannot start server without a generated world");
         }
+
+        Console.WriteLine("[GameLoader] Initializing SimDLL with WorldGen cells...");
+        InitSimDLL(cells.Value.cells, cells.Value.bgTemp, cells.Value.dc);
 
         IsLoaded = true;
         Console.WriteLine($"[GameLoader] World ready: {width}x{height} ({width * height} cells), SimDLL: {SimRunning}");
@@ -136,6 +113,37 @@ public class GameLoader {
             }
         }
         // NOTE: We intentionally skip ElementLoaderPatch — we want real FindElementByHash
+
+        // Override DebugLogHandlerPatch — it throws on LogError, which kills WorldGen
+        // (WorldGen uses Debug.Assert which logs errors for non-fatal conditions)
+        var logMethod = typeof(DebugLogHandler).GetMethod(
+            nameof(DebugLogHandler.LogFormat),
+            new[] { typeof(LogType), typeof(UnityEngine.Object), typeof(string), typeof(object[]) }
+        );
+        if (logMethod != null) {
+            harmony.Patch(logMethod,
+                prefix: new HarmonyMethod(typeof(GameLoader), nameof(SoftDebugLogHandler)) { priority = Priority.First });
+        }
+    }
+
+    /// <summary>
+    /// Non-throwing debug log handler. The test DebugLogHandlerPatch throws on LogError,
+    /// which is fatal for WorldGen (it uses Debug.Assert for non-fatal warnings).
+    /// </summary>
+    private static bool SoftDebugLogHandler(LogType logType, string format, object[] args) {
+        var message = string.Format(format, args);
+        switch (logType) {
+            case LogType.Error:
+                Console.WriteLine($"[ERROR] {message}");
+                break;
+            case LogType.Warning:
+                Console.WriteLine($"[WARNING] {message}");
+                break;
+            default:
+                Console.WriteLine($"[INFO] {message}");
+                break;
+        }
+        return false; // skip original
     }
 
     /// <summary>
@@ -187,6 +195,7 @@ public class GameLoader {
     private void LoadElementsFromGame() {
         ElementLoader.elements = new List<Element>();
         ElementLoader.elementTable = new Dictionary<int, Element>();
+        ElementLoader.elementTagTable = new Dictionary<Tag, Element>();
 
         var elementsPath = GameStreamingAssetsPath + "/elements/";
         Console.WriteLine($"[GameLoader] Elements path: {elementsPath}");
@@ -240,6 +249,7 @@ public class GameLoader {
 
             ElementLoader.elements.Add(element);
             ElementLoader.elementTable[hash] = element;
+            ElementLoader.elementTagTable[element.tag] = element;
         }
 
         // Sort and index elements (like FinaliseElementsTable)
@@ -484,10 +494,13 @@ public class GameLoader {
                 game.liquidConduitFlow = new ConduitFlow(ConduitType.Liquid, width * height, game.liquidConduitSystem, 10f, 0.75f);
             }
 
+            // Must set world size before generation (like Cluster.BeginGeneration does)
+            wg.SetWorldSize(width, height);
+            wg.SetHiddenYOffset(wg.Settings.world.hiddenY);
+
             wg.Initialise(
                 (key, pct, stage) => {
-                    if ((int)(pct * 10) % 1 == 0)
-                        Console.WriteLine($"[WorldGen] {stage}: {pct:P0}");
+                    Console.WriteLine($"[WorldGen] {stage}: {pct:P0}");
                     return true;
                 },
                 error => Console.WriteLine($"[WorldGen] ERROR: {error.errorDesc}"),
@@ -652,68 +665,6 @@ public class GameLoader {
 
         Grid.InitializeCells();
         Console.WriteLine($"[GameLoader] Pinned Grid allocated: {gridWidth}x{gridHeight}");
-    }
-
-    /// <summary>
-    /// Fallback: fill Grid cells with a procedural world layout.
-    /// Used when WorldGen fails.
-    /// </summary>
-    public static unsafe void PopulateWorldProcedural(int width, int height) {
-        var rng = new Random(42);
-        var elements = ElementLoader.elements;
-
-        // Find element indices by hash
-        ushort FindIdx(SimHashes hash) {
-            var elem = ElementLoader.FindElementByHash(hash);
-            return elem?.idx ?? 0;
-        }
-
-        var VACUUM = FindIdx(SimHashes.Vacuum);
-        var OXYGEN = FindIdx(SimHashes.Oxygen);
-        var CO2 = FindIdx(SimHashes.CarbonDioxide);
-        var GRANITE = FindIdx(SimHashes.Granite);
-        var SANDSTONE = FindIdx(SimHashes.SandStone);
-        var WATER = FindIdx(SimHashes.Water);
-        var ICE = FindIdx(SimHashes.Ice);
-
-        for (var y = 0; y < height; y++) {
-            for (var x = 0; x < width; x++) {
-                var cell = y * width + x;
-                ushort element;
-                float temp;
-
-                if (y < height / 8) {
-                    element = GRANITE;
-                    temp = 310f + (float)(rng.NextDouble() * 20);
-                } else if (y < height * 3 / 4) {
-                    var inCenter = x >= width / 4 && x < width * 3 / 4
-                                && y >= height / 3 && y < height * 2 / 3;
-                    if (inCenter) {
-                        element = OXYGEN;
-                        temp = 293f;
-                    } else if (x < 3 || x >= width - 3) {
-                        element = GRANITE;
-                        temp = 300f;
-                    } else {
-                        var r = rng.NextDouble();
-                        element = r < 0.4 ? OXYGEN : r < 0.6 ? CO2 : r < 0.8 ? SANDSTONE : VACUUM;
-                        temp = element == VACUUM ? 0f : 290f + (float)(rng.NextDouble() * 10);
-                    }
-
-                    if (x >= width / 3 && x < width * 2 / 3 && y >= height / 3 && y < height / 3 + 4) {
-                        element = WATER;
-                        temp = 288f;
-                    }
-                } else {
-                    element = rng.NextDouble() < 0.3 ? ICE : rng.NextDouble() < 0.5 ? VACUUM : OXYGEN;
-                    temp = element == VACUUM ? 0f : 250f;
-                }
-
-                Grid.elementIdx[cell] = element;
-                Grid.temperature[cell] = temp;
-            }
-        }
-        Console.WriteLine($"[GameLoader] Procedural world populated: {width}x{height}");
     }
 
     public void Shutdown() {
