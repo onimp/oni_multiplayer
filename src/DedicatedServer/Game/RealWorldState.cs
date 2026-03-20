@@ -12,7 +12,6 @@ public class RealWorldState {
     private readonly int width;
     private readonly int height;
     private readonly GameLoader loader;
-    private int tick;
 
     public RealWorldState(int width, int height, GameLoader loader) {
         this.width = width;
@@ -21,7 +20,6 @@ public class RealWorldState {
     }
 
     public unsafe object GetWorldSnapshot() {
-        tick++;
         var numCells = width * height;
 
         var cells = new object[numCells];
@@ -47,7 +45,7 @@ public class RealWorldState {
         return new {
             width,
             height,
-            tick,
+            tick = loader.SimTick,
             cells
         };
     }
@@ -70,7 +68,7 @@ public class RealWorldState {
     public object GetEntities() {
         var entities = new List<object>();
         return new {
-            tick,
+            tick = loader.SimTick,
             entities = entities.ToArray()
         };
     }
@@ -80,7 +78,7 @@ public class RealWorldState {
         var cycle = gameClock != null ? gameClock.GetCycle() + 1 : 1;
 
         return new {
-            tick,
+            tick = loader.SimTick,
             cycle,
             speed = 1,
             paused = !loader.SimRunning,

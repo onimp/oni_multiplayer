@@ -41,6 +41,7 @@ public class GameLoader {
     public int Height => height;
     public bool IsLoaded { get; private set; }
     public bool SimRunning { get; private set; }
+    public int SimTick { get; private set; }
 
     // GC handles to keep pinned arrays alive for the server lifetime
     private static GCHandle elementIdxHandle;
@@ -630,6 +631,7 @@ public class GameLoader {
     /// </summary>
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
+        SimTick++;
 
         var activeRegions = new List<global::Game.SimActiveRegion> {
             new() {
