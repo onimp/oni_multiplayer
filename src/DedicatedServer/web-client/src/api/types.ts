@@ -33,6 +33,7 @@ export interface GameState {
   worldHeight: number;
   duplicantCount: number;
   buildingCount: number;
+  entityCount: number;
 }
 
 export type OverlayMode = 'element' | 'temperature' | 'mass';

@@ -99,8 +99,11 @@ public class RealWorldState {
             paused = !loader.SimRunning,
             worldWidth = width,
             worldHeight = height,
-            duplicantCount = loader.SpawnData?.otherEntities?.Count ?? 0,
+            duplicantCount = 3, // starter dupes from WorldGen
             buildingCount = loader.SpawnData?.buildings?.Count ?? 0,
+            entityCount = (loader.SpawnData?.otherEntities?.Count ?? 0) +
+                          (loader.SpawnData?.elementalOres?.Count ?? 0) +
+                          (loader.SpawnData?.pickupables?.Count ?? 0),
             source = loader.SimRunning ? "simdll" : "fallback"
         };
     }

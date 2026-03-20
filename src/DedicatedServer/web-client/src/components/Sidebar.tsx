@@ -78,6 +78,9 @@ export function Sidebar({
             <div><span className="label">Element:</span> {cellInfo.element}</div>
             <div><span className="label">Temp:</span> {cellInfo.temperatureC}&deg;C ({cellInfo.temperature}K)</div>
             <div><span className="label">Mass:</span> {cellInfo.mass} kg</div>
+            {cellInfo.entities && (
+              <div><span className="label">Entities:</span> {cellInfo.entities.join(', ')}</div>
+            )}
           </div>
         ) : (
           <div className="cell-details muted">Hover over a cell</div>

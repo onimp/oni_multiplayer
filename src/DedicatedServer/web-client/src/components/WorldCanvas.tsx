@@ -79,7 +79,7 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       const rect = canvasRef.current!.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      const info = rendererRef.current.getCellAt(mouseX, mouseY, world);
+      const info = rendererRef.current.getCellAt(mouseX, mouseY, world, entities);
       onCellHover(info);
     }
   }, [world, entities, overlay, showEntities, showGrid, onCellHover]);

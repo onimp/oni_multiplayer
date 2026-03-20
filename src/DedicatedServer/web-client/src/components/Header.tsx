@@ -16,7 +16,7 @@ export function Header({ connected, gameState }: Props) {
         {gameState && (
           <span className="game-info">
             Cycle {gameState.cycle} | Tick {gameState.tick} |{' '}
-            {gameState.duplicantCount} dupes | {gameState.buildingCount} buildings
+            {gameState.duplicantCount} dupes | {gameState.buildingCount} buildings | {gameState.entityCount} entities
           </span>
         )}
       </div>

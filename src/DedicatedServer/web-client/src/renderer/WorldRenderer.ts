@@ -9,6 +9,7 @@ export interface CellInfo {
   temperature: number;
   temperatureC: number;
   mass: number;
+  entities?: string[];
 }
 
 export interface RenderOptions {
@@ -56,7 +57,7 @@ export class WorldRenderer {
     this.offsetY = y;
   }
 
-  getCellAt(mouseX: number, mouseY: number, world: WorldData): CellInfo | null {
+  getCellAt(mouseX: number, mouseY: number, world: WorldData, entities?: EntitiesResponse | null): CellInfo | null {
     const cellX = Math.floor((mouseX - this.offsetX) / this.cellSize);
     const cellY = world.height - 1 - Math.floor((mouseY - this.offsetY) / this.cellSize);
 
@@ -64,6 +65,9 @@ export class WorldRenderer {
 
     const idx = cellY * world.width + cellX;
     const cell = world.cells[idx];
+    const cellEntities = entities?.entities
+      ?.filter(e => e.x === cellX && e.y === cellY)
+      .map(e => `${e.name} (${e.type})`);
     return {
       x: cellX,
       y: cellY,
@@ -72,6 +76,7 @@ export class WorldRenderer {
       temperature: cell.temperature,
       temperatureC: parseFloat((cell.temperature - 273.15).toFixed(1)),
       mass: cell.mass,
+      entities: cellEntities?.length ? cellEntities : undefined,
     };
   }
 
@@ -184,10 +189,14 @@ export class WorldRenderer {
     for (const entity of entities) {
       const screenX = this.offsetX + entity.x * cellSize + cellSize / 2;
       const screenY = this.offsetY + (world.height - 1 - entity.y) * cellSize + cellSize / 2;
-      const radius = Math.max(3, cellSize * 0.4);
       const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
 
-      if (entity.type === 'duplicant') {
+      if (screenX < -cellSize || screenX > this.canvas.width + cellSize ||
+          screenY < -cellSize || screenY > this.canvas.height + cellSize) continue;
+
+      if (entity.name === 'Minion') {
+        // Duplicants: circle with border
+        const radius = Math.max(3, cellSize * 0.4);
         ctx.beginPath();
         ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
         ctx.fillStyle = color;
@@ -195,27 +204,11 @@ export class WorldRenderer {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1.5;
         ctx.stroke();
-
-        if (cellSize >= 8) {
-          ctx.fillStyle = '#ffffff';
-          ctx.font = `${Math.max(8, cellSize * 0.6)}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.fillText(entity.name, screenX, screenY - radius - 3);
-        }
       } else {
-        const size = Math.max(4, cellSize * 0.7);
+        // Everything else: small dot, no label (label on hover via cell info)
+        const size = Math.max(2, cellSize * 0.3);
         ctx.fillStyle = color;
         ctx.fillRect(screenX - size / 2, screenY - size / 2, size, size);
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(screenX - size / 2, screenY - size / 2, size, size);
-
-        if (cellSize >= 14) {
-          ctx.fillStyle = '#ffffff';
-          ctx.font = `${Math.max(7, cellSize * 0.45)}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.fillText(entity.name, screenX, screenY - size / 2 - 3);
-        }
       }
     }
   }
