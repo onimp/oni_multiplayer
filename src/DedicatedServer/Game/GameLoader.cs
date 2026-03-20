@@ -25,9 +25,6 @@ namespace DedicatedServer.Game;
 /// </summary>
 public class GameLoader {
 
-    private const int DefaultWidth = 256;
-    private const int DefaultHeight = 384;
-
     /// <summary>
     /// Path to the game's StreamingAssets directory.
     /// Required env variable: ONI_STREAMING_ASSETS
@@ -60,9 +57,10 @@ public class GameLoader {
     private static GCHandle radiationHandle;
     private static GCHandle massHandle;
 
-    public void Boot(int worldWidth = DefaultWidth, int worldHeight = DefaultHeight) {
-        width = worldWidth;
-        height = worldHeight;
+    public void Boot() {
+        // Initial size for game systems — will be overridden by WorldGen settings
+        width = 256;
+        height = 384;
 
         Console.WriteLine("[GameLoader] Installing patches...");
         // Force Mono JIT to compile reflection/emit infrastructure before Harmony.
