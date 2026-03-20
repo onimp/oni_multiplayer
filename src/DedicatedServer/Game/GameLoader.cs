@@ -124,6 +124,19 @@ public class GameLoader {
             harmony.Patch(logMethod,
                 prefix: new HarmonyMethod(typeof(GameLoader), nameof(SoftDebugLogHandler)) { priority = Priority.First });
         }
+
+        // Patch ReportWorldGenError to not crash on GenericGameSettings.instance == null
+        var reportMethod = typeof(WorldGen).GetMethod("ReportWorldGenError", BindingFlags.Public | BindingFlags.Instance);
+        if (reportMethod != null) {
+            harmony.Patch(reportMethod,
+                prefix: new HarmonyMethod(typeof(GameLoader), nameof(SafeReportWorldGenError)));
+        }
+
+        // Provide GenericGameSettings._instance to prevent NPEs in WorldGen error reporting
+        var ggsField = typeof(GenericGameSettings).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
+        if (ggsField != null && ggsField.GetValue(null) == null) {
+            ggsField.SetValue(null, new GenericGameSettings());
+        }
     }
 
     /// <summary>
@@ -144,6 +157,17 @@ public class GameLoader {
                 break;
         }
         return false; // skip original
+    }
+
+    /// <summary>
+    /// Safe WorldGen error reporter — logs to console instead of crashing.
+    /// </summary>
+    private static bool SafeReportWorldGenError(Exception e, string errorMessage) {
+        Console.WriteLine($"[WorldGen] ERROR: {errorMessage ?? "WorldGen failure"}");
+        Console.WriteLine($"[WorldGen] Exception: {e?.GetType().Name}: {e?.Message}");
+        if (e?.StackTrace != null)
+            Console.WriteLine($"[WorldGen] Stack: {e.StackTrace.Split('\n').FirstOrDefault()}");
+        return false; // skip original (which crashes on GenericGameSettings.instance)
     }
 
     /// <summary>
