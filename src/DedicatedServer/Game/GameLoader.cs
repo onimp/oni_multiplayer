@@ -300,9 +300,12 @@ public class GameLoader {
                 prefix: new HarmonyMethod(typeof(GameLoader), nameof(FixElementPath)));
         }
 
+        // Register STRINGS.ELEMENTS LocStrings so Strings.Get() works for element names
+        Localization.RegisterForTranslation(typeof(STRINGS.ELEMENTS));
+
         ElementLoader.Load(ref substanceList, substanceTables);
 
-        // Ensure all elements have a stub substance (Load may skip ManifestSubstance)
+        // Ensure all elements have a stub substance and fix names
         foreach (var elem in ElementLoader.elements) {
             if (elem.substance == null) {
                 elem.substance = new Substance {

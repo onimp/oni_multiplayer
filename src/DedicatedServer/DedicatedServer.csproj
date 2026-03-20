@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
+        <StartupObject>DedicatedServer.Program</StartupObject>
         <AssemblyName>DedicatedServer</AssemblyName>
         <AssemblyTitle>ONI Multiplayer Dedicated Server</AssemblyTitle>
         <Copyright>MIT License (C) ONIMP Team</Copyright>
