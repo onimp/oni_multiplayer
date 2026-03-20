@@ -300,13 +300,15 @@ public class GameLoader {
                 prefix: new HarmonyMethod(typeof(GameLoader), nameof(FixElementPath)));
         }
 
-        // Register STRINGS.ELEMENTS LocStrings so Strings.Get() works for element names
-        Localization.RegisterForTranslation(typeof(STRINGS.ELEMENTS));
-
         ElementLoader.Load(ref substanceList, substanceTables);
 
-        // Ensure all elements have a stub substance and fix names
+        // Fix element names and ensure stub substances
         foreach (var elem in ElementLoader.elements) {
+            // Strings.Get() returns MISSING.STRINGS.* without localization — use tag name instead
+            if (elem.name != null && elem.name.Contains("MISSING.STRINGS")) {
+                elem.name = elem.tag.Name;
+                elem.nameUpperCase = elem.name.ToUpper();
+            }
             if (elem.substance == null) {
                 elem.substance = new Substance {
                     nameTag = elem.tag,
