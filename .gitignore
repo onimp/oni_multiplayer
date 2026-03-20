@@ -9,3 +9,5 @@ src/*/obj/
 
 # Decompiled game sources — NEVER commit (intellectual property of Klei Entertainment)
 /decompiled/
+# Vite build output (served at runtime, not tracked in git)
+src/DedicatedServer/wwwroot/assets/
