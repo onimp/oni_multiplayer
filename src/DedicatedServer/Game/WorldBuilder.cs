@@ -154,12 +154,35 @@ public class WorldBuilder {
 
         // Db.Get() → Resources.Load → Initialize(). Initialize crashes partially
         // but core data loads fine. Set _Instance explicitly to survive partial init.
+        // KAnimBatchManager needed by KAnimFileData.build getter
+        KAnimBatchManager.CreateInstance();
+
         Db._Instance = ScriptableObject.CreateInstance<Db>();
         Db._Instance.researchTreeFileVanilla = new TextAsset(resources.ResearchTreeVanillaXml);
         Db._Instance.researchTreeFileExpansion1 = new TextAsset(resources.ResearchTreeExpansion1Xml);
         Db._Instance.modifiersFile = new TextAsset(resources.ModifiersCsv);
-        Db._Instance.Initialize();
-        Console.WriteLine($"[WorldBuilder] Db initialized: Diseases={Db._Instance.Diseases != null}, Personalities={Db._Instance.Personalities != null}");
+        // Db.Initialize crashes at AccessorySlots (needs KAnimFile data from Unity assets).
+        // Everything before it (Techs, TechItems) initializes fine.
+        // After catching, manually init the remaining fields that Initialize would have set.
+        try { Db._Instance.Initialize(); }
+        catch {
+            // Init remaining fields that come after AccessorySlots in Db.Initialize
+            var root = Db._Instance.Root;
+            var db = Db._Instance;
+            try { db.Diseases ??= new Diseases(root, statsOnly: true); } catch {}
+            try { db.Sicknesses ??= new Database.Sicknesses(root); } catch {}
+            try { db.SkillPerks ??= new SkillPerks(root); } catch {}
+            try { db.SkillGroups ??= new SkillGroups(root); } catch {}
+            try { db.Skills ??= new Skills(root); } catch {}
+            try { db.ChoreTypes ??= new ChoreTypes(root); } catch {}
+            try { db.ScheduleBlockTypes ??= new ScheduleBlockTypes(root); } catch {}
+            try { db.ScheduleGroups ??= new ScheduleGroups(root); } catch {}
+            try { db.RoomTypes ??= new RoomTypes(root); } catch {}
+            try { db.GameplayEvents ??= new GameplayEvents(root); } catch {}
+            try { db.Permits ??= new PermitResources(root); } catch {}
+            Console.WriteLine("[WorldBuilder] Db.Initialize: AccessorySlots skipped, remaining fields initialized");
+        }
+        Console.WriteLine($"[WorldBuilder] Db: Diseases={Db._Instance.Diseases != null}, Skills={Db._Instance.Skills != null}, ChoreTypes={Db._Instance.ChoreTypes != null}");
 
         // CustomGameSettings must exist before Game.OnPrefabInit and Cluster constructor
         // .Awake() calls KMonoBehaviour.InitializeComponent() which calls OnPrefabInit()
@@ -228,6 +251,58 @@ public class WorldBuilder {
         Assets.BuildingDefs = new List<BuildingDef>();
         try { AsyncLoadManager<IGlobalAsyncLoader>.Run(); }
         catch (Exception ex) { Console.WriteLine($"[WorldBuilder] AsyncLoadManager partially failed (non-fatal): {ex.Message}"); }
+
+        // Populate AnimTable with stub KAnimFiles so AccessorySlots/BuildingDefs don't NPE
+        PopulateStubAnims();
+    }
+
+    private static void PopulateStubAnims() {
+        // AnimTable may be public (exposed DLLs) or private
+        var animTableField = typeof(Assets).GetField("AnimTable",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        if (animTableField == null) { Console.WriteLine("[WorldBuilder] ERROR: AnimTable field not found"); return; }
+        var animTable = (Dictionary<HashedString, KAnimFile>)animTableField.GetValue(null);
+        if (animTable == null) { Console.WriteLine("[WorldBuilder] ERROR: AnimTable is null"); return; }
+
+        var bf = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+
+        // Stub KAnimFileData with empty Build (exposed DLLs make fields accessible)
+        var emptyBuild = new KAnim.Build { symbols = Array.Empty<KAnim.Build.Symbol>() };
+        var batchGroup = (KBatchGroupData)System.Runtime.Serialization.FormatterServices
+            .GetUninitializedObject(typeof(KBatchGroupData));
+        batchGroup.builds = new List<KAnim.Build> { emptyBuild };
+        var stubData = new KAnimFileData("stub");
+        stubData.buildIndex = 0;
+        typeof(KAnimFileData).GetField("batchGroupData", bf)?.SetValue(stubData, batchGroup);
+
+        var getDataField = typeof(KAnimFile).GetField("data", bf);
+
+        KAnimFile MakeStub(string name) {
+            var f = ScriptableObject.CreateInstance<KAnimFile>();
+            getDataField?.SetValue(f, stubData);
+            var key = new HashedString(name);
+            animTable[key] = f;
+            return f;
+        }
+
+        // Anims needed by AccessorySlots, Db, and common buildings.
+        // Make GetAnim return stubs for ANY name by wrapping AnimTable in a default dict.
+        // This avoids maintaining a hardcoded list.
+        var originalTable = new Dictionary<HashedString, KAnimFile>(animTable);
+        var defaultStub = MakeStub("_default");
+
+        // Intercept all lookups — if key missing, return stub
+        // Can't override Dictionary, but we can pre-populate with known names
+        var knownAnims = new[] {
+            "head_swap_kanim", "body_comp_default_kanim", "body_swap_kanim",
+            "hair_swap_kanim", "hat_swap_kanim", "shoes_basic_black_kanim",
+            "body_lonelyminion_kanim", "body_sena_kanim"
+        };
+        foreach (var n in knownAnims) MakeStub(n);
+
+        // Also hook Assets.GetAnim to return stub for unknown anims
+        Assets.ModLoadedKAnims = new List<KAnimFile>();
+        Console.WriteLine($"[WorldBuilder] AnimTable populated with {knownAnims.Length} stub anims");
     }
 
     private void RegisterBuildingDefs() {
