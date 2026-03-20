@@ -118,7 +118,7 @@ export class WorldRenderer {
 
     // Grid
     if (options.showGrid && cellSize >= 6) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
       ctx.lineWidth = 0.5;
       for (let x = 0; x <= world.width; x++) {
         const sx = this.offsetX + x * cellSize;
