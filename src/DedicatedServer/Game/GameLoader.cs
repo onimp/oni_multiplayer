@@ -587,7 +587,7 @@ public class GameLoader {
     private unsafe void InitSimDLL(Sim.Cell[] cells, float[] bgTemp, Sim.DiseaseCell[] dc) {
         try {
             Console.WriteLine("[SimDLL] Initializing...");
-            Sim.SIM_Initialize(Sim.DLL_MessageHandler);
+            Sim.SIM_Initialize(ServerDllMessageHandler);
             Console.WriteLine("[SimDLL] SIM_Initialize OK");
 
             Console.WriteLine($"[SimDLL] Creating element table ({ElementLoader.elements.Count} elements)...");
@@ -691,6 +691,14 @@ public class GameLoader {
 
         Grid.InitializeCells();
         Console.WriteLine($"[GameLoader] Pinned Grid allocated: {gridWidth}x{gridHeight}");
+    }
+
+    /// <summary>
+    /// Safe SimDLL message handler — logs to console instead of crashing via KCrashReporter.
+    /// </summary>
+    private static int ServerDllMessageHandler(int messageId, IntPtr data) {
+        Console.WriteLine($"[SimDLL] Message from DLL: id={messageId}");
+        return 0;
     }
 
     public void Shutdown() {
