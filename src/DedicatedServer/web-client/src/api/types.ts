@@ -12,11 +12,11 @@ export interface WorldData {
 }
 
 export interface EntityData {
-  type: 'duplicant' | 'building';
+  type: 'duplicant' | 'building' | 'entity' | 'pickupable' | 'ore';
   name: string;
   x: number;
   y: number;
-  state: string;
+  state?: string;
 }
 
 export interface EntitiesResponse {
@@ -36,3 +36,13 @@ export interface GameState {
 }
 
 export type OverlayMode = 'element' | 'temperature' | 'mass';
+
+export interface ElementInfo {
+  id: number;
+  name: string;
+  state: string;
+}
+
+export interface ElementsResponse {
+  elements: ElementInfo[];
+}

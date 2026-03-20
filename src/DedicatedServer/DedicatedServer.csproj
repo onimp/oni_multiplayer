@@ -1,23 +1,45 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
+        <StartupObject>DedicatedServer.Program</StartupObject>
         <AssemblyName>DedicatedServer</AssemblyName>
         <AssemblyTitle>ONI Multiplayer Dedicated Server</AssemblyTitle>
         <Copyright>MIT License (C) ONIMP Team</Copyright>
-        <!-- Skip AssemblyExposer — DedicatedServer uses pre-exposed DLLs -->
         <SkipAssemblyExposure>true</SkipAssemblyExposure>
     </PropertyGroup>
 
+    <!-- Reuse test infrastructure for Unity patches and game bootstrap -->
     <ItemGroup>
-        <Reference Include="Assembly-CSharp" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp.dll" Private="false" />
-        <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp-firstpass.dll" Private="false" />
-        <Reference Include="UnityEngine.CoreModule" HintPath="$(ExposedLibrariesPath)\UnityEngine.CoreModule.dll" Private="false" />
-        <Reference Include="0Harmony" HintPath="$(ExposedLibrariesPath)\0Harmony.dll" Private="false" />
+        <ProjectReference Include="..\MultiplayerMod.Test\MultiplayerMod.Test.csproj" PrivateAssets="All" />
     </ItemGroup>
 
     <ItemGroup>
-        <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" Private="false" />
+        <Reference Include="Assembly-CSharp" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp.dll" Private="true" />
+        <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ExposedLibrariesPath)\Assembly-CSharp-firstpass.dll" Private="true" />
+        <Reference Include="UnityEngine.CoreModule" HintPath="$(ExposedLibrariesPath)\UnityEngine.CoreModule.dll" Private="true" />
+        <Reference Include="0Harmony" HintPath="$(ManagedPath)\0Harmony.dll" Private="true" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" Private="true" />
+        <Reference Include="UnityEngine.UI" HintPath="$(ManagedPath)\UnityEngine.UI.dll" Private="true" />
+        <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedPath)\com.rlabrecque.steamworks.net.dll" Private="true" />
         <Reference Include="Newtonsoft.Json" HintPath="$(ManagedPath)\Newtonsoft.Json.dll" Private="true" />
+        <Reference Include="FMODUnity" HintPath="$(ManagedPath)\FMODUnity.dll" Private="true" />
+        <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedPath)\Unity.TextMeshPro.dll" Private="true" />
+        <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(ManagedPath)\UnityEngine.ImageConversionModule.dll" Private="true" />
+        <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedPath)\UnityEngine.IMGUIModule.dll" Private="true" />
+        <Reference Include="ImGui.NET" HintPath="$(ManagedPath)\ImGui.NET.dll" Private="true" />
+        <Reference Include="ImGui" HintPath="$(ManagedPath)\ImGui.dll" Private="true" />
+        <Reference Include="LibNoiseDotNet" HintPath="$(ManagedPath)\LibNoiseDotNet.dll" Private="true" />
+        <Reference Include="Ionic.Zip" HintPath="$(ManagedPath)\Ionic.Zip.dll" Private="true" />
+    </ItemGroup>
+
+    <!-- NUnit for ServerBootTest (runs game via dotnet test) -->
+    <ItemGroup>
+        <PackageReference Include="NUnit" Version="3.13.3" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     </ItemGroup>
 
     <!-- Embed wwwroot as resources for static file serving -->

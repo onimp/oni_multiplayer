@@ -1,5 +1,5 @@
 import type { CellData, EntityData, OverlayMode, WorldData, EntitiesResponse } from '../api/types';
-import { ELEMENT_COLORS, ELEMENT_NAMES, ENTITY_COLORS } from './constants';
+import { getElementColor, getElementName, ENTITY_COLORS } from './constants';
 
 export interface CellInfo {
   x: number;
@@ -67,7 +67,7 @@ export class WorldRenderer {
     return {
       x: cellX,
       y: cellY,
-      element: ELEMENT_NAMES[cell.element] ?? `Unknown (${cell.element})`,
+      element: getElementName(cell.element),
       elementId: cell.element,
       temperature: cell.temperature,
       temperatureC: parseFloat((cell.temperature - 273.15).toFixed(1)),
@@ -102,13 +102,23 @@ export class WorldRenderer {
         if (screenX + cellSize < 0 || screenX > w || screenY + cellSize < 0 || screenY > h) continue;
 
         ctx.fillStyle = this.getCellColor(cell, options.overlay);
-        ctx.fillRect(screenX, screenY, cellSize, cellSize);
+        ctx.fillRect(Math.round(screenX), Math.round(screenY), Math.ceil(cellSize), Math.ceil(cellSize));
       }
     }
 
+    // World boundary outline (always visible)
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(
+      this.offsetX,
+      this.offsetY,
+      world.width * cellSize,
+      world.height * cellSize
+    );
+
     // Grid
     if (options.showGrid && cellSize >= 6) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
       ctx.lineWidth = 0.5;
       for (let x = 0; x <= world.width; x++) {
         const sx = this.offsetX + x * cellSize;
@@ -135,7 +145,7 @@ export class WorldRenderer {
   private getCellColor(cell: CellData, overlay: OverlayMode): string {
     switch (overlay) {
       case 'element':
-        return ELEMENT_COLORS[cell.element] ?? '#ff00ff';
+        return getElementColor(cell.element);
 
       case 'temperature': {
         const t = cell.temperature;

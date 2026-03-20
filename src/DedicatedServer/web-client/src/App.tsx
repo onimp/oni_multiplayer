@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { WorldData, EntitiesResponse, GameState, OverlayMode } from './api/types';
-import { fetchAll } from './api/client';
+import { fetchAll, fetchElements } from './api/client';
+import { loadElements, areElementsLoaded } from './renderer/constants';
 import type { CellInfo } from './renderer/WorldRenderer';
 import { Header } from './components/Header';
 import { WorldCanvas } from './components/WorldCanvas';
@@ -24,6 +25,11 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     try {
+      // Load element definitions on first fetch
+      if (!areElementsLoaded()) {
+        const elemData = await fetchElements();
+        loadElements(elemData.elements);
+      }
       const data = await fetchAll();
       setWorld(data.world);
       setEntities(data.entities);

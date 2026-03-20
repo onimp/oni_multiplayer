@@ -1,4 +1,4 @@
-import type { WorldData, EntitiesResponse, GameState } from './types';
+import type { WorldData, EntitiesResponse, GameState, ElementsResponse } from './types';
 
 const BASE_URL = '/api';
 
@@ -18,6 +18,10 @@ export async function fetchEntities(): Promise<EntitiesResponse> {
 
 export async function fetchGameState(): Promise<GameState> {
   return fetchJson<GameState>('/state');
+}
+
+export async function fetchElements(): Promise<ElementsResponse> {
+  return fetchJson<ElementsResponse>('/elements');
 }
 
 export async function fetchAll(): Promise<{
