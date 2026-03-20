@@ -1,0 +1,179 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Header */
+header {
+  background: #16213e;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #0f3460;
+}
+
+header h1 {
+  font-size: 18px;
+  color: #e94560;
+  font-weight: 600;
+}
+
+.status {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.status-connected {
+  color: #4ecca3;
+}
+.status-connected::before {
+  content: '\25CF';
+  margin-right: 4px;
+}
+.status-disconnected {
+  color: #e94560;
+}
+.status-disconnected::before {
+  content: '\25CF';
+  margin-right: 4px;
+}
+.game-info {
+  color: #888;
+}
+
+/* Main layout */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: #16213e;
+  border-left: 1px solid #0f3460;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar h3 {
+  font-size: 13px;
+  color: #e94560;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar label {
+  display: block;
+  margin-bottom: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.sidebar input[type="radio"],
+.sidebar input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+.sidebar input[type="number"] {
+  width: 80px;
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  color: #e0e0e0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+
+.sidebar button {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  background: #0f3460;
+  color: #e0e0e0;
+  border: 1px solid #e94560;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.sidebar button:hover {
+  background: #e94560;
+}
+
+/* Cell info */
+.cell-details {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #a0a0a0;
+}
+.cell-details .label {
+  color: #e0e0e0;
+  font-weight: 500;
+}
+.muted {
+  color: #666;
+}
+
+/* Entities */
+.entity-list {
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.entity-item {
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.5);
+}
+.entity-name {
+  color: #4ecca3;
+  font-weight: 500;
+}
+.entity-type {
+  color: #888;
+  font-size: 11px;
+  margin-left: 4px;
+}
+.entity-state {
+  color: #e94560;
+  font-size: 11px;
+  margin-left: 4px;
+}
+.entity-pos {
+  color: #666;
+  font-size: 11px;
+}
