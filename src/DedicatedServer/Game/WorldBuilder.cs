@@ -46,7 +46,7 @@ public class WorldBuilder {
 
     public BuildingDef GetBuildingDef(string id) {
         if (_buildingDefCache.TryGetValue(id, out var def)) return def;
-        try { return Assets.GetBuildingDef(id); } catch { return null; }
+        return Assets.GetBuildingDef(id);
     }
 
     public void Create(ResourceLoader resources) {
@@ -166,23 +166,36 @@ public class WorldBuilder {
         // After catching, manually init the remaining fields that Initialize would have set.
         try { Db._Instance.Initialize(); }
         catch {
-            // Init remaining fields that come after AccessorySlots in Db.Initialize
+            // Db.Initialize crashes at AccessorySlots (needs KAnimFile data from Unity assets).
+            // Everything before it initializes fine. Init remaining fields individually —
+            // some constructors NPE without full Unity env, log failures explicitly.
             var root = Db._Instance.Root;
             var db = Db._Instance;
-            try { db.Diseases ??= new Diseases(root, statsOnly: true); } catch {}
-            try { db.Sicknesses ??= new Database.Sicknesses(root); } catch {}
-            try { db.SkillPerks ??= new SkillPerks(root); } catch {}
-            try { db.SkillGroups ??= new SkillGroups(root); } catch {}
-            try { db.Skills ??= new Skills(root); } catch {}
-            try { db.ChoreTypes ??= new ChoreTypes(root); } catch {}
-            try { db.ScheduleBlockTypes ??= new ScheduleBlockTypes(root); } catch {}
-            try { db.ScheduleGroups ??= new ScheduleGroups(root); } catch {}
-            try { db.RoomTypes ??= new RoomTypes(root); } catch {}
-            try { db.GameplayEvents ??= new GameplayEvents(root); } catch {}
-            try { db.Permits ??= new PermitResources(root); } catch {}
+            InitDbField(ref db.ScheduleBlockTypes, () => new ScheduleBlockTypes(root), "ScheduleBlockTypes");
+            InitDbField(ref db.ScheduleGroups, () => new ScheduleGroups(root), "ScheduleGroups");
+            InitDbField(ref db.RoomTypes, () => new RoomTypes(root), "RoomTypes");
+            InitDbField(ref db.Diseases, () => new Diseases(root, statsOnly: true), "Diseases");
+            InitDbField(ref db.Sicknesses, () => new Database.Sicknesses(root), "Sicknesses");
+            InitDbField(ref db.SkillPerks, () => new SkillPerks(root), "SkillPerks");
+            InitDbField(ref db.SkillGroups, () => new SkillGroups(root), "SkillGroups");
+            InitDbField(ref db.Skills, () => new Skills(root), "Skills");
+            InitDbField(ref db.ColonyAchievements, () => new ColonyAchievements(root), "ColonyAchievements");
+            InitDbField(ref db.MiscStatusItems, () => new MiscStatusItems(root), "MiscStatusItems");
+            InitDbField(ref db.CreatureStatusItems, () => new CreatureStatusItems(root), "CreatureStatusItems");
+            InitDbField(ref db.BuildingStatusItems, () => new BuildingStatusItems(root), "BuildingStatusItems");
+            InitDbField(ref db.RobotStatusItems, () => new RobotStatusItems(root), "RobotStatusItems");
+            InitDbField(ref db.ChoreTypes, () => new ChoreTypes(root), "ChoreTypes");
+            InitDbField(ref db.Quests, () => new Quests(root), "Quests");
+            InitDbField(ref db.GameplayEvents, () => new GameplayEvents(root), "GameplayEvents");
+            InitDbField(ref db.GameplaySeasons, () => new GameplaySeasons(root), "GameplaySeasons");
+            InitDbField(ref db.Stories, () => new Stories(root), "Stories");
+            InitDbField(ref db.OrbitalTypeCategories, () => new OrbitalTypeCategories(root), "OrbitalTypeCategories");
+            InitDbField(ref db.ArtableStatuses, () => new ArtableStatuses(root), "ArtableStatuses");
+            InitDbField(ref db.Permits, () => new PermitResources(root), "Permits");
+            InitDbField(ref db.Spices, () => new Spices(root), "Spices");
             Console.WriteLine("[WorldBuilder] Db.Initialize: AccessorySlots skipped, remaining fields initialized");
         }
-        Console.WriteLine($"[WorldBuilder] Db: Diseases={Db._Instance.Diseases != null}, Skills={Db._Instance.Skills != null}, ChoreTypes={Db._Instance.ChoreTypes != null}");
+        Console.WriteLine($"[WorldBuilder] Db: Diseases={Db._Instance.Diseases != null}, MiscStatusItems={Db._Instance.MiscStatusItems != null}, ChoreTypes={Db._Instance.ChoreTypes != null}");
 
         // CustomGameSettings must exist before Game.OnPrefabInit and Cluster constructor
         // .Awake() calls KMonoBehaviour.InitializeComponent() which calls OnPrefabInit()
@@ -249,6 +262,19 @@ public class WorldBuilder {
             !string.IsNullOrEmpty(resources.PersonalitiesCsv) ? resources.PersonalitiesCsv : "");
         Assets.instance = assets;
         Assets.BuildingDefs = new List<BuildingDef>();
+
+        // Initialize static lists that Assets.OnPrefabInit would normally set
+        // Without these, GetMaterial/GetBlockTileDecorInfo NPE on null list
+        var stubMaterial = UnityRuntime.CreateStub<Material>();
+        stubMaterial.name = "tiles_solid";
+        Assets.Materials = new List<Material> { stubMaterial };
+        Assets.BlockTileDecorInfos = new List<BlockTileDecorInfo>();
+        foreach (var decorName in new[] { "tiles_solid_tops_info", "tiles_solid_tops_place_info" }) {
+            var info = ScriptableObject.CreateInstance<BlockTileDecorInfo>();
+            info.name = decorName;
+            info.decor = Array.Empty<BlockTileDecorInfo.Decor>();
+            Assets.BlockTileDecorInfos.Add(info);
+        }
 
         // Stub TextureAtlases for tile building defs
         Assets.TextureAtlases = new List<TextureAtlas>();
@@ -323,27 +349,17 @@ public class WorldBuilder {
     }
 
     private void RegisterBuildingDefs() {
-        try {
-            var types = typeof(GeneratedBuildings).Assembly.GetTypes()
-                .Where(t => typeof(IBuildingConfig).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
-                .ToList();
-            int registered = 0;
-            foreach (var type in types) {
-                try {
-                    var config = (IBuildingConfig)Activator.CreateInstance(type);
-                    var def = config.CreateBuildingDef();
-                    if (def != null) {
-                        _buildingDefCache[def.PrefabID] = def;
-                        registered++;
-                    }
-                } catch (Exception ex) {
-                    Console.WriteLine($"[BuildingDef] FAIL {type.Name}: {ex}");
-                }
+        var types = typeof(GeneratedBuildings).Assembly.GetTypes()
+            .Where(t => typeof(IBuildingConfig).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+            .ToList();
+        foreach (var type in types) {
+            var config = (IBuildingConfig)Activator.CreateInstance(type);
+            var def = config.CreateBuildingDef();
+            if (def != null) {
+                _buildingDefCache[def.PrefabID] = def;
             }
-            Console.WriteLine($"[WorldBuilder] Registered {registered}/{types.Count} building defs");
-        } catch (Exception ex) {
-            Console.WriteLine($"[WorldBuilder] Building registration failed: {ex.Message}");
         }
+        Console.WriteLine($"[WorldBuilder] Registered {_buildingDefCache.Count}/{types.Count} building defs");
     }
 
     private void AddStarterDuplicants(GameSpawnData spawnData) {
@@ -378,6 +394,15 @@ public class WorldBuilder {
         var ra = new float[n]; var raH = GCHandle.Alloc(ra, GCHandleType.Pinned); Grid.radiation = (float*)raH.AddrOfPinnedObject();
         var ma = new float[n]; var maH = GCHandle.Alloc(ma, GCHandleType.Pinned); Grid.mass = (float*)maH.AddrOfPinnedObject();
         Grid.InitializeCells();
+    }
+
+    /// <summary>
+    /// Initializes a Db field if null. Logs on failure — some fields need full Unity env.
+    /// </summary>
+    private static void InitDbField<T>(ref T field, Func<T> factory, string name) where T : class {
+        if (field != null) return;
+        try { field = factory(); }
+        catch (Exception ex) { Console.WriteLine($"[Db] {name} skipped: {ex.GetBaseException().Message}"); }
     }
 
     public void Shutdown() {

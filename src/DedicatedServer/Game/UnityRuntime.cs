@@ -126,6 +126,16 @@ public static class UnityRuntime {
 
     // --- MonoBehaviour ---
 
+    /// <summary>
+    /// Creates a stub UnityEngine.Object of the given type without calling its constructor.
+    /// Assigns a valid m_CachedPtr so name/identity operations work.
+    /// </summary>
+    public static T CreateStub<T>() where T : UnityEngine.Object {
+        var obj = (T)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(T));
+        obj.m_CachedPtr = new IntPtr(++_nextId);
+        return obj;
+    }
+
     public static bool IsObjectMonoBehaviour(UnityEngine.Object obj) => obj is MonoBehaviour;
 
     public static Coroutine StartCoroutineManaged2(MonoBehaviour self, System.Collections.IEnumerator routine) {
