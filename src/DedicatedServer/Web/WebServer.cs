@@ -104,6 +104,10 @@ public class WebServer {
                 SendJson(context.Response, 200,
                     useReal ? realWorld!.GetWorldSnapshot() : mockWorld.GetWorldSnapshot());
                 break;
+            case "/api/elements":
+                SendJson(context.Response, 200,
+                    useReal ? realWorld!.GetElements() : mockWorld.GetElements());
+                break;
             case "/api/entities":
                 SendJson(context.Response, 200,
                     useReal ? realWorld!.GetEntities() : mockWorld.GetEntities());

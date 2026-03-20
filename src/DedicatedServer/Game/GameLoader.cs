@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using HarmonyLib;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.Environment.Unity;
 using MultiplayerMod.Test.GameRuntime.Patches;
 using UnityEngine;
+using Random = System.Random;
 
 namespace DedicatedServer.Game;
 
@@ -188,24 +190,168 @@ public class GameLoader {
         game.fetchManager = new FetchManager();
         GameScheduler.Instance = worldGameObject.AddComponent<GameScheduler>();
 
-        ElementLoader.elements = new List<Element> { new() };
+        RegisterElements();
         ResetGrid();
+        PopulateWorld(width, height);
 
         GameScenePartitioner.instance?.OnForcedCleanUp();
-        Console.WriteLine("[GameLoader] Grid initialized.");
+        Console.WriteLine("[GameLoader] Grid initialized and populated.");
+    }
+
+    /// <summary>
+    /// Register elements matching the frontend's hardcoded indices (0-10).
+    /// These must match constants.ts ELEMENT_NAMES/ELEMENT_COLORS.
+    /// </summary>
+    public static void RegisterElements() {
+        var elementDefs = new (string name, SimHashes hash, Element.State state, float defaultTemp, float defaultMass)[] {
+            ("Vacuum",         SimHashes.Vacuum,              Element.State.Vacuum, 0f,      0f),
+            ("Oxygen",         SimHashes.Oxygen,              Element.State.Gas,    293.15f, 1.8f),
+            ("Carbon Dioxide", SimHashes.CarbonDioxide,       Element.State.Gas,    293.15f, 1.8f),
+            ("Hydrogen",       SimHashes.Hydrogen,            Element.State.Gas,    293.15f, 0.09f),
+            ("Water",          SimHashes.Water,               Element.State.Liquid, 293.15f, 1000f),
+            ("Dirty Water",    SimHashes.DirtyWater,          Element.State.Liquid, 293.15f, 1000f),
+            ("Granite",        SimHashes.Granite,             Element.State.Solid,  293.15f, 2500f),
+            ("Sandstone",      SimHashes.SandStone,           Element.State.Solid,  293.15f, 2000f),
+            ("Algae",          SimHashes.Algae,               Element.State.Solid,  293.15f, 200f),
+            ("Copper Ore",     SimHashes.Cuprite,             Element.State.Solid,  293.15f, 2000f),
+            ("Ice",            SimHashes.Ice,                 Element.State.Solid,  243.15f, 1000f),
+        };
+
+        ElementLoader.elements = new List<Element>();
+        ElementLoader.elementTable = new Dictionary<int, Element>();
+
+        for (ushort i = 0; i < elementDefs.Length; i++) {
+            var def = elementDefs[i];
+            var elem = new Element {
+                id = def.hash,
+                name = def.name,
+                nameUpperCase = def.name.ToUpper(),
+                idx = i,
+                state = def.state,
+                defaultValues = new Sim.PhysicsData {
+                    temperature = def.defaultTemp,
+                    mass = def.defaultMass,
+                },
+                substance = new Substance()
+            };
+            ElementLoader.elements.Add(elem);
+            ElementLoader.elementTable[(int)def.hash] = elem;
+        }
+
+        Console.WriteLine($"[GameLoader] Registered {ElementLoader.elements.Count} elements.");
+    }
+
+    // GC handles to keep pinned arrays alive for the server lifetime
+    private static GCHandle elementIdxHandle;
+    private static GCHandle temperatureHandle;
+    private static GCHandle radiationHandle;
+
+    /// <summary>
+    /// Allocate pinned Grid arrays that survive GC.
+    /// The fixed() block in PlayableGameTest only pins during the block —
+    /// for a long-running server we need GCHandle.Alloc with Pinned type.
+    /// </summary>
+    public static unsafe void AllocatePinnedGrid(int gridWidth, int gridHeight) {
+        var numCells = gridWidth * gridHeight;
+        GridSettings.Reset(gridWidth, gridHeight);
+
+        var elementIdxArr = new ushort[numCells];
+        elementIdxHandle = GCHandle.Alloc(elementIdxArr, GCHandleType.Pinned);
+        Grid.elementIdx = (ushort*)elementIdxHandle.AddrOfPinnedObject();
+
+        var tempArr = new float[numCells];
+        temperatureHandle = GCHandle.Alloc(tempArr, GCHandleType.Pinned);
+        Grid.temperature = (float*)temperatureHandle.AddrOfPinnedObject();
+
+        var radArr = new float[numCells];
+        radiationHandle = GCHandle.Alloc(radArr, GCHandleType.Pinned);
+        Grid.radiation = (float*)radiationHandle.AddrOfPinnedObject();
+
+        Grid.InitializeCells();
+        Console.WriteLine($"[GameLoader] Pinned Grid allocated: {gridWidth}x{gridHeight} ({numCells} cells).");
     }
 
     public unsafe void ResetGrid() {
-        var numCells = width * height;
-        GridSettings.Reset(width, height);
-        fixed (ushort* ptr = &(new ushort[numCells])[0]) {
-            Grid.elementIdx = ptr;
+        AllocatePinnedGrid(width, height);
+    }
+
+    /// <summary>
+    /// Fill Grid cells with a procedural world layout.
+    /// Matches the structure of MockWorldState for visual consistency.
+    /// </summary>
+    public static unsafe void PopulateWorld(int width, int height) {
+        const ushort VACUUM = 0, OXYGEN = 1, CO2 = 2, HYDROGEN = 3, WATER = 4;
+        const ushort DIRTY_WATER = 5, GRANITE = 6, SANDSTONE = 7, ALGAE = 8, COPPER = 9, ICE = 10;
+
+        var rng = new Random(42);
+
+        for (var y = 0; y < height; y++) {
+            for (var x = 0; x < width; x++) {
+                var cell = y * width + x;
+                ushort element;
+                float temp;
+
+                if (y < height / 12) {
+                    // Bottom layer: rock floor
+                    element = GRANITE;
+                    temp = 310f + (float)(rng.NextDouble() * 20);
+                } else if (y < height / 4) {
+                    // Lower zone: mixed resources
+                    var r = rng.NextDouble();
+                    if (r < 0.4) element = SANDSTONE;
+                    else if (r < 0.6) element = COPPER;
+                    else if (r < 0.75) element = ALGAE;
+                    else element = OXYGEN;
+                    temp = 295f + (float)(rng.NextDouble() * 15);
+                } else if (y < height * 3 / 4) {
+                    // Middle: habitable zone
+                    var inStartingArea = x >= width / 4 && x < width * 3 / 4
+                                      && y >= height / 3 && y < height * 2 / 3;
+
+                    if (inStartingArea) {
+                        // Starting biome: oxygen-rich
+                        element = OXYGEN;
+                        temp = 293f + (float)(rng.NextDouble() * 5);
+                    } else if (x < 3 || x >= width - 3) {
+                        // Side walls
+                        element = rng.NextDouble() < 0.7 ? GRANITE : SANDSTONE;
+                        temp = 300f + (float)(rng.NextDouble() * 10);
+                    } else {
+                        // Open area: gas mix
+                        var r = rng.NextDouble();
+                        if (r < 0.5) element = OXYGEN;
+                        else if (r < 0.7) element = CO2;
+                        else if (r < 0.85) element = HYDROGEN;
+                        else element = VACUUM;
+                        temp = element == VACUUM ? 0f : 290f + (float)(rng.NextDouble() * 10);
+                    }
+
+                    // Water pool in starting area
+                    if (x >= width / 3 && x < width * 2 / 3
+                        && y >= height / 3 && y < height / 3 + 4) {
+                        element = rng.NextDouble() < 0.9 ? WATER : DIRTY_WATER;
+                        temp = 288f + (float)(rng.NextDouble() * 5);
+                    }
+                } else if (y < height * 7 / 8) {
+                    // Upper cold zone
+                    var r = rng.NextDouble();
+                    if (r < 0.4) element = ICE;
+                    else if (r < 0.6) element = OXYGEN;
+                    else element = GRANITE;
+                    temp = element == ICE ? 243f + (float)(rng.NextDouble() * 10)
+                                         : 260f + (float)(rng.NextDouble() * 15);
+                } else {
+                    // Top: near-vacuum
+                    element = rng.NextDouble() < 0.8 ? VACUUM : OXYGEN;
+                    temp = element == VACUUM ? 0f : 250f + (float)(rng.NextDouble() * 20);
+                }
+
+                Grid.elementIdx[cell] = element;
+                Grid.temperature[cell] = temp;
+            }
         }
-        fixed (float* ptr = &(new float[numCells])[0]) {
-            Grid.temperature = ptr;
-            Grid.radiation = ptr;
-        }
-        Grid.InitializeCells();
+
+        Console.WriteLine($"[GameLoader] World populated: {width}x{height} cells.");
     }
 
     public void Shutdown() {

@@ -189,6 +189,22 @@ public class MockWorldState {
         };
     }
 
+    public object GetElements() {
+        var names = new[] {
+            "Vacuum", "Oxygen", "Carbon Dioxide", "Hydrogen", "Water",
+            "Dirty Water", "Granite", "Sandstone", "Algae", "Copper Ore", "Ice"
+        };
+        var states = new[] {
+            "Vacuum", "Gas", "Gas", "Gas", "Liquid",
+            "Liquid", "Solid", "Solid", "Solid", "Solid", "Solid"
+        };
+        var elements = new object[names.Length];
+        for (var i = 0; i < names.Length; i++) {
+            elements[i] = new { id = i, name = names[i], state = states[i] };
+        }
+        return new { elements };
+    }
+
     public object GetGameState() {
         return new {
             tick,

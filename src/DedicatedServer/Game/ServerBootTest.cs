@@ -9,7 +9,7 @@ namespace DedicatedServer.Game;
 /// <summary>
 /// "Test" that boots the game world and starts the web server.
 /// Run via: dotnet test --filter ServerBoot --no-build
-/// This is a workaround for the Mono/CoreCLR runtime issue — 
+/// This is a workaround for the Mono/CoreCLR runtime issue —
 /// dotnet test uses the correct Mono runtime that supports Harmony transpilers.
 /// </summary>
 [TestFixture]
@@ -18,12 +18,22 @@ public class ServerBootTest : PlayableGameTest {
     [Test]
     public void ServerBoot() {
         var port = 8080;
-        Console.WriteLine($"[ServerBoot] Game world loaded. Starting web server on port {port}...");
+        var gridWidth = Grid.WidthInCells;
+        var gridHeight = Grid.HeightInCells;
+
+        // PlayableGameTest sets up the game world but uses non-pinned memory.
+        // Re-allocate Grid with pinned arrays and register real elements.
+        Console.WriteLine("[ServerBoot] Setting up world with pinned Grid and real elements...");
+        GameLoader.RegisterElements();
+        GameLoader.AllocatePinnedGrid(gridWidth, gridHeight);
+        GameLoader.PopulateWorld(gridWidth, gridHeight);
+
+        Console.WriteLine($"[ServerBoot] Game world ready ({gridWidth}x{gridHeight}). Starting web server on port {port}...");
 
         var cts = new CancellationTokenSource();
 
         var server = new WebServer(port);
-        var realWorld = new RealWorldState(Grid.WidthInCells, Grid.HeightInCells);
+        var realWorld = new RealWorldState(gridWidth, gridHeight);
         server.SetRealWorldState(realWorld);
         server.Start(cts.Token);
 

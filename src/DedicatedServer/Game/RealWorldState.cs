@@ -26,14 +26,20 @@ public class RealWorldState {
         for (var i = 0; i < numCells; i++) {
             ushort elementIdx = 0;
             float temp = 0f;
+            float mass = 0f;
 
             if (Grid.elementIdx != null) elementIdx = Grid.elementIdx[i];
             if (Grid.temperature != null) temp = Grid.temperature[i];
 
+            // Get default mass from element definition
+            if (elementIdx < ElementLoader.elements?.Count) {
+                mass = ElementLoader.elements[elementIdx].defaultValues.mass;
+            }
+
             cells[i] = new {
                 element = (int)elementIdx,
                 temperature = Math.Round(temp, 1),
-                mass = 0.0
+                mass = Math.Round(mass, 1)
             };
         }
 
@@ -45,13 +51,23 @@ public class RealWorldState {
         };
     }
 
+    public object GetElements() {
+        var elements = new List<object>();
+        if (ElementLoader.elements != null) {
+            for (var i = 0; i < ElementLoader.elements.Count; i++) {
+                var elem = ElementLoader.elements[i];
+                elements.Add(new {
+                    id = i,
+                    name = elem.name ?? $"Element_{i}",
+                    state = elem.state.ToString()
+                });
+            }
+        }
+        return new { elements };
+    }
+
     public object GetEntities() {
         var entities = new List<object>();
-
-        if (global::Game.Instance != null) {
-            // Real entity enumeration will come in Phase 3
-        }
-
         return new {
             tick,
             entities = entities.ToArray()
