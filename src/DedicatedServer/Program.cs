@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DedicatedServer.Game;
 using DedicatedServer.Web;
-using MultiplayerMod.Test.Environment.Unity;
 
 namespace DedicatedServer;
 
@@ -19,20 +18,19 @@ public static class Program {
     private static string[] GetAssemblySearchPaths() {
         var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
         var repoRoot = Path.GetFullPath(Path.Combine(basePath, "..", "..", "..","..",".."));
-        var steamPath = Environment.GetEnvironmentVariable("ONI_MANAGED_PATH")
-            ?? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Application Support", "Steam", "steamapps", "common",
-                "OxygenNotIncluded", "OxygenNotIncluded.app", "Contents", "Resources", "Data", "Managed"
-            );
 
-        return new[] {
+        var paths = new List<string> {
             Path.Combine(repoRoot, "lib", "exposed"),
             Path.Combine(repoRoot, "lib", "runtime"),
-            steamPath,
             Path.Combine(repoRoot, "src", "MultiplayerMod", "bin", "Debug", "net48"),
             Path.Combine(repoRoot, "src", "MultiplayerMod.Test", "bin", "Debug", "net48"),
         };
+
+        // Optional: additional managed DLL path via env variable
+        var managedPath = Environment.GetEnvironmentVariable("ONI_MANAGED_PATH");
+        if (!string.IsNullOrEmpty(managedPath)) paths.Add(managedPath);
+
+        return paths.ToArray();
     }
 
     static Program() {
@@ -54,16 +52,15 @@ public static class Program {
 
         Console.WriteLine($"ONI Dedicated Server starting on port {port}...");
 
-        // Install Unity patches BEFORE any game class is loaded.
-        // ElementLoader has a static initializer that calls Application.streamingAssetsPath.
-        UnityTestRuntime.Install();
-
         var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => {
             e.Cancel = true;
             cts.Cancel();
         };
 
+        // GameLoader.Boot() handles all Harmony patches internally.
+        // Do NOT reference UnityTestRuntime here — its static initializer
+        // creates new Harmony() which triggers a self-test that hangs on standalone Mono.
         var loader = new GameLoader();
         loader.Boot();
 

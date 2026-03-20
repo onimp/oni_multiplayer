@@ -29,34 +29,19 @@ public class GameLoader {
     private const int DefaultHeight = 384;
 
     /// <summary>
-    /// Path to the game's StreamingAssets directory. Auto-detected from common
-    /// Steam installation paths, or set via ONI_STREAMING_ASSETS env variable.
+    /// Path to the game's StreamingAssets directory.
+    /// Required env variable: ONI_STREAMING_ASSETS
     /// </summary>
-    private static readonly string GameStreamingAssetsPath = DetectStreamingAssetsPath();
+    private static readonly string GameStreamingAssetsPath = GetRequiredEnvPath("ONI_STREAMING_ASSETS",
+        "Path to ONI StreamingAssets (e.g. .../OxygenNotIncluded_Data/StreamingAssets)");
 
-    private static string DetectStreamingAssetsPath() {
-        // Allow override via environment variable
-        var envPath = Environment.GetEnvironmentVariable("ONI_STREAMING_ASSETS");
-        if (!string.IsNullOrEmpty(envPath) && Directory.Exists(envPath)) return envPath;
-
-        // Auto-detect from common Steam installation paths
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var candidates = new[] {
-            // macOS
-            Path.Combine(home, "Library/Application Support/Steam/steamapps/common/OxygenNotIncluded",
-                "OxygenNotIncluded.app/Contents/Resources/Data/StreamingAssets"),
-            // Linux
-            Path.Combine(home, ".steam/steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/StreamingAssets"),
-            // Windows
-            @"C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\StreamingAssets",
-        };
-
-        foreach (var path in candidates) {
-            if (Directory.Exists(path)) return path;
-        }
-
-        throw new DirectoryNotFoundException(
-            "Could not find ONI StreamingAssets. Set ONI_STREAMING_ASSETS environment variable.");
+    private static string GetRequiredEnvPath(string envVar, string description) {
+        var path = Environment.GetEnvironmentVariable(envVar);
+        if (string.IsNullOrEmpty(path))
+            throw new InvalidOperationException($"Environment variable {envVar} is required. {description}");
+        if (!Directory.Exists(path))
+            throw new DirectoryNotFoundException($"{envVar}={path} — directory not found");
+        return path;
     }
 
     private Harmony harmony = null!;
@@ -80,6 +65,11 @@ public class GameLoader {
         height = worldHeight;
 
         Console.WriteLine("[GameLoader] Installing patches...");
+        // Force Mono JIT to compile reflection/emit infrastructure before Harmony.
+        // Harmony's self-test (MonoMod _HookSelftest) deadlocks on standalone Mono
+        // if reflection/emit hasn't been warmed up yet.
+        System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(System.Reflection.Emit.DynamicMethod).TypeHandle);
+        System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(System.Reflection.Emit.ILGenerator).TypeHandle);
         harmony = new Harmony("DedicatedServer");
         InstallPatches();
 
@@ -164,6 +154,17 @@ public class GameLoader {
         if (ggsField != null && ggsField.GetValue(null) == null) {
             ggsField.SetValue(null, new GenericGameSettings());
         }
+
+        // Patch ManifestSubstanceForElement — SubstanceTable requires Unity textures,
+        // we just create a stub Substance for each element instead
+        var manifestMethod = AccessTools.Method(typeof(ElementLoader), "ManifestSubstanceForElement");
+        if (manifestMethod != null) {
+            harmony.Patch(manifestMethod,
+                prefix: new HarmonyMethod(typeof(GameLoader), nameof(StubManifestSubstance)));
+            Console.WriteLine("[GameLoader] Patched ManifestSubstanceForElement");
+        } else {
+            Console.WriteLine("[GameLoader] WARNING: ManifestSubstanceForElement not found!");
+        }
     }
 
     /// <summary>
@@ -182,6 +183,38 @@ public class GameLoader {
             default:
                 Console.WriteLine($"[INFO] {message}");
                 break;
+        }
+        return false; // skip original
+    }
+
+    /// <summary>
+    /// Fix ElementLoader.path before CollectElementsFromYAML reads it.
+    /// </summary>
+    private static void FixElementPath() {
+        var field = AccessTools.Field(typeof(ElementLoader), "path");
+        Console.WriteLine($"[FixElementPath] field={field}, current='{field?.GetValue(null)}'");
+        Console.WriteLine($"[FixElementPath] streamingAssetsPath='{Application.streamingAssetsPath}'");
+        if (field != null) {
+            var newPath = Application.streamingAssetsPath + "/elements/";
+            field.SetValue(null, newPath);
+            Console.WriteLine($"[FixElementPath] set to '{field.GetValue(null)}'");
+        }
+    }
+
+    /// <summary>
+    /// Stub substance creation — replaces ManifestSubstanceForElement which needs Unity textures.
+    /// </summary>
+    private static bool StubManifestSubstance(Element elem, ref Hashtable substanceList) {
+        if (substanceList.ContainsKey(elem.id)) {
+            elem.substance = substanceList[elem.id] as Substance;
+        } else {
+            elem.substance = new Substance();
+            elem.substance.elementID = elem.id;
+            elem.substance.renderedByWorld = elem.IsSolid;
+            elem.substance.idx = substanceList.Count;
+            elem.substance.nameTag = elem.tag;
+            elem.substance.anim = new KAnimFile { IsBuildLoaded = true };
+            substanceList[elem.id] = elem.substance;
         }
         return false; // skip original
     }
@@ -246,14 +279,25 @@ public class GameLoader {
     private void LoadElementsFromGame() {
         // Provide stub SubstanceTable for each DLC — ElementLoader.Load() checks
         // substanceTablesByDlc.ContainsKey(entry.dlcId) to decide which elements to load.
+        // Ensure FileSystem is initialized (ElementLoader.Load uses FileSystem.GetFiles)
+        Klei.FileSystem.Initialize();
+
         var substanceList = new Hashtable();
-        var substanceTables = new Dictionary<string, SubstanceTable> { { "", new SubstanceTable() } };
+        var substanceTables = new Dictionary<string, SubstanceTable> { { "", CreateStubSubstanceTable() } };
 
         // Add DLC substance tables if DLCs are present
         foreach (var dlcId in DlcManager.RELEASED_VERSIONS) {
             if (!substanceTables.ContainsKey(dlcId)) {
-                substanceTables[dlcId] = new SubstanceTable();
+                substanceTables[dlcId] = CreateStubSubstanceTable();
             }
+        }
+
+        // Patch CollectElementsFromYAML — the static `path` field reads Application.streamingAssetsPath
+        // at class load time, which may be empty. We override it via Harmony prefix.
+        var collectMethod = AccessTools.Method(typeof(ElementLoader), "CollectElementsFromYAML");
+        if (collectMethod != null) {
+            harmony.Patch(collectMethod,
+                prefix: new HarmonyMethod(typeof(GameLoader), nameof(FixElementPath)));
         }
 
         ElementLoader.Load(ref substanceList, substanceTables);
@@ -278,6 +322,17 @@ public class GameLoader {
 
         WorldGen.SetupDefaultElements();
         Console.WriteLine($"[GameLoader] Registered {ElementLoader.elements.Count} elements");
+    }
+
+    /// <summary>
+    /// Create a SubstanceTable with an initialized (empty) list.
+    /// The default ScriptableObject constructor leaves 'list' null.
+    /// </summary>
+    private static SubstanceTable CreateStubSubstanceTable() {
+        var table = ScriptableObject.CreateInstance<SubstanceTable>();
+        var listField = typeof(SubstanceTable).GetField("list", BindingFlags.NonPublic | BindingFlags.Instance);
+        listField?.SetValue(table, new List<Substance>());
+        return table;
     }
 
     private void InitializeWorld() {
