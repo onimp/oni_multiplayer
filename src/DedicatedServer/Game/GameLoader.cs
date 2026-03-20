@@ -289,6 +289,61 @@ public class GameLoader {
     }
 
     /// <summary>
+    /// Extract personalities CSV from the game's sharedassets0.assets file.
+    /// Unity TextAsset in serialized file: asset name "Personalities" followed by length-prefixed UTF8 data.
+    /// Falls back to a minimal stub if extraction fails.
+    /// </summary>
+    private static string LoadPersonalitiesCsv() {
+        try {
+            var dataDir = Path.GetDirectoryName(GameStreamingAssetsPath);
+            var assetPath = Path.Combine(dataDir!, "sharedassets0.assets");
+            if (!File.Exists(assetPath)) {
+                Console.WriteLine($"[GameLoader] sharedassets0.assets not found at {assetPath}");
+                return FallbackPersonalitiesCsv();
+            }
+
+            var data = File.ReadAllBytes(assetPath);
+            var marker = System.Text.Encoding.UTF8.GetBytes("Name,Gender,Model,RequiredDlcId");
+            var idx = FindBytes(data, marker);
+            if (idx < 0) {
+                Console.WriteLine("[GameLoader] Personalities CSV header not found in assets");
+                return FallbackPersonalitiesCsv();
+            }
+
+            // Find end of CSV (null terminator)
+            var end = idx;
+            while (end < data.Length && data[end] != 0) end++;
+
+            var csv = System.Text.Encoding.UTF8.GetString(data, idx, end - idx);
+            var lineCount = csv.Split('\n').Length;
+            Console.WriteLine($"[GameLoader] Loaded {lineCount} personalities from game assets");
+            return csv;
+        } catch (Exception ex) {
+            Console.WriteLine($"[GameLoader] Failed to load personalities: {ex.Message}");
+            return FallbackPersonalitiesCsv();
+        }
+    }
+
+    private static int FindBytes(byte[] haystack, byte[] needle) {
+        for (var i = 0; i <= haystack.Length - needle.Length; i++) {
+            var found = true;
+            for (var j = 0; j < needle.Length; j++) {
+                if (haystack[i + j] != needle[j]) { found = false; break; }
+            }
+            if (found) return i;
+        }
+        return -1;
+    }
+
+    private static string FallbackPersonalitiesCsv() =>
+        "Name,Gender,PersonalityType,StressTrait,JoyTrait,StickerType,CongenitalTrait," +
+        "HeadShape,Mouth,Neck,Eyes,Hair,Body,Belt,Cuff,Foot,Hand,Pelvis,Leg,Arm_Skin,Leg_Skin," +
+        "ValidStarter,Grave,Model,SpeechMouth,RequiredDlcId\n" +
+        "Meep,Male,Doofy,Aggressive,SparkleStreaker,,,3,0,0,5,7,3,0,0,0,0,0,0,3,3,0,meep,Minion,0,\n" +
+        "Bubbles,Female,Doofy,BingeEater,StickerBomber,glitter,,3,0,0,2,30,2,0,0,0,0,0,0,3,3,1,bubbles,Minion,0,\n" +
+        "Stinky,Male,Doofy,StressVomiter,BalloonArtist,,,1,0,0,5,15,3,0,0,0,0,0,0,1,1,1,stinky,Minion,0,";
+
+    /// <summary>
     /// Load elements using the game's ElementLoader with stub SubstanceTables.
     /// This calls the game's own YAML parsing + element creation logic.
     /// </summary>
@@ -410,12 +465,7 @@ public class GameLoader {
         assets.BlockTileDecorInfoAssets = new List<BlockTileDecorInfo>();
         Assets.ModLoadedKAnims = new List<KAnimFile>() { ScriptableObject.CreateInstance<KAnimFile>() };
         assets.elementAudio = new TextAsset("");
-        assets.personalitiesFile = new TextAsset(
-            "Name,Gender,PersonalityType,StressTrait,JoyTrait,StickerType,CongenitalTrait," +
-            "HeadShape,Mouth,Neck,Eyes,Hair,Body,Belt,Cuff,Foot,Hand,Pelvis,Leg,Arm_Skin,Leg_Skin," +
-            "ValidStarter,Grave,Model,SpeechMouth,RequiredDlcId\n" +
-            "TestDupe,Male,Sweet,UglyCrier,BalloonArtist,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,testdupe,Minion,0,"
-        );
+        assets.personalitiesFile = new TextAsset(LoadPersonalitiesCsv());
         Assets.instance = assets;
         AsyncLoadManager<IGlobalAsyncLoader>.Run();
     }
@@ -578,17 +628,29 @@ public class GameLoader {
                 Console.WriteLine($"[GameLoader] SpawnData: {bldg} buildings, {ores} ores, {other} entities, {picks} pickupables");
                 Console.WriteLine($"[GameLoader] Start position: {SpawnData.baseStartPos}");
 
-                // Add 3 starter duplicants near the start position
-                // Real duplicant spawning requires full Unity prefab system (NewBaseScreen.SpawnMinions)
-                // which isn't available headless. For now, add them as spawn markers.
+                // Add 3 starter duplicants near the start position using real personalities
                 var startX = SpawnData.baseStartPos.x;
                 var startY = SpawnData.baseStartPos.y;
+                var starters = Db.Get()?.Personalities?.GetStartingPersonalities();
+                var names = new List<string>();
+                if (starters != null && starters.Count >= 3) {
+                    var rng = new Random();
+                    var used = new HashSet<int>();
+                    for (var i = 0; i < 3; i++) {
+                        int idx;
+                        do { idx = rng.Next(starters.Count); } while (used.Contains(idx));
+                        used.Add(idx);
+                        names.Add(starters[idx].Name);
+                    }
+                } else {
+                    names.AddRange(new[] { "Meep", "Bubbles", "Stinky" });
+                }
                 for (var i = 0; i < 3; i++) {
                     SpawnData.otherEntities.Add(new TemplateClasses.Prefab(
-                        "Minion", TemplateClasses.Prefab.Type.Other,
+                        names[i], TemplateClasses.Prefab.Type.Other,
                         startX + i, startY, (SimHashes)0));
                 }
-                Console.WriteLine($"[GameLoader] Added 3 starter duplicants at ({startX},{startY})");
+                Console.WriteLine($"[GameLoader] Added 3 starter duplicants: {string.Join(", ", names)}");
             }
 
             // Build bgTemp from cells
