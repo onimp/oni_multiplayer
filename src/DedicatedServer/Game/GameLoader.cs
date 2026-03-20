@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,11 +28,36 @@ public class GameLoader {
     private const int DefaultWidth = 256;
     private const int DefaultHeight = 384;
 
-    private static readonly string GameStreamingAssetsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        "Library/Application Support/Steam/steamapps/common/OxygenNotIncluded",
-        "OxygenNotIncluded.app/Contents/Resources/Data/StreamingAssets"
-    );
+    /// <summary>
+    /// Path to the game's StreamingAssets directory. Auto-detected from common
+    /// Steam installation paths, or set via ONI_STREAMING_ASSETS env variable.
+    /// </summary>
+    private static readonly string GameStreamingAssetsPath = DetectStreamingAssetsPath();
+
+    private static string DetectStreamingAssetsPath() {
+        // Allow override via environment variable
+        var envPath = Environment.GetEnvironmentVariable("ONI_STREAMING_ASSETS");
+        if (!string.IsNullOrEmpty(envPath) && Directory.Exists(envPath)) return envPath;
+
+        // Auto-detect from common Steam installation paths
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var candidates = new[] {
+            // macOS
+            Path.Combine(home, "Library/Application Support/Steam/steamapps/common/OxygenNotIncluded",
+                "OxygenNotIncluded.app/Contents/Resources/Data/StreamingAssets"),
+            // Linux
+            Path.Combine(home, ".steam/steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/StreamingAssets"),
+            // Windows
+            @"C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\StreamingAssets",
+        };
+
+        foreach (var path in candidates) {
+            if (Directory.Exists(path)) return path;
+        }
+
+        throw new DirectoryNotFoundException(
+            "Could not find ONI StreamingAssets. Set ONI_STREAMING_ASSETS environment variable.");
+    }
 
     private Harmony harmony = null!;
     private int width;
@@ -214,143 +240,44 @@ public class GameLoader {
     }
 
     /// <summary>
-    /// Load all elements from the game's YAML files, bypassing SubstanceTable (Unity assets).
-    /// Reads YAML directly from disk — the game's FileSystem may not be initialized.
+    /// Load elements using the game's ElementLoader with stub SubstanceTables.
+    /// This calls the game's own YAML parsing + element creation logic.
     /// </summary>
     private void LoadElementsFromGame() {
-        ElementLoader.elements = new List<Element>();
-        ElementLoader.elementTable = new Dictionary<int, Element>();
-        ElementLoader.elementTagTable = new Dictionary<Tag, Element>();
+        // Provide stub SubstanceTable for each DLC — ElementLoader.Load() checks
+        // substanceTablesByDlc.ContainsKey(entry.dlcId) to decide which elements to load.
+        var substanceList = new Hashtable();
+        var substanceTables = new Dictionary<string, SubstanceTable> { { "", new SubstanceTable() } };
 
-        var elementsPath = GameStreamingAssetsPath + "/elements/";
-        Console.WriteLine($"[GameLoader] Elements path: {elementsPath}");
-        Console.WriteLine($"[GameLoader] Path exists: {Directory.Exists(elementsPath)}");
-
-        // Read YAML files directly (game's FileSystem may not be set up)
-        var entries = new List<ElementLoader.ElementEntry>();
-        if (Directory.Exists(elementsPath)) {
-            foreach (var yamlFile in Directory.GetFiles(elementsPath, "*.yaml")) {
-                if (Path.GetFileName(yamlFile).StartsWith(".")) continue;
-                try {
-                    var collection = Klei.YamlIO.LoadFile<ElementLoader.ElementEntryCollection>(yamlFile, null);
-                    if (collection?.elements != null) {
-                        entries.AddRange(collection.elements);
-                    }
-                } catch (Exception ex) {
-                    Console.WriteLine($"[GameLoader] Failed to load {Path.GetFileName(yamlFile)}: {ex.Message}");
-                }
+        // Add DLC substance tables if DLCs are present
+        foreach (var dlcId in DlcManager.RELEASED_VERSIONS) {
+            if (!substanceTables.ContainsKey(dlcId)) {
+                substanceTables[dlcId] = new SubstanceTable();
             }
         }
-        Console.WriteLine($"[GameLoader] Found {entries.Count} element entries in YAML");
 
-        foreach (var entry in entries) {
-            var hash = Hash.SDBMLower(entry.elementId);
-            if (ElementLoader.elementTable.ContainsKey(hash)) continue;
+        ElementLoader.Load(ref substanceList, substanceTables);
 
-            // Skip DLC elements if not "vanilla" (dlcId == "")
-            // For simplicity, load all — SimDLL will ignore unused ones
-            var element = new Element();
-            element.id = (SimHashes)hash;
-            element.name = entry.elementId; // Use ID as name (no localization)
-            element.nameUpperCase = entry.elementId.ToUpper();
-            element.tag = TagManager.Create(entry.elementId, entry.elementId);
-            element.dlcId = entry.dlcId;
-
-            // Copy all physical properties
-            CopyEntryToElement(entry, element);
-
-            // Create stub Substance (needed by FinaliseElementsTable)
-            element.substance = new Substance {
-                nameTag = element.tag,
-                anim = new KAnimFile { IsBuildLoaded = true }
-            };
-
-            var defMass = entry.defaultMass;
-            if (defMass <= 0f) defMass = 1f;
-            element.defaultValues = new Sim.PhysicsData {
-                temperature = entry.defaultTemperature,
-                mass = defMass
-            };
-
-            ElementLoader.elements.Add(element);
-            ElementLoader.elementTable[hash] = element;
-            ElementLoader.elementTagTable[element.tag] = element;
+        // Ensure all elements have a stub substance (Load may skip ManifestSubstance)
+        foreach (var elem in ElementLoader.elements) {
+            if (elem.substance == null) {
+                elem.substance = new Substance {
+                    nameTag = elem.tag,
+                    anim = new KAnimFile { IsBuildLoaded = true }
+                };
+            }
         }
 
-        // Sort and index elements (like FinaliseElementsTable)
-        FinaliseElements();
+        // Build elementTagTable if not already populated
+        if (ElementLoader.elementTagTable == null || ElementLoader.elementTagTable.Count == 0) {
+            ElementLoader.elementTagTable = new Dictionary<Tag, Element>();
+            foreach (var elem in ElementLoader.elements) {
+                ElementLoader.elementTagTable[elem.tag] = elem;
+            }
+        }
+
         WorldGen.SetupDefaultElements();
-
         Console.WriteLine($"[GameLoader] Registered {ElementLoader.elements.Count} elements");
-    }
-
-    private static void CopyEntryToElement(ElementLoader.ElementEntry entry, Element elem) {
-        elem.specificHeatCapacity = entry.specificHeatCapacity;
-        elem.thermalConductivity = entry.thermalConductivity;
-        elem.molarMass = entry.molarMass;
-        elem.strength = entry.strength;
-        elem.disabled = entry.isDisabled;
-        elem.flow = entry.flow;
-        elem.maxMass = entry.maxMass;
-        elem.maxCompression = entry.liquidCompression;
-        elem.viscosity = entry.speed;
-        elem.minHorizontalFlow = entry.minHorizontalFlow;
-        elem.minVerticalFlow = entry.minVerticalFlow;
-        elem.solidSurfaceAreaMultiplier = entry.solidSurfaceAreaMultiplier;
-        elem.liquidSurfaceAreaMultiplier = entry.liquidSurfaceAreaMultiplier;
-        elem.gasSurfaceAreaMultiplier = entry.gasSurfaceAreaMultiplier;
-        elem.state = entry.state;
-        elem.hardness = entry.hardness;
-        elem.lowTemp = entry.lowTemp;
-        elem.lowTempTransitionTarget = (SimHashes)Hash.SDBMLower(entry.lowTempTransitionTarget);
-        elem.highTemp = entry.highTemp;
-        elem.highTempTransitionTarget = (SimHashes)Hash.SDBMLower(entry.highTempTransitionTarget);
-        elem.highTempTransitionOreID = (SimHashes)Hash.SDBMLower(entry.highTempTransitionOreId);
-        elem.highTempTransitionOreMassConversion = entry.highTempTransitionOreMassConversion;
-        elem.lowTempTransitionOreID = (SimHashes)Hash.SDBMLower(entry.lowTempTransitionOreId);
-        elem.lowTempTransitionOreMassConversion = entry.lowTempTransitionOreMassConversion;
-    }
-
-    /// <summary>
-    /// Simplified FinaliseElementsTable — sort, index, set transition targets.
-    /// Skips SubstanceTable/texture lookups.
-    /// </summary>
-    private static void FinaliseElements() {
-        // Set temperature-related flags
-        foreach (var elem in ElementLoader.elements) {
-            if (elem.thermalConductivity == 0f)
-                elem.state |= Element.State.TemperatureInsulated;
-            if (elem.strength == 0f)
-                elem.state |= Element.State.Unbreakable;
-        }
-
-        // Sort: solids first (descending), then by id
-        ElementLoader.elements = ElementLoader.elements
-            .OrderByDescending(e => (int)(e.state & Element.State.Solid))
-            .ThenBy(e => e.id)
-            .ToList();
-
-        // Re-index and rebuild lookup tables
-        ElementLoader.elementTable.Clear();
-        for (var i = 0; i < ElementLoader.elements.Count; i++) {
-            var elem = ElementLoader.elements[i];
-            elem.idx = (ushort)i;
-            if (elem.substance != null)
-                elem.substance.idx = i;
-            ElementLoader.elementTable[(int)elem.id] = elem;
-        }
-
-        // Resolve transition targets
-        foreach (var elem in ElementLoader.elements) {
-            if (elem.IsSolid) {
-                elem.highTempTransition = ElementLoader.FindElementByHash(elem.highTempTransitionTarget);
-            } else if (elem.IsLiquid) {
-                elem.highTempTransition = ElementLoader.FindElementByHash(elem.highTempTransitionTarget);
-                elem.lowTempTransition = ElementLoader.FindElementByHash(elem.lowTempTransitionTarget);
-            } else if (elem.IsGas) {
-                elem.lowTempTransition = ElementLoader.FindElementByHash(elem.lowTempTransitionTarget);
-            }
-        }
     }
 
     private void InitializeWorld() {

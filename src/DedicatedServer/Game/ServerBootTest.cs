@@ -7,19 +7,17 @@ using NUnit.Framework;
 namespace DedicatedServer.Game;
 
 /// <summary>
-/// "Test" that boots the game world and starts the web server.
+/// Entry point for the dedicated server.
+/// Uses NUnit test runner as a workaround — dotnet test correctly configures
+/// Mono runtime for Harmony transpilers on macOS (direct mono execution hangs).
 /// Run via: dotnet test --filter ServerBoot --no-build
-/// This is a workaround for the Mono/CoreCLR runtime issue —
-/// dotnet test uses the correct Mono runtime that supports Harmony transpilers.
 /// </summary>
 [TestFixture]
 public class ServerBootTest {
 
     [OneTimeSetUp]
     public void Setup() {
-        // Install Unity patches FIRST — must happen before any game class is loaded.
-        // ElementLoader has a static initializer that calls Application.streamingAssetsPath,
-        // which is an InternalCall that doesn't exist without Unity.
+        // Install Unity patches BEFORE any game class is loaded
         UnityTestRuntime.Install();
     }
 
@@ -28,50 +26,32 @@ public class ServerBootTest {
         var port = 8080;
         var loader = new GameLoader();
 
-        Console.WriteLine("[ServerBoot] Booting game world with real WorldGen + SimDLL...");
+        Console.WriteLine("[Server] Booting game world...");
         loader.Boot();
 
-        var gridWidth = loader.Width;
-        var gridHeight = loader.Height;
-
-        Console.WriteLine($"[ServerBoot] Game world ready ({gridWidth}x{gridHeight}), SimDLL: {loader.SimRunning}");
-        Console.WriteLine("[ServerBoot] Starting web server...");
+        Console.WriteLine($"[Server] World ready ({loader.Width}x{loader.Height}), SimDLL: {loader.SimRunning}");
 
         var cts = new CancellationTokenSource();
         var server = new WebServer(port);
-        var realWorld = new RealWorldState(gridWidth, gridHeight, loader);
-        server.SetRealWorldState(realWorld);
+        server.SetRealWorldState(new RealWorldState(loader.Width, loader.Height, loader));
         server.Start(cts.Token);
 
-        Console.WriteLine($"[ServerBoot] Web server running at http://localhost:{port}/");
-        Console.WriteLine("[ServerBoot] Press Ctrl+C to stop.");
+        Console.WriteLine($"[Server] http://localhost:{port}/");
 
-        Console.CancelKeyPress += (_, e) => {
-            e.Cancel = true;
-            cts.Cancel();
-        };
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        // Tick simulation in background if SimDLL is running
         if (loader.SimRunning) {
-            Console.WriteLine("[ServerBoot] Starting simulation tick loop (200ms per tick)...");
             var tickThread = new Thread(() => {
                 while (!cts.IsCancellationRequested) {
-                    try {
-                        loader.TickSimulation();
-                        Thread.Sleep(200);
-                    } catch (Exception ex) {
-                        Console.WriteLine($"[ServerBoot] Tick error: {ex.Message}");
-                    }
+                    try { loader.TickSimulation(); Thread.Sleep(200); }
+                    catch (Exception ex) { Console.WriteLine($"[Tick] {ex.Message}"); }
                 }
             }) { IsBackground = true };
             tickThread.Start();
         }
 
-        try {
-            Thread.Sleep(Timeout.Infinite);
-        } catch (ThreadInterruptedException) {
-            // Cancelled
-        }
+        try { Thread.Sleep(Timeout.Infinite); }
+        catch (ThreadInterruptedException) { }
 
         loader.Shutdown();
     }

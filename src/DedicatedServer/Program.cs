@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DedicatedServer.Game;
 using DedicatedServer.Web;
+using MultiplayerMod.Test.Environment.Unity;
 
 namespace DedicatedServer;
 
@@ -47,14 +48,15 @@ public static class Program {
 
     public static void Main(string[] args) {
         var port = DefaultPort;
-        var useMock = false;
-
         foreach (var arg in args) {
             if (int.TryParse(arg, out var p)) port = p;
-            if (arg == "--mock") useMock = true;
         }
 
         Console.WriteLine($"ONI Dedicated Server starting on port {port}...");
+
+        // Install Unity patches BEFORE any game class is loaded.
+        // ElementLoader has a static initializer that calls Application.streamingAssetsPath.
+        UnityTestRuntime.Install();
 
         var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => {
@@ -62,27 +64,29 @@ public static class Program {
             cts.Cancel();
         };
 
-        // Start web server first (serves mock data initially)
+        var loader = new GameLoader();
+        loader.Boot();
+
         var server = new WebServer(port);
+        server.SetRealWorldState(new RealWorldState(loader.Width, loader.Height, loader));
         server.Start(cts.Token);
+
         Console.WriteLine($"Web server running at http://localhost:{port}/");
 
-        GameLoader? gameLoader = null;
-
-        if (!useMock) {
-            try {
-                Console.WriteLine("Loading game DLLs...");
-                gameLoader = new GameLoader();
-                gameLoader.Boot();
-                server.SetRealWorldState(new RealWorldState(gameLoader.Width, gameLoader.Height, gameLoader));
-                Console.WriteLine("Game world loaded. Visualizer showing real data.");
-            } catch (Exception ex) {
-                Console.WriteLine($"[ERROR] Failed to load game: {ex.Message}");
-                Console.WriteLine($"[ERROR] {ex.StackTrace}");
-                Console.WriteLine("Falling back to mock data. Use --mock to skip game loading.");
-            }
-        } else {
-            Console.WriteLine("Mock mode: using generated world data.");
+        // Tick simulation in background
+        if (loader.SimRunning) {
+            Console.WriteLine("Simulation tick loop started (200ms per tick)");
+            var tickThread = new Thread(() => {
+                while (!cts.IsCancellationRequested) {
+                    try {
+                        loader.TickSimulation();
+                        Thread.Sleep(200);
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[Tick] Error: {ex.Message}");
+                    }
+                }
+            }) { IsBackground = true };
+            tickThread.Start();
         }
 
         Console.WriteLine("Press Ctrl+C to stop.");
@@ -93,7 +97,7 @@ public static class Program {
             // Cancelled
         }
 
-        gameLoader?.Shutdown();
+        loader.Shutdown();
         Console.WriteLine("Shutting down...");
     }
 }
