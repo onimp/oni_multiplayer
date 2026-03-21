@@ -133,6 +133,15 @@ public class WorldBuilder {
         // Without this reset, StateMachineUpdater would skip all SM ticks.
         StateMachine.Instance.error = false;
 
+        // Fix consumerState for all Brains after spawn.
+        // ChoreConsumer.OnSpawn() may fail before initializing consumerState for two reasons:
+        //   1. Minions: schedulable.GetSchedule() returns null because MinionIdentity.OnSpawn()
+        //      (which triggers OnAddDupe → schedule assignment) runs AFTER ChoreConsumer.OnSpawn()
+        //      in the BaseMinionConfig component order.
+        //   2. Creatures: ChoreTable.Instance ctor throws when SMI creation fails in headless.
+        // Both leave consumerState null → Brain.UpdateChores() NPEs on every tick.
+        FixChoreConsumers();
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         Console.WriteLine($"[WorldBuilder] World ready: {Width}x{Height}, SimDLL: {SimRunning}");
@@ -441,6 +450,46 @@ public class WorldBuilder {
         if (field != null) return;
         try { field = factory(); }
         catch (Exception ex) { Console.WriteLine($"[Db] {name} skipped: {ex.GetBaseException().Message}"); }
+    }
+
+    /// <summary>
+    /// Post-spawn fix: assign default schedules to unscheduled Minions and initialize
+    /// consumerState on any Brain whose ChoreConsumer.OnSpawn() did not complete.
+    /// Called once after SpawnEntities() when all Components.Brains are populated.
+    /// </summary>
+    private void FixChoreConsumers() {
+        // Step 1: assign default schedule to all Minions not yet scheduled.
+        // Must happen BEFORE creating ChoreConsumerState — its ctor calls
+        // schedulable.GetSchedule().GetCurrentScheduleBlock() which NPEs on null.
+        var schedules = ScheduleManager.Instance?.GetSchedules();
+        if (schedules?.Count > 0) {
+            foreach (var identity in Components.LiveMinionIdentities.Items) {
+                try {
+                    var schedulable = identity.GetComponent<Schedulable>();
+                    if (schedulable == null) continue;
+                    if (ScheduleManager.Instance!.GetSchedule(schedulable) != null) continue;
+                    schedules[0].Assign(schedulable);
+                } catch (Exception ex) {
+                    Console.WriteLine($"[WorldBuilder] Schedule assign failed for {identity.name}: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+
+        // Step 2: create ChoreConsumerState for every Brain that is missing it.
+        // Covers Minions (schedule now assigned above) and Creatures (choreTable may have failed).
+        var fixedCount = 0;
+        foreach (var brain in Components.Brains.Items) {
+            try {
+                var cc = brain.gameObject.GetComponent<ChoreConsumer>();
+                if (cc == null || cc.consumerState != null) continue;
+                cc.consumerState = new ChoreConsumerState(cc);
+                fixedCount++;
+            } catch (Exception ex) {
+                Console.WriteLine($"[WorldBuilder] consumerState init failed for {brain.name}: {ex.GetBaseException().Message}");
+            }
+        }
+
+        Console.WriteLine($"[WorldBuilder] FixChoreConsumers: {fixedCount}/{Components.Brains.Count} consumerState(s) initialized post-spawn");
     }
 
     public void Shutdown() {
