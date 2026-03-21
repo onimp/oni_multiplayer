@@ -5,21 +5,25 @@ using HarmonyLib;
 namespace DedicatedServer.Game.Patches;
 
 /// <summary>
-/// Ensures ChoreConsumer.OnSpawn always initializes consumerState, even if ChoreTable
-/// construction or ChoreConsumerState initialization partially fails in headless mode.
+/// Fixes ChoreConsumer in headless mode.
 ///
 /// Two known failure modes:
 ///  1. Minions (choreTable == null): consumerState ctor NPEs at
 ///     schedulable.GetSchedule().GetCurrentScheduleBlock() because MinionIdentity.OnSpawn()
 ///     (which triggers OnAddDupe → schedule assignment) runs AFTER ChoreConsumer.OnSpawn()
-///     in the component order from BaseMinionConfig.
+///     in the BaseMinionConfig component order.
+///     Fix: Prefix pre-assigns default schedule before OnSpawn runs.
 ///
-///  2. Creatures (choreTable != null): ChoreTableChore.ctor calls def.CreateSMI() which
-///     calls StateMachineManager.CreateSMIFromDef(), which can fail in headless if the
-///     state machine's CreateStates/BindStates/InitializeStateMachine has rendering deps.
+///  2. Creatures (choreTable != null): ChoreTableChore.ctor → def.CreateSMI() →
+///     StateMachineManager.CreateSMIFromDef() throws in headless → OnSpawn throws →
+///     consumerState stays null.
+///     Fix: FindNextChore Prefix guards against null consumerState (returns false=no chore).
+///
+/// NOTE: [HarmonyFinalizer] is NOT used here — the Harmony version bundled with the game
+/// deadlocks during patching when a Finalizer is present.
 /// </summary>
 [HarmonyPatch(typeof(ChoreConsumer), "OnSpawn")]
-public static class ChoreConsumerPatch {
+public static class ChoreConsumerOnSpawnPatch {
 
     /// <summary>
     /// Pre-assign a default schedule to unscheduled Schedulables before ChoreConsumer
@@ -41,28 +45,21 @@ public static class ChoreConsumerPatch {
             Console.WriteLine($"[BrainFix] EnsureSchedule failed on {__instance.name}: {ex.GetBaseException().Message}");
         }
     }
+}
 
-    /// <summary>
-    /// After OnSpawn (even if it threw): if consumerState is still null, initialize it.
-    /// Suppresses the original exception — OnSpawn failure is non-fatal; the brain can
-    /// still tick with a valid consumerState even if choreTableInstance is missing.
-    /// </summary>
-    [HarmonyFinalizer]
-    static Exception EnsureConsumerState(Exception __exception, ChoreConsumer __instance) {
-        if (__exception != null) {
-            Console.WriteLine($"[BrainFix] ChoreConsumer.OnSpawn threw on {__instance.name}: {__exception.GetBaseException().Message}");
-        }
+/// <summary>
+/// Guards Brain.UpdateBrain() → FindNextChore() against null consumerState.
+/// When ChoreConsumer.OnSpawn() throws (e.g. creature ChoreTable SMI creation fails),
+/// TriggerLifecycle catches it and continues — but consumerState stays null.
+/// Without this guard, the Brain NPEs every tick at consumerState.Refresh().
+/// </summary>
+[HarmonyPatch(typeof(ChoreConsumer), "FindNextChore")]
+public static class ChoreConsumerFindNextChorePatch {
 
-        if (__instance.consumerState == null) {
-            try {
-                __instance.consumerState = new ChoreConsumerState(__instance);
-                if (__exception != null)
-                    Console.WriteLine($"[BrainFix] consumerState fallback OK for {__instance.name}");
-            } catch (Exception e2) {
-                Console.WriteLine($"[BrainFix] consumerState fallback also failed for {__instance.name}: {e2.GetBaseException().Message}");
-            }
-        }
-
-        return null; // Suppress original exception
+    [HarmonyPrefix]
+    static bool GuardNullConsumerState(ChoreConsumer __instance, ref bool __result) {
+        if (__instance.consumerState != null) return true; // run original
+        __result = false; // no chore found
+        return false;     // skip original
     }
 }
