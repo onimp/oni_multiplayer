@@ -120,7 +120,6 @@ public class WorldBuilder {
         }
 
         SpawnData = cluster.currentWorld.SpawnData;
-        if (SpawnData != null) AddStarterDuplicants(SpawnData);
 
         // Initialize SimDLL with generated cell data
         if (generatedCells != null) {
@@ -180,6 +179,12 @@ public class WorldBuilder {
 
         Console.WriteLine("[WorldBuilder] Spawning entities...");
         SpawnEntities(cluster);
+
+        // Spawn starter duplicants at the actual colony location.
+        // Must run AFTER SpawnEntities so Telepad/PrintingPod is already in the world
+        // (FindColonySpawnCell can then locate it via FindObjectsOfType).
+        // Also requires Grid.Solid to be populated (only valid after Sim.Start()).
+        SpawnStarterMinions();
 
         // Reset SM error flag — some entity OnSpawn() may have tripped it during boot.
         // Without this reset, StateMachineUpdater would skip all SM ticks.
@@ -542,16 +547,75 @@ public class WorldBuilder {
         Console.WriteLine($"[WorldBuilder] Registered {registered}/{types.Count} entities ({failed} failed), prefabs: {Assets.PrefabsByTag?.Count ?? 0}");
     }
 
-    private void AddStarterDuplicants(GameSpawnData spawnData) {
-        var startX = spawnData.baseStartPos.x;
-        var startY = spawnData.baseStartPos.y;
-        // Prefab ID must match the registered entity tag — "Minion" from MinionConfig.
-        // Personalities are applied post-spawn; for now just place 3 Minion prefabs.
+    /// <summary>
+    /// Spawns 3 starter duplicants at the real colony location.
+    /// Called after SpawnEntities() so Grid.Solid is valid and Telepad is already in the world.
+    /// </summary>
+    private void SpawnStarterMinions() {
+        var spawnCell = FindColonySpawnCell();
         for (var i = 0; i < 3; i++) {
-            spawnData.otherEntities.Add(new TemplateClasses.Prefab(
-                "Minion", TemplateClasses.Prefab.Type.Other, startX + i, startY, (SimHashes)0));
+            var cell = spawnCell + i;
+            var x = cell % Grid.WidthInCells;
+            var y = cell / Grid.WidthInCells;
+            // PlaceOtherEntities(entity, rootCell=0) computes cell = Grid.OffsetCell(0, x, y) = x + y*Width
+            // so passing global (x,y) directly gives the correct global cell.
+            var entity = new TemplateClasses.Prefab("Minion", TemplateClasses.Prefab.Type.Other, x, y, (SimHashes)0);
+            var go = TemplateLoader.PlaceOtherEntities(entity, 0);
+            if (go != null) {
+                Console.WriteLine($"[SpawnMinion] Spawned Minion at ({x},{y}) cell={cell}");
+                _spawnedMinions.Add(go);
+                if (!_prefabSizeMap.ContainsKey("Minion")) CaptureEntitySize("Minion", go);
+            } else {
+                Console.WriteLine($"[SpawnMinion] Failed to spawn Minion at ({x},{y}) cell={cell}");
+            }
         }
-        Console.WriteLine($"[WorldBuilder] Added 3 Minion prefabs at ({startX},{startY})");
+        Console.WriteLine($"[WorldBuilder] {_spawnedMinions.Count} starter minion(s) spawned");
+    }
+
+    /// <summary>
+    /// Finds the best cell to spawn duplicants, using the real colony terrain.
+    /// Priority 1: locate the Telepad/PrintingPod and stand on its floor.
+    /// Priority 2: scan Grid for the first breathable cell (non-Vacuum) above a solid floor.
+    /// Requires Sim.Start() to have run (Grid.Solid must be populated).
+    /// </summary>
+    private static int FindColonySpawnCell() {
+        // Priority 1: find PrintingPod / Telepad in the world (spawned by SpawnEntities).
+        // Stand on the cell at floor level just below the telepad.
+        var telepad = UnityEngine.Object.FindObjectsOfType<KMonoBehaviour>()
+            .FirstOrDefault(x => x.GetType().Name == "Telepad" || x.GetType().Name == "StartingTelepad");
+        if (telepad != null) {
+            var cell = Grid.PosToCell(telepad.transform.position);
+            Console.WriteLine($"[SpawnFinder] Found Telepad at cell={cell} ({cell % Grid.WidthInCells},{cell / Grid.WidthInCells})");
+            // Walk downward to find solid floor, stand on cell above it
+            for (var dy = 0; dy < 10; dy++) {
+                var floorCell = cell - dy * Grid.WidthInCells;
+                var standCell = floorCell + Grid.WidthInCells;
+                if (Grid.IsValidCell(floorCell) && Grid.IsValidCell(standCell)
+                    && Grid.Solid[floorCell] && !Grid.Solid[standCell])
+                    return standCell;
+            }
+            Console.WriteLine("[SpawnFinder] Telepad found but no solid floor below, falling back to scan");
+        }
+
+        // Priority 2: scan the centre half of the map for a breathable cell over a solid floor.
+        // Search top-down (higher y first) so we find the upper colony area before underground.
+        for (var y = Grid.HeightInCells * 3 / 4; y >= Grid.HeightInCells / 4; y--) {
+            for (var x = Grid.WidthInCells / 4; x < Grid.WidthInCells * 3 / 4; x++) {
+                var cell = y * Grid.WidthInCells + x;
+                var floorCell = cell - Grid.WidthInCells;
+                if (!Grid.IsValidCell(cell) || !Grid.IsValidCell(floorCell)) continue;
+                if (Grid.Solid[floorCell] && !Grid.Solid[cell]
+                    && Grid.Element[cell]?.id != SimHashes.Vacuum) {
+                    Console.WriteLine($"[SpawnFinder] Auto-detected spawn at ({x},{y}) cell={cell}");
+                    return cell;
+                }
+            }
+        }
+
+        // Fallback: world centre (should never hit this on a valid world)
+        var fallbackCell = (Grid.HeightInCells / 2) * Grid.WidthInCells + Grid.WidthInCells / 2;
+        Console.WriteLine($"[SpawnFinder] WARN: no suitable spawn found, using world centre cell={fallbackCell}");
+        return fallbackCell;
     }
 
     /// <summary>
