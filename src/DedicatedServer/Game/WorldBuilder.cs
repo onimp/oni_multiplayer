@@ -609,9 +609,13 @@ public class WorldBuilder {
     /// </summary>
     private void SpawnStarterMinions() {
         var startCell = FindColonySpawnCell();
+        // Only request as many cells as we want, but spawn ONLY the unique cells returned.
+        // Do NOT fall back to startCell for missing slots — a dupe sharing a cell halves the
+        // atmosphere mass per dupe, pushing mass below IsBreathable threshold → allMet=False.
         var cells = FindSpawnCells(startCell, 3);
-        for (var i = 0; i < 3; i++) {
-            var cell = i < cells.Count ? cells[i] : startCell;
+        Console.WriteLine($"[SpawnMinion] Spawning {cells.Count} dupe(s) (unique gas cells found={cells.Count}/3)");
+        for (var i = 0; i < cells.Count; i++) {
+            var cell = cells[i];
             var x = cell % Grid.WidthInCells;
             var y = cell / Grid.WidthInCells;
             // PlaceOtherEntities(entity, rootCell=0) computes cell = Grid.OffsetCell(0, x, y) = x + y*Width
@@ -698,10 +702,28 @@ public class WorldBuilder {
             }
             if (firstGasCell >= 0) {
                 var e = Grid.Element[firstGasCell];
-                Console.WriteLine($"[SpawnFinder] No O2 found, using first gas cell: ({firstGasCell % w},{firstGasCell / w}) elem={e?.tag} mass={Grid.Mass[firstGasCell]:F2}");
+                Console.WriteLine($"[SpawnFinder] No O2 found above HQ, using first gas cell: ({firstGasCell % w},{firstGasCell / w}) elem={e?.tag} mass={Grid.Mass[firstGasCell]:F2}");
                 return firstGasCell;
             }
-            Console.WriteLine($"[SpawnFinder] HQ known at cell={_hqCell} but no gas cell found within 30 rows above, falling back");
+
+            // Priority 1b: O2 exists laterally (e.g. y=204-205 has O2 but no floor directly above HQ).
+            // Scan a ±15 wide band at dy=8..25 to find an O2 cell that has solid floor below it.
+            Console.WriteLine($"[SpawnFinder] Vertical scan found no valid cell — trying horizontal O2 scan (dy=8..25, dx=±15)");
+            for (var dy = 8; dy <= 25; dy++) {
+                for (var dx = -15; dx <= 15; dx++) {
+                    var c = _hqCell + dy * w + dx;
+                    if (!Grid.IsValidCell(c) || Grid.Solid[c]) continue;
+                    var floorC = c - w;
+                    if (!Grid.IsValidCell(floorC) || !Grid.Solid[floorC]) continue;
+                    var e = Grid.Element[c];
+                    if (e == null || e.IsLiquid || e.id == SimHashes.Vacuum) continue;
+                    if (e.id == SimHashes.Oxygen && Grid.Mass[c] > 1.0f) {
+                        Console.WriteLine($"[SpawnFinder] O2 with floor found laterally at ({c % w},{c / w}) dx={dx} dy={dy} mass={Grid.Mass[c]:F2}");
+                        return c;
+                    }
+                }
+            }
+            Console.WriteLine($"[SpawnFinder] HQ known at cell={_hqCell} but no gas cell found in 30-row+lateral scan, falling back");
         } else {
             Console.WriteLine("[SpawnFinder] _hqCell not set — HQ not found in SpawnData");
         }
