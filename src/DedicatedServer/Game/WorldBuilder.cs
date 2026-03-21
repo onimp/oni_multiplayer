@@ -537,7 +537,8 @@ public class WorldBuilder {
         var types = typeof(GeneratedBuildings).Assembly.GetTypes().ToList();
         var before = Assets.BuildingDefs?.Count ?? 0;
         GeneratedBuildings.LoadGeneratedBuildings(types);
-        BuildingConfigManager.Instance.ConfigurePost();
+        try { BuildingConfigManager.Instance.ConfigurePost(); }
+        catch (Exception ex) { Console.WriteLine($"[WorldBuilder] ConfigurePost non-fatal: {ex.GetBaseException().Message}"); }
         var after = Assets.BuildingDefs?.Count ?? 0;
         Console.WriteLine($"[WorldBuilder] Registered {after - before} building defs via GeneratedBuildings ({after} total in Assets)");
         // Populate local cache for GetBuildingDef() callers (e.g. RealWorldState)
