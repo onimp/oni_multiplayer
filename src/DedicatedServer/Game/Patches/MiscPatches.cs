@@ -203,6 +203,19 @@ public static class DebugPatches {
     }
 }
 
+/// <summary>
+/// LightSymbolTracker is a rendering-only component (tracks a light position to an animation symbol).
+/// RenderEveryTick → IsEnableAndVisible → CameraController.Instance.VisibleArea → NPE (no camera in headless).
+/// 12,489 NPEs/min with zero gameplay impact. Suppress entirely.
+/// </summary>
+[HarmonyPatch(typeof(LightSymbolTracker))]
+public static class LightSymbolTrackerPatches {
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(LightSymbolTracker.RenderEveryTick))]
+    static bool RenderEveryTick() => false; // No camera in headless — skip rendering
+}
+
 [HarmonyPatch(typeof(SystemInfo))]
 public static class SystemInfoPatches {
 

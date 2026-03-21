@@ -40,6 +40,8 @@ public class WorldBuilder {
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
         SimTick++;
+        // One-time diagnostic: log chore/nav state for each Minion at tick 5.
+        if (SimTick == 5) LogDuplicantStatus();
         var activeRegions = new List<global::Game.SimActiveRegion> {
             new() { region = new Pair<Vector2I, Vector2I>(new Vector2I(0, 0), new Vector2I(Width, Height)) }
         };
@@ -279,6 +281,11 @@ public class WorldBuilder {
             game.travelTubeSystem ??= new UtilityNetworkTubesManager(Width, Height, 35);
             game.gasConduitFlow ??= new ConduitFlow(ConduitType.Gas, Width * Height, game.gasConduitSystem, 1f, 0.25f);
             game.liquidConduitFlow ??= new ConduitFlow(ConduitType.Liquid, Width * Height, game.liquidConduitSystem, 10f, 0.75f);
+            // fetchManager: initialized at Game.OnPrefabInit line 835 (after crash at line 820).
+            // PickupableSensor.Update() calls Game.Instance.fetchManager.UpdatePickups() every
+            // brain tick — NPEs 1,380×/min if null. Just add the component; FetchManager has no
+            // custom OnPrefabInit so AddComponent is sufficient.
+            game.fetchManager ??= go.AddComponent<FetchManager>();
         }
 
 
@@ -660,6 +667,24 @@ public class WorldBuilder {
         }
 
         Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{allBrainGOs.Count} consumerState(s) created (minions={minionGOs.Count} brains={Components.Brains.Count})");
+    }
+
+    /// <summary>
+    /// One-shot diagnostic: logs currentChore and NavType for each spawned Minion.
+    /// Called at SimTick==5 to verify Brain→Chore→Navigator pipeline is working.
+    /// </summary>
+    private void LogDuplicantStatus() {
+        Console.WriteLine($"[DupeStatus] tick={SimTick} minions={_spawnedMinions.Count}");
+        foreach (var go in _spawnedMinions) {
+            try {
+                var driver = go.GetComponent<ChoreDriver>();
+                var nav    = go.GetComponent<Navigator>();
+                var chore  = driver?.GetCurrentChore();
+                Console.WriteLine($"  [{go.name}] chore={chore?.GetType().Name ?? "null"}  navType={nav?.CurrentNavType.ToString() ?? "null"}  navGrid={nav?.NavGrid?.id ?? "null"}");
+            } catch (Exception ex) {
+                Console.WriteLine($"  [{go.name}] ERROR: {ex.GetBaseException().Message}");
+            }
+        }
     }
 
     public void Shutdown() {
