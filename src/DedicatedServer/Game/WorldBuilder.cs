@@ -53,8 +53,8 @@ public class WorldBuilder {
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
         SimTick++;
-        // Multi-tick diagnostic: log at tick 5, 30, 100 to see if paths warm up over time.
-        if (SimTick == 5 || SimTick == 30 || SimTick == 100) LogDuplicantStatus();
+        // Multi-tick diagnostic: log at tick 5, 30, 100, 200 to see if movement starts over time.
+        if (SimTick == 5 || SimTick == 30 || SimTick == 100 || SimTick == 200) LogDuplicantStatus();
         var activeRegions = new List<global::Game.SimActiveRegion> {
             new() { region = new Pair<Vector2I, Vector2I>(new Vector2I(0, 0), new Vector2I(Width, Height)) }
         };
@@ -603,8 +603,11 @@ public class WorldBuilder {
     /// </summary>
     private static List<int> FindSpawnCells(int startCell, int count) {
         var result = new List<int>(count);
-        for (var x = 0; result.Count < count && x <= 200; x++) {
-            var candidate = startCell + (x % 2 == 0 ? x / 2 : -(x + 1) / 2); // zigzag: 0,1,-1,2,-2,...
+        // Zigzag: 0,−1,+1,−2,+2,−3,+3,−4,+4,−5,+5,−6,+6 → ±6 cells max.
+        // Narrow range keeps all dupes in the same connected cave pocket.
+        // (old limit was 200 which could reach isolated pockets 8+ cells away)
+        for (var x = 0; result.Count < count && x <= 12; x++) {
+            var candidate = startCell + (x % 2 == 0 ? x / 2 : -(x + 1) / 2);
             var floorCell = candidate - Grid.WidthInCells;
             if (!Grid.IsValidCell(candidate) || !Grid.IsValidCell(floorCell)) continue;
             if (!Grid.Solid[floorCell] || Grid.Solid[candidate]) continue;
@@ -614,8 +617,8 @@ public class WorldBuilder {
             if (result.Contains(candidate)) continue;
             result.Add(candidate);
         }
-        if (result.Count < count)
-            Console.WriteLine($"[SpawnFinder] Only found {result.Count}/{count} suitable spawn cells near {startCell}");
+        // Pad with startCell so remaining dupes overlap rather than land in isolated pockets.
+        while (result.Count < count) result.Add(startCell);
         return result;
     }
 
