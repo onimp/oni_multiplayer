@@ -41,8 +41,8 @@ public class WorldBuilder {
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
         SimTick++;
-        // One-time diagnostic: log chore/nav state for each Minion at tick 5.
-        if (SimTick == 5) LogDuplicantStatus();
+        // Multi-tick diagnostic: log at tick 5, 30, 100 to see if paths warm up over time.
+        if (SimTick == 5 || SimTick == 30 || SimTick == 100) LogDuplicantStatus();
         var activeRegions = new List<global::Game.SimActiveRegion> {
             new() { region = new Pair<Vector2I, Vector2I>(new Vector2I(0, 0), new Vector2I(Width, Height)) }
         };
@@ -950,7 +950,57 @@ public class WorldBuilder {
                 // Sensor state
                 var sensors   = go.GetComponent<Sensors>();
                 var idleSensor = sensors?.GetSensor<IdleCellSensor>();
-                Console.WriteLine($"  [{go.name}] idleCell={idleSensor?.GetCell() ?? -1}  ChorePreconditions.instance={(ChorePreconditions.instance != null ? "OK" : "NULL")}");
+                var hasIdleTag = go.GetComponent<KPrefabID>()?.HasTag(GameTags.Idle) ?? false;
+                Console.WriteLine($"  [{go.name}] idleCell={idleSensor?.GetCell() ?? -1}  hasIdleTag={hasIdleTag}  ChorePreconditions.instance={(ChorePreconditions.instance != null ? "OK" : "NULL")}");
+
+                // NavGrid + PathGrid diagnostics
+                // GetNavigationCost uses PathGrid.GetCost (PathProber-warmed) — -1 = unreachable.
+                // RunQuery uses PathFinder.Run BFS directly — doesn't need PathGrid warmup.
+                // If all costs == -1, PathGrid is cold (AsyncPathProber hasn't run yet); BFS still works.
+                if (nav != null) {
+                    Console.WriteLine($"  [{nav.gameObject.name}] NavGrid={nav.NavGrid?.id ?? "NULL"}  PathGrid={nav.PathGrid != null}  abilities={nav.GetComponent<Navigator>()?.GetCurrentAbilities() != null}  navType={nav.CurrentNavType}");
+                    var reachable = 0;
+                    var sb = new System.Text.StringBuilder();
+                    for (var offset = -3; offset <= 3; offset++) {
+                        var testCell = cell + offset;
+                        var cost = nav.GetNavigationCost(testCell);
+                        if (cost != -1) { reachable++; sb.Append($"cell{testCell}:{cost} "); }
+                    }
+                    Console.WriteLine($"  [{nav.gameObject.name}] PathGrid reachable (±3 cells): {reachable}/7  {(reachable == 0 ? "(PathGrid cold — BFS still works)" : sb.ToString())}");
+
+                    // Force synchronous probe to warm PathGrid and recheck
+                    try {
+                        nav.UpdateProbe(forceUpdate: true);
+                        var reachableAfter = 0;
+                        for (var offset = -3; offset <= 3; offset++) {
+                            if (nav.GetNavigationCost(cell + offset) != -1) reachableAfter++;
+                        }
+                        Console.WriteLine($"  [{nav.gameObject.name}] After forceUpdate probe: reachable={reachableAfter}/7");
+                    } catch (Exception ex3) {
+                        Console.WriteLine($"  [{nav.gameObject.name}] UpdateProbe error: {ex3.GetBaseException().Message}");
+                    }
+                }
+
+                // SafeFlags for current cell and neighbors — reveals exactly why IdleCellQuery returns -1.
+                // IdleCellQuery requires: IsClear & IsNotLadder & IsNotTube & IsBreathable & IsNotLiquid
+                var brain4 = go.GetComponent<MinionBrain>();
+                if (brain4 != null) {
+                    Console.WriteLine($"  [{go.name}] SafeFlags for current cell {cell}: {SafeCellQuery.GetFlags(cell, brain4)}");
+                    var bestFlags = (SafeCellQuery.SafeFlags)0;
+                    var bestCell = -1;
+                    for (var offset = -5; offset <= 5; offset++) {
+                        var tc = cell + offset;
+                        if (!Grid.IsValidCell(tc)) continue;
+                        var f = SafeCellQuery.GetFlags(tc, brain4);
+                        if ((int)f > (int)bestFlags) { bestFlags = f; bestCell = tc; }
+                    }
+                    const SafeCellQuery.SafeFlags idleRequired = SafeCellQuery.SafeFlags.IsClear | SafeCellQuery.SafeFlags.IsNotLadder | SafeCellQuery.SafeFlags.IsNotTube | SafeCellQuery.SafeFlags.IsBreathable | SafeCellQuery.SafeFlags.IsNotLiquid;
+                    Console.WriteLine($"  [{go.name}] Best SafeFlags in ±5: cell={bestCell} flags={bestFlags}  idleRequired={idleRequired}  allMet={(bestFlags & idleRequired) == idleRequired}");
+                    // Log mass+element for current cell (helps diagnose IsBreathable failures)
+                    if (Grid.IsValidCell(cell)) {
+                        unsafe { Console.WriteLine($"  [{go.name}] cell {cell}: mass={Grid.mass[cell]:F3}  elementIdx={Grid.elementIdx[cell]}  solid={Grid.Solid[cell]}  temp={Grid.temperature[cell]:F1}K"); }
+                    }
+                }
 
                 // ChoreConsumer providers list
                 if (consumer != null && providersField != null) {
