@@ -70,24 +70,28 @@ public static class Program {
         Console.WriteLine($"Web server running at http://localhost:{port}/");
 
         if (loader.World.SimRunning) {
-            Console.WriteLine("State machine tick loop started (60 Hz target)");
+            // Run tick loop on the MAIN thread — this is required for correct game behavior.
+            // Game.MainThread = Thread.CurrentThread is captured at static init time (main thread).
+            // Game.IsOnMainThread() checks current thread == MainThread. If the tick loop runs
+            // on a background thread, IsOnMainThread() returns false →
+            //   DoPreconditions sets skippedPreconditions = true → IsComplete() returns false →
+            //   CollectChores tries incomplete_contexts.Add(item) → NPE (null passed by 4-arg overload).
+            Console.WriteLine("State machine tick loop running on main thread (press Ctrl+C to stop)");
             var tickLoop = loader.World.TickLoop;
-            new Thread(() => {
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-                while (!cts.IsCancellationRequested) {
-                    try {
-                        sw.Restart();
-                        tickLoop.Update(0.2f); // Each tick = 200ms (1/5 sec) for now
-                        var elapsed = sw.ElapsedMilliseconds;
-                        if (elapsed < 200) Thread.Sleep(200 - (int)elapsed);
-                    }
-                    catch (Exception ex) { Console.WriteLine($"[StateMachineTick] Error: {ex.Message}\n{ex.StackTrace}"); }
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (!cts.IsCancellationRequested) {
+                try {
+                    sw.Restart();
+                    tickLoop.Update(0.2f); // Each tick = 200ms (1/5 sec) for now
+                    var elapsed = sw.ElapsedMilliseconds;
+                    if (elapsed < 200) Thread.Sleep(200 - (int)elapsed);
                 }
-            }) { IsBackground = true }.Start();
+                catch (Exception ex) { Console.WriteLine($"[StateMachineTick] Error: {ex.Message}\n{ex.StackTrace}"); }
+            }
+        } else {
+            Console.WriteLine("Press Ctrl+C to stop.");
+            try { Task.Delay(-1, cts.Token).Wait(); } catch (AggregateException) {}
         }
-
-        Console.WriteLine("Press Ctrl+C to stop.");
-        try { Task.Delay(-1, cts.Token).Wait(); } catch (AggregateException) {}
 
         loader.Shutdown();
         Console.WriteLine("Shutting down...");
