@@ -578,9 +578,9 @@ public class WorldBuilder {
 
     /// <summary>
     /// Post-spawn fix: ensure ChoreProvider/ChoreDriver are initialized, assign default schedules,
-    /// and create ChoreConsumerState for all Minions whose ChoreConsumer.OnSpawn() did not complete.
-    /// Called once after SpawnEntities(). Only touches LiveMinionIdentities — creatures have a
-    /// different ChoreTable and can NPE if processed here.
+    /// and create ChoreConsumerState for all entities (Minions AND critters) whose
+    /// ChoreConsumer.OnSpawn() did not complete.
+    /// Called once after SpawnEntities().
     /// </summary>
     private void FixChoreConsumers() {
         // Prefer _spawnedMinions (directly tracked during SpawnEntities) over LiveMinionIdentities
@@ -635,10 +635,20 @@ public class WorldBuilder {
             Console.WriteLine($"[WorldBuilder] WARNING: ScheduleManager has no schedules — consumerState will fail!");
         }
 
-        // Step 2: create ChoreConsumerState for Minions that are still missing it.
-        // Only Minions — creature ChoreTable.Instance ctor NPEs in headless.
+        // Step 2: create ChoreConsumerState for ALL entities with null consumerState.
+        // Minions: covered via minionGOs (direct tracking from SpawnEntities).
+        // Critters/other: covered via Components.Brains — all entities with Brain register there.
+        //   Brain.UpdateChores → FindNextChore immediately NPEs if consumerState==null (0x0000b).
+        //   ChoreConsumerState ctor is safe for any entity: Schedulable/Navigator/Resume are
+        //   null-checked internally. Creatures have no Schedulable so scheduleBlock stays null.
+        // Previous code only fixed Minions. Non-Minion entities (critters) caused 2.2K NPEs/min.
+        var allBrainGOs = new HashSet<GameObject>(minionGOs);
+        foreach (var brain in Components.Brains.Items) {
+            if (brain?.gameObject != null) allBrainGOs.Add(brain.gameObject);
+        }
+
         var fixedCount = 0;
-        foreach (var go in minionGOs) {
+        foreach (var go in allBrainGOs) {
             try {
                 var cc = go.GetComponent<ChoreConsumer>();
                 if (cc == null || cc.consumerState != null) continue;
@@ -649,7 +659,7 @@ public class WorldBuilder {
             }
         }
 
-        Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{minionGOs.Count} consumerState(s) created, Brains={Components.Brains.Count}");
+        Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{allBrainGOs.Count} consumerState(s) created (minions={minionGOs.Count} brains={Components.Brains.Count})");
     }
 
     public void Shutdown() {
