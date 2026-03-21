@@ -129,6 +129,10 @@ public class WorldBuilder {
         Console.WriteLine("[WorldBuilder] Spawning entities...");
         SpawnEntities(cluster);
 
+        // Reset SM error flag — some entity OnSpawn() may have tripped it during boot.
+        // Without this reset, StateMachineUpdater would skip all SM ticks.
+        StateMachine.Instance.error = false;
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         Console.WriteLine($"[WorldBuilder] World ready: {Width}x{Height}, SimDLL: {SimRunning}");

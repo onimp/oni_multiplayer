@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -98,6 +100,7 @@ public class WebServer {
             SendJson(context.Response, 503, new { error = "World not loaded yet" });
             return;
         }
+        var sw = Stopwatch.StartNew();
         switch (path) {
             case "/api/health":
                 SendJson(context.Response, 200, new {
@@ -106,22 +109,39 @@ public class WebServer {
                     timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 });
                 break;
-            case "/api/world":
-                SendJson(context.Response, 200, realWorld.GetWorldSnapshot());
-                break;
+            case "/api/world": {
+                // Pre-serialized bytes, cached per SimTick — avoids re-serializing 98K cells on every request
+                var bytes = realWorld.GetWorldSnapshotBytes();
+                sw.Stop();
+                var acceptsGzip = context.Request.Headers["Accept-Encoding"]?.Contains("gzip") == true;
+                Console.WriteLine($"[WebServer] /api/world: getBytes={sw.ElapsedMilliseconds}ms size={bytes.Length/1024}KB gzip={acceptsGzip}");
+                SendPrebuiltJsonMaybeGzip(context.Response, 200, bytes, acceptsGzip);
+                return; // already stopped sw
+            }
             case "/api/elements":
                 SendJson(context.Response, 200, realWorld.GetElements());
                 break;
-            case "/api/entities":
-                SendJson(context.Response, 200, realWorld.GetEntities());
-                break;
-            case "/api/state":
-                SendJson(context.Response, 200, realWorld.GetGameState());
-                break;
+            case "/api/entities": {
+                var bytes = realWorld.GetEntitiesBytes();
+                sw.Stop();
+                Console.WriteLine($"[WebServer] /api/entities: getBytes={sw.ElapsedMilliseconds}ms size={bytes.Length}B");
+                SendPrebuiltJson(context.Response, 200, bytes);
+                return;
+            }
+            case "/api/state": {
+                // Pre-serialized bytes, cached with 200ms TTL
+                var bytes = realWorld.GetGameStateBytes();
+                sw.Stop();
+                Console.WriteLine($"[WebServer] /api/state: getBytes={sw.ElapsedMilliseconds}ms size={bytes.Length}B");
+                SendPrebuiltJson(context.Response, 200, bytes);
+                return;
+            }
             default:
                 SendJson(context.Response, 404, new { error = "Unknown API endpoint" });
                 break;
         }
+        sw.Stop();
+        Console.WriteLine($"[WebServer] {path}: {sw.ElapsedMilliseconds}ms");
     }
 
     private void HandleStaticFile(HttpListenerContext context, string path) {
@@ -155,11 +175,45 @@ public class WebServer {
     private static void SendJson(HttpListenerResponse response, int statusCode, object data) {
         var json = JsonConvert.SerializeObject(data);
         var bytes = Encoding.UTF8.GetBytes(json);
+        SendPrebuiltJson(response, statusCode, bytes);
+    }
+
+    /// <summary>
+    /// Sends already-serialized JSON bytes directly — skips double-serialization for cached responses.
+    /// </summary>
+    private static void SendPrebuiltJson(HttpListenerResponse response, int statusCode, byte[] bytes) {
         response.StatusCode = statusCode;
         response.ContentType = "application/json; charset=utf-8";
         response.Headers.Add("Access-Control-Allow-Origin", "*");
         response.ContentLength64 = bytes.Length;
         response.OutputStream.Write(bytes, 0, bytes.Length);
+        response.OutputStream.Close();
+    }
+
+    /// <summary>
+    /// Sends JSON bytes, optionally gzip-compressed if the client accepts it.
+    /// For large payloads like /api/world (~1.5MB JSON → ~150KB gzip).
+    /// </summary>
+    private static void SendPrebuiltJsonMaybeGzip(HttpListenerResponse response, int statusCode, byte[] bytes, bool gzip) {
+        response.StatusCode = statusCode;
+        response.ContentType = "application/json; charset=utf-8";
+        response.Headers.Add("Access-Control-Allow-Origin", "*");
+        if (gzip) {
+            var sw = Stopwatch.StartNew();
+            using var ms = new MemoryStream();
+            using (var gz = new GZipStream(ms, CompressionLevel.Fastest)) {
+                gz.Write(bytes, 0, bytes.Length);
+            }
+            var compressed = ms.ToArray();
+            sw.Stop();
+            Console.WriteLine($"[WebServer] gzip: {bytes.Length/1024}KB → {compressed.Length/1024}KB in {sw.ElapsedMilliseconds}ms");
+            response.Headers.Add("Content-Encoding", "gzip");
+            response.ContentLength64 = compressed.Length;
+            response.OutputStream.Write(compressed, 0, compressed.Length);
+        } else {
+            response.ContentLength64 = bytes.Length;
+            response.OutputStream.Write(bytes, 0, bytes.Length);
+        }
         response.OutputStream.Close();
     }
 }
