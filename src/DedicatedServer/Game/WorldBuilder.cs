@@ -556,6 +556,11 @@ public class WorldBuilder {
     private static unsafe void AllocateGrid(int w, int h) {
         var n = w * h;
         GridSettings.Reset(w, h);
+        // GridSettings.Reset fills Grid.WorldIdx with byte.MaxValue=255 (sentinel for "no world").
+        // GetMyWorldId() returns -1 when WorldIdx[cell]==255 → StandardChoreBase.IsValid() fails.
+        // We have a single world with ID=0 — mark all cells as belonging to it.
+        if (Grid.WorldIdx != null)
+            for (var i = 0; i < n; i++) Grid.WorldIdx[i] = 0;
         var ei = new ushort[n]; var eiH = GCHandle.Alloc(ei, GCHandleType.Pinned); Grid.elementIdx = (ushort*)eiH.AddrOfPinnedObject();
         var te = new float[n]; var teH = GCHandle.Alloc(te, GCHandleType.Pinned); Grid.temperature = (float*)teH.AddrOfPinnedObject();
         var ra = new float[n]; var raH = GCHandle.Alloc(ra, GCHandleType.Pinned); Grid.radiation = (float*)raH.AddrOfPinnedObject();

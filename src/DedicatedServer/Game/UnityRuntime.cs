@@ -455,13 +455,13 @@ public static class UnityRuntime {
             .Where(t => t.Namespace?.StartsWith("DedicatedServer.Game.Patches") == true)
             .ToList();
 
-        // Skip patch classes that target Unity InternalCall groups — those are pre-patched.
-        // Only apply patches for managed game code (non-Unity-InternalCall methods).
-        // Skip patch classes that target Unity InternalCall methods — pre-patched by PatchInternalCalls.
-        // Non-Unity game classes (AssetsPatches, etc.) are NOT in this list and get patched normally.
+        // Skip patch classes whose targets are pure InternalCalls pre-patched by PatchInternalCalls.
+        // Only applies to classes where PatchInternalCalls already delegates to UnityRuntime statics.
+        // TransformPatches is NOT skipped — Transform::get/set_position_Injected are in the callMap
+        //   as zero-returning stubs (not delegated), so Harmony must patch them at runtime.
         var skipTypes = new HashSet<string> {
             "ApplicationPatches", "GameObjectPatches", "ComponentPatches",
-            "TransformPatches", "ObjectPatches", "BehaviourPatches",
+            "ObjectPatches", "BehaviourPatches",
             "MonoBehaviourPatches", "ScriptableObjectPatches", "TextAssetPatches",
             "RandomPatches", "DebugPatches", "SystemInfoPatches"
         };
