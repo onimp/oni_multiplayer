@@ -288,6 +288,15 @@ public class WorldBuilder {
             game.fetchManager ??= go.AddComponent<FetchManager>();
         }
 
+        // MinionBrain.UpdateBrain() checks discoveredSurface / discoveredOilField to fire
+        // "first discovery" events. If false, it calls World.Instance.zoneRenderData.GetSubWorldZoneType()
+        // which NPEs because SubworldZoneRenderData (rendering component) is null in headless.
+        // Mark both as already discovered — we're in headless, "discovery" UI events are irrelevant.
+        // savedInfo is a struct field on Game (public SavedInfo savedInfo), direct write is safe.
+        global::Game.Instance.savedInfo.discoveredSurface = true;
+        global::Game.Instance.savedInfo.discoveredOilField = true;
+        Console.WriteLine("[WorldBuilder] savedInfo.discovered* = true (skips zoneRenderData NPE in MinionBrain)");
+
 
         // GlobalChoreProvider.OnPrefabInit → ChoreProvider.OnPrefabInit calls Game.Instance.Subscribe().
         // Must be initialized AFTER Game.Instance is set.
@@ -666,6 +675,11 @@ public class WorldBuilder {
             }
         }
 
+        // Diagnostic: log ChoreDriver initialization state for each Minion.
+        foreach (var go in minionGOs) {
+            var driver = go.GetComponent<ChoreDriver>();
+            Console.WriteLine($"[FixChoreConsumers] {go.name}: ChoreDriver={driver != null} isInit={driver?.IsInitialized()} consumerState={go.GetComponent<ChoreConsumer>()?.consumerState != null} sensors={go.GetComponent<Sensors>() != null}");
+        }
         Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{allBrainGOs.Count} consumerState(s) created (minions={minionGOs.Count} brains={Components.Brains.Count})");
     }
 
