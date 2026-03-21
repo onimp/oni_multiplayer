@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Database;
 using Klei;
@@ -835,7 +836,14 @@ public class WorldBuilder {
             Console.WriteLine($"[DupeStatus] ScheduleManager ERROR: {ex.GetBaseException().Message}");
         }
 
-        // 3. Per-minion state
+        // 3. Per-minion state + precondition failure diagnosis
+        // Reflection fields cached once (same type for all minions).
+        var snapshotField    = typeof(ChoreConsumer).GetField("preconditionSnapshot", BindingFlags.Instance | BindingFlags.NonPublic);
+        var providersField   = typeof(ChoreConsumer).GetField("providers",            BindingFlags.Instance | BindingFlags.NonPublic);
+        Type? snapshotType   = snapshotField?.GetValue(_spawnedMinions.Count > 0 ? _spawnedMinions[0].GetComponent<ChoreConsumer>() : null)?.GetType();
+        var failedCtxField   = snapshotType?.GetField("failedContexts");
+        var succeededCtxField = snapshotType?.GetField("succeededContexts");
+
         foreach (var go in _spawnedMinions) {
             try {
                 var driver    = go.GetComponent<ChoreDriver>();
@@ -846,9 +854,50 @@ public class WorldBuilder {
                 var brain     = go.GetComponent<Brain>();
                 var localCP   = go.GetComponent<ChoreProvider>();
                 var localChores = localCP?.choreWorldMap?.Values.Sum(l => l?.Count ?? 0) ?? -1;
-                Console.WriteLine($"  [{go.name}] chore={chore?.GetType().Name ?? "null"}  navType={nav?.CurrentNavType}  navGrid={nav?.NavGrid?.id ?? "null"}  consumerState={consumer?.consumerState != null}  idleMonitor={idleSmi != null}  brainRunning={brain?.IsRunning()}  localChores={localChores}  hasChore={driver?.HasChore()}");
+                var worldId   = go.GetMyWorldId();
+                var cell      = Grid.PosToCell(go);
+                var worldIdx  = (Grid.WorldIdx != null && Grid.IsValidCell(cell)) ? (int)Grid.WorldIdx[cell] : -99;
+                Console.WriteLine($"  [{go.name}] chore={chore?.GetType().Name ?? "null"}  brainRunning={brain?.IsRunning()}  localChores={localChores}  hasChore={driver?.HasChore()}  worldId={worldId}  cell={cell}  gridWorldIdx={worldIdx}  navType={nav?.CurrentNavType}");
+
+                // Sensor state
+                var sensors   = go.GetComponent<Sensors>();
+                var idleSensor = sensors?.GetSensor<IdleCellSensor>();
+                Console.WriteLine($"  [{go.name}] idleCell={idleSensor?.GetCell() ?? -1}  ChorePreconditions.instance={(ChorePreconditions.instance != null ? "OK" : "NULL")}");
+
+                // ChoreConsumer providers list
+                if (consumer != null && providersField != null) {
+                    var providerList = providersField.GetValue(consumer) as System.Collections.IList;
+                    Console.WriteLine($"  [{go.name}] consumer.providers={providerList?.Count ?? -1}");
+                }
+
+                // Run FindNextChore to populate preconditionSnapshot, then read failed contexts
+                if (consumer?.consumerState != null) {
+                    Chore.Precondition.Context dummy = default;
+                    consumer.FindNextChore(ref dummy);
+
+                    if (snapshotField != null && failedCtxField != null && succeededCtxField != null) {
+                        var snapshot  = snapshotField.GetValue(consumer);
+                        var failed    = failedCtxField.GetValue(snapshot)   as List<Chore.Precondition.Context>;
+                        var succeeded = succeededCtxField.GetValue(snapshot) as List<Chore.Precondition.Context>;
+                        Console.WriteLine($"  [{go.name}] preconditions: succeeded={succeeded?.Count ?? -1}  failed={failed?.Count ?? -1}");
+                        if (failed != null) {
+                            foreach (var ctx in failed) {
+                                try {
+                                    var preconditions = ctx.chore?.GetPreconditions();
+                                    var failId = ctx.failedPreconditionId;
+                                    var failName = (preconditions != null && failId >= 0 && failId < preconditions.Count)
+                                        ? preconditions[failId].condition.id
+                                        : $"idx={failId}";
+                                    Console.WriteLine($"    FAILED: chore={ctx.chore?.GetType().Name ?? "null"}  precondition={failName}  skipped={ctx.skippedPreconditions}");
+                                } catch (Exception ex2) {
+                                    Console.WriteLine($"    FAILED ctx error: {ex2.GetBaseException().Message}");
+                                }
+                            }
+                        }
+                    }
+                }
             } catch (Exception ex) {
-                Console.WriteLine($"  [{go.name}] ERROR: {ex.GetBaseException().Message}");
+                Console.WriteLine($"  [{go.name}] ERROR: {ex.GetBaseException().Message}\n    {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
             }
         }
     }
