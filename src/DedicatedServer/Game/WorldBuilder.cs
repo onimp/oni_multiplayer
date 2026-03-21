@@ -682,6 +682,7 @@ public class WorldBuilder {
     private static void DisableRenderingOnlyComponents() {
         var count = 0;
         foreach (var lst in UnityEngine.Object.FindObjectsOfType<LightSymbolTracker>()) {
+            if (lst == null) continue;
             lst.enabled = false;
             count++;
         }
