@@ -453,14 +453,38 @@ public class WorldBuilder {
     }
 
     /// <summary>
-    /// Post-spawn fix: assign default schedules to unscheduled Minions and initialize
-    /// consumerState on any Brain whose ChoreConsumer.OnSpawn() did not complete.
-    /// Called once after SpawnEntities() when all Components.Brains are populated.
+    /// Post-spawn fix: ensure ChoreProvider/ChoreDriver are initialized, assign default schedules,
+    /// and create ChoreConsumerState for all Minions whose ChoreConsumer.OnSpawn() did not complete.
+    /// Called once after SpawnEntities(). Only touches LiveMinionIdentities — creatures have a
+    /// different ChoreTable and can NPE if processed here.
     /// </summary>
     private void FixChoreConsumers() {
+        Console.WriteLine($"[WorldBuilder] FixChoreConsumers() called: LiveMinions={Components.LiveMinionIdentities.Count}, Brains={Components.Brains.Count}");
+
+        // Step 0: force ChoreProvider and ChoreDriver initialization for any Minion
+        // where the lifecycle didn't complete (isInitialized=false → Spawn() bailed early).
+        foreach (var identity in Components.LiveMinionIdentities.Items) {
+            try {
+                var provider = identity.GetComponent<ChoreProvider>();
+                if (provider != null && !provider.IsInitialized()) {
+                    provider.InitializeComponent();
+                    provider.Spawn();
+                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreProvider for {identity.name}");
+                }
+                var driver = identity.GetComponent<ChoreDriver>();
+                if (driver != null && !driver.IsInitialized()) {
+                    driver.InitializeComponent();
+                    driver.Spawn();
+                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreDriver for {identity.name}");
+                }
+            } catch (Exception ex) {
+                Console.WriteLine($"[WorldBuilder] ChoreProvider/Driver init failed for {identity.name}: {ex.GetBaseException().Message}");
+            }
+        }
+
         // Step 1: assign default schedule to all Minions not yet scheduled.
         // Must happen BEFORE creating ChoreConsumerState — its ctor calls
-        // schedulable.GetSchedule().GetCurrentScheduleBlock() which NPEs on null.
+        // schedulable.GetSchedule().GetCurrentScheduleBlock() which NPEs on null schedule.
         var schedules = ScheduleManager.Instance?.GetSchedules();
         if (schedules?.Count > 0) {
             foreach (var identity in Components.LiveMinionIdentities.Items) {
@@ -473,23 +497,25 @@ public class WorldBuilder {
                     Console.WriteLine($"[WorldBuilder] Schedule assign failed for {identity.name}: {ex.GetBaseException().Message}");
                 }
             }
+        } else {
+            Console.WriteLine($"[WorldBuilder] WARNING: ScheduleManager has no schedules — consumerState will fail!");
         }
 
-        // Step 2: create ChoreConsumerState for every Brain that is missing it.
-        // Covers Minions (schedule now assigned above) and Creatures (choreTable may have failed).
+        // Step 2: create ChoreConsumerState for Minions that are still missing it.
+        // Only LiveMinionIdentities — creature ChoreTable.Instance ctor NPEs in headless.
         var fixedCount = 0;
-        foreach (var brain in Components.Brains.Items) {
+        foreach (var identity in Components.LiveMinionIdentities.Items) {
             try {
-                var cc = brain.gameObject.GetComponent<ChoreConsumer>();
+                var cc = identity.GetComponent<ChoreConsumer>();
                 if (cc == null || cc.consumerState != null) continue;
                 cc.consumerState = new ChoreConsumerState(cc);
                 fixedCount++;
             } catch (Exception ex) {
-                Console.WriteLine($"[WorldBuilder] consumerState init failed for {brain.name}: {ex.GetBaseException().Message}");
+                Console.WriteLine($"[WorldBuilder] consumerState init failed for {identity.name}: {ex.GetBaseException().Message}");
             }
         }
 
-        Console.WriteLine($"[WorldBuilder] FixChoreConsumers: {fixedCount}/{Components.Brains.Count} consumerState(s) initialized post-spawn");
+        Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{Components.LiveMinionIdentities.Count} minion consumerState(s) created, Brains={Components.Brains.Count}");
     }
 
     public void Shutdown() {

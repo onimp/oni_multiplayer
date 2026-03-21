@@ -19,9 +19,10 @@ public class RealWorldState {
     private readonly int height;
     private readonly WorldBuilder world;
 
-    // --- World snapshot cache (invalidated per SimTick) ---
+    // --- World snapshot cache (TTL-based, 200ms) ---
     private byte[]? _worldJsonBytes;
-    private int _worldCacheTick = -1;
+    private System.DateTime _worldCacheTime = System.DateTime.MinValue;
+    private static readonly System.TimeSpan WorldCacheTTL = System.TimeSpan.FromMilliseconds(200);
     private readonly object _worldCacheLock = new();
 
     // --- Entities cache (static per world — SpawnData never changes) ---
@@ -53,8 +54,8 @@ public class RealWorldState {
         var tick = world.SimTick;
 
         lock (_worldCacheLock) {
-            if (_worldJsonBytes != null && _worldCacheTick == tick) {
-                Console.WriteLine($"[WorldState] Cache HIT: world tick={tick} size={_worldJsonBytes.Length/1024}KB");
+            if (_worldJsonBytes != null && (System.DateTime.UtcNow - _worldCacheTime) < WorldCacheTTL) {
+                Console.WriteLine($"[WorldState] Cache HIT: world age={(System.DateTime.UtcNow - _worldCacheTime).TotalMilliseconds:F0}ms size={_worldJsonBytes.Length/1024}KB");
                 return _worldJsonBytes;
             }
         }
@@ -87,7 +88,7 @@ public class RealWorldState {
         Console.WriteLine($"[WorldState] Cache MISS: rebuilt world snapshot {bytes.Length / 1024}KB in {sw.ElapsedMilliseconds}ms (tick={tick})");
 
         lock (_worldCacheLock) {
-            _worldCacheTick = tick;
+            _worldCacheTime = System.DateTime.UtcNow;
             _worldJsonBytes = bytes;
         }
         return bytes;
