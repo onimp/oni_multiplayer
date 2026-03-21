@@ -341,6 +341,47 @@ public class WorldBuilder {
         StateMachineManager.Instance.Clear();
         StateMachine.Instance.error = false;
 
+        // ClusterManager is needed by ChoreProvider.AddChore / CollectChores via:
+        //   GetMyParentWorldId() → GetMyWorld() → ClusterManager.Instance.GetWorld(worldId)
+        // Without it: NPE fires 7,000+ times/tick, choreWorldMap never populated → localChores=0.
+        //
+        // OnPrefabInit() sets Instance=this then crashes on SaveLoader.Instance.OnWorldGenComplete +=
+        // (SaveLoader is null in headless). Instance is set BEFORE that line, so we catch the crash.
+        //
+        // Must be initialized BEFORE SpawnEntities() → FixRationalAi() → IdleMonitor.StartSM()
+        // → AddChore → GetMyParentWorldId() → GetMyWorld() → GetWorld(0).
+        var clusterManagerGo = new GameObject("ClusterManager");
+        var cm = clusterManagerGo.AddComponent<ClusterManager>();
+        try { cm.InitializeComponent(); }
+        catch (Exception ex) {
+            // Expected: SaveLoader.Instance is null → OnWorldGenComplete += NPE.
+            // Instance=this is set before that line — verify before continuing.
+            Console.WriteLine($"[WorldBuilder] ClusterManager.InitializeComponent partial (expected): {ex.GetBaseException().Message}");
+        }
+        if (ClusterManager.Instance == null) {
+            ClusterManager.Instance = cm;
+            Console.WriteLine("[WorldBuilder] ClusterManager.Instance set manually (fallback)");
+        }
+
+        // WorldContainer(id=0): a required entry in ClusterManager.m_worldContainers.
+        // GetWorld(0) iterates m_worldContainers searching by .id — without a container with
+        // id=0, GetWorld(0) returns null → GetMyParentWorldId() returns -1 → AddChore uses key=-1
+        // → CollectChores looks for key=0 → never finds chores → Brain.FindBetterChore returns null.
+        //
+        // WorldContainer.OnPrefabInit() calls RegisterWorldContainer(this) automatically — safe
+        // because ClusterManager.Instance is already set above.
+        var worldContainerGo = new GameObject("WorldContainer_0");
+        var wc = worldContainerGo.AddComponent<WorldContainer>();
+        try { wc.InitializeComponent(); }
+        catch (Exception ex) {
+            Console.WriteLine($"[WorldBuilder] WorldContainer.InitializeComponent partial: {ex.GetBaseException().Message}");
+            // Fallback: register manually if OnPrefabInit didn't complete
+            if (!ClusterManager.Instance.WorldContainers.Contains(wc))
+                ClusterManager.Instance.RegisterWorldContainer(wc);
+        }
+        wc.SetID(0);  // sets id=0 and ParentWorldId=0
+        Console.WriteLine($"[WorldBuilder] ClusterManager ready: Instance={ClusterManager.Instance != null}, worlds={ClusterManager.Instance?.WorldContainers?.Count}, GetWorld(0)={ClusterManager.Instance?.GetWorld(0)?.id}");
+
         // BrainScheduler manages Dupe + Creature AI brain groups.
         // Must be initialized here — BEFORE SpawnEntities() — so that Brain.OnSpawn()
         // callbacks (Components.Brains.Add) find a registered handler and end up in
