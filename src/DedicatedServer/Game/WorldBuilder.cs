@@ -926,12 +926,15 @@ public class WorldBuilder {
                         Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
                     }
                 }
-                if (nav3 != null && !nav3.isSpawned) {
+                // isSpawned=true after headless entity creation, so !isSpawned never triggers.
+                // GetSMI() returns the private _smi field (not lazy property) — reliable null check.
+                // If _smi is null the SM was never started. smi property lazy-creates + StartSM starts it.
+                if (nav3 != null && nav3.GetSMI() == null) {
                     try {
-                        nav3.Spawn(); // starts Navigator SM (normal.stopped); GoTo() transitions to normal.moving
-                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator spawned, SM running={nav3.smi != null}");
+                        nav3.smi.StartSM(); // lazy-creates instance, transitions to normal.stopped
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM() called, smi={nav3.GetSMI() != null}");
                     } catch (Exception ex) {
-                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.Spawn partial: {ex.GetBaseException().Message}");
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM partial: {ex.GetBaseException().Message}");
                     }
                 }
 
