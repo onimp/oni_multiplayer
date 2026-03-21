@@ -382,6 +382,17 @@ public class WorldBuilder {
         wc.SetID(0);  // sets id=0 and ParentWorldId=0
         Console.WriteLine($"[WorldBuilder] ClusterManager ready: Instance={ClusterManager.Instance != null}, worlds={ClusterManager.Instance?.WorldContainers?.Count}, GetWorld(0)={ClusterManager.Instance?.GetWorld(0)?.id}");
 
+        // GridRestrictionSerializer is a KMonoBehaviour singleton needed by
+        // MinionPathFinderAbilities.Refresh() → GetTagId(). Without it, every
+        // SafeCellSensor.RunAndGetSafeCellQueryResult() call NPEs at [0x00000].
+        var grsGo = new GameObject("GridRestrictionSerializer");
+        var grs = grsGo.AddComponent<GridRestrictionSerializer>();
+        try { grs.InitializeComponent(); }
+        catch (Exception ex) {
+            Console.WriteLine($"[WorldBuilder] GridRestrictionSerializer.InitializeComponent partial: {ex.GetBaseException().Message}");
+        }
+        Console.WriteLine($"[WorldBuilder] GridRestrictionSerializer.Instance={GridRestrictionSerializer.Instance != null}");
+
         // BrainScheduler manages Dupe + Creature AI brain groups.
         // Must be initialized here — BEFORE SpawnEntities() — so that Brain.OnSpawn()
         // callbacks (Components.Brains.Add) find a registered handler and end up in
@@ -789,6 +800,37 @@ public class WorldBuilder {
                 // and AddUrge() calls that NPE in headless.
                 var idleMonitorSmi = new IdleMonitor.Instance(smc);
                 idleMonitorSmi.StartSM();
+
+                // Step 3a: ensure Navigator.OnPrefabInit() has run.
+                // Navigator.OnPrefabInit() sets NavGrid = Pathfinding.Instance.GetNavGrid(NavGridName).
+                // MinionBrain.OnPrefabInit() calls new MinionPathFinderAbilities(Navigator) which
+                // accesses Navigator.NavGrid.transitions in its ctor — NPEs if NavGrid is null.
+                // When NavGrid is null the ctor throws, brain.OnPrefabInit() silently swallows it,
+                // and Navigator.abilities stays null → SafeCellSensor.RunAndGetSafeCellQueryResult
+                // NPEs at [0x00000] on every sensor tick.
+                var nav3 = go.GetComponent<Navigator>();
+                if (nav3 != null && !nav3.IsInitialized()) {
+                    try {
+                        nav3.InitializeComponent();
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent OK, NavGrid={nav3.NavGrid?.id ?? "null"}");
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
+                    }
+                }
+
+                // Step 3b: ensure MinionIdentity.assignableProxy is set.
+                // MinionIdentity.ValidateProxy() creates the proxy GO and sets the assignableProxy ref.
+                // This normally runs in MinionIdentity.OnSpawn() → OnAddDupe callback.
+                // Without it: MinionPathFinderAbilities.Refresh() calls assignableProxy.Get() → NPE.
+                var identity = go.GetComponent<MinionIdentity>();
+                if (identity != null && identity.assignableProxy?.Get() == null) {
+                    try {
+                        identity.ValidateProxy();
+                        Console.WriteLine($"[FixRationalAi] {go.name}: ValidateProxy OK, proxy={identity.assignableProxy?.Get() != null}");
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[FixRationalAi] {go.name}: ValidateProxy partial: {ex.GetBaseException().Message}");
+                    }
+                }
 
                 // Step 3: spawn Brain — sets running=true + choreConsumer + registers with BrainScheduler.
                 // Without this: Brain.IsRunning()=false → BrainGroup.RenderEveryTick skips brain
