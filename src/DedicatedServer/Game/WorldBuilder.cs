@@ -144,15 +144,16 @@ public class WorldBuilder {
                 SimRunning = true;
                 Console.WriteLine("[WorldBuilder] SimDLL running");
 
-                // Diagnostic: sample solid state at key cells before NavGrid rebuild.
-                // Dupe spawn area y=187, x≈128 → cell≈48000; floor at y=186 → cell≈47744.
-                if (Grid.IsValidCell(48000) && Grid.IsValidCell(47744)) {
-                    Console.WriteLine($"[NavGrid] Pre-rebuild solid check: dupeCell=48000 solid={Grid.Solid[48000]} elem={Grid.Element[48000]?.tag}, floorCell=47744 solid={Grid.Solid[47744]} elem={Grid.Element[47744]?.tag}");
-                    // Sample a few floor cells
-                    for (var dx = 0; dx < 4; dx++) {
-                        var fc = 47744 + dx;
-                        Console.WriteLine($"[NavGrid]   floor+{dx} ({fc}): solid={Grid.Solid[fc]} elem={Grid.Element[fc]?.tag}");
+                // Diagnostic: count solid / non-vacuum cells across the entire grid.
+                // If solidCount=0 and nonVacuumCount=0 → SimDLL did not load world data.
+                {
+                    int solidCount = 0, vacuumCount = 0, nonVacuumCount = 0;
+                    for (var i = 0; i < Grid.CellCount; i++) {
+                        if (Grid.Solid[i]) solidCount++;
+                        if (Grid.Element[i]?.id == SimHashes.Vacuum) vacuumCount++;
+                        else nonVacuumCount++;
                     }
+                    Console.WriteLine($"[Grid] After Sim.Start(): solid={solidCount} vacuum={vacuumCount} nonVacuum={nonVacuumCount} total={Grid.CellCount}");
                 }
 
                 // NavGrids were built in InitializeWorld() via new GameNavGrids() → NavGrid ctor
