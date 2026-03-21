@@ -21,7 +21,8 @@ export default function App() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(1000);
 
-  const timerRef = useRef<number | null>(null);
+  const timerRef    = useRef<number | null>(null);
+  const fetchingRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -43,14 +44,32 @@ export default function App() {
   useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+    if (!autoRefresh) {
+      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
+      return;
     }
-    if (autoRefresh) {
-      timerRef.current = window.setInterval(refresh, refreshInterval);
+
+    let active = true;
+
+    // Sequential poll: next request only starts after the previous one completes.
+    // Prevents request pile-up when server is slow.
+    async function poll() {
+      if (!active) return;
+      if (!fetchingRef.current) {
+        fetchingRef.current = true;
+        try { await refresh(); }
+        finally { fetchingRef.current = false; }
+      }
+      if (active) timerRef.current = window.setTimeout(poll, refreshInterval);
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+
+    poll();
+
+    return () => {
+      active = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [autoRefresh, refreshInterval, refresh]);
 
   return (

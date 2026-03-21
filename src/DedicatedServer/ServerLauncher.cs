@@ -10,6 +10,17 @@ class ServerLauncher {
     static void Main(string[] args) {
         var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
 
+        // NUnit3TestAdapter and Microsoft.NET.Test.Sdk are project dependencies for
+        // running tests via 'dotnet test'. They bring in TestPlatform DLLs at runtime.
+        // When running as a standalone server those DLLs are not present — return null
+        // so the CLR treats them as unavailable (types from them are never used directly).
+        AppDomain.CurrentDomain.AssemblyResolve += (_, e) => {
+            var n = new AssemblyName(e.Name).Name ?? "";
+            if (n.StartsWith("Microsoft.TestPlatform") || n.StartsWith("Microsoft.VisualStudio.TestPlatform"))
+                return null;
+            return null;
+        };
+
         // Fix Apple Silicon / Rosetta W^X before Harmony loads
         try {
             var patcherDll = Path.Combine(exeDir, "AppleSiliconHarmony.dll");

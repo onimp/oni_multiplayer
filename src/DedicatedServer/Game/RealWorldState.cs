@@ -22,7 +22,7 @@ public class RealWorldState {
     // --- World snapshot cache (TTL-based, 200ms) ---
     private byte[]? _worldJsonBytes;
     private System.DateTime _worldCacheTime = System.DateTime.MinValue;
-    private static readonly System.TimeSpan WorldCacheTTL = System.TimeSpan.FromMilliseconds(200);
+    private static readonly System.TimeSpan WorldCacheTTL = System.TimeSpan.FromMilliseconds(1000);
     private readonly object _worldCacheLock = new();
 
     // --- Entities cache (static per world — SpawnData never changes) ---
@@ -32,11 +32,11 @@ public class RealWorldState {
     // --- State cache (time-based, 200ms TTL) ---
     private byte[]? _stateJsonBytes;
     private long _stateLastMs;
-    private const long StateCacheMs = 200;
+    private const long StateCacheMs = 1000;
     private readonly object _stateCacheLock = new();
 
-    // --- Entity size cache (static — prefab sizes don't change) ---
-    private static readonly Dictionary<string, (int w, int h)> _entitySizeCache = new();
+    // --- Entity size cache (per-instance — populated from WorldBuilder.PrefabSizeMap on first use) ---
+    private readonly Dictionary<string, (int w, int h)> _entitySizeCache = new();
 
     public RealWorldState(int width, int height, WorldBuilder world) {
         this.width = width;
@@ -134,12 +134,22 @@ public class RealWorldState {
     }
 
     /// <summary>
-    /// Returns entity size in cells by inspecting OccupyArea component on the registered prefab.
-    /// Falls back to KBoxCollider2D size, then (1,1). Results are cached.
+    /// Returns entity size in cells.
+    /// Primary source: WorldBuilder.PrefabSizeMap — sizes captured from live spawned GOs
+    ///   during SpawnEntities() via OccupyArea._UnrotatedOccupiedCellsOffsets (most reliable).
+    /// Fallback: Assets.GetPrefab OccupyArea → KBoxCollider2D → (1,1).
+    /// Results are instance-cached in _entitySizeCache.
     /// </summary>
-    private static (int w, int h) GetEntitySize(string id) {
+    private (int w, int h) GetEntitySize(string id) {
         if (_entitySizeCache.TryGetValue(id, out var cached)) return cached;
 
+        // Primary: captured from live spawned GO in SpawnEntities (has real OccupyArea data)
+        if (world.PrefabSizeMap.TryGetValue(id, out var liveSize)) {
+            _entitySizeCache[id] = liveSize;
+            return liveSize;
+        }
+
+        // Fallback: inspect the registered prefab in Assets
         (int w, int h) size = (1, 1);
         try {
             var prefab = Assets.GetPrefab(new Tag(id));
@@ -156,15 +166,20 @@ public class RealWorldState {
                     }
                     size = (maxX - minX + 1, maxY - minY + 1);
                 } else {
-                    // Fallback: KBoxCollider2D size
+                    // Fallback: KBoxCollider2D size (set in ConfigPlacedEntity alongside OccupyArea)
                     var col = prefab.GetComponent<KBoxCollider2D>();
                     if (col != null) {
                         var s = col.size;
                         size = (Math.Max(1, (int)Math.Round(s.x)), Math.Max(1, (int)Math.Round(s.y)));
                     }
                 }
+                Console.WriteLine($"[EntitySize] {id} → {size.w}×{size.h} (Assets fallback, occupyArea={(prefab.GetComponent<OccupyArea>() != null ? "found" : "null")})");
+            } else {
+                Console.WriteLine($"[EntitySize] {id} → prefab not found in Assets, defaulting to 1×1");
             }
-        } catch { /* use default */ }
+        } catch (Exception ex) {
+            Console.WriteLine($"[EntitySize] {id} → exception: {ex.GetBaseException().Message}, defaulting to 1×1");
+        }
 
         _entitySizeCache[id] = size;
         return size;

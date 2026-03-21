@@ -31,12 +31,9 @@
         <Reference Include="Ionic.Zip" HintPath="$(ManagedPath)\Ionic.Zip.dll" Private="true" />
     </ItemGroup>
 
-    <!-- NUnit for ServerBootTest (runs game via dotnet test) -->
-    <ItemGroup>
-        <PackageReference Include="NUnit" Version="3.13.3" />
-        <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    </ItemGroup>
+    <!-- NUnit3TestAdapter + Microsoft.NET.Test.Sdk removed: the SDK adds a module initializer
+         that probes for test adapters before Main() runs, pulling in TestPlatform DLLs that
+         crash the standalone server. ServerBootTest should go in a separate test project. -->
 
     <!-- Embed wwwroot as resources for static file serving -->
     <ItemGroup>

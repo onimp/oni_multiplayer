@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace DedicatedServer.Game;
@@ -20,22 +19,27 @@ public class GameTickLoop {
 
     private float _accumulatedTime;
     private int _simSubTick;
-    private readonly Action _tickSimDll;
+    private readonly System.Action _tickSimDll;
 
     /// <param name="tickSimDll">Called every 200ms to advance SimDLL (pass WorldBuilder.TickSimulation)</param>
-    public GameTickLoop(Action tickSimDll) {
+    public GameTickLoop(System.Action tickSimDll) {
         _tickSimDll = tickSimDll;
     }
 
     /// <summary>Advance simulation by dt seconds. Call from main loop at ~60fps or any rate.</summary>
     public void Update(float dt) {
-        _accumulatedTime += Mathf.Min(dt, 0.2f);
+        var clampedDt = Mathf.Min(dt, 0.2f);
+        _accumulatedTime += clampedDt;
 
         while (_accumulatedTime >= SubTickTime) {
             _simSubTick = (_simSubTick + 1) % SimFrameSubTicks;
             if (_simSubTick == 0) _tickSimDll();
+            // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets
             Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
             _accumulatedTime -= SubTickTime;
         }
+
+        // Drive RENDER_EVERY_TICK bucket — covers BrainScheduler (Dupe/Creature AI)
+        Singleton<StateMachineUpdater>.Instance.RenderEveryTick(clampedDt);
     }
 }

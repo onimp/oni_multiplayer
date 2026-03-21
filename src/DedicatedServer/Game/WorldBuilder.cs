@@ -30,6 +30,13 @@ public class WorldBuilder {
     // which may be empty if MinionIdentity.OnSpawn() didn't complete.
     private readonly List<GameObject> _spawnedMinions = new List<GameObject>();
 
+    /// <summary>
+    /// Maps prefab ID → (w, h) in cells, populated from live spawned GOs during SpawnEntities().
+    /// Used by RealWorldState.GetEntitySize to get correct sizes without relying on Assets.GetPrefab.
+    /// </summary>
+    public IReadOnlyDictionary<string, (int w, int h)> PrefabSizeMap => _prefabSizeMap;
+    private readonly Dictionary<string, (int w, int h)> _prefabSizeMap = new();
+
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
         SimTick++;
@@ -280,7 +287,14 @@ public class WorldBuilder {
         Awake("GlobalChoreProvider", () => go.AddComponent<GlobalChoreProvider>().Awake());
 
         PathFinder.Initialize();
-        new GameNavGrids(Pathfinding.Instance);
+        try {
+            new GameNavGrids(Pathfinding.Instance);
+            var gridCount = Pathfinding.Instance.GetNavGrids().Count;
+            Console.WriteLine($"[WorldBuilder] GameNavGrids: {gridCount} nav grid(s) registered" +
+                (Pathfinding.Instance.GetNavGrid("MinionNavGrid") != null ? " (MinionNavGrid OK)" : " (WARNING: MinionNavGrid missing!)"));
+        } catch (Exception ex) {
+            Console.WriteLine($"[WorldBuilder] GameNavGrids FAILED: {ex.GetBaseException().Message} — NavGrid will be null, Navigators will be patched to skip.");
+        }
 
         StateMachineManager.Instance.Clear();
         StateMachine.Instance.error = false;
@@ -443,6 +457,11 @@ public class WorldBuilder {
                     if (entity.id == "Minion" || entity.id == "BionicMinion") {
                         _spawnedMinions.Add(go);
                     }
+                    // Capture size from live GO's OccupyArea once per unique prefab ID.
+                    // More reliable than reading from Assets.GetPrefab in headless mode.
+                    if (!_prefabSizeMap.ContainsKey(entity.id)) {
+                        CaptureEntitySize(entity.id, go);
+                    }
                 } else {
                     Console.WriteLine($"[Entities] Skipped (no prefab or invalid cell): {entity.id}");
                     skipped++;
@@ -450,6 +469,46 @@ public class WorldBuilder {
             }
         }
         Console.WriteLine($"[WorldBuilder] Entity spawning: {spawned} spawned, {skipped} skipped, {_spawnedMinions.Count} minions tracked");
+    }
+
+    /// <summary>
+    /// Reads OccupyArea from a live spawned GO and caches its cell bounding box.
+    /// Logs [CritterSize] for each unique ID to aid diagnostics.
+    /// </summary>
+    private void CaptureEntitySize(string id, GameObject go) {
+        try {
+            var occupy = go.GetComponent<OccupyArea>();
+            int w = 1, h = 1;
+            int cellCount = 0;
+
+            if (occupy?._UnrotatedOccupiedCellsOffsets?.Length > 0) {
+                var offsets = occupy._UnrotatedOccupiedCellsOffsets;
+                cellCount = offsets.Length;
+                int minX = 0, maxX = 0, minY = 0, maxY = 0;
+                foreach (var o in offsets) {
+                    if (o.x < minX) minX = o.x;
+                    if (o.x > maxX) maxX = o.x;
+                    if (o.y < minY) minY = o.y;
+                    if (o.y > maxY) maxY = o.y;
+                }
+                w = maxX - minX + 1;
+                h = maxY - minY + 1;
+            } else {
+                // Fallback: KBoxCollider2D (set in ConfigPlacedEntity alongside OccupyArea)
+                var col = go.GetComponent<KBoxCollider2D>();
+                if (col != null) {
+                    var s = col.size;
+                    w = Math.Max(1, (int)Math.Round(s.x));
+                    h = Math.Max(1, (int)Math.Round(s.y));
+                }
+            }
+
+            _prefabSizeMap[id] = (w, h);
+            Console.WriteLine($"[CritterSize] id={id} tag={go.GetComponent<KPrefabID>()?.PrefabTag} occupyCells={cellCount} w={w} h={h}");
+        } catch (Exception ex) {
+            Console.WriteLine($"[CritterSize] id={id} FAILED: {ex.GetBaseException().Message}");
+            _prefabSizeMap[id] = (1, 1);
+        }
     }
 
     private static unsafe void AllocateGrid(int w, int h) {
@@ -509,9 +568,13 @@ public class WorldBuilder {
     private void FixChoreConsumers() {
         // Prefer _spawnedMinions (directly tracked during SpawnEntities) over LiveMinionIdentities
         // which requires MinionIdentity.OnSpawn() to have run successfully.
-        var minionGOs = _spawnedMinions.Count > 0
-            ? _spawnedMinions
-            : Components.LiveMinionIdentities.Items.ConvertAll(id => id.gameObject);
+        // Use HashSet to deduplicate — defensive against double-entries if SpawnEntities
+        // processes the same GO more than once across multiple worlds.
+        var minionSet = _spawnedMinions.Count > 0
+            ? new HashSet<GameObject>(_spawnedMinions)
+            : new HashSet<GameObject>(
+                Components.LiveMinionIdentities.Items.ConvertAll(id => id.gameObject));
+        var minionGOs = new List<GameObject>(minionSet);
 
         Console.WriteLine($"[WorldBuilder] FixChoreConsumers() called: tracked={_spawnedMinions.Count}, LiveMinions={Components.LiveMinionIdentities.Count}, Brains={Components.Brains.Count}");
 

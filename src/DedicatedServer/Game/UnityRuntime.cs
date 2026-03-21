@@ -190,13 +190,25 @@ public static class UnityRuntime {
         if (data == null) return null;
 
         if (data is GameObject srcGo) {
-            // Clone GameObject: create new GO, then add components of same types
+            // Clone GameObject: create new GO, then clone each component preserving field values.
+            // Unity's Instantiate copies all serialized fields — we replicate this by MemberwiseClone
+            // each component, then fix up its identity (m_CachedPtr) and owner (ComponentToGameObject).
+            // This is critical: without field copying, prefab-configured fields like Navigator.NavGridName
+            // are null on the clone, breaking OnPrefabInit (GetNavGrid("") returns null → NPE).
             var clone = new GameObject();
             clone.name = srcGo.name;
             if (GameObjectComponents.TryGetValue(srcGo.m_CachedPtr, out var srcComponents)) {
+                var cloneComponents = GameObjectComponents[clone.m_CachedPtr];
+                // Remove the stub Transform that CreateGameObject added — we'll clone the real one
+                cloneComponents.Clear();
                 foreach (var srcComp in srcComponents) {
-                    if (srcComp is Transform) continue; // already added by CreateGameObject
-                    AddComponent(clone, srcComp.GetType());
+                    // MemberwiseClone copies all fields (including NavGridName, NavType, etc.)
+                    var cloneComp = (Component) srcComp.GetType()
+                        .GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .Invoke(srcComp, null);
+                    cloneComp.m_CachedPtr = new IntPtr(NextId());
+                    ComponentToGameObject[cloneComp.m_CachedPtr] = clone;
+                    cloneComponents.Add(cloneComp);
                 }
             }
             // Copy position

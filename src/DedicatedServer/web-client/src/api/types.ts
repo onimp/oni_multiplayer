@@ -1,18 +1,15 @@
-export interface CellData {
-  element: number;
-  temperature: number;
-  mass: number;
-}
-
 export interface WorldData {
   width: number;
   height: number;
   tick: number;
-  cells: CellData[];
+  /** Flat arrays: index = y * width + x */
+  e: number[];   // element ids
+  t: number[];   // temperatures (Kelvin)
+  m: number[];   // masses
 }
 
 export interface EntityData {
-  type: 'duplicant' | 'building' | 'entity' | 'pickupable' | 'ore';
+  type: 'duplicant' | 'critter' | 'building' | 'entity' | 'pickupable' | 'ore';
   name: string;
   x: number;
   y: number;

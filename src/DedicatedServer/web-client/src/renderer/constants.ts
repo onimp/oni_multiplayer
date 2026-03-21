@@ -128,9 +128,10 @@ export function areElementsLoaded(): boolean {
 }
 
 export const ENTITY_COLORS: Record<string, string> = {
-  duplicant:  '#e94560',
+  duplicant:  '#ffe033',  // bright yellow — highly visible
+  critter:    '#4cff91',  // bright green
   building:   '#f5a623',
-  entity:     '#2ecc71',
+  entity:     '#5b8fff',  // blue-ish for generic entities
   pickupable: '#9b59b6',
   ore:        '#e67e22',
 };
