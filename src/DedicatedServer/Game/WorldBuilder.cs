@@ -581,8 +581,8 @@ public class WorldBuilder {
     private static int FindColonySpawnCell() {
         // Priority 1: find PrintingPod / Telepad in the world (spawned by SpawnEntities).
         // Stand on the cell at floor level just below the telepad.
-        var telepad = UnityEngine.Object.FindObjectsOfType<KMonoBehaviour>()
-            .FirstOrDefault(x => x.GetType().Name == "Telepad" || x.GetType().Name == "StartingTelepad");
+        var allBehaviours = UnityEngine.Object.FindObjectsOfType<KMonoBehaviour>() ?? Array.Empty<KMonoBehaviour>();
+        var telepad = allBehaviours.FirstOrDefault(x => x.GetType().Name == "Telepad" || x.GetType().Name == "StartingTelepad");
         if (telepad != null) {
             var cell = Grid.PosToCell(telepad.transform.position);
             Console.WriteLine($"[SpawnFinder] Found Telepad at cell={cell} ({cell % Grid.WidthInCells},{cell / Grid.WidthInCells})");
