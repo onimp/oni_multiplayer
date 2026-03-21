@@ -692,59 +692,67 @@ public class WorldBuilder {
     }
 
     /// <summary>
-    /// Starts RationalAi for each spawned Minion. In the live game, this is done by
-    /// MinionConfig.OnSpawn() → BaseMinionConfig.BaseOnSpawn() which runs via Unity's Start()
-    /// callback. In headless Start() never fires, so we replicate the critical parts:
-    ///   1. Add sensors to the Sensors component (needed by IdleChore → IdleCellSensor).
-    ///   2. Create RationalAi.Instance and start it with IdleMonitor as the only sub-SM.
-    ///      Using only IdleMonitor avoids NPEs from 42 other monitors that require
-    ///      rendering/audio/UI infrastructure not available in headless.
-    ///   3. Add navigator transition override layers for basic movement.
-    /// Effect: GlobalChoreProvider gets IdleChore entries → Brain.FindBetterChore returns
-    /// a chore → ChoreDriver ticks → Navigator moves the Minion.
+    /// Starts IdleMonitor for each spawned Minion so that IdleChore is registered in
+    /// GlobalChoreProvider and Brain.FindBetterChore returns a chore.
+    ///
+    /// In the live game this runs via: Unity.Start() → KMonoBehaviour.Spawn() →
+    ///   KPrefabID.OnSpawn() → MinionConfig.OnSpawn() → BaseMinionConfig.BaseOnSpawn()
+    ///   → new RationalAi.Instance(smc, model).StartSM()
+    ///   → RationalAi.alive.ToggleStateMachineList → new IdleMonitor.Instance(smi.master).StartSM()
+    ///
+    /// In headless Unity.Start() never fires so none of this chain runs.
+    ///
+    /// BYPASSES RationalAi entirely — it would also start DeathMonitor (via root.ToggleStateMachine)
+    /// and call AddUrge() etc., and spawning tests show it still NPEs in headless.
+    /// IdleMonitor.Instance is instantiated directly with the StateMachineController as master
+    /// — identical to what ToggleStateMachineList does — and is purely state-machine C# with
+    /// no Unity rendering/audio dependencies.
+    ///
+    /// SAFE SENSORS: only PathProberSensor and IdleCellSensor are added.
+    ///   AssignableReachabilitySensor is EXCLUDED — its ctor accesses MinionIdentity.assignableProxy
+    ///   which is only populated in MinionIdentity.OnSpawn() (never ran) → NPE.
+    ///   Sensors.Add() calls sensor.Update() immediately; both PathProberSensor and IdleCellSensor
+    ///   are no-ops when the Minion has no relevant tags (Idle etc.).
+    ///
+    /// Effect: GlobalChoreProvider.chores > 0 → Brain picks IdleChore → ChoreDriver ticks.
     /// </summary>
     private void FixRationalAi() {
         var fixedCount = 0;
         foreach (var go in _spawnedMinions) {
             try {
-                // Step 1: populate Sensors (needed for idle cell / pathfinding sensors)
-                var sensors = go.GetComponent<Sensors>();
-                if (sensors != null) {
-                    sensors.Add(new PathProberSensor(sensors));
-                    sensors.Add(new SafeCellSensor(sensors));
-                    sensors.Add(new IdleCellSensor(sensors));
-                    sensors.Add(new PickupableSensor(sensors));
-                    sensors.Add(new ClosestEdibleSensor(sensors));
-                    sensors.Add(new AssignableReachabilitySensor(sensors));
-                    sensors.Add(new MingleCellSensor(sensors));
-                }
-
-                // Step 2: create and start RationalAi with IdleMonitor only.
-                // Full BaseRationalAiStateMachines() has 43 entries many of which NPE in headless
-                // (RadiationMonitor, StressMonitor, EmoteMonitor, etc. need UI/audio/camera).
                 var smc = go.GetComponent<StateMachineController>();
                 if (smc == null) {
                     Console.WriteLine($"[FixRationalAi] {go.name}: StateMachineController=null, skipping");
                     continue;
                 }
-                var rationalAi = new RationalAi.Instance(smc, MinionConfig.MODEL);
-                rationalAi.stateMachinesToRunWhenAlive = new Func<RationalAi.Instance, StateMachine.Instance>[] {
-                    smi => new IdleMonitor.Instance(smi.master)
-                };
-                rationalAi.StartSM();
 
-                // Step 3: add navigator transition layers (needed for door/ladder traversal)
+                // Step 1: add only the safe sensors needed for IdleChore execution.
+                // AssignableReachabilitySensor is intentionally excluded — NPE in ctor.
+                // ClosestEdibleSensor, MingleCellSensor — excluded until headless safety confirmed.
+                var sensors = go.GetComponent<Sensors>();
+                if (sensors != null) {
+                    sensors.Add(new PathProberSensor(sensors));
+                    sensors.Add(new IdleCellSensor(sensors));
+                }
+
+                // Step 2: start IdleMonitor directly (bypasses RationalAi and DeathMonitor).
+                // IdleMonitor.Instance ctor = base(master) only — pure C#, no Unity dependencies.
+                // On StartSM(): enters idle state → ToggleRecurringChore(CreateIdleChore)
+                // → new IdleChore(master) → registered in GlobalChoreProvider.
+                var idleMonitorSmi = new IdleMonitor.Instance(smc);
+                idleMonitorSmi.StartSM();
+
+                // Step 3: add navigator transition layers (List.Add — no callbacks fired).
                 var nav = go.GetComponent<Navigator>();
                 if (nav?.transitionDriver != null) {
                     nav.transitionDriver.overrideLayers.Add(new BipedTransitionLayer(nav, 3.325f, 2.5f));
                     nav.transitionDriver.overrideLayers.Add(new DoorTransitionLayer(nav));
-                    nav.transitionDriver.overrideLayers.Add(new TubeTransitionLayer(nav));
                     nav.transitionDriver.overrideLayers.Add(new LadderDiseaseTransitionLayer(nav));
                     nav.transitionDriver.overrideLayers.Add(new NavTeleportTransitionLayer(nav));
                 }
 
                 fixedCount++;
-                Console.WriteLine($"[FixRationalAi] {go.name}: RationalAi+IdleMonitor started OK");
+                Console.WriteLine($"[FixRationalAi] {go.name}: IdleMonitor started OK");
             } catch (Exception ex) {
                 Console.WriteLine($"[FixRationalAi] {go.name}: ERROR: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
             }
