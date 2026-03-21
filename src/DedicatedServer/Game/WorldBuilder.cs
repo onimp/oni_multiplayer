@@ -555,13 +555,15 @@ public class WorldBuilder {
     }
 
     /// <summary>
-    /// Spawns 3 starter duplicants at the real colony location.
-    /// Called after SpawnEntities() so Grid.Solid is valid and Telepad is already in the world.
+    /// Spawns 3 starter duplicants, each in their own gas cell with sufficient atmosphere.
+    /// Spreading dupes across separate cells prevents atmosphere-sharing that drops mass below
+    /// the SafeFlags.IsBreathable threshold, which causes idleCell=own cell (cost=0) → no movement.
     /// </summary>
     private void SpawnStarterMinions() {
-        var spawnCell = FindColonySpawnCell();
+        var startCell = FindColonySpawnCell();
+        var cells = FindSpawnCells(startCell, 3);
         for (var i = 0; i < 3; i++) {
-            var cell = spawnCell; // same cell — dupes spread naturally via IdleChore BFS
+            var cell = i < cells.Count ? cells[i] : startCell;
             var x = cell % Grid.WidthInCells;
             var y = cell / Grid.WidthInCells;
             // PlaceOtherEntities(entity, rootCell=0) computes cell = Grid.OffsetCell(0, x, y) = x + y*Width
@@ -569,15 +571,37 @@ public class WorldBuilder {
             var entity = new TemplateClasses.Prefab("Minion", TemplateClasses.Prefab.Type.Other, x, y, (SimHashes)0);
             var go = TemplateLoader.PlaceOtherEntities(entity, 0);
             if (go != null) {
-                Console.WriteLine($"[SpawnMinion] Spawned Minion at ({x},{y}) cell={cell}");
+                Console.WriteLine($"[SpawnMinion] Spawned Minion {i} at ({x},{y}) cell={cell} mass={Grid.Mass[cell]:F2}");
                 _spawnedMinions.Add(go);
                 _directlySpawnedEntities.Add(("Minion", x, y));
                 if (!_prefabSizeMap.ContainsKey("Minion")) CaptureEntitySize("Minion", go);
             } else {
-                Console.WriteLine($"[SpawnMinion] Failed to spawn Minion at ({x},{y}) cell={cell}");
+                Console.WriteLine($"[SpawnMinion] Failed to spawn Minion {i} at ({x},{y}) cell={cell}");
             }
         }
         Console.WriteLine($"[WorldBuilder] {_spawnedMinions.Count} starter minion(s) spawned");
+    }
+
+    /// <summary>
+    /// Starting from startCell, zigzag-scans horizontally to find `count` distinct gas cells,
+    /// each with solid floor below and sufficient mass (>0.5 kg) so every dupe has breathable air.
+    /// </summary>
+    private static List<int> FindSpawnCells(int startCell, int count) {
+        var result = new List<int>(count);
+        for (var x = 0; result.Count < count && x <= 200; x++) {
+            var candidate = startCell + (x % 2 == 0 ? x / 2 : -(x + 1) / 2); // zigzag: 0,1,-1,2,-2,...
+            var floorCell = candidate - Grid.WidthInCells;
+            if (!Grid.IsValidCell(candidate) || !Grid.IsValidCell(floorCell)) continue;
+            if (!Grid.Solid[floorCell] || Grid.Solid[candidate]) continue;
+            var elem = Grid.Element[candidate];
+            if (elem == null || !elem.IsGas) continue;
+            if (Grid.Mass[candidate] < 0.5f) continue;
+            if (result.Contains(candidate)) continue;
+            result.Add(candidate);
+        }
+        if (result.Count < count)
+            Console.WriteLine($"[SpawnFinder] Only found {result.Count}/{count} suitable spawn cells near {startCell}");
+        return result;
     }
 
     /// <summary>
