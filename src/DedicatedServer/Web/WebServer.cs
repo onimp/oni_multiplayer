@@ -55,7 +55,12 @@ public class WebServer {
     }
 
     public void Start(CancellationToken ct) {
-        listener.Start();
+        try {
+            listener.Start();
+        } catch (Exception ex) {
+            Console.WriteLine($"[WebServer] Failed to start on port {port}: {ex.Message} — continuing without web server.");
+            return;
+        }
         Task.Run(() => ListenLoop(ct), ct);
     }
 

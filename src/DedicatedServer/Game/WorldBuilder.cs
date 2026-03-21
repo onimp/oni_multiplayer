@@ -22,6 +22,7 @@ public class WorldBuilder {
     public bool SimRunning { get; private set; }
     public int SimTick { get; private set; }
     public GameSpawnData SpawnData { get; private set; }
+    public GameTickLoop TickLoop { get; private set; }
 
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
@@ -55,6 +56,9 @@ public class WorldBuilder {
 
         Console.WriteLine("[WorldBuilder] Registering buildings...");
         RegisterBuildingDefs();
+
+        Console.WriteLine("[WorldBuilder] Registering entities...");
+        RegisterEntities();
 
         Console.WriteLine("[WorldBuilder] Generating world...");
         Sim.Cell[] generatedCells = null;
@@ -122,8 +126,17 @@ public class WorldBuilder {
             }
         }
 
+        Console.WriteLine("[WorldBuilder] Spawning entities...");
+        SpawnEntities(cluster);
+
         IsLoaded = true;
+        TickLoop = new GameTickLoop(TickSimulation);
         Console.WriteLine($"[WorldBuilder] World ready: {Width}x{Height}, SimDLL: {SimRunning}");
+    }
+
+    private static void Awake(string name, System.Action awake) {
+        try { awake(); Console.WriteLine($"[InitWorld] {name} OK"); }
+        catch (Exception ex) { Console.WriteLine($"[InitWorld] {name} CRASHED: {ex.GetBaseException().Message}\n{ex.GetBaseException().StackTrace?.Split('\n')[0]}"); throw; }
     }
 
     private void InitializeWorld(ResourceLoader resources) {
@@ -134,20 +147,20 @@ public class WorldBuilder {
         AllocateGrid(Width, Height);
 
         KObjectManager.Instance?.OnDestroy();
-        go.AddComponent<KObjectManager>().Awake();
+        Awake("KObjectManager", () => go.AddComponent<KObjectManager>().Awake());
         DistributionPlatform.sImpl = go.AddComponent<SteamDistributionPlatform>();
         Global.Instance?.OnDestroy();
-        go.AddComponent<Global>().Awake();
-        go.AddComponent<World>().Awake();
-        go.AddComponent<Pathfinding>().Awake();
-        go.AddComponent<GameScenePartitioner>().Awake();
-        go.AddComponent<GameClock>().Awake();
-        go.AddComponent<GameScheduler>().Awake();
-        go.AddComponent<ScheduleManager>().Awake();
-        go.AddComponent<MinionGroupProber>().Awake();
-        go.AddComponent<NavigationReservations>().Awake();
-        go.AddComponent<GlobalChoreProvider>().Awake();
-        go.AddComponent<BuildingConfigManager>().Awake();
+        Awake("Global", () => go.AddComponent<Global>().Awake());
+        Awake("World", () => go.AddComponent<World>().Awake());
+        Awake("Pathfinding", () => go.AddComponent<Pathfinding>().Awake());
+        Awake("GameScenePartitioner", () => go.AddComponent<GameScenePartitioner>().Awake());
+        Awake("GameClock", () => go.AddComponent<GameClock>().Awake());
+        Awake("GameScheduler", () => go.AddComponent<GameScheduler>().Awake());
+        Awake("ScheduleManager", () => go.AddComponent<ScheduleManager>().Awake());
+        Awake("MinionGroupProber", () => go.AddComponent<MinionGroupProber>().Awake());
+        Awake("NavigationReservations", () => go.AddComponent<NavigationReservations>().Awake());
+        Awake("BuildingConfigManager", () => go.AddComponent<BuildingConfigManager>().Awake());
+        Awake("EntityConfigManager", () => go.AddComponent<EntityConfigManager>().Awake());
 
         // Assets — Game.OnPrefabInit calls Db.Get() which needs Assets
         SetupAssets(go, resources);
@@ -236,11 +249,26 @@ public class WorldBuilder {
         }
 
 
+        // GlobalChoreProvider.OnPrefabInit → ChoreProvider.OnPrefabInit calls Game.Instance.Subscribe().
+        // Must be initialized AFTER Game.Instance is set.
+        Awake("GlobalChoreProvider", () => go.AddComponent<GlobalChoreProvider>().Awake());
+
         PathFinder.Initialize();
         new GameNavGrids(Pathfinding.Instance);
 
         StateMachineManager.Instance.Clear();
         StateMachine.Instance.error = false;
+
+        // BrainScheduler manages Dupe + Creature AI brain groups.
+        // Must be initialized here — BEFORE SpawnEntities() — so that Brain.OnSpawn()
+        // callbacks (Components.Brains.Add) find a registered handler and end up in
+        // a brain group. Calling Spawn() registers it with SimAndRenderScheduler
+        // RENDER_EVERY_TICK, which our GameTickLoop drives via RenderEveryTick().
+        var brainScheduler = go.AddComponent<BrainScheduler>();
+        Awake("BrainScheduler", () => brainScheduler.Awake());
+        brainScheduler.Spawn();
+        global::Game.BrainScheduler = brainScheduler;
+        Console.WriteLine("[WorldBuilder] BrainScheduler ready");
     }
 
     // TODO: replace with game's own asset loading
@@ -299,53 +327,10 @@ public class WorldBuilder {
         PopulateStubAnims();
     }
 
-    /// <summary>
-    /// Dictionary subclass that returns a stub KAnimFile for any missing key.
-    /// Replaces Assets.AnimTable so GetAnim() never returns null.
-    /// </summary>
     private static void PopulateStubAnims() {
-        var bf = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
-               | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance;
-
-        // Create stub KAnimFileData with empty Build
-        var emptyBuild = new KAnim.Build { symbols = Array.Empty<KAnim.Build.Symbol>() };
-        var batchGroup = (KBatchGroupData)System.Runtime.Serialization.FormatterServices
-            .GetUninitializedObject(typeof(KBatchGroupData));
-        batchGroup.builds = new List<KAnim.Build> { emptyBuild };
-        var stubData = new KAnimFileData("stub");
-        stubData.buildIndex = 0;
-        typeof(KAnimFileData).GetField("batchGroupData", bf)?.SetValue(stubData, batchGroup);
-
-        var stub = ScriptableObject.CreateInstance<KAnimFile>();
-        typeof(KAnimFile).GetField("data", bf)?.SetValue(stub, stubData);
-
-        // Get AnimTable and populate with stub for every anim name found in game assembly
-        var animTableField = typeof(Assets).GetField("AnimTable", bf);
-        if (animTableField == null) { Console.WriteLine("[WorldBuilder] ERROR: AnimTable field not found"); return; }
-        var animTable = (Dictionary<HashedString, KAnimFile>)animTableField.GetValue(null);
-
-        // Register stubs for all anim names used by AccessorySlots and building configs
-        var animNames = new[] {
-            // AccessorySlots
-            "head_swap_kanim", "body_comp_default_kanim", "body_swap_kanim",
-            "hair_swap_kanim", "hat_swap_kanim", "shoes_basic_black_kanim",
-            "body_lonelyminion_kanim", "body_sena_kanim",
-            // Tile configs
-            "floor_basic_kanim", "floor_bunker_kanim", "floor_carpet_kanim",
-            "floor_glass_kanim", "floor_insulated_kanim", "floor_mesh_kanim",
-            "floor_metal_kanim", "floor_moulding_kanim", "floor_plastic_kanim",
-            "floor_rocket_kanim", "floor_snow_kanim", "floor_wood_kanim",
-            "farmtilerotating_kanim", "radbolt_joint_plate_kanim", "storagetile_kanim",
-            // SpiceGrinder + other
-            "spice_grinder_kanim", "atmo_shoes_cantaloupe_kanim",
-            "rocket_window_small_kanim"
-        };
-        int count = 0;
-        foreach (var name in animNames) {
-            var key = new HashedString(name);
-            if (!animTable.ContainsKey(key)) { animTable[key] = stub; count++; }
-        }
-        Console.WriteLine($"[WorldBuilder] AnimTable populated with {count} stub anims");
+        // Assets.GetAnim() is patched by PatchInternalCalls (at build time in Assembly-CSharp.dll)
+        // to return UnityRuntime.GetStubAnim() when AnimTable is empty (headless mode).
+        // No pre-population needed — the stub is returned automatically.
     }
 
     private void RegisterBuildingDefs() {
@@ -362,28 +347,77 @@ public class WorldBuilder {
         Console.WriteLine($"[WorldBuilder] Registered {_buildingDefCache.Count}/{types.Count} building defs");
     }
 
+    private void RegisterEntities() {
+        EntityTemplates.CreateTemplates();
+        var entityConfigType = typeof(IEntityConfig);
+        var types = typeof(EntityConfigManager).Assembly.GetTypes()
+            .Where(t => entityConfigType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+            .ToList();
+        int registered = 0, failed = 0;
+        foreach (var type in types) {
+            try {
+                var config = (IEntityConfig)Activator.CreateInstance(type);
+                // DLC check: cast the CONFIG INSTANCE (not the Type object) to IHasDlcRestrictions
+                string[] required = null, forbidden = null;
+                if (config is IHasDlcRestrictions dlcRestrictions) {
+                    required = dlcRestrictions.GetRequiredDlcIds();
+                    forbidden = dlcRestrictions.GetForbiddenDlcIds();
+                }
+                if (!DlcManager.IsCorrectDlcSubscribed(required, forbidden)) continue;
+                EntityConfigManager.Instance.RegisterEntity(config, required, forbidden);
+                registered++;
+            } catch (Exception ex) {
+                failed++;
+                if (failed <= 3) {
+                    var inner = ex.InnerException;
+                    Console.WriteLine($"[WorldBuilder] Entity FAIL [{type.Name}]: {ex.GetType().Name}: {ex.Message}");
+                    Console.WriteLine($"  Stack: {(inner ?? ex).StackTrace?.Split('\n')[0]}");
+                }
+            }
+        }
+        Console.WriteLine($"[WorldBuilder] Registered {registered}/{types.Count} entities ({failed} failed), prefabs: {Assets.PrefabsByTag?.Count ?? 0}");
+    }
+
     private void AddStarterDuplicants(GameSpawnData spawnData) {
         var startX = spawnData.baseStartPos.x;
         var startY = spawnData.baseStartPos.y;
-        var starters = Db.Get()?.Personalities?.GetStartingPersonalities();
-        var names = new List<string>();
-        if (starters != null && starters.Count >= 3) {
-            var rng = new Random();
-            var used = new HashSet<int>();
-            for (var i = 0; i < 3; i++) {
-                int idx;
-                do { idx = rng.Next(starters.Count); } while (used.Contains(idx));
-                used.Add(idx);
-                names.Add(starters[idx].Name);
-            }
-        } else {
-            names.AddRange(new[] { "Meep", "Bubbles", "Stinky" });
-        }
+        // Prefab ID must match the registered entity tag — "Minion" from MinionConfig.
+        // Personalities are applied post-spawn; for now just place 3 Minion prefabs.
         for (var i = 0; i < 3; i++) {
             spawnData.otherEntities.Add(new TemplateClasses.Prefab(
-                names[i], TemplateClasses.Prefab.Type.Other, startX + i, startY, (SimHashes)0));
+                "Minion", TemplateClasses.Prefab.Type.Other, startX + i, startY, (SimHashes)0));
         }
-        Console.WriteLine($"[WorldBuilder] Added 3 duplicants: {string.Join(", ", names)}");
+        Console.WriteLine($"[WorldBuilder] Added 3 Minion prefabs at ({startX},{startY})");
+    }
+
+    /// <summary>
+    /// Instantiates entities from SpawnData for each world in the cluster.
+    /// Mirrors WorldGenSpawner.PlaceTemplates() but without SaveLoader dependency.
+    /// Applies world offsets to positions, then calls TemplateLoader.PlaceOtherEntities per entity.
+    /// </summary>
+    private void SpawnEntities(Cluster cluster) {
+        var spawned = 0;
+        var skipped = 0;
+        foreach (var world in cluster.worlds) {
+            var offsetX = world.data?.world?.offset.x ?? 0;
+            var offsetY = world.data?.world?.offset.y ?? 0;
+            // Apply world offset to positions (WorldGenSpawner.PlaceTemplates does the same)
+            foreach (var entity in world.SpawnData.otherEntities) {
+                entity.location_x += offsetX;
+                entity.location_y += offsetY;
+            }
+            foreach (var entity in world.SpawnData.otherEntities) {
+                var go = TemplateLoader.PlaceOtherEntities(entity, 0);
+                if (go != null) {
+                    Console.WriteLine($"[Entities] Spawned: {entity.id} at ({entity.location_x},{entity.location_y})");
+                    spawned++;
+                } else {
+                    Console.WriteLine($"[Entities] Skipped (no prefab or invalid cell): {entity.id}");
+                    skipped++;
+                }
+            }
+        }
+        Console.WriteLine($"[WorldBuilder] Entity spawning: {spawned} spawned, {skipped} skipped");
     }
 
     private static unsafe void AllocateGrid(int w, int h) {

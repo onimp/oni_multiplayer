@@ -1,73 +1,277 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace DedicatedServer.Game;
 
 /// <summary>
 /// Managed implementations for Unity InternalCall methods.
-/// Cecil patcher inserts Call instructions to these methods in UnityEngine.CoreModule.dll.
+/// Harmony patches redirect Unity InternalCalls to these methods.
+/// Provides component tracking, lifecycle management, and object identity.
 /// </summary>
 public static class UnityRuntime {
 
-    private static readonly List<GameObject> AllGameObjects = new List<GameObject>();
-    private static readonly Dictionary<IntPtr, GameObject> ComponentToGameObject = new Dictionary<IntPtr, GameObject>();
-    private static readonly Dictionary<IntPtr, string> ObjectNames = new Dictionary<IntPtr, string>();
+    // --- Object identity ---
     private static int _nextId;
+    private static int NextId() => Interlocked.Increment(ref _nextId);
+
+    // --- Component tracking ---
+    // Every GameObject has a list of components. Every component knows its parent GO.
+    private static readonly Dictionary<IntPtr, List<Component>> GameObjectComponents = new();
+    private static readonly Dictionary<IntPtr, GameObject> ComponentToGameObject = new();
+    private static readonly Dictionary<IntPtr, string> ObjectNames = new();
+    private static readonly Dictionary<IntPtr, Vector3> ObjectPositions = new();
+    private static readonly HashSet<IntPtr> ActiveObjects = new();
+    private static readonly HashSet<IntPtr> SpawnedObjects = new();
+
+    // --- Stats ---
+    public static int TotalGameObjects => GameObjectComponents.Count;
+    public static int TotalComponents => ComponentToGameObject.Count;
+
+    // ==================== GameObject ====================
 
     public static void CreateGameObject(GameObject self, string name) {
-        self.m_CachedPtr = new IntPtr(++_nextId);
-        // GameObject inherits Component — .gameObject should return self
-        ComponentToGameObject[self.m_CachedPtr] = self;
-        AllGameObjects.Add(self);
+        self.m_CachedPtr = new IntPtr(NextId());
+        GameObjectComponents[self.m_CachedPtr] = new List<Component>();
+        ComponentToGameObject[self.m_CachedPtr] = self; // GO is also a Component
+        ObjectNames[self.m_CachedPtr] = name ?? "";
+        // Every GameObject gets a Transform
+        AddComponent(self, typeof(Transform));
     }
 
     public static Component AddComponent(GameObject self, Type componentType) {
-        var comp = (Component)Activator.CreateInstance(componentType);
-        comp.m_CachedPtr = new IntPtr(++_nextId);
+        Component comp;
+        try {
+            comp = (Component) Activator.CreateInstance(componentType, true);
+        } catch {
+            // Some components have no parameterless ctor — create uninitialized
+            comp = (Component) System.Runtime.Serialization.FormatterServices
+                .GetUninitializedObject(componentType);
+        }
+        comp.m_CachedPtr = new IntPtr(NextId());
         ComponentToGameObject[comp.m_CachedPtr] = self;
+
+        if (GameObjectComponents.TryGetValue(self.m_CachedPtr, out var components))
+            components.Add(comp);
+
         return comp;
     }
 
+    public static Component GetComponent(GameObject self, Type type) {
+        if (!GameObjectComponents.TryGetValue(self.m_CachedPtr, out var components))
+            return null;
+
+        Component exact = null;
+        foreach (var c in components) {
+            if (type.IsInstanceOfType(c)) {
+                if (c.GetType() == type) return c; // exact match = best
+                exact ??= c; // assignable match = fallback
+            }
+        }
+        return exact;
+    }
+
+    public static Array GetComponentsInternal(GameObject self, Type type) {
+        if (!GameObjectComponents.TryGetValue(self.m_CachedPtr, out var components))
+            return Array.CreateInstance(type, 0);
+
+        var matches = components.Where(type.IsInstanceOfType).ToArray();
+        var result = Array.CreateInstance(type, matches.Length);
+        Array.Copy(matches, result, matches.Length);
+        return result;
+    }
+
+    public static Component GetComponentInChildren(GameObject self, Type type, bool includeInactive) {
+        return GetComponent(self, type);
+    }
+
+    public static unsafe void GetComponentFastPath(
+        GameObject self, Type type, IntPtr oneFurtherThanResultValue) {
+        var component = GetComponent(self, type);
+        if (component == null) return;
+
+#pragma warning disable CS8500
+        var instanceIntPtr = (IntPtr) (&component);
+#pragma warning restore CS8500
+        var adjustedTargetIntPtr = IntPtr.Subtract(oneFurtherThanResultValue, 8);
+
+        var sourceBytePtr = (byte*) instanceIntPtr.ToPointer();
+        var targetBytePtr = (byte*) adjustedTargetIntPtr.ToPointer();
+        for (var i = 0; i < 8; i++)
+            targetBytePtr[i] = sourceBytePtr[i];
+    }
+
+    public static unsafe void GetComponentFastPathFromComponent(
+        Component self, Type type, IntPtr oneFurtherThanResultValue) {
+        var go = GetGameObject(self);
+        if (go != null)
+            GetComponentFastPath(go, type, oneFurtherThanResultValue);
+    }
+
     public static GameObject Find(string name) {
-        for (var i = 0; i < AllGameObjects.Count; i++) {
-            if (AllGameObjects[i].name == name)
-                return AllGameObjects[i];
+        foreach (var kvp in GameObjectComponents) {
+            if (ObjectNames.TryGetValue(kvp.Key, out var n) && n == name) {
+                // Find the GO by its ptr
+                if (ComponentToGameObject.TryGetValue(kvp.Key, out var go))
+                    return go;
+            }
         }
         return null;
     }
+
+    public static void SetActive(GameObject self, bool value) {
+        if (value) {
+            ActiveObjects.Add(self.m_CachedPtr);
+            // Trigger lifecycle on activation (like Unity does)
+            TriggerLifecycle(self);
+        } else {
+            ActiveObjects.Remove(self.m_CachedPtr);
+        }
+    }
+
+    public static bool GetActive(GameObject self) {
+        return ActiveObjects.Contains(self.m_CachedPtr);
+    }
+
+    public static void SetLayer(GameObject self, int layer) {
+        // No-op in headless
+    }
+
+    // ==================== Component ====================
 
     public static GameObject GetGameObject(Component self) {
         ComponentToGameObject.TryGetValue(self.m_CachedPtr, out var go);
         return go;
     }
 
-    public static void CreateScriptableObject(ScriptableObject self) {
-        self.m_CachedPtr = new IntPtr(++_nextId);
+    public static Transform GetTransformFromComponent(Component self) {
+        var go = GetGameObject(self);
+        return go != null ? (Transform) GetComponent(go, typeof(Transform)) : null;
     }
 
-    public static ScriptableObject CreateScriptableObjectInstanceFromType(Type type, bool applyDefaultsAndReset) {
-        var obj = (ScriptableObject)Activator.CreateInstance(type);
-        obj.m_CachedPtr = new IntPtr(++_nextId);
-        return obj;
+    public static Transform GetTransformFromGameObject(GameObject self) {
+        return (Transform) GetComponent(self, typeof(Transform));
     }
 
-    // --- Object name ---
+    // ==================== Object ====================
 
-    public static string GetName(UnityEngine.Object self) {
+    public static string GetName(Object self) {
         ObjectNames.TryGetValue(self.m_CachedPtr, out var name);
         return name ?? "";
     }
 
-    public static void SetName(UnityEngine.Object self, string name) {
-        ObjectNames[self.m_CachedPtr] = name;
+    public static void SetName(Object self, string name) {
+        ObjectNames[self.m_CachedPtr] = name ?? "";
     }
 
-    public static int GetInstanceID(UnityEngine.Object self) {
+    public static int GetInstanceID(Object self) {
         return self.m_CachedPtr.ToInt32();
     }
 
-    // --- Application ---
+    public static void ObjectConstructor(Object obj) {
+        if (obj.m_CachedPtr == IntPtr.Zero)
+            obj.m_CachedPtr = new IntPtr(NextId());
+        if (obj is GameObject go) {
+            if (!GameObjectComponents.ContainsKey(go.m_CachedPtr)) {
+                GameObjectComponents[go.m_CachedPtr] = new List<Component>();
+                ComponentToGameObject[go.m_CachedPtr] = go;
+            }
+        }
+    }
+
+    // --- Instantiate (clone) ---
+
+    public static Object CloneSingle(Object data) {
+        if (data == null) return null;
+
+        if (data is GameObject srcGo) {
+            // Clone GameObject: create new GO, then add components of same types
+            var clone = new GameObject();
+            clone.name = srcGo.name;
+            if (GameObjectComponents.TryGetValue(srcGo.m_CachedPtr, out var srcComponents)) {
+                foreach (var srcComp in srcComponents) {
+                    if (srcComp is Transform) continue; // already added by CreateGameObject
+                    AddComponent(clone, srcComp.GetType());
+                }
+            }
+            // Copy position
+            if (ObjectPositions.TryGetValue(srcGo.m_CachedPtr, out var pos))
+                ObjectPositions[clone.m_CachedPtr] = pos;
+            return clone;
+        }
+
+        // Non-GameObject: MemberwiseClone
+        var cloneObj = (Object) data.GetType()
+            .GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(data, null);
+        cloneObj.m_CachedPtr = new IntPtr(NextId());
+        return cloneObj;
+    }
+
+    public static Object CloneSingleWithParent(Object data, Transform parent, bool worldPositionStays) {
+        return CloneSingle(data);
+    }
+
+    public static Object CloneSingleWithParams(Object data, Vector3 pos, Quaternion rot) {
+        var clone = CloneSingle(data);
+        if (clone is GameObject go)
+            ObjectPositions[go.m_CachedPtr] = pos;
+        return clone;
+    }
+
+    public static Object InstantiateSingleWithParent(Object data, Transform parent, Vector3 pos, Quaternion rot) {
+        return CloneSingleWithParams(data, pos, rot);
+    }
+
+    public static bool IsNativeObjectAlive(Object o) {
+        return o != null && o.m_CachedPtr != IntPtr.Zero;
+    }
+
+    // --- Destroy ---
+
+    public static void DestroyObject(Object obj, float t) {
+        DestroyInternal(obj);
+    }
+
+    public static void DestroyImmediate(Object obj, bool allowDestroyingAssets) {
+        DestroyInternal(obj);
+    }
+
+    private static void DestroyInternal(Object obj) {
+        if (obj == null) return;
+        if (obj is GameObject go && GameObjectComponents.TryGetValue(go.m_CachedPtr, out var comps)) {
+            foreach (var c in comps.ToList()) {
+                ComponentToGameObject.Remove(c.m_CachedPtr);
+                ObjectNames.Remove(c.m_CachedPtr);
+            }
+            GameObjectComponents.Remove(go.m_CachedPtr);
+            ActiveObjects.Remove(go.m_CachedPtr);
+            SpawnedObjects.Remove(go.m_CachedPtr);
+        }
+        ComponentToGameObject.Remove(obj.m_CachedPtr);
+        ObjectNames.Remove(obj.m_CachedPtr);
+    }
+
+    // ==================== ScriptableObject ====================
+
+    public static void CreateScriptableObject(ScriptableObject self) {
+        if (self.m_CachedPtr == IntPtr.Zero)
+            self.m_CachedPtr = new IntPtr(NextId());
+    }
+
+    public static ScriptableObject CreateScriptableObjectInstanceFromType(Type type, bool applyDefaultsAndReset) {
+        var obj = (ScriptableObject) Activator.CreateInstance(type);
+        if (obj.m_CachedPtr == IntPtr.Zero)
+            obj.m_CachedPtr = new IntPtr(NextId());
+        return obj;
+    }
+
+    // ==================== Application ====================
 
     private static readonly string _streamingAssetsPath =
         Environment.GetEnvironmentVariable("ONI_STREAMING_ASSETS") ?? "";
@@ -82,23 +286,37 @@ public static class UnityRuntime {
     public static int GetProcessorCount() => Environment.ProcessorCount;
     public static int GetSystemMemorySize() => 8192;
 
-    // --- Transform ---
-    private static readonly Dictionary<IntPtr, Transform> ComponentToTransform = new Dictionary<IntPtr, Transform>();
+    // ==================== Transform ====================
 
-    public static Transform GetTransform(Component self) {
-        if (ComponentToTransform.TryGetValue(self.m_CachedPtr, out var t)) return t;
-        // Create a stub Transform for this component's gameObject
-        var transform = (Transform)Activator.CreateInstance(typeof(Transform), true);
-        transform.m_CachedPtr = new IntPtr(++_nextId);
-        ComponentToTransform[self.m_CachedPtr] = transform;
-        return transform;
+    public static void GetPosition(Transform self, out Vector3 result) {
+        var go = GetGameObject(self);
+        if (go != null && ObjectPositions.TryGetValue(go.m_CachedPtr, out var pos))
+            result = pos;
+        else
+            result = Vector3.zero;
     }
 
-    // --- TextAsset ---
-    private static readonly Dictionary<IntPtr, string> TextAssetContent = new Dictionary<IntPtr, string>();
+    public static void SetPositionFromTransform(Transform self, ref Vector3 position) {
+        var go = GetGameObject(self);
+        if (go != null)
+            ObjectPositions[go.m_CachedPtr] = position;
+    }
 
-    public static void CreateTextAsset(UnityEngine.Object self, string text) {
-        self.m_CachedPtr = new IntPtr(++_nextId);
+    public static void SetPosition(GameObject go, Vector3 position) {
+        ObjectPositions[go.m_CachedPtr] = position;
+    }
+
+    public static void SetParent(Transform self, Transform parent, bool worldPositionStays) {
+        // No-op in headless
+    }
+
+    // ==================== TextAsset ====================
+
+    private static readonly Dictionary<IntPtr, string> TextAssetContent = new();
+
+    public static void CreateTextAsset(Object self, string text) {
+        if (self.m_CachedPtr == IntPtr.Zero)
+            self.m_CachedPtr = new IntPtr(NextId());
         TextAssetContent[self.m_CachedPtr] = text ?? "";
     }
 
@@ -112,34 +330,145 @@ public static class UnityRuntime {
         return System.Text.Encoding.UTF8.GetBytes(text ?? "");
     }
 
-    // --- Resources ---
+    // ==================== Resources ====================
 
-    public static UnityEngine.Object[] FindObjectsOfTypeAll(Type type) => Array.Empty<UnityEngine.Object>();
+    public static Object[] FindObjectsOfTypeAll(Type type) => Array.Empty<Object>();
 
-    public static UnityEngine.Object LoadResource(string path, Type type) {
-        // ScriptableObject-based singletons loaded via Resources.Load in game
-        if (typeof(ScriptableObject).IsAssignableFrom(type)) {
+    public static Object[] FindObjectsOfType(Type type, bool includeInactive) {
+        return Array.Empty<Object>();
+    }
+
+    public static Object LoadResource(string path, Type type) {
+        if (typeof(ScriptableObject).IsAssignableFrom(type))
             return ScriptableObject.CreateInstance(type);
-        }
         return null;
     }
 
-    // --- MonoBehaviour ---
+    // ==================== Behaviour ====================
+
+    public static bool GetIsActiveAndEnabled(Behaviour self) => true;
+    public static bool GetEnabled(Behaviour self) => true;
+    public static void SetEnabled(Behaviour self, bool value) { }
+
+    // ==================== MonoBehaviour ====================
+
+    public static bool IsObjectMonoBehaviour(Object obj) => obj is MonoBehaviour;
+
+    public static Coroutine StartCoroutineManaged(MonoBehaviour self, IEnumerator routine) {
+        // No coroutines in headless — just run synchronously if simple
+        return null;
+    }
+
+    // ==================== DontDestroyOnLoad ====================
+
+    public static void DontDestroyOnLoad(Object target) { }
+
+    // ==================== Misc ====================
+
+    public static int GetOffsetOfInstanceIDInCPlusPlusObject() => 0x08;
+
+    public static string ObjectToString(Object obj) {
+        return (obj.name ?? "") + obj.GetHashCode();
+    }
+
+    // ==================== Lifecycle ====================
+
+    /// <summary>
+    /// Triggers the KMonoBehaviour lifecycle (Awake→OnPrefabInit, Start→OnSpawn) on a GameObject.
+    /// Called when SetActive(true) or manually after KInstantiate.
+    /// </summary>
+    public static void TriggerLifecycle(GameObject go) {
+        if (SpawnedObjects.Contains(go.m_CachedPtr)) return;
+        SpawnedObjects.Add(go.m_CachedPtr);
+
+        if (!GameObjectComponents.TryGetValue(go.m_CachedPtr, out var components)) return;
+
+        // Phase 1: Awake (InitializeComponent → OnPrefabInit)
+        var snapshot = components.ToList(); // snapshot — components may be added during Awake
+        foreach (var comp in snapshot) {
+            if (comp is KMonoBehaviour kmb) {
+                try { kmb.InitializeComponent(); }
+                catch (Exception ex) {
+                    Console.WriteLine($"[Lifecycle] Awake failed [{comp.GetType().Name}]: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+
+        // Phase 2: Start (Spawn → OnSpawn)
+        snapshot = components.ToList(); // re-snapshot after Awake may have added more
+        foreach (var comp in snapshot) {
+            if (comp is KMonoBehaviour kmb) {
+                try { kmb.Spawn(); }
+                catch (Exception ex) {
+                    Console.WriteLine($"[Lifecycle] Start failed [{comp.GetType().Name}]: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Creates a stub UnityEngine.Object of the given type without calling its constructor.
     /// Assigns a valid m_CachedPtr so name/identity operations work.
     /// </summary>
-    public static T CreateStub<T>() where T : UnityEngine.Object {
-        var obj = (T)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(T));
-        obj.m_CachedPtr = new IntPtr(++_nextId);
+    // ==================== KAnim stubs ====================
+
+    private static KAnimFile _stubAnim;
+
+    /// <summary>Returns a stub KAnimFile for headless use when a real asset isn't available.</summary>
+    public static KAnimFile GetStubAnim() {
+        if (_stubAnim != null) return _stubAnim;
+        var stub = CreateStub<KAnimFile>();
+        _stubAnim = stub;
+        return stub;
+    }
+
+    public static T CreateStub<T>() where T : Object {
+        var obj = (T) System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(T));
+        obj.m_CachedPtr = new IntPtr(NextId());
         return obj;
     }
 
-    public static bool IsObjectMonoBehaviour(UnityEngine.Object obj) => obj is MonoBehaviour;
+    /// <summary>
+    /// Install Harmony patches to redirect Unity InternalCalls to this runtime.
+    /// Must be called BEFORE any Unity code executes.
+    /// </summary>
+    public static void Install() {
+        // InternalCall methods in UnityEngine.CoreModule.dll are pre-patched at build time
+        // by PatchInternalCalls (Mono.Cecil) — they already delegate to UnityRuntime statics.
+        // Harmony runtime patches on InternalCalls hang on Mono (no IL body → native detour blocks).
+        // Only apply Harmony patches for purely managed methods (non-InternalCall).
+        var harmony = new HarmonyLib.Harmony("DedicatedServer.UnityRuntime");
+        // Discover all patch classes in the Patches namespace
+        var patchTypes = typeof(UnityRuntime).Assembly.GetTypes()
+            .Where(t => t.Namespace?.StartsWith("DedicatedServer.Game.Patches") == true)
+            .ToList();
 
-    public static Coroutine StartCoroutineManaged2(MonoBehaviour self, System.Collections.IEnumerator routine) {
-        // Skip coroutines on headless server — no frame loop
-        return null;
+        // Skip patch classes that target Unity InternalCall groups — those are pre-patched.
+        // Only apply patches for managed game code (non-Unity-InternalCall methods).
+        // Skip patch classes that target Unity InternalCall methods — pre-patched by PatchInternalCalls.
+        // Non-Unity game classes (AssetsPatches, etc.) are NOT in this list and get patched normally.
+        var skipTypes = new HashSet<string> {
+            "ApplicationPatches", "GameObjectPatches", "ComponentPatches",
+            "TransformPatches", "ObjectPatches", "BehaviourPatches",
+            "MonoBehaviourPatches", "ScriptableObjectPatches", "TextAssetPatches",
+            "RandomPatches", "DebugPatches", "SystemInfoPatches"
+        };
+
+        int applied = 0, skipped = 0;
+        foreach (var type in patchTypes) {
+            if (skipTypes.Contains(type.Name)) {
+                skipped++;
+                continue;
+            }
+            Console.WriteLine($"[UnityRuntime] Patching {type.Name}...");
+            Console.Out.Flush();
+            try {
+                harmony.CreateClassProcessor(type).Patch();
+                applied++;
+            } catch (Exception ex) {
+                Console.WriteLine($"[UnityRuntime] Patch failed [{type.Name}]: {ex.GetBaseException().Message}");
+            }
+        }
+        Console.WriteLine($"[UnityRuntime] Installed {applied} patch classes ({skipped} skipped — pre-patched by PatchInternalCalls)");
     }
 }
