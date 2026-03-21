@@ -291,6 +291,10 @@ public class WorldBuilder {
         // every tick (nochore.Update and haschore.Update). Without this, Instance is null → NPE 81K+/min.
         // OnPrefabInit just sets Instance=this, creates NoteStorage, and subscribes to Game events.
         Awake("ReportManager", () => go.AddComponent<ReportManager>().Awake());
+        // todaysReport is only created in OnSaveGameReady (subscribed to game event hash -1917495436).
+        // That event never fires in headless. Fire it manually so todaysReport != null
+        // and ReportManager.ReportValue() doesn't NPE on every ChoreDriver tick.
+        global::Game.Instance.Trigger(-1917495436);
 
         // Mirrors Game.OnPrefabInit() lines 830-842 (never reached there because it crashes at 820).
         // PathFinder.Initialize() — builds offset tables NavGrid uses.
