@@ -672,17 +672,24 @@ public class WorldBuilder {
         // Prefer Oxygen zone — more connected cells = more room for 3 dupes.
         if (_hqCell >= 0) {
             var firstGasCell = -1;  // fallback: first any-gas cell with solid floor
-            for (var dy = 1; dy <= 20; dy++) {
+            Console.WriteLine($"[ScanAboveHQ] Starting scan from HQ cell={_hqCell} ({_hqCell % w},{_hqCell / w}), dy=1..30");
+            for (var dy = 1; dy <= 30; dy++) {
                 var candidate = _hqCell + dy * w;
+                if (!Grid.IsValidCell(candidate)) {
+                    Console.WriteLine($"[ScanAboveHQ] dy={dy} y={candidate / w} → break (invalid cell)");
+                    break;
+                }
                 var floorCell = candidate - w;
-                if (!Grid.IsValidCell(candidate) || !Grid.IsValidCell(floorCell)) continue;
-                if (Grid.Solid[candidate]) continue; // skip solid cells (rock layers between HQ and O2 cave)
+                var solid = Grid.Solid[candidate];
                 var elem = Grid.Element[candidate];
+                var mass = Grid.Mass[candidate];
+                Console.WriteLine($"[ScanAboveHQ] dy={dy} y={candidate / w} solid={solid} elem={elem?.tag ?? "null"} mass={mass:F2} floorSolid={Grid.Solid[floorCell]}");
+                if (solid) continue; // skip solid cells (rock layers between HQ and O2 cave)
                 if (elem == null || elem.IsLiquid || elem.id == SimHashes.Vacuum) continue;
                 if (!Grid.Solid[floorCell]) continue; // no floor to stand on
                 // Prefer Oxygen cells (higher mass, more connected space)
-                if (elem.id == SimHashes.Oxygen && Grid.Mass[candidate] > 1.0f) {
-                    Console.WriteLine($"[SpawnFinder] Oxygen zone above HQ: ({candidate % w},{candidate / w}) mass={Grid.Mass[candidate]:F2}");
+                if (elem.id == SimHashes.Oxygen && mass > 1.0f) {
+                    Console.WriteLine($"[SpawnFinder] Oxygen zone above HQ: ({candidate % w},{candidate / w}) mass={mass:F2}");
                     return candidate;
                 }
                 // Record first non-vacuum gas cell as fallback (e.g. CO2 layer)
@@ -694,7 +701,7 @@ public class WorldBuilder {
                 Console.WriteLine($"[SpawnFinder] No O2 found, using first gas cell: ({firstGasCell % w},{firstGasCell / w}) elem={e?.tag} mass={Grid.Mass[firstGasCell]:F2}");
                 return firstGasCell;
             }
-            Console.WriteLine($"[SpawnFinder] HQ known at cell={_hqCell} but no gas cell found within 20 rows above, falling back");
+            Console.WriteLine($"[SpawnFinder] HQ known at cell={_hqCell} but no gas cell found within 30 rows above, falling back");
         } else {
             Console.WriteLine("[SpawnFinder] _hqCell not set — HQ not found in SpawnData");
         }
@@ -1051,20 +1058,20 @@ public class WorldBuilder {
                     sensors.Add(new IdleCellSensor(sensors));
                 }
 
-                // Step 1b: start key vital monitors — required so BreathMonitor/CalorieMonitor/etc
-                // trigger their state-machine chores (BreathMonitor → MoveToSafety when O2 low, etc).
-                // Each wrapped in try/catch — ctors access Db.Amounts which is safe post-Db.Initialize,
-                // but some fields may be null in partial headless init.
+                // Step 2: start IdleMonitor FIRST — must be before any other monitor so
+                // IdleChore is registered in ChoreProvider before anything else runs.
+                // Bypasses RationalAi entirely to avoid DeathMonitor / AddUrge() NPEs in headless.
+                // Direct instantiation (not StartMonitor<T>) guarantees correct ctor call.
+                var idleMonitorSmi = new IdleMonitor.Instance(smc);
+                idleMonitorSmi.StartSM();
+                Console.WriteLine($"[FixRationalAi] {go.name}: IdleMonitor started, smi={idleMonitorSmi != null}");
+
+                // Step 1b: start vital monitors AFTER IdleMonitor so IdleChore already exists.
+                // Each wrapped in try/catch — ctors access Db.Amounts (safe post-Db.Initialize).
                 StartMonitor<BreathMonitor>(smc,   "BreathMonitor");
                 StartMonitor<CalorieMonitor>(smc,  "CalorieMonitor");
                 StartMonitor<BladderMonitor>(smc,  "BladderMonitor");
                 StartMonitor<StaminaMonitor>(smc,  "StaminaMonitor");
-
-                // Step 2: start IdleMonitor directly (mirrors what RationalAi.alive does via
-                // ToggleStateMachineList). Bypasses RationalAi entirely to avoid DeathMonitor
-                // and AddUrge() calls that NPE in headless.
-                var idleMonitorSmi = new IdleMonitor.Instance(smc);
-                idleMonitorSmi.StartSM();
 
                 // Step 3a: ensure Navigator is fully initialised AND its SM is started.
                 //
