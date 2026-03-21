@@ -23,6 +23,12 @@ public class WorldBuilder {
     public int SimTick { get; private set; }
     public GameSpawnData SpawnData { get; private set; }
     public GameTickLoop TickLoop { get; private set; }
+    /// <summary>Singleton world state — created once in Create(), reused by WebServer.</summary>
+    public RealWorldState WorldState { get; private set; }
+
+    // Minions actually spawned during SpawnEntities() — more reliable than Components.LiveMinionIdentities
+    // which may be empty if MinionIdentity.OnSpawn() didn't complete.
+    private readonly List<GameObject> _spawnedMinions = new List<GameObject>();
 
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
@@ -126,6 +132,12 @@ public class WorldBuilder {
             }
         }
 
+        // Bootstrap ScheduleManager BEFORE spawning entities.
+        // ScheduleManager.OnSpawn() creates the default schedule and hooks OnAddDupe.
+        // Without this call, schedules.Count == 0 → FixChoreConsumers can't assign schedules
+        // → ChoreConsumerState ctor NPEs at schedulable.GetSchedule().GetCurrentScheduleBlock().
+        InitializeSchedules();
+
         Console.WriteLine("[WorldBuilder] Spawning entities...");
         SpawnEntities(cluster);
 
@@ -144,6 +156,7 @@ public class WorldBuilder {
 
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
+        WorldState = new RealWorldState(Width, Height, this);
         Console.WriteLine($"[WorldBuilder] World ready: {Width}x{Height}, SimDLL: {SimRunning}");
     }
 
@@ -411,6 +424,7 @@ public class WorldBuilder {
     private void SpawnEntities(Cluster cluster) {
         var spawned = 0;
         var skipped = 0;
+        _spawnedMinions.Clear();
         foreach (var world in cluster.worlds) {
             var offsetX = world.data?.world?.offset.x ?? 0;
             var offsetY = world.data?.world?.offset.y ?? 0;
@@ -424,13 +438,18 @@ public class WorldBuilder {
                 if (go != null) {
                     Console.WriteLine($"[Entities] Spawned: {entity.id} at ({entity.location_x},{entity.location_y})");
                     spawned++;
+                    // Track Minion GOs directly — more reliable than Components.LiveMinionIdentities
+                    // which requires MinionIdentity.OnSpawn() to have completed successfully.
+                    if (entity.id == "Minion" || entity.id == "BionicMinion") {
+                        _spawnedMinions.Add(go);
+                    }
                 } else {
                     Console.WriteLine($"[Entities] Skipped (no prefab or invalid cell): {entity.id}");
                     skipped++;
                 }
             }
         }
-        Console.WriteLine($"[WorldBuilder] Entity spawning: {spawned} spawned, {skipped} skipped");
+        Console.WriteLine($"[WorldBuilder] Entity spawning: {spawned} spawned, {skipped} skipped, {_spawnedMinions.Count} minions tracked");
     }
 
     private static unsafe void AllocateGrid(int w, int h) {
@@ -453,32 +472,67 @@ public class WorldBuilder {
     }
 
     /// <summary>
+    /// Calls ScheduleManager.Spawn() to create the default schedule and register the OnAddDupe hook.
+    /// Must be called BEFORE SpawnEntities() so that minion spawning auto-assigns schedules,
+    /// and BEFORE FixChoreConsumers() so that ChoreConsumerState ctor can call GetSchedule().
+    /// Falls back to AddSchedule() directly if Spawn() throws (e.g. STRINGS not loaded).
+    /// </summary>
+    private void InitializeSchedules() {
+        var sm = ScheduleManager.Instance;
+        if (sm == null) {
+            Console.WriteLine("[WorldBuilder] InitializeSchedules: ScheduleManager.Instance is null — skipping");
+            return;
+        }
+        try {
+            sm.Spawn();
+            Console.WriteLine($"[WorldBuilder] ScheduleManager.Spawn() OK — {sm.GetSchedules().Count} schedule(s)");
+        } catch (Exception ex) {
+            Console.WriteLine($"[WorldBuilder] ScheduleManager.Spawn() failed: {ex.GetBaseException().Message} — adding schedule manually");
+            try {
+                var scheduleGroups = Db.Get().ScheduleGroups;
+                if (scheduleGroups != null && sm.GetSchedules().Count == 0) {
+                    sm.AddSchedule(scheduleGroups.allGroups, "Default", alarmOn: false);
+                    Console.WriteLine($"[WorldBuilder] Manual schedule added: {sm.GetSchedules().Count} schedule(s)");
+                }
+            } catch (Exception ex2) {
+                Console.WriteLine($"[WorldBuilder] Manual schedule also failed: {ex2.GetBaseException().Message}");
+            }
+        }
+    }
+
+    /// <summary>
     /// Post-spawn fix: ensure ChoreProvider/ChoreDriver are initialized, assign default schedules,
     /// and create ChoreConsumerState for all Minions whose ChoreConsumer.OnSpawn() did not complete.
     /// Called once after SpawnEntities(). Only touches LiveMinionIdentities — creatures have a
     /// different ChoreTable and can NPE if processed here.
     /// </summary>
     private void FixChoreConsumers() {
-        Console.WriteLine($"[WorldBuilder] FixChoreConsumers() called: LiveMinions={Components.LiveMinionIdentities.Count}, Brains={Components.Brains.Count}");
+        // Prefer _spawnedMinions (directly tracked during SpawnEntities) over LiveMinionIdentities
+        // which requires MinionIdentity.OnSpawn() to have run successfully.
+        var minionGOs = _spawnedMinions.Count > 0
+            ? _spawnedMinions
+            : Components.LiveMinionIdentities.Items.ConvertAll(id => id.gameObject);
+
+        Console.WriteLine($"[WorldBuilder] FixChoreConsumers() called: tracked={_spawnedMinions.Count}, LiveMinions={Components.LiveMinionIdentities.Count}, Brains={Components.Brains.Count}");
 
         // Step 0: force ChoreProvider and ChoreDriver initialization for any Minion
-        // where the lifecycle didn't complete (isInitialized=false → Spawn() bailed early).
-        foreach (var identity in Components.LiveMinionIdentities.Items) {
+        // where the lifecycle didn't complete (isInitialized=false → Spawn() bails early).
+        foreach (var go in minionGOs) {
             try {
-                var provider = identity.GetComponent<ChoreProvider>();
+                var provider = go.GetComponent<ChoreProvider>();
                 if (provider != null && !provider.IsInitialized()) {
                     provider.InitializeComponent();
                     provider.Spawn();
-                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreProvider for {identity.name}");
+                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreProvider for {go.name}");
                 }
-                var driver = identity.GetComponent<ChoreDriver>();
+                var driver = go.GetComponent<ChoreDriver>();
                 if (driver != null && !driver.IsInitialized()) {
                     driver.InitializeComponent();
                     driver.Spawn();
-                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreDriver for {identity.name}");
+                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreDriver for {go.name}");
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"[WorldBuilder] ChoreProvider/Driver init failed for {identity.name}: {ex.GetBaseException().Message}");
+                Console.WriteLine($"[WorldBuilder] ChoreProvider/Driver init failed for {go.name}: {ex.GetBaseException().Message}");
             }
         }
 
@@ -487,14 +541,14 @@ public class WorldBuilder {
         // schedulable.GetSchedule().GetCurrentScheduleBlock() which NPEs on null schedule.
         var schedules = ScheduleManager.Instance?.GetSchedules();
         if (schedules?.Count > 0) {
-            foreach (var identity in Components.LiveMinionIdentities.Items) {
+            foreach (var go in minionGOs) {
                 try {
-                    var schedulable = identity.GetComponent<Schedulable>();
+                    var schedulable = go.GetComponent<Schedulable>();
                     if (schedulable == null) continue;
                     if (ScheduleManager.Instance!.GetSchedule(schedulable) != null) continue;
                     schedules[0].Assign(schedulable);
                 } catch (Exception ex) {
-                    Console.WriteLine($"[WorldBuilder] Schedule assign failed for {identity.name}: {ex.GetBaseException().Message}");
+                    Console.WriteLine($"[WorldBuilder] Schedule assign failed for {go.name}: {ex.GetBaseException().Message}");
                 }
             }
         } else {
@@ -502,20 +556,20 @@ public class WorldBuilder {
         }
 
         // Step 2: create ChoreConsumerState for Minions that are still missing it.
-        // Only LiveMinionIdentities — creature ChoreTable.Instance ctor NPEs in headless.
+        // Only Minions — creature ChoreTable.Instance ctor NPEs in headless.
         var fixedCount = 0;
-        foreach (var identity in Components.LiveMinionIdentities.Items) {
+        foreach (var go in minionGOs) {
             try {
-                var cc = identity.GetComponent<ChoreConsumer>();
+                var cc = go.GetComponent<ChoreConsumer>();
                 if (cc == null || cc.consumerState != null) continue;
                 cc.consumerState = new ChoreConsumerState(cc);
                 fixedCount++;
             } catch (Exception ex) {
-                Console.WriteLine($"[WorldBuilder] consumerState init failed for {identity.name}: {ex.GetBaseException().Message}");
+                Console.WriteLine($"[WorldBuilder] consumerState init failed for {go.name}: {ex.GetBaseException().Message}");
             }
         }
 
-        Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{Components.LiveMinionIdentities.Count} minion consumerState(s) created, Brains={Components.Brains.Count}");
+        Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{minionGOs.Count} consumerState(s) created, Brains={Components.Brains.Count}");
     }
 
     public void Shutdown() {

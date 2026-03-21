@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Threading;
 using DedicatedServer.Game;
 using System.Threading.Tasks;
-using DedicatedServer.Game;
 using DedicatedServer.Web;
 
 namespace DedicatedServer;
@@ -64,17 +63,25 @@ public static class Program {
         loader.Boot();
 
         var server = new WebServer(port);
-        server.SetRealWorldState(new RealWorldState(loader.World.Width, loader.World.Height, loader.World));
+        // WorldState is a singleton created once by WorldBuilder.Create() — NOT per-request.
+        server.SetRealWorldState(loader.World.WorldState);
         server.Start(cts.Token);
 
         Console.WriteLine($"Web server running at http://localhost:{port}/");
 
         if (loader.World.SimRunning) {
-            Console.WriteLine("Simulation tick loop started (200ms per tick)");
+            Console.WriteLine("State machine tick loop started (60 Hz target)");
+            var tickLoop = loader.World.TickLoop;
             new Thread(() => {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
                 while (!cts.IsCancellationRequested) {
-                    try { loader.World.TickSimulation(); Thread.Sleep(200); }
-                    catch (Exception ex) { Console.WriteLine($"[Tick] Error: {ex.Message}"); }
+                    try {
+                        sw.Restart();
+                        tickLoop.Update(0.2f); // Each tick = 200ms (1/5 sec) for now
+                        var elapsed = sw.ElapsedMilliseconds;
+                        if (elapsed < 200) Thread.Sleep(200 - (int)elapsed);
+                    }
+                    catch (Exception ex) { Console.WriteLine($"[StateMachineTick] Error: {ex.Message}\n{ex.StackTrace}"); }
                 }
             }) { IsBackground = true }.Start();
         }
