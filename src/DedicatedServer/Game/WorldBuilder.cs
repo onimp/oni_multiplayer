@@ -692,29 +692,30 @@ public class WorldBuilder {
     }
 
     /// <summary>
-    /// Starts IdleMonitor for each spawned Minion so that IdleChore is registered in
-    /// GlobalChoreProvider and Brain.FindBetterChore returns a chore.
+    /// Bootstraps the Brain→Chore→Navigator pipeline for each spawned Minion.
     ///
-    /// In the live game this runs via: Unity.Start() → KMonoBehaviour.Spawn() →
+    /// In the live game the full chain runs via Unity.Start() → KMonoBehaviour.Spawn() →
     ///   KPrefabID.OnSpawn() → MinionConfig.OnSpawn() → BaseMinionConfig.BaseOnSpawn()
-    ///   → new RationalAi.Instance(smc, model).StartSM()
-    ///   → RationalAi.alive.ToggleStateMachineList → new IdleMonitor.Instance(smi.master).StartSM()
+    ///   → RationalAi.Instance.StartSM() → ToggleStateMachineList → IdleMonitor.StartSM().
+    ///   Also Unity.Start() → KMonoBehaviour.Spawn() → Brain.OnSpawn() sets running=true
+    ///   and adds brain to Components.Brains → BrainScheduler ticks UpdateBrain().
+    ///   And Sensors.OnSpawn() subscribes OnBrainPreUpdate → sensors update before each brain tick.
     ///
-    /// In headless Unity.Start() never fires so none of this chain runs.
+    /// In headless Unity.Start() never fires → none of this runs → chore stays null forever.
     ///
-    /// BYPASSES RationalAi entirely — it would also start DeathMonitor (via root.ToggleStateMachine)
-    /// and call AddUrge() etc., and spawning tests show it still NPEs in headless.
-    /// IdleMonitor.Instance is instantiated directly with the StateMachineController as master
-    /// — identical to what ToggleStateMachineList does — and is purely state-machine C# with
-    /// no Unity rendering/audio dependencies.
-    ///
-    /// SAFE SENSORS: only PathProberSensor and IdleCellSensor are added.
-    ///   AssignableReachabilitySensor is EXCLUDED — its ctor accesses MinionIdentity.assignableProxy
-    ///   which is only populated in MinionIdentity.OnSpawn() (never ran) → NPE.
-    ///   Sensors.Add() calls sensor.Update() immediately; both PathProberSensor and IdleCellSensor
-    ///   are no-ops when the Minion has no relevant tags (Idle etc.).
-    ///
-    /// Effect: GlobalChoreProvider.chores > 0 → Brain picks IdleChore → ChoreDriver ticks.
+    /// Steps performed here (each per Minion GO):
+    ///   1. Add safe sensors (PathProberSensor + IdleCellSensor — both are no-ops at Add() time).
+    ///      AssignableReachabilitySensor EXCLUDED — its ctor NPEs on MinionIdentity.assignableProxy.
+    ///   2. Start IdleMonitor.Instance directly with StateMachineController as master.
+    ///      IdleMonitor.Instance ctor = base(master) only — pure C#.
+    ///      StartSM() → idle state → ToggleRecurringChore → new IdleChore → registered in ChoreProvider.
+    ///   3. Spawn Brain (MinionBrain) directly via KMonoBehaviour.Spawn().
+    ///      Brain.OnSpawn(): sets choreConsumer, sets running=true, calls Components.Brains.Add(this)
+    ///      → BrainScheduler.OnAddBrain → brain added to DupeBrainGroup → UpdateBrain() scheduled.
+    ///   4. Spawn Sensors directly via KMonoBehaviour.Spawn().
+    ///      Sensors.OnSpawn(): subscribes OnBrainPreUpdate to Brain.onPreUpdate
+    ///      → sensors update before each brain tick → IdleCellSensor finds idle cell.
+    ///   5. Add navigator transition override layers (pure List.Add — no callbacks).
     /// </summary>
     private void FixRationalAi() {
         var fixedCount = 0;
@@ -726,23 +727,40 @@ public class WorldBuilder {
                     continue;
                 }
 
-                // Step 1: add only the safe sensors needed for IdleChore execution.
-                // AssignableReachabilitySensor is intentionally excluded — NPE in ctor.
-                // ClosestEdibleSensor, MingleCellSensor — excluded until headless safety confirmed.
+                // Step 1: add safe sensors BEFORE Sensors.Spawn() subscribes onPreUpdate.
+                // PathProberSensor.Update() → navigator.UpdateProbe() no-op (executePathProbeTaskAsync=true).
+                // IdleCellSensor.Update() → prefabid.HasTag(Idle)=false → return immediately.
+                // AssignableReachabilitySensor EXCLUDED: ctor calls assignableProxy.Get() → NPE.
                 var sensors = go.GetComponent<Sensors>();
                 if (sensors != null) {
                     sensors.Add(new PathProberSensor(sensors));
                     sensors.Add(new IdleCellSensor(sensors));
                 }
 
-                // Step 2: start IdleMonitor directly (bypasses RationalAi and DeathMonitor).
-                // IdleMonitor.Instance ctor = base(master) only — pure C#, no Unity dependencies.
-                // On StartSM(): enters idle state → ToggleRecurringChore(CreateIdleChore)
-                // → new IdleChore(master) → registered in GlobalChoreProvider.
+                // Step 2: start IdleMonitor directly (mirrors what RationalAi.alive does via
+                // ToggleStateMachineList). Bypasses RationalAi entirely to avoid DeathMonitor
+                // and AddUrge() calls that NPE in headless.
                 var idleMonitorSmi = new IdleMonitor.Instance(smc);
                 idleMonitorSmi.StartSM();
 
-                // Step 3: add navigator transition layers (List.Add — no callbacks fired).
+                // Step 3: spawn Brain — sets running=true + choreConsumer + registers with BrainScheduler.
+                // Without this: Brain.IsRunning()=false → BrainGroup.RenderEveryTick skips brain
+                // → UpdateBrain() never called → chore never picked even though IdleChore exists.
+                // KMonoBehaviour.Spawn() is public; requires isInitialized=true (set by Awake — already done).
+                var brain = go.GetComponent<MinionBrain>();
+                if (brain != null && !brain.isSpawned) {
+                    brain.Spawn();
+                    Console.WriteLine($"[FixRationalAi] {go.name}: Brain spawned (running={brain.IsRunning()})");
+                }
+
+                // Step 4: spawn Sensors — subscribes OnBrainPreUpdate to Brain.onPreUpdate.
+                // Without this: sensors never update → IdleCellSensor always returns InvalidCell.
+                // Must happen AFTER Brain.Spawn() so Brain.onPreUpdate delegate is initialised.
+                if (sensors != null && !sensors.isSpawned) {
+                    sensors.Spawn();
+                }
+
+                // Step 5: navigator transition layers (pure List.Add — no immediate callbacks).
                 var nav = go.GetComponent<Navigator>();
                 if (nav?.transitionDriver != null) {
                     nav.transitionDriver.overrideLayers.Add(new BipedTransitionLayer(nav, 3.325f, 2.5f));
@@ -752,7 +770,7 @@ public class WorldBuilder {
                 }
 
                 fixedCount++;
-                Console.WriteLine($"[FixRationalAi] {go.name}: IdleMonitor started OK");
+                Console.WriteLine($"[FixRationalAi] {go.name}: OK");
             } catch (Exception ex) {
                 Console.WriteLine($"[FixRationalAi] {go.name}: ERROR: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
             }
@@ -820,12 +838,15 @@ public class WorldBuilder {
         // 3. Per-minion state
         foreach (var go in _spawnedMinions) {
             try {
-                var driver   = go.GetComponent<ChoreDriver>();
-                var nav      = go.GetComponent<Navigator>();
-                var chore    = driver?.GetCurrentChore();
-                var consumer = go.GetComponent<ChoreConsumer>();
-                var idleSmi  = go.GetSMI<IdleMonitor.Instance>();
-                Console.WriteLine($"  [{go.name}] chore={chore?.GetType().Name ?? "null"}  navType={nav?.CurrentNavType}  navGrid={nav?.NavGrid?.id ?? "null"}  consumerState={consumer?.consumerState != null}  idleMonitor={idleSmi != null}");
+                var driver    = go.GetComponent<ChoreDriver>();
+                var nav       = go.GetComponent<Navigator>();
+                var chore     = driver?.GetCurrentChore();
+                var consumer  = go.GetComponent<ChoreConsumer>();
+                var idleSmi   = go.GetSMI<IdleMonitor.Instance>();
+                var brain     = go.GetComponent<Brain>();
+                var localCP   = go.GetComponent<ChoreProvider>();
+                var localChores = localCP?.choreWorldMap?.Values.Sum(l => l?.Count ?? 0) ?? -1;
+                Console.WriteLine($"  [{go.name}] chore={chore?.GetType().Name ?? "null"}  navType={nav?.CurrentNavType}  navGrid={nav?.NavGrid?.id ?? "null"}  consumerState={consumer?.consumerState != null}  idleMonitor={idleSmi != null}  brainRunning={brain?.IsRunning()}  localChores={localChores}  hasChore={driver?.HasChore()}");
             } catch (Exception ex) {
                 Console.WriteLine($"  [{go.name}] ERROR: {ex.GetBaseException().Message}");
             }
