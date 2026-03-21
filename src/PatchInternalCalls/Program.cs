@@ -87,6 +87,14 @@ var callMap = new Dictionary<string, string> {
     ["UnityEngine.GameObject::GetComponentFastPath"] = "GetComponentFastPath",
     ["UnityEngine.Component::GetComponentFastPath"] = "GetComponentFastPathFromComponent",
     ["UnityEngine.GameObject::GetComponentInChildren"] = "GetComponentInChildren",
+    // Transform position — MUST be patched via Cecil (not Harmony) because Harmony on these
+    // _Injected methods causes a deadlock on Mono (same as KMonoBehaviour subclasses).
+    // get_position_Injected(out Vector3 ret) → GetPosition(Transform self, out Vector3 result)
+    // set_position_Injected(ref Vector3 value) → SetPositionFromTransform(Transform self, ref Vector3 position)
+    ["UnityEngine.Transform::get_position_Injected"] = "GetPosition",
+    ["UnityEngine.Transform::set_position_Injected"] = "SetPositionFromTransform",
+    ["UnityEngine.Transform::get_localPosition_Injected"] = "GetPosition",
+    ["UnityEngine.Transform::set_localPosition_Injected"] = "SetPositionFromTransform",
 };
 
 // Patch all InternalCall methods

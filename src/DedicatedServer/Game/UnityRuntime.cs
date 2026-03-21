@@ -455,13 +455,13 @@ public static class UnityRuntime {
             .Where(t => t.Namespace?.StartsWith("DedicatedServer.Game.Patches") == true)
             .ToList();
 
-        // Skip patch classes whose targets are pure InternalCalls pre-patched by PatchInternalCalls.
-        // Only applies to classes where PatchInternalCalls already delegates to UnityRuntime statics.
-        // TransformPatches is NOT skipped — Transform::get/set_position_Injected are in the callMap
-        //   as zero-returning stubs (not delegated), so Harmony must patch them at runtime.
+        // Skip patch classes that target Unity InternalCall methods — pre-patched by PatchInternalCalls.
+        // Harmony on InternalCall stubs causes a deadlock on Mono (no IL body → native detour blocks).
+        // TransformPatches is included: get/set_position_Injected are patched by PatchInternalCalls
+        //   callMap → GetPosition/SetPositionFromTransform (Cecil, build-time, no Harmony needed).
         var skipTypes = new HashSet<string> {
             "ApplicationPatches", "GameObjectPatches", "ComponentPatches",
-            "ObjectPatches", "BehaviourPatches",
+            "TransformPatches", "ObjectPatches", "BehaviourPatches",
             "MonoBehaviourPatches", "ScriptableObjectPatches", "TextAssetPatches",
             "RandomPatches", "DebugPatches", "SystemInfoPatches"
         };
