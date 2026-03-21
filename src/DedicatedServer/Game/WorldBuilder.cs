@@ -603,22 +603,25 @@ public class WorldBuilder {
     /// </summary>
     private static List<int> FindSpawnCells(int startCell, int count) {
         var result = new List<int>(count);
-        // Zigzag: 0,−1,+1,−2,+2,−3,+3,−4,+4,−5,+5,−6,+6 → ±6 cells max.
+        var used = new HashSet<int>();
+        // Zigzag: 0,−1,+1,−2,+2,...,−6,+6 (±6 cells max).
         // Narrow range keeps all dupes in the same connected cave pocket.
-        // (old limit was 200 which could reach isolated pockets 8+ cells away)
+        // No padding — fewer dupes in distinct cells beats duplicates sharing a cell
+        // (shared cells halve per-dupe atmosphere, pushing mass below allMet threshold).
         for (var x = 0; result.Count < count && x <= 12; x++) {
             var candidate = startCell + (x % 2 == 0 ? x / 2 : -(x + 1) / 2);
+            if (used.Contains(candidate)) continue;
             var floorCell = candidate - Grid.WidthInCells;
             if (!Grid.IsValidCell(candidate) || !Grid.IsValidCell(floorCell)) continue;
             if (!Grid.Solid[floorCell] || Grid.Solid[candidate]) continue;
             var elem = Grid.Element[candidate];
             if (elem == null || !elem.IsGas) continue;
             if (Grid.Mass[candidate] < 0.5f) continue;
-            if (result.Contains(candidate)) continue;
             result.Add(candidate);
+            used.Add(candidate);
         }
-        // Pad with startCell so remaining dupes overlap rather than land in isolated pockets.
-        while (result.Count < count) result.Add(startCell);
+        if (result.Count < count)
+            Console.WriteLine($"[SpawnFinder] Only {result.Count}/{count} unique gas cells in ±6 range — spawning fewer dupes");
         return result;
     }
 
@@ -632,20 +635,31 @@ public class WorldBuilder {
         var w = Grid.WidthInCells;
 
         // Priority 1: scan upward from HQ cell (captured from SpawnData during SpawnEntities).
-        // The starter cave with 40 oxygen cells sits directly above the Headquarters building.
+        // The starter cave: CO2 at y≈196 (2 cells, low mass), Oxygen at y≈198+ (40 cells, higher mass).
+        // Prefer Oxygen zone — more connected cells = more room for 3 dupes.
         if (_hqCell >= 0) {
+            var firstGasCell = -1;  // fallback: first any-gas cell with solid floor
             for (var dy = 1; dy <= 20; dy++) {
                 var candidate = _hqCell + dy * w;
                 var floorCell = candidate - w;
                 if (!Grid.IsValidCell(candidate) || !Grid.IsValidCell(floorCell)) continue;
-                if (Grid.Solid[candidate]) continue;
+                if (Grid.Solid[candidate]) break; // hit ceiling — stop scanning
                 var elem = Grid.Element[candidate];
                 if (elem == null || elem.IsLiquid || elem.id == SimHashes.Vacuum) continue;
-                // Found a breathable gas cell above HQ — check floor is solid
-                if (Grid.Solid[floorCell]) {
-                    Console.WriteLine($"[SpawnFinder] Gas cell above HQ: ({candidate % w},{candidate / w}) elem={elem.tag} mass={Grid.Mass[candidate]:F2}");
+                if (!Grid.Solid[floorCell]) continue; // no floor to stand on
+                // Prefer Oxygen cells (higher mass, more connected space)
+                if (elem.id == SimHashes.Oxygen && Grid.Mass[candidate] > 1.0f) {
+                    Console.WriteLine($"[SpawnFinder] Oxygen zone above HQ: ({candidate % w},{candidate / w}) mass={Grid.Mass[candidate]:F2}");
                     return candidate;
                 }
+                // Record first non-vacuum gas cell as fallback (e.g. CO2 layer)
+                if (firstGasCell < 0)
+                    firstGasCell = candidate;
+            }
+            if (firstGasCell >= 0) {
+                var e = Grid.Element[firstGasCell];
+                Console.WriteLine($"[SpawnFinder] No O2 found, using first gas cell: ({firstGasCell % w},{firstGasCell / w}) elem={e?.tag} mass={Grid.Mass[firstGasCell]:F2}");
+                return firstGasCell;
             }
             Console.WriteLine($"[SpawnFinder] HQ known at cell={_hqCell} but no gas cell found within 20 rows above, falling back");
         } else {
