@@ -286,6 +286,12 @@ public class WorldBuilder {
         // Must be initialized AFTER Game.Instance is set.
         Awake("GlobalChoreProvider", () => go.AddComponent<GlobalChoreProvider>().Awake());
 
+        // ReportManager is added to Game GO via Unity editor prefab in normal game — not in any Init code.
+        // ChoreDriver.States.InitializeStates() lambdas call ReportManager.Instance.ReportValue() on
+        // every tick (nochore.Update and haschore.Update). Without this, Instance is null → NPE 81K+/min.
+        // OnPrefabInit just sets Instance=this, creates NoteStorage, and subscribes to Game events.
+        Awake("ReportManager", () => go.AddComponent<ReportManager>().Awake());
+
         // Mirrors Game.OnPrefabInit() lines 830-842 (never reached there because it crashes at 820).
         // PathFinder.Initialize() — builds offset tables NavGrid uses.
         // GameNavGrids — registers all nav grids, including "MinionNavGrid" (DuplicantGrid).
