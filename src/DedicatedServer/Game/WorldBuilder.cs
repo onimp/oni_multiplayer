@@ -117,6 +117,23 @@ public class WorldBuilder {
                 }
             }
             Console.WriteLine($"[WorldBuilder] Copied {n} cells to Grid");
+
+            // Grid.InitializeCells() sets Grid.Solid (BuildMasks) from Grid.elementIdx.
+            // AllocateGrid() called it earlier when all elementIdx were 0 (vacuum, non-solid).
+            // Now that we have the real element data, call it again so Grid.Solid is correct.
+            // This is required before NavGrid rebuild below — FloorValidator.IsWalkableCell()
+            // needs Grid.Solid[cellBelow]=true to mark a cell as floor-navigable.
+            Grid.InitializeCells();
+            Console.WriteLine("[WorldBuilder] Grid.InitializeCells() called with real element data");
+
+            // NavGrids were built in InitializeWorld() via new GameNavGrids() → NavGrid ctor
+            // → InitializeGraph(). At that time Grid.Solid was all-false (vacuum), so the
+            // FloorValidator produced zero valid floor cells → no floor transitions in nav graph.
+            // ResetNavGrids() calls InitializeGraph() on every NavGrid, rebuilding the full
+            // graph with the correct solid state from the generated world.
+            Pathfinding.Instance.ResetNavGrids();
+            var navCount = Pathfinding.Instance.GetNavGrids().Count;
+            Console.WriteLine($"[WorldBuilder] NavGrids rebuilt: {navCount} grid(s) reset with correct solid state");
         }
 
         SpawnData = cluster.currentWorld.SpawnData;
@@ -841,6 +858,15 @@ public class WorldBuilder {
                     brain.Spawn();
                     Console.WriteLine($"[FixRationalAi] {go.name}: Brain spawned (running={brain.IsRunning()})");
                 }
+
+                // Step 3c: pre-add GameTags.Idle to break the deadlock.
+                // IdleCellSensor.Update() returns Grid.InvalidCell immediately when
+                //   !prefabid.HasTag(GameTags.Idle) → idleCell=-1 → Brain never finds idleCell.
+                // IdleChore.idle.ToggleTag(GameTags.Idle) adds the tag only AFTER Brain picks
+                // IdleChore — creating a deadlock: no tag → no idleCell → chore not picked →
+                // no tag. Pre-adding the tag breaks the cycle; IdleChore will redundantly
+                // re-add/remove it via ToggleTag when it enters/exits the idle state.
+                go.GetComponent<KPrefabID>()?.AddTag(GameTags.Idle);
 
                 // Step 4: spawn Sensors — subscribes OnBrainPreUpdate to Brain.onPreUpdate.
                 // Without this: sensors never update → IdleCellSensor always returns InvalidCell.

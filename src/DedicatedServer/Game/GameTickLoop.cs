@@ -33,7 +33,13 @@ public class GameTickLoop {
 
         while (_accumulatedTime >= SubTickTime) {
             _simSubTick = (_simSubTick + 1) % SimFrameSubTicks;
-            if (_simSubTick == 0) _tickSimDll();
+            if (_simSubTick == 0) {
+                _tickSimDll();
+                // After each 200ms SimDLL step, process nav dirty cells. Mirrors Game.UnsafeSim200ms()
+                // which calls Pathfinding.Instance.UpdateNavGrids() after world.UpdateCellInfo().
+                // Without this, tile changes from the sim never propagate to the nav graph.
+                Pathfinding.Instance?.UpdateNavGrids();
+            }
             // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets
             Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
             _accumulatedTime -= SubTickTime;
@@ -41,5 +47,11 @@ public class GameTickLoop {
 
         // Drive RENDER_EVERY_TICK bucket — covers BrainScheduler (Dupe/Creature AI)
         Singleton<StateMachineUpdater>.Instance.RenderEveryTick(clampedDt);
+
+        // Dispatch async path probe work orders to the background thread and apply completed
+        // PathGrid results back to navigators. Mirrors Game.LateUpdate() where TickFrame()
+        // is called every Unity frame. Without this, PathGrid costs are never populated
+        // → Navigator.GetNavigationCost() always returns -1 → path-cost-based chore selection fails.
+        AsyncPathProber.Instance?.TickFrame();
     }
 }
