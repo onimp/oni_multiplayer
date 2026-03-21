@@ -906,13 +906,17 @@ public class WorldBuilder {
                 var idleMonitorSmi = new IdleMonitor.Instance(smc);
                 idleMonitorSmi.StartSM();
 
-                // Step 3a: ensure Navigator.OnPrefabInit() has run.
-                // Navigator.OnPrefabInit() sets NavGrid = Pathfinding.Instance.GetNavGrid(NavGridName).
+                // Step 3a: ensure Navigator is fully initialised AND its SM is started.
+                //
+                // InitializeComponent() → OnPrefabInit() sets NavGrid, PathGrid, transitionDriver.
                 // MinionBrain.OnPrefabInit() calls new MinionPathFinderAbilities(Navigator) which
-                // accesses Navigator.NavGrid.transitions in its ctor — NPEs if NavGrid is null.
-                // When NavGrid is null the ctor throws, brain.OnPrefabInit() silently swallows it,
-                // and Navigator.abilities stays null → SafeCellSensor.RunAndGetSafeCellQueryResult
-                // NPEs at [0x00000] on every sensor tick.
+                // accesses Navigator.NavGrid.transitions — NPEs if NavGrid is null.
+                //
+                // Navigator.Spawn() → OnSpawn() → base.OnSpawn() → StartSM() starts the
+                // Navigator state machine (normal.stopped → normal.moving on GoTo()).
+                // Without Spawn(), the SM never starts → normal.moving never runs →
+                // SIM_EVERY_TICK bucket never registered → SimEveryTick(dt) never fires →
+                // transitionDriver.UpdateTransition(dt) never called → Navigator.Advance() = 0.
                 var nav3 = go.GetComponent<Navigator>();
                 if (nav3 != null && !nav3.IsInitialized()) {
                     try {
@@ -920,6 +924,14 @@ public class WorldBuilder {
                         Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent OK, NavGrid={nav3.NavGrid?.id ?? "null"}");
                     } catch (Exception ex) {
                         Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
+                    }
+                }
+                if (nav3 != null && !nav3.isSpawned) {
+                    try {
+                        nav3.Spawn(); // starts Navigator SM (normal.stopped); GoTo() transitions to normal.moving
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator spawned, SM running={nav3.smi != null}");
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.Spawn partial: {ex.GetBaseException().Message}");
                     }
                 }
 
