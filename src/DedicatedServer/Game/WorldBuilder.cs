@@ -163,11 +163,6 @@ public class WorldBuilder {
         // Both leave consumerState null → Brain.UpdateChores() NPEs on every tick.
         FixChoreConsumers();
 
-        // LightSymbolTracker.RenderEveryTick → IsEnableAndVisible → CameraController.Instance.VisibleArea
-        // CameraController.Instance is null in headless → NPE 12K+/min, pure rendering, no gameplay impact.
-        // Cannot use Harmony (KMonoBehaviour subclass → deadlock). Disable all instances post-spawn.
-        DisableRenderingOnlyComponents();
-
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         WorldState = new RealWorldState(Width, Height, this);
