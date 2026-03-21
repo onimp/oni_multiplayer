@@ -703,6 +703,21 @@ public class WorldBuilder {
                 e.type = Prefab.Type.Other;
             }
 
+            // Diagnose building def availability before attempting spawn
+            {
+                var blist = world.SpawnData.buildings;
+                Console.WriteLine($"[SpawnDiag] BuildingDefs count: {Assets.BuildingDefs?.Count ?? 0}");
+                var hqDef = Assets.GetBuildingDef("Headquarters");
+                Console.WriteLine($"[SpawnDiag] HQ def: {(hqDef != null ? "OK" : "NULL")}");
+                Console.WriteLine($"[SpawnDiag] Buildings in SpawnData: {blist?.Count ?? 0}");
+                if (blist != null) {
+                    foreach (var b in blist.Take(5)) {
+                        var def = Assets.GetBuildingDef(b.id);
+                        Console.WriteLine($"[SpawnDiag]   id=\"{b.id}\" type={b.type} def={(def != null ? "OK" : "NULL")} xy=({b.location_x},{b.location_y})");
+                    }
+                }
+            }
+
             // Spawn buildings (Headquarters, Tiles, etc.) — critical: creates HQ GO so
             // Components.Telepads is populated and FindColonySpawnCell() can locate the printer.
             foreach (var b in world.SpawnData.buildings) {
