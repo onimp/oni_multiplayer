@@ -259,6 +259,9 @@ public class WorldBuilder {
         Awake("ScheduleManager", () => go.AddComponent<ScheduleManager>().Awake());
         Awake("MinionGroupProber", () => go.AddComponent<MinionGroupProber>().Awake());
         Awake("NavigationReservations", () => go.AddComponent<NavigationReservations>().Awake());
+        // BuildingLoader must precede BuildingConfigManager: RegisterBuilding() calls
+        // BuildingLoader.Instance.CreateBuildingComplete() to build the prefab template.
+        Awake("BuildingLoader", () => go.AddComponent<BuildingLoader>().Awake());
         Awake("BuildingConfigManager", () => go.AddComponent<BuildingConfigManager>().Awake());
         Awake("EntityConfigManager", () => go.AddComponent<EntityConfigManager>().Awake());
 
@@ -524,17 +527,23 @@ public class WorldBuilder {
     }
 
     private void RegisterBuildingDefs() {
-        var types = typeof(GeneratedBuildings).Assembly.GetTypes()
-            .Where(t => typeof(IBuildingConfig).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
-            .ToList();
-        foreach (var type in types) {
-            var config = (IBuildingConfig)Activator.CreateInstance(type);
-            var def = config.CreateBuildingDef();
-            if (def != null) {
+        // Use the real game registration path so Assets.GetBuildingDef() works —
+        // which is what TemplateLoader.PlaceBuilding() calls internally.
+        // GeneratedBuildings.LoadGeneratedBuildings() calls
+        //   BuildingConfigManager.Instance.RegisterBuilding(config) for each IBuildingConfig,
+        //   which calls Assets.AddBuildingDef() AND creates buildingDef.BuildingComplete.
+        // Both BuildingLoader.Instance and BuildingConfigManager.Instance must exist first
+        // (initialized in InitializeWorld).
+        var types = typeof(GeneratedBuildings).Assembly.GetTypes().ToList();
+        var before = Assets.BuildingDefs?.Count ?? 0;
+        GeneratedBuildings.LoadGeneratedBuildings(types);
+        BuildingConfigManager.Instance.ConfigurePost();
+        var after = Assets.BuildingDefs?.Count ?? 0;
+        Console.WriteLine($"[WorldBuilder] Registered {after - before} building defs via GeneratedBuildings ({after} total in Assets)");
+        // Populate local cache for GetBuildingDef() callers (e.g. RealWorldState)
+        if (Assets.BuildingDefs != null)
+            foreach (var def in Assets.BuildingDefs)
                 _buildingDefCache[def.PrefabID] = def;
-            }
-        }
-        Console.WriteLine($"[WorldBuilder] Registered {_buildingDefCache.Count}/{types.Count} building defs");
     }
 
     private void RegisterEntities() {
@@ -681,26 +690,16 @@ public class WorldBuilder {
             var offsetX = world.data?.world?.offset.x ?? 0;
             var offsetY = world.data?.world?.offset.y ?? 0;
 
-            // Apply world offset to all entity types (mirrors WorldGenSpawner.PlaceTemplates)
+            // Apply world offset to spawned entity types (mirrors WorldGenSpawner.PlaceTemplates)
             foreach (var b in world.SpawnData.buildings) {
                 b.location_x += offsetX;
                 b.location_y += offsetY;
                 b.type = Prefab.Type.Building; // real game sets this explicitly
             }
-            foreach (var o in world.SpawnData.elementalOres) {
-                o.location_x += offsetX;
-                o.location_y += offsetY;
-                o.type = Prefab.Type.Ore;
-            }
             foreach (var e in world.SpawnData.otherEntities) {
                 e.location_x += offsetX;
                 e.location_y += offsetY;
                 e.type = Prefab.Type.Other;
-            }
-            foreach (var p in world.SpawnData.pickupables) {
-                p.location_x += offsetX;
-                p.location_y += offsetY;
-                p.type = Prefab.Type.Pickupable;
             }
 
             // Spawn buildings (Headquarters, Tiles, etc.) — critical: creates HQ GO so
@@ -713,17 +712,6 @@ public class WorldBuilder {
                     if (!_prefabSizeMap.ContainsKey(b.id)) CaptureEntitySize(b.id, go);
                 } else {
                     Console.WriteLine($"[Entities] Building skipped (no def or invalid cell): {b.id}");
-                    skipped++;
-                }
-            }
-
-            // Spawn elemental ores
-            foreach (var o in world.SpawnData.elementalOres) {
-                var go = TemplateLoader.PlaceElementalOres(o, 0);
-                if (go != null) {
-                    spawned++;
-                    if (!_prefabSizeMap.ContainsKey(o.id)) CaptureEntitySize(o.id, go);
-                } else {
                     skipped++;
                 }
             }
@@ -742,16 +730,9 @@ public class WorldBuilder {
                 }
             }
 
-            // Spawn pickupables
-            foreach (var p in world.SpawnData.pickupables) {
-                var go = TemplateLoader.PlacePickupables(p, 0);
-                if (go != null) {
-                    spawned++;
-                    if (!_prefabSizeMap.ContainsKey(p.id)) CaptureEntitySize(p.id, go);
-                } else {
-                    skipped++;
-                }
-            }
+            // elementalOres and pickupables skipped — PlaceElementalOres/PlacePickupables
+            // crash in headless (Substance.SpawnResource → KInstantiate NullRef) and are
+            // not required for duplicant navigation/AI.
         }
         Console.WriteLine($"[WorldBuilder] Entity spawning: {spawned} spawned, {skipped} skipped, {_spawnedMinions.Count} minions tracked");
     }
