@@ -286,15 +286,22 @@ public class WorldBuilder {
         // Must be initialized AFTER Game.Instance is set.
         Awake("GlobalChoreProvider", () => go.AddComponent<GlobalChoreProvider>().Awake());
 
+        // Mirrors Game.OnPrefabInit() lines 830-842 (never reached there because it crashes at 820).
+        // PathFinder.Initialize() — builds offset tables NavGrid uses.
+        // GameNavGrids — registers all nav grids, including "MinionNavGrid" (DuplicantGrid).
+        //   MUST complete before SpawnEntities() so Navigator.OnPrefabInit can call
+        //   Pathfinding.Instance.GetNavGrid("MinionNavGrid") and receive a non-null NavGrid.
+        // AsyncPathProber.CreateInstance(1) — creates the pathfinding worker thread.
+        //   Minions have executePathProbeTaskAsync=true, so Navigator.OnSpawn calls
+        //   AsyncPathProber.Instance.Register(this). Without this, Instance is null → NPE.
+        // No try-catch — failures here are fatal and must not be silently swallowed.
         PathFinder.Initialize();
-        try {
-            new GameNavGrids(Pathfinding.Instance);
-            var gridCount = Pathfinding.Instance.GetNavGrids().Count;
-            Console.WriteLine($"[WorldBuilder] GameNavGrids: {gridCount} nav grid(s) registered" +
-                (Pathfinding.Instance.GetNavGrid("MinionNavGrid") != null ? " (MinionNavGrid OK)" : " (WARNING: MinionNavGrid missing!)"));
-        } catch (Exception ex) {
-            Console.WriteLine($"[WorldBuilder] GameNavGrids FAILED: {ex.GetBaseException().Message} — NavGrid will be null, Navigators will be patched to skip.");
-        }
+        new GameNavGrids(Pathfinding.Instance);
+        AsyncPathProber.CreateInstance(1);
+        var registeredNavGrids = Pathfinding.Instance.GetNavGrids().Count;
+        var minionNavGrid = Pathfinding.Instance.GetNavGrid("MinionNavGrid");
+        Console.WriteLine($"[WorldBuilder] NavGrids: {registeredNavGrids} registered, MinionNavGrid={minionNavGrid?.id ?? "NULL — Navigator.OnPrefabInit will fail!"}");
+        Console.WriteLine($"[WorldBuilder] AsyncPathProber initialized: {AsyncPathProber.Instance != null}");
 
         StateMachineManager.Instance.Clear();
         StateMachine.Instance.error = false;
