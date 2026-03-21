@@ -163,6 +163,14 @@ public class WorldBuilder {
         // Both leave consumerState null → Brain.UpdateChores() NPEs on every tick.
         FixChoreConsumers();
 
+        // Start RationalAi (including IdleMonitor) for each Minion.
+        // BaseMinionConfig.BaseOnSpawn() — which creates RationalAi.Instance and calls StartSM() —
+        // is called from MinionConfig.OnSpawn(), which itself is called by KMonoBehaviour.Spawn()
+        // triggered by Unity's Start() callback. In headless Unity's Start() never fires, so
+        // RationalAi was never started → IdleMonitor never started → GlobalChoreProvider.chores=0
+        // → Brain.FindBetterChore always returns null → dupes never move.
+        FixRationalAi();
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         WorldState = new RealWorldState(Width, Height, this);
@@ -684,6 +692,67 @@ public class WorldBuilder {
     }
 
     /// <summary>
+    /// Starts RationalAi for each spawned Minion. In the live game, this is done by
+    /// MinionConfig.OnSpawn() → BaseMinionConfig.BaseOnSpawn() which runs via Unity's Start()
+    /// callback. In headless Start() never fires, so we replicate the critical parts:
+    ///   1. Add sensors to the Sensors component (needed by IdleChore → IdleCellSensor).
+    ///   2. Create RationalAi.Instance and start it with IdleMonitor as the only sub-SM.
+    ///      Using only IdleMonitor avoids NPEs from 42 other monitors that require
+    ///      rendering/audio/UI infrastructure not available in headless.
+    ///   3. Add navigator transition override layers for basic movement.
+    /// Effect: GlobalChoreProvider gets IdleChore entries → Brain.FindBetterChore returns
+    /// a chore → ChoreDriver ticks → Navigator moves the Minion.
+    /// </summary>
+    private void FixRationalAi() {
+        var fixedCount = 0;
+        foreach (var go in _spawnedMinions) {
+            try {
+                // Step 1: populate Sensors (needed for idle cell / pathfinding sensors)
+                var sensors = go.GetComponent<Sensors>();
+                if (sensors != null) {
+                    sensors.Add(new PathProberSensor(sensors));
+                    sensors.Add(new SafeCellSensor(sensors));
+                    sensors.Add(new IdleCellSensor(sensors));
+                    sensors.Add(new PickupableSensor(sensors));
+                    sensors.Add(new ClosestEdibleSensor(sensors));
+                    sensors.Add(new AssignableReachabilitySensor(sensors));
+                    sensors.Add(new MingleCellSensor(sensors));
+                }
+
+                // Step 2: create and start RationalAi with IdleMonitor only.
+                // Full BaseRationalAiStateMachines() has 43 entries many of which NPE in headless
+                // (RadiationMonitor, StressMonitor, EmoteMonitor, etc. need UI/audio/camera).
+                var smc = go.GetComponent<StateMachineController>();
+                if (smc == null) {
+                    Console.WriteLine($"[FixRationalAi] {go.name}: StateMachineController=null, skipping");
+                    continue;
+                }
+                var rationalAi = new RationalAi.Instance(smc, MinionConfig.MODEL);
+                rationalAi.stateMachinesToRunWhenAlive = new Func<RationalAi.Instance, StateMachine.Instance>[] {
+                    smi => new IdleMonitor.Instance(smi.master)
+                };
+                rationalAi.StartSM();
+
+                // Step 3: add navigator transition layers (needed for door/ladder traversal)
+                var nav = go.GetComponent<Navigator>();
+                if (nav?.transitionDriver != null) {
+                    nav.transitionDriver.overrideLayers.Add(new BipedTransitionLayer(nav, 3.325f, 2.5f));
+                    nav.transitionDriver.overrideLayers.Add(new DoorTransitionLayer(nav));
+                    nav.transitionDriver.overrideLayers.Add(new TubeTransitionLayer(nav));
+                    nav.transitionDriver.overrideLayers.Add(new LadderDiseaseTransitionLayer(nav));
+                    nav.transitionDriver.overrideLayers.Add(new NavTeleportTransitionLayer(nav));
+                }
+
+                fixedCount++;
+                Console.WriteLine($"[FixRationalAi] {go.name}: RationalAi+IdleMonitor started OK");
+            } catch (Exception ex) {
+                Console.WriteLine($"[FixRationalAi] {go.name}: ERROR: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
+            }
+        }
+        Console.WriteLine($"[WorldBuilder] FixRationalAi done: {fixedCount}/{_spawnedMinions.Count} minion(s) started");
+    }
+
+    /// <summary>
     /// Disables rendering-only components that NPE in headless (no camera/animator).
     /// Cannot use Harmony (KMonoBehaviour subclass methods → deadlock).
     /// component.enabled = false prevents RenderEveryTick/SimEveryTick callbacks.
@@ -705,12 +774,50 @@ public class WorldBuilder {
     /// </summary>
     private void LogDuplicantStatus() {
         Console.WriteLine($"[DupeStatus] tick={SimTick} minions={_spawnedMinions.Count}");
+
+        // 1. GlobalChoreProvider total chore count
+        try {
+            var gcp = GlobalChoreProvider.Instance;
+            var totalChores = 0;
+            var totalFetches = 0;
+            if (gcp?.choreWorldMap != null)
+                foreach (var list in gcp.choreWorldMap.Values) totalChores += list?.Count ?? 0;
+            if (gcp?.fetchMap != null)
+                foreach (var list in gcp.fetchMap.Values) totalFetches += list?.Count ?? 0;
+            Console.WriteLine($"[DupeStatus] GlobalChoreProvider chores={totalChores} fetchChores={totalFetches} gcp={(gcp != null ? "OK" : "null")}");
+        } catch (Exception ex) {
+            Console.WriteLine($"[DupeStatus] GlobalChoreProvider ERROR: {ex.GetBaseException().Message}");
+        }
+
+        // 2. ScheduleManager — current block + IsAllowed(Work)
+        try {
+            var sm = ScheduleManager.Instance;
+            if (sm != null) {
+                var schedules = sm.GetSchedules();
+                Console.WriteLine($"[DupeStatus] ScheduleManager schedules={schedules?.Count ?? 0}");
+                if (schedules != null) {
+                    for (var i = 0; i < schedules.Count; i++) {
+                        var block = schedules[i].GetCurrentScheduleBlock();
+                        var allowsWork = block?.IsAllowed(Db.Get().ScheduleBlockTypes.Work) ?? false;
+                        Console.WriteLine($"[DupeStatus]   schedule[{i}] block={block?.name ?? "null"} allowsWork={allowsWork}");
+                    }
+                }
+            } else {
+                Console.WriteLine($"[DupeStatus] ScheduleManager.Instance=null");
+            }
+        } catch (Exception ex) {
+            Console.WriteLine($"[DupeStatus] ScheduleManager ERROR: {ex.GetBaseException().Message}");
+        }
+
+        // 3. Per-minion state
         foreach (var go in _spawnedMinions) {
             try {
-                var driver = go.GetComponent<ChoreDriver>();
-                var nav    = go.GetComponent<Navigator>();
-                var chore  = driver?.GetCurrentChore();
-                Console.WriteLine($"  [{go.name}] chore={chore?.GetType().Name ?? "null"}  navType={nav?.CurrentNavType.ToString() ?? "null"}  navGrid={nav?.NavGrid?.id ?? "null"}");
+                var driver   = go.GetComponent<ChoreDriver>();
+                var nav      = go.GetComponent<Navigator>();
+                var chore    = driver?.GetCurrentChore();
+                var consumer = go.GetComponent<ChoreConsumer>();
+                var idleSmi  = go.GetSMI<IdleMonitor.Instance>();
+                Console.WriteLine($"  [{go.name}] chore={chore?.GetType().Name ?? "null"}  navType={nav?.CurrentNavType}  navGrid={nav?.NavGrid?.id ?? "null"}  consumerState={consumer?.consumerState != null}  idleMonitor={idleSmi != null}");
             } catch (Exception ex) {
                 Console.WriteLine($"  [{go.name}] ERROR: {ex.GetBaseException().Message}");
             }
