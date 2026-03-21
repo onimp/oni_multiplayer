@@ -226,6 +226,14 @@ public class RealWorldState {
                 entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = 1, h = 1 });
         }
 
+        // Include entities spawned directly (e.g. starter minions via SpawnStarterMinions).
+        // These bypass spawnData.otherEntities so they must be added here explicitly.
+        foreach (var (id, x, y) in world.DirectlySpawnedEntities) {
+            var entityType = ClassifyOtherEntity(id);
+            var (ew, eh) = GetEntitySize(id);
+            entities.Add(new { type = entityType, name = id, x, y, w = ew, h = eh });
+        }
+
         var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new {
             tick = world.SimTick,
             entities = entities.ToArray()

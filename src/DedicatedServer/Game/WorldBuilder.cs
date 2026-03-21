@@ -38,6 +38,13 @@ public class WorldBuilder {
     public IReadOnlyDictionary<string, (int w, int h)> PrefabSizeMap => _prefabSizeMap;
     private readonly Dictionary<string, (int w, int h)> _prefabSizeMap = new();
 
+    /// <summary>
+    /// Entities spawned directly (not via spawnData.otherEntities → SpawnEntities).
+    /// Used by RealWorldState.GetEntitiesBytes so /api/entities includes them.
+    /// </summary>
+    public IReadOnlyList<(string id, int x, int y)> DirectlySpawnedEntities => _directlySpawnedEntities;
+    private readonly List<(string id, int x, int y)> _directlySpawnedEntities = new();
+
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
         SimTick++;
@@ -564,6 +571,7 @@ public class WorldBuilder {
             if (go != null) {
                 Console.WriteLine($"[SpawnMinion] Spawned Minion at ({x},{y}) cell={cell}");
                 _spawnedMinions.Add(go);
+                _directlySpawnedEntities.Add(("Minion", x, y));
                 if (!_prefabSizeMap.ContainsKey("Minion")) CaptureEntitySize("Minion", go);
             } else {
                 Console.WriteLine($"[SpawnMinion] Failed to spawn Minion at ({x},{y}) cell={cell}");
@@ -597,15 +605,18 @@ public class WorldBuilder {
             Console.WriteLine("[SpawnFinder] Telepad found but no solid floor below, falling back to scan");
         }
 
-        // Priority 2: scan the centre half of the map for a breathable cell over a solid floor.
+        // Priority 2: scan the centre half of the map for a gas cell over a solid floor.
+        // Requirements: solid floor below, non-solid non-liquid non-vacuum above.
         // Search top-down (higher y first) so we find the upper colony area before underground.
         for (var y = Grid.HeightInCells * 3 / 4; y >= Grid.HeightInCells / 4; y--) {
             for (var x = Grid.WidthInCells / 4; x < Grid.WidthInCells * 3 / 4; x++) {
                 var cell = y * Grid.WidthInCells + x;
                 var floorCell = cell - Grid.WidthInCells;
                 if (!Grid.IsValidCell(cell) || !Grid.IsValidCell(floorCell)) continue;
+                var elem = Grid.Element[cell];
+                if (elem == null) continue;
                 if (Grid.Solid[floorCell] && !Grid.Solid[cell]
-                    && Grid.Element[cell]?.id != SimHashes.Vacuum) {
+                    && elem.id != SimHashes.Vacuum && !elem.IsLiquid) {
                     Console.WriteLine($"[SpawnFinder] Auto-detected spawn at ({x},{y}) cell={cell}");
                     return cell;
                 }
