@@ -561,7 +561,7 @@ public class WorldBuilder {
     private void SpawnStarterMinions() {
         var spawnCell = FindColonySpawnCell();
         for (var i = 0; i < 3; i++) {
-            var cell = spawnCell + i;
+            var cell = spawnCell; // same cell — dupes spread naturally via IdleChore BFS
             var x = cell % Grid.WidthInCells;
             var y = cell / Grid.WidthInCells;
             // PlaceOtherEntities(entity, rootCell=0) computes cell = Grid.OffsetCell(0, x, y) = x + y*Width
