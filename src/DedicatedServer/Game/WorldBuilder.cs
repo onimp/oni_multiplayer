@@ -32,6 +32,10 @@ public class WorldBuilder {
     // which may be empty if MinionIdentity.OnSpawn() didn't complete.
     private readonly List<GameObject> _spawnedMinions = new List<GameObject>();
 
+    // HQ/Headquarters cell read directly from SpawnData during SpawnEntities(),
+    // used by FindColonySpawnCell() to locate the starter cave without needing the GO.
+    private int _hqCell = -1;
+
     /// <summary>
     /// Maps prefab ID → (w, h) in cells, populated from live spawned GOs during SpawnEntities().
     /// Used by RealWorldState.GetEntitySize to get correct sizes without relying on Assets.GetPrefab.
@@ -527,24 +531,11 @@ public class WorldBuilder {
     }
 
     private void RegisterBuildingDefs() {
-        // Use the real game registration path so Assets.GetBuildingDef() works —
-        // which is what TemplateLoader.PlaceBuilding() calls internally.
-        // GeneratedBuildings.LoadGeneratedBuildings() calls
-        //   BuildingConfigManager.Instance.RegisterBuilding(config) for each IBuildingConfig,
-        //   which calls Assets.AddBuildingDef() AND creates buildingDef.BuildingComplete.
-        // Both BuildingLoader.Instance and BuildingConfigManager.Instance must exist first
-        // (initialized in InitializeWorld).
-        var types = typeof(GeneratedBuildings).Assembly.GetTypes().ToList();
-        var before = Assets.BuildingDefs?.Count ?? 0;
-        GeneratedBuildings.LoadGeneratedBuildings(types);
-        try { BuildingConfigManager.Instance.ConfigurePost(); }
-        catch (Exception ex) { Console.WriteLine($"[WorldBuilder] ConfigurePost non-fatal: {ex.GetBaseException().Message}"); }
-        var after = Assets.BuildingDefs?.Count ?? 0;
-        Console.WriteLine($"[WorldBuilder] Registered {after - before} building defs via GeneratedBuildings ({after} total in Assets)");
-        // Populate local cache for GetBuildingDef() callers (e.g. RealWorldState)
-        if (Assets.BuildingDefs != null)
-            foreach (var def in Assets.BuildingDefs)
-                _buildingDefCache[def.PrefabID] = def;
+        // GeneratedBuildings.LoadGeneratedBuildings() crashes for all 463 configs in headless
+        // (BuildingLoader.CreateBuildingComplete → Add2DComponents → NullRef without Unity renderer).
+        // Result: 0 defs in Assets → TemplateLoader.PlaceBuilding returns null for every building.
+        // HQ position is now read directly from SpawnData in SpawnEntities() instead.
+        Console.WriteLine("[WorldBuilder] RegisterBuildingDefs: skipped (LoadGeneratedBuildings broken in headless)");
     }
 
     private void RegisterEntities() {
@@ -634,32 +625,35 @@ public class WorldBuilder {
     /// Priority 2: scan Grid for the first breathable cell (non-Vacuum) above a solid floor.
     /// Requires Sim.Start() to have run (Grid.Solid must be populated).
     /// </summary>
-    private static int FindColonySpawnCell() {
-        // Priority 1: find PrintingPod / Telepad in the world (spawned by SpawnEntities).
-        // Stand on the cell at floor level just below the telepad.
-        var allBehaviours = UnityEngine.Object.FindObjectsOfType<KMonoBehaviour>() ?? Array.Empty<KMonoBehaviour>();
-        var telepad = allBehaviours.FirstOrDefault(x => x.GetType().Name == "Telepad" || x.GetType().Name == "StartingTelepad");
-        if (telepad != null) {
-            var cell = Grid.PosToCell(telepad.transform.position);
-            Console.WriteLine($"[SpawnFinder] Found Telepad at cell={cell} ({cell % Grid.WidthInCells},{cell / Grid.WidthInCells})");
-            // Walk downward to find solid floor, stand on cell above it
-            for (var dy = 0; dy < 10; dy++) {
-                var floorCell = cell - dy * Grid.WidthInCells;
-                var standCell = floorCell + Grid.WidthInCells;
-                if (Grid.IsValidCell(floorCell) && Grid.IsValidCell(standCell)
-                    && Grid.Solid[floorCell] && !Grid.Solid[standCell])
-                    return standCell;
+    private int FindColonySpawnCell() {
+        var w = Grid.WidthInCells;
+
+        // Priority 1: scan upward from HQ cell (captured from SpawnData during SpawnEntities).
+        // The starter cave with 40 oxygen cells sits directly above the Headquarters building.
+        if (_hqCell >= 0) {
+            for (var dy = 1; dy <= 20; dy++) {
+                var candidate = _hqCell + dy * w;
+                var floorCell = candidate - w;
+                if (!Grid.IsValidCell(candidate) || !Grid.IsValidCell(floorCell)) continue;
+                if (Grid.Solid[candidate]) continue;
+                var elem = Grid.Element[candidate];
+                if (elem == null || elem.IsLiquid || elem.id == SimHashes.Vacuum) continue;
+                // Found a breathable gas cell above HQ — check floor is solid
+                if (Grid.Solid[floorCell]) {
+                    Console.WriteLine($"[SpawnFinder] Gas cell above HQ: ({candidate % w},{candidate / w}) elem={elem.tag} mass={Grid.Mass[candidate]:F2}");
+                    return candidate;
+                }
             }
-            Console.WriteLine("[SpawnFinder] Telepad found but no solid floor below, falling back to scan");
+            Console.WriteLine($"[SpawnFinder] HQ known at cell={_hqCell} but no gas cell found within 20 rows above, falling back");
+        } else {
+            Console.WriteLine("[SpawnFinder] _hqCell not set — HQ not found in SpawnData");
         }
 
         // Priority 2: scan the centre half of the map for a gas cell over a solid floor.
-        // Requirements: solid floor below, non-solid non-liquid non-vacuum above.
-        // Search top-down (higher y first) so we find the upper colony area before underground.
         for (var y = Grid.HeightInCells * 3 / 4; y >= Grid.HeightInCells / 4; y--) {
-            for (var x = Grid.WidthInCells / 4; x < Grid.WidthInCells * 3 / 4; x++) {
-                var cell = y * Grid.WidthInCells + x;
-                var floorCell = cell - Grid.WidthInCells;
+            for (var x = w / 4; x < w * 3 / 4; x++) {
+                var cell = y * w + x;
+                var floorCell = cell - w;
                 if (!Grid.IsValidCell(cell) || !Grid.IsValidCell(floorCell)) continue;
                 var elem = Grid.Element[cell];
                 if (elem == null) continue;
@@ -671,8 +665,8 @@ public class WorldBuilder {
             }
         }
 
-        // Fallback: world centre (should never hit this on a valid world)
-        var fallbackCell = (Grid.HeightInCells / 2) * Grid.WidthInCells + Grid.WidthInCells / 2;
+        // Fallback: world centre
+        var fallbackCell = (Grid.HeightInCells / 2) * w + w / 2;
         Console.WriteLine($"[SpawnFinder] WARN: no suitable spawn found, using world centre cell={fallbackCell}");
         return fallbackCell;
     }
@@ -691,11 +685,17 @@ public class WorldBuilder {
             var offsetX = world.data?.world?.offset.x ?? 0;
             var offsetY = world.data?.world?.offset.y ?? 0;
 
-            // Apply world offset to spawned entity types (mirrors WorldGenSpawner.PlaceTemplates)
+            // Apply world offset to spawned entity types (mirrors WorldGenSpawner.PlaceTemplates).
+            // Also capture HQ coordinates for FindColonySpawnCell() — done here because offsets
+            // are already applied and we don't need the building to be actually spawned.
             foreach (var b in world.SpawnData.buildings) {
                 b.location_x += offsetX;
                 b.location_y += offsetY;
                 b.type = Prefab.Type.Building; // real game sets this explicitly
+                if (_hqCell < 0 && (b.id == "Headquarters" || b.id == "GeneShuffler" || b.id == "Telepad")) {
+                    _hqCell = b.location_y * Grid.WidthInCells + b.location_x;
+                    Console.WriteLine($"[SpawnFinder] HQ from SpawnData: id={b.id} at ({b.location_x},{b.location_y}) cell={_hqCell}");
+                }
             }
             foreach (var e in world.SpawnData.otherEntities) {
                 e.location_x += offsetX;
