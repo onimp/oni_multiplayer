@@ -55,19 +55,34 @@ public class WorldBuilder {
         SimTick++;
         // Multi-tick diagnostic: log at tick 5, 30, 100, 200 to see if movement starts over time.
         if (SimTick == 5 || SimTick == 30 || SimTick == 100 || SimTick == 200) LogDuplicantStatus();
+        StepTheSim(0.2f);
+    }
+
+    /// <summary>
+    /// Sends a NewGameFrame(dt) to SimDLL and reads back PrepareGameData.
+    /// dt=0f bootstraps sim state without advancing time
+    /// (mirrors Game.UnsafePrefabInit line 880: StepTheSim(0f)).
+    /// dt=0.2f is the normal per-frame advance used by TickSimulation().
+    /// </summary>
+    private unsafe void StepTheSim(float dt) {
         var activeRegions = new List<global::Game.SimActiveRegion> {
             new() { region = new Pair<Vector2I, Vector2I>(new Vector2I(0, 0), new Vector2I(Width, Height)) }
         };
-        SimMessages.NewGameFrame(0.2f, activeRegions);
+        SimMessages.NewGameFrame(dt, activeRegions);
         var visible = new byte[Grid.CellCount];
         for (var i = 0; i < visible.Length; i++) visible[i] = byte.MaxValue;
         var ptr = Sim.HandleMessage(SimMessageHashes.PrepareGameData, visible.Length, visible);
         if (ptr != IntPtr.Zero) {
             var update = (Sim.GameDataUpdate*)(void*)ptr;
-            Grid.elementIdx = update->elementIdx;
-            Grid.temperature = update->temperature;
-            Grid.mass = update->mass;
-            Grid.radiation = update->radiation;
+            Grid.elementIdx      = update->elementIdx;
+            Grid.temperature     = update->temperature;
+            Grid.mass            = update->mass;
+            Grid.radiation       = update->radiation;
+            Grid.properties      = update->properties;
+            Grid.strengthInfo    = update->strengthInfo;
+            Grid.insulation      = update->insulation;
+            Grid.diseaseIdx      = update->diseaseIdx;
+            Grid.diseaseCount    = update->diseaseCount;
         }
     }
 
@@ -154,6 +169,24 @@ public class WorldBuilder {
                 Sim.Start();
                 SimRunning = true;
                 Console.WriteLine("[WorldBuilder] SimDLL running");
+
+                // P0 Fix 1 (Sol DS-005): StepTheSim(0f) — bootstrap SimDLL before entity spawn.
+                // Mirrors Game.UnsafePrefabInit line 880. dt=0 flushes initial sim state without
+                // advancing time. Reads back Grid.elementIdx/temperature/mass/etc pointers from SimDLL.
+                StepTheSim(0f);
+                Console.WriteLine("[WorldBuilder] StepTheSim(0f) bootstrap done");
+
+                // P0 Fix 2 (Sol DS-005): world.UpdateCellInfo() — mirrors Game.UnsafeOnSpawn line 1002.
+                // Called with empty solidInfo so the World/pathfinding layer is primed for solid changes.
+                // Actual solid-change propagation happens each tick via TickSimulation → StepTheSim.
+                // unsafe block required: UpdateCellInfo takes Sim.SolidSubstanceChangeInfo*/LiquidChangeInfo* params.
+                unsafe {
+                    World.Instance?.UpdateCellInfo(
+                        new System.Collections.Generic.List<SolidInfo>(),
+                        new System.Collections.Generic.List<CallbackInfo>(),
+                        0, null, 0, null);
+                }
+                Console.WriteLine("[WorldBuilder] World.UpdateCellInfo() bootstrap done");
 
                 // Diagnostic: count solid / non-vacuum cells across the entire grid.
                 // If solidCount=0 and nonVacuumCount=0 → SimDLL did not load world data.
@@ -643,7 +676,7 @@ public class WorldBuilder {
                 var candidate = _hqCell + dy * w;
                 var floorCell = candidate - w;
                 if (!Grid.IsValidCell(candidate) || !Grid.IsValidCell(floorCell)) continue;
-                if (Grid.Solid[candidate]) break; // hit ceiling — stop scanning
+                if (Grid.Solid[candidate]) continue; // skip solid cells (rock layers between HQ and O2 cave)
                 var elem = Grid.Element[candidate];
                 if (elem == null || elem.IsLiquid || elem.id == SimHashes.Vacuum) continue;
                 if (!Grid.Solid[floorCell]) continue; // no floor to stand on
@@ -743,6 +776,21 @@ public class WorldBuilder {
                     Console.WriteLine($"[Entities] Building spawned: {b.id} at ({b.location_x},{b.location_y})");
                     spawned++;
                     if (!_prefabSizeMap.ContainsKey(b.id)) CaptureEntitySize(b.id, go);
+
+                    // P0 Fix 3 (Sol DS-005): call Spawn() on Telepad/HQ so OnSpawn() runs and
+                    // registers the component in Components.Telepads → Immigration.IsHalted()=false.
+                    // KMonoBehaviour.Spawn() is public and safe to call if !isSpawned.
+                    if (b.id == "Headquarters" || b.id == "Telepad" || b.id == "GeneShuffler") {
+                        try {
+                            var kmono = go.GetComponent<KMonoBehaviour>();
+                            if (kmono != null && !kmono.isSpawned) {
+                                kmono.Spawn();
+                                Console.WriteLine($"[Entities] {b.id}.Spawn() done: Telepads={Components.Telepads?.Count ?? -1}");
+                            }
+                        } catch (Exception ex) {
+                            Console.WriteLine($"[Entities] {b.id}.Spawn() partial: {ex.GetBaseException().Message}");
+                        }
+                    }
                 } else {
                     Console.WriteLine($"[Entities] Building skipped (no def or invalid cell): {b.id}");
                     skipped++;
@@ -991,14 +1039,26 @@ public class WorldBuilder {
                 }
 
                 // Step 1: add safe sensors BEFORE Sensors.Spawn() subscribes onPreUpdate.
-                // PathProberSensor.Update() → navigator.UpdateProbe() no-op (executePathProbeTaskAsync=true).
-                // IdleCellSensor.Update() → prefabid.HasTag(Idle)=false → return immediately.
+                // PathProberSensor.Update() → navigator.UpdateProbe() (no-op for async probers).
+                // SafeCellSensor.Update() → RunSafeCellQuery → populates safe-cell for IdleCellQuery.
+                //   Required: without it, SafeCellQuery never runs → allMet flags wrong → idle fails.
+                // IdleCellSensor.Update() → uses SafeCellQuery result to find idle cell.
                 // AssignableReachabilitySensor EXCLUDED: ctor calls assignableProxy.Get() → NPE.
                 var sensors = go.GetComponent<Sensors>();
                 if (sensors != null) {
                     sensors.Add(new PathProberSensor(sensors));
+                    sensors.Add(new SafeCellSensor(sensors));   // P0 Fix 4 (Sol): needed for SafeFlags
                     sensors.Add(new IdleCellSensor(sensors));
                 }
+
+                // Step 1b: start key vital monitors — required so BreathMonitor/CalorieMonitor/etc
+                // trigger their state-machine chores (BreathMonitor → MoveToSafety when O2 low, etc).
+                // Each wrapped in try/catch — ctors access Db.Amounts which is safe post-Db.Initialize,
+                // but some fields may be null in partial headless init.
+                StartMonitor<BreathMonitor>(smc,   "BreathMonitor");
+                StartMonitor<CalorieMonitor>(smc,  "CalorieMonitor");
+                StartMonitor<BladderMonitor>(smc,  "BladderMonitor");
+                StartMonitor<StaminaMonitor>(smc,  "StaminaMonitor");
 
                 // Step 2: start IdleMonitor directly (mirrors what RationalAi.alive does via
                 // ToggleStateMachineList). Bypasses RationalAi entirely to avoid DeathMonitor
@@ -1094,6 +1154,28 @@ public class WorldBuilder {
             }
         }
         Console.WriteLine($"[WorldBuilder] FixRationalAi done: {fixedCount}/{_spawnedMinions.Count} minion(s) started");
+    }
+
+    /// <summary>
+    /// Starts a StateMachine.Instance for the given SM type on the target.
+    /// Mirrors the IdleMonitor pattern: new TSM.Instance(target); instance.StartSM().
+    /// Uses reflection to construct TSM.Instance — avoids complex nested generic constraints.
+    /// Wrapped in try/catch — monitors access Db.Amounts which may be partial in headless.
+    /// </summary>
+    private static void StartMonitor<TSM>(IStateMachineTarget target, string name)
+        where TSM : StateMachine {
+        try {
+            var instanceType = typeof(TSM).GetNestedType("Instance");
+            if (instanceType == null) {
+                Console.WriteLine($"[StartMonitor] {name}: nested Instance type not found");
+                return;
+            }
+            var instance = (StateMachine.Instance)Activator.CreateInstance(instanceType, target);
+            instance.StartSM();
+            Console.WriteLine($"[StartMonitor] {name}: started OK");
+        } catch (Exception ex) {
+            Console.WriteLine($"[StartMonitor] {name}: {ex.GetBaseException().Message}");
+        }
     }
 
     /// <summary>
