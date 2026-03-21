@@ -163,6 +163,11 @@ public class WorldBuilder {
         // Both leave consumerState null → Brain.UpdateChores() NPEs on every tick.
         FixChoreConsumers();
 
+        // LightSymbolTracker.RenderEveryTick → IsEnableAndVisible → CameraController.Instance.VisibleArea
+        // CameraController.Instance is null in headless → NPE 12K+/min, pure rendering, no gameplay impact.
+        // Cannot use Harmony (KMonoBehaviour subclass → deadlock). Disable all instances post-spawn.
+        DisableRenderingOnlyComponents();
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         WorldState = new RealWorldState(Width, Height, this);
@@ -667,6 +672,21 @@ public class WorldBuilder {
         }
 
         Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{allBrainGOs.Count} consumerState(s) created (minions={minionGOs.Count} brains={Components.Brains.Count})");
+    }
+
+    /// <summary>
+    /// Disables rendering-only components that NPE in headless (no camera/animator).
+    /// Cannot use Harmony (KMonoBehaviour subclass methods → deadlock).
+    /// component.enabled = false prevents RenderEveryTick/SimEveryTick callbacks.
+    /// </summary>
+    private static void DisableRenderingOnlyComponents() {
+        var count = 0;
+        foreach (var lst in UnityEngine.Object.FindObjectsOfType<LightSymbolTracker>()) {
+            lst.enabled = false;
+            count++;
+        }
+        if (count > 0)
+            Console.WriteLine($"[WorldBuilder] Disabled {count} LightSymbolTracker component(s)");
     }
 
     /// <summary>
