@@ -187,6 +187,19 @@ public class WorldBuilder {
         Console.WriteLine("[WorldBuilder] Spawning entities...");
         SpawnEntities(cluster);
 
+        // Diagnostic: log element/mass state around PrintingPod BEFORE and AFTER a SimDLL tick.
+        // Helps diagnose whether oxygen vacuum near printer is from stale Grid data (SimMessages
+        // queued but not yet processed) or from worldgen generating a genuinely empty room.
+        DiagnosePrinterArea("pre-tick");
+        if (SimRunning) {
+            // Run one full SimDLL frame (12 subticks * 200ms = 1 sim frame) to flush
+            // any queued SimMessages.ReplaceElement calls from SpawnEntities/PlaceBuilding.
+            for (var t = 0; t < 12; t++) Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
+            TickSimulation();
+            Console.WriteLine("[WorldBuilder] Ran 1 sim frame post-SpawnEntities to flush SimMessages");
+        }
+        DiagnosePrinterArea("post-tick");
+
         // Spawn starter duplicants at the actual colony location.
         // Must run AFTER SpawnEntities so Telepad/PrintingPod is already in the world
         // (FindColonySpawnCell can then locate it via FindObjectsOfType).
@@ -1040,6 +1053,38 @@ public class WorldBuilder {
     /// One-shot diagnostic: logs currentChore and NavType for each spawned Minion.
     /// Called at SimTick==5 to verify Brain→Chore→Navigator pipeline is working.
     /// </summary>
+    /// <summary>
+    /// Logs element/mass data around the PrintingPod (Telepad) to diagnose oxygen presence.
+    /// Call before and after a SimDLL tick to distinguish stale Grid data from genuine vacuum.
+    /// </summary>
+    private static void DiagnosePrinterArea(string label) {
+        try {
+            var all = UnityEngine.Object.FindObjectsOfType<KMonoBehaviour>() ?? Array.Empty<KMonoBehaviour>();
+            var printer = all.FirstOrDefault(x => {
+                var n = x.GetType().Name;
+                return n == "Telepad" || n == "StartingTelepad" || n.Contains("Headquarters");
+            });
+            if (printer == null) {
+                Console.WriteLine($"[PrinterDiag:{label}] No Telepad/Headquarters found");
+                return;
+            }
+            var printerCell = Grid.PosToCell(printer.transform.position);
+            var px = printerCell % Grid.WidthInCells;
+            var py = printerCell / Grid.WidthInCells;
+            Console.WriteLine($"[PrinterDiag:{label}] {printer.GetType().Name} at cell={printerCell} ({px},{py})");
+            for (var dy = -2; dy <= 2; dy++) {
+                for (var dx = -2; dx <= 2; dx++) {
+                    var c = printerCell + dy * Grid.WidthInCells + dx;
+                    if (!Grid.IsValidCell(c)) continue;
+                    var elem = Grid.Element[c];
+                    Console.WriteLine($"  ({dx:+0;-0},{dy:+0;-0}) cell={c}: elem={elem?.tag} solid={Grid.Solid[c]} mass={Grid.Mass[c]:F3} gas={elem?.IsGas}");
+                }
+            }
+        } catch (Exception ex) {
+            Console.WriteLine($"[PrinterDiag:{label}] Error: {ex.GetBaseException().Message}");
+        }
+    }
+
     private void LogDuplicantStatus() {
         Console.WriteLine($"[DupeStatus] tick={SimTick} minions={_spawnedMinions.Count}");
 
