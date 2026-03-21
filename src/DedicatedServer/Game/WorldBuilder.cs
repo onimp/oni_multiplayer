@@ -7,6 +7,7 @@ using Database;
 using Klei;
 using ProcGen;
 using ProcGenGame;
+using TemplateClasses;
 using UnityEngine;
 using Random = System.Random;
 
@@ -668,8 +669,9 @@ public class WorldBuilder {
 
     /// <summary>
     /// Instantiates entities from SpawnData for each world in the cluster.
-    /// Mirrors WorldGenSpawner.PlaceTemplates() but without SaveLoader dependency.
-    /// Applies world offsets to positions, then calls TemplateLoader.PlaceOtherEntities per entity.
+    /// Mirrors WorldGenSpawner.PlaceTemplates() but without SaveLoader/fog-of-war dependency.
+    /// Applies world offsets to positions, then calls the appropriate TemplateLoader function
+    /// for each entity type: PlaceBuilding / PlaceElementalOres / PlaceOtherEntities / PlacePickupables.
     /// </summary>
     private void SpawnEntities(Cluster cluster) {
         var spawned = 0;
@@ -678,28 +680,75 @@ public class WorldBuilder {
         foreach (var world in cluster.worlds) {
             var offsetX = world.data?.world?.offset.x ?? 0;
             var offsetY = world.data?.world?.offset.y ?? 0;
-            // Apply world offset to positions (WorldGenSpawner.PlaceTemplates does the same)
-            foreach (var entity in world.SpawnData.otherEntities) {
-                entity.location_x += offsetX;
-                entity.location_y += offsetY;
+
+            // Apply world offset to all entity types (mirrors WorldGenSpawner.PlaceTemplates)
+            foreach (var b in world.SpawnData.buildings) {
+                b.location_x += offsetX;
+                b.location_y += offsetY;
+                b.type = Prefab.Type.Building; // real game sets this explicitly
             }
-            foreach (var entity in world.SpawnData.otherEntities) {
-                var go = TemplateLoader.PlaceOtherEntities(entity, 0);
+            foreach (var o in world.SpawnData.elementalOres) {
+                o.location_x += offsetX;
+                o.location_y += offsetY;
+                o.type = Prefab.Type.Ore;
+            }
+            foreach (var e in world.SpawnData.otherEntities) {
+                e.location_x += offsetX;
+                e.location_y += offsetY;
+                e.type = Prefab.Type.Other;
+            }
+            foreach (var p in world.SpawnData.pickupables) {
+                p.location_x += offsetX;
+                p.location_y += offsetY;
+                p.type = Prefab.Type.Pickupable;
+            }
+
+            // Spawn buildings (Headquarters, Tiles, etc.) — critical: creates HQ GO so
+            // Components.Telepads is populated and FindColonySpawnCell() can locate the printer.
+            foreach (var b in world.SpawnData.buildings) {
+                var go = TemplateLoader.PlaceBuilding(b, 0);
                 if (go != null) {
-                    Console.WriteLine($"[Entities] Spawned: {entity.id} at ({entity.location_x},{entity.location_y})");
+                    Console.WriteLine($"[Entities] Building spawned: {b.id} at ({b.location_x},{b.location_y})");
                     spawned++;
-                    // Track Minion GOs directly — more reliable than Components.LiveMinionIdentities
-                    // which requires MinionIdentity.OnSpawn() to have completed successfully.
-                    if (entity.id == "Minion" || entity.id == "BionicMinion") {
-                        _spawnedMinions.Add(go);
-                    }
-                    // Capture size from live GO's OccupyArea once per unique prefab ID.
-                    // More reliable than reading from Assets.GetPrefab in headless mode.
-                    if (!_prefabSizeMap.ContainsKey(entity.id)) {
-                        CaptureEntitySize(entity.id, go);
-                    }
+                    if (!_prefabSizeMap.ContainsKey(b.id)) CaptureEntitySize(b.id, go);
                 } else {
-                    Console.WriteLine($"[Entities] Skipped (no prefab or invalid cell): {entity.id}");
+                    Console.WriteLine($"[Entities] Building skipped (no def or invalid cell): {b.id}");
+                    skipped++;
+                }
+            }
+
+            // Spawn elemental ores
+            foreach (var o in world.SpawnData.elementalOres) {
+                var go = TemplateLoader.PlaceElementalOres(o, 0);
+                if (go != null) {
+                    spawned++;
+                    if (!_prefabSizeMap.ContainsKey(o.id)) CaptureEntitySize(o.id, go);
+                } else {
+                    skipped++;
+                }
+            }
+
+            // Spawn other entities (critters, dupes, etc.)
+            foreach (var e in world.SpawnData.otherEntities) {
+                var go = TemplateLoader.PlaceOtherEntities(e, 0);
+                if (go != null) {
+                    Console.WriteLine($"[Entities] Spawned: {e.id} at ({e.location_x},{e.location_y})");
+                    spawned++;
+                    if (e.id == "Minion" || e.id == "BionicMinion") _spawnedMinions.Add(go);
+                    if (!_prefabSizeMap.ContainsKey(e.id)) CaptureEntitySize(e.id, go);
+                } else {
+                    Console.WriteLine($"[Entities] Skipped (no prefab or invalid cell): {e.id}");
+                    skipped++;
+                }
+            }
+
+            // Spawn pickupables
+            foreach (var p in world.SpawnData.pickupables) {
+                var go = TemplateLoader.PlacePickupables(p, 0);
+                if (go != null) {
+                    spawned++;
+                    if (!_prefabSizeMap.ContainsKey(p.id)) CaptureEntitySize(p.id, go);
+                } else {
                     skipped++;
                 }
             }
