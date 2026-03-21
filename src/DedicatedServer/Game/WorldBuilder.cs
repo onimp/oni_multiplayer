@@ -117,23 +117,6 @@ public class WorldBuilder {
                 }
             }
             Console.WriteLine($"[WorldBuilder] Copied {n} cells to Grid");
-
-            // Grid.InitializeCells() sets Grid.Solid (BuildMasks) from Grid.elementIdx.
-            // AllocateGrid() called it earlier when all elementIdx were 0 (vacuum, non-solid).
-            // Now that we have the real element data, call it again so Grid.Solid is correct.
-            // This is required before NavGrid rebuild below — FloorValidator.IsWalkableCell()
-            // needs Grid.Solid[cellBelow]=true to mark a cell as floor-navigable.
-            Grid.InitializeCells();
-            Console.WriteLine("[WorldBuilder] Grid.InitializeCells() called with real element data");
-
-            // NavGrids were built in InitializeWorld() via new GameNavGrids() → NavGrid ctor
-            // → InitializeGraph(). At that time Grid.Solid was all-false (vacuum), so the
-            // FloorValidator produced zero valid floor cells → no floor transitions in nav graph.
-            // ResetNavGrids() calls InitializeGraph() on every NavGrid, rebuilding the full
-            // graph with the correct solid state from the generated world.
-            Pathfinding.Instance.ResetNavGrids();
-            var navCount = Pathfinding.Instance.GetNavGrids().Count;
-            Console.WriteLine($"[WorldBuilder] NavGrids rebuilt: {navCount} grid(s) reset with correct solid state");
         }
 
         SpawnData = cluster.currentWorld.SpawnData;
@@ -151,9 +134,38 @@ public class WorldBuilder {
                 SimMessages.CreateSimElementsTable(ElementLoader.elements);
                 SimMessages.CreateDiseaseTable(Db.Get().Diseases);
                 SimMessages.SimDataInitializeFromCells(Width, Height, 42, generatedCells, bgTemp, dc, headless: true);
+
+                // Sim.Start() internally calls Grid.InitializeCells() after setting
+                // Grid.elementIdx = SimDLL-pointer — this is the ONLY correct time to
+                // call InitializeCells, because the SimDLL pointer carries the authoritative
+                // element state. Any earlier call (e.g. from our managed copy above) gets
+                // overwritten by Sim.Start(). So we must rebuild NavGrids AFTER Sim.Start().
                 Sim.Start();
                 SimRunning = true;
                 Console.WriteLine("[WorldBuilder] SimDLL running");
+
+                // Diagnostic: sample solid state at key cells before NavGrid rebuild.
+                // Dupe spawn area y=187, x≈128 → cell≈48000; floor at y=186 → cell≈47744.
+                if (Grid.IsValidCell(48000) && Grid.IsValidCell(47744)) {
+                    Console.WriteLine($"[NavGrid] Pre-rebuild solid check: dupeCell=48000 solid={Grid.Solid[48000]} elem={Grid.Element[48000]?.tag}, floorCell=47744 solid={Grid.Solid[47744]} elem={Grid.Element[47744]?.tag}");
+                    // Sample a few floor cells
+                    for (var dx = 0; dx < 4; dx++) {
+                        var fc = 47744 + dx;
+                        Console.WriteLine($"[NavGrid]   floor+{dx} ({fc}): solid={Grid.Solid[fc]} elem={Grid.Element[fc]?.tag}");
+                    }
+                }
+
+                // NavGrids were built in InitializeWorld() via new GameNavGrids() → NavGrid ctor
+                // → InitializeGraph(). At that time Grid.Solid was all-false (all vacuum), so the
+                // FloorValidator produced zero valid floor cells → no floor transitions.
+                // Now Grid.elementIdx points to SimDLL data (set by Sim.Start()) and
+                // Grid.InitializeCells() was called inside Sim.Start() with the correct elements.
+                // Grid.Solid is now authoritative — rebuild all NavGrids so FloorValidator marks
+                // actual solid tiles as walkable foundations.
+                Pathfinding.Instance.ResetNavGrids();
+                var navCount = Pathfinding.Instance.GetNavGrids().Count;
+                Console.WriteLine($"[WorldBuilder] NavGrids rebuilt post-SimStart: {navCount} grid(s)");
+
             } catch (Exception ex) {
                 Console.WriteLine($"[WorldBuilder] SimDLL failed: {ex.Message}");
             }
