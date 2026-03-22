@@ -1554,6 +1554,8 @@ public class WorldBuilder {
         var total = 0;
         foreach (var brain in Components.Brains.Items) {
             if (brain is not CreatureBrain) continue;
+            var smc = brain.gameObject.GetComponent<StateMachineController>();
+            if (smc == null || smc.stateMachines == null) continue;
             total++;
             CreaturePrefab.Setup((CreatureBrain)brain);
         }
