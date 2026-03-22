@@ -16,6 +16,57 @@ namespace MultiplayerMod.Test.GameRuntime;
 /// </summary>
 public class ChoreDriverSmTest : PlayableGameTest {
 
+    // ─── DS-006: ChoreDriver haschore.Update worker NPE ─────────────────────
+
+    /// <summary>
+    /// Regression test for DS-006: smi.worker null → NPE in haschore.Update (b__5_3 IL[0x75]).
+    ///
+    /// StatesInstance.ctor sets: worker = base.master.GetComponent&lt;WorkerBase&gt;()
+    /// StandardWorker : WorkerBase.  If StandardWorker is absent from the dupe GO,
+    /// worker=null → haschore.Update fires: Workable workable = smi.worker.GetWorkable() → NPE.
+    ///
+    /// This test documents the broken state: worker IS null when StandardWorker is absent.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_StatesInstance_Worker_IsNull_WhenNoStandardWorker() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+
+        // Do NOT add StandardWorker — replicates the broken headless spawning state.
+        driver.smi.StartSM();
+
+        var smi = driver.GetSMI<ChoreDriver.StatesInstance>();
+        Assert.IsNull(smi.worker,
+            "worker must be null when StandardWorker is absent from the GO. " +
+            "This is the root cause of ChoreDriver+States b__5_3 [0x00075] NPE firing 522K+/5min " +
+            "on the dedicated server (haschore.Update: smi.worker.GetWorkable() → NullReferenceException).");
+    }
+
+    /// <summary>
+    /// Fix test for DS-006: after AddOrGet&lt;StandardWorker&gt;() (our WorldBuilder fix),
+    /// StatesInstance.worker is non-null → haschore.Update can call GetWorkable() safely.
+    ///
+    /// WorldBuilder.FixRationalAi now calls go.AddOrGet&lt;StandardWorker&gt;() before
+    /// choreDriver.smi.StartSM() so worker is always set regardless of prefab bootstrap state.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_StatesInstance_Worker_IsNotNull_WhenStandardWorkerPresent() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        go.AddComponent<StandardWorker>(); // ← fix: mirrors WorldBuilder.FixRationalAi AddOrGet
+        var driver = go.AddComponent<ChoreDriver>();
+
+        driver.smi.StartSM();
+
+        var smi = driver.GetSMI<ChoreDriver.StatesInstance>();
+        Assert.IsNotNull(smi.worker,
+            "worker must be non-null after AddOrGet<StandardWorker>() + StartSM(). " +
+            "This ensures haschore.Update (b__5_3) can call smi.worker.GetWorkable() without NPE.");
+    }
+
+    // ─── DS-005 tests (pre-existing) ────────────────────────────────────────
+
     /// <summary>
     /// Baseline: freshly added ChoreDriver has no SMI (GetSMI() == null).
     /// Verifies the broken state that the fix addresses.

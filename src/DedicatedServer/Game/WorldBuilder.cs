@@ -1620,6 +1620,13 @@ public class WorldBuilder {
                 // Guarded with GetSMI()==null so we don't double-start when BaseOnSpawn succeeded.
                 var choreDriver = go.GetComponent<ChoreDriver>();
                 if (choreDriver != null && choreDriver.GetSMI() == null) {
+                    // StatesInstance.ctor sets worker = GetComponent<WorkerBase>().
+                    // BaseMinionConfig.BaseMinion() adds StandardWorker (which : WorkerBase) at line 89,
+                    // but in headless the prefab bootstrap may not complete → StandardWorker absent →
+                    // worker=null → haschore.Update lambda (b__5_3) at IL[0x75] NPEs on
+                    // smi.worker.GetWorkable() every tick, firing 522K+ errors/5min and freezing GameClock.
+                    // AddOrGet is a no-op if StandardWorker is already present (BaseOnSpawn path).
+                    go.AddOrGet<StandardWorker>();
                     try {
                         choreDriver.smi.StartSM(); // lazy-creates StatesInstance, enters nochore
                         Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM started (smi={choreDriver.GetSMI() != null})");
