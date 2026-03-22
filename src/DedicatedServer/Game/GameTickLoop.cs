@@ -41,15 +41,24 @@ public class GameTickLoop {
 
         while (_accumulatedTime >= SubTickTime) {
             _simSubTick = (_simSubTick + 1) % SimFrameSubTicks;
-            if (_simSubTick == 0) {
-                _tickSimDll();
-                // After each 200ms SimDLL step, process nav dirty cells. Mirrors Game.UnsafeSim200ms()
-                // which calls Pathfinding.Instance.UpdateNavGrids() after world.UpdateCellInfo().
-                // Without this, tile changes from the sim never propagate to the nav graph.
-                Pathfinding.Instance?.UpdateNavGrids();
+            try {
+                if (_simSubTick == 0) {
+                    _tickSimDll();
+                    // After each 200ms SimDLL step, process nav dirty cells. Mirrors Game.UnsafeSim200ms()
+                    // which calls Pathfinding.Instance.UpdateNavGrids() after world.UpdateCellInfo().
+                    // Without this, tile changes from the sim never propagate to the nav graph.
+                    Pathfinding.Instance?.UpdateNavGrids();
+                }
+                // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets
+                Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
+            } catch (Exception ex) {
+                // BreathMonitor.IsLowBreath() → WorldContainer.AlertManager → NPE fires 563K× per run.
+                // Without this catch the while-loop aborts → _tickCount never reaches SensorWarmupTick
+                // → ForceUpdateSensors never fires → idleCell=-1 forever → no movement.
+                // Log at low frequency to avoid console spam while still surfacing the root cause.
+                if (_tickCount % 200 == 0)
+                    Debug.LogWarning($"[GameTickLoop] SubTick ex (count={_tickCount}): {ex.GetBaseException().Message}");
             }
-            // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets
-            Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
             _accumulatedTime -= SubTickTime;
         }
 
