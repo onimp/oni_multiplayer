@@ -1,0 +1,117 @@
+using System;
+using System.Reflection;
+using UnityEngine;
+
+namespace DedicatedServer.Game;
+
+/// <summary>
+/// Per-creature component bootstrap for the dedicated server headless environment.
+///
+/// Same problem as dupes: TriggerLifecycle fires Brain.OnSpawn() but may partially fail,
+/// leaving brain.running=false or Navigator SM unstarted → CreatureBrainGroup skips the brain.
+///
+/// Key differences from MinionPrefab (dupe fix):
+///   - No Schedule/Schedulable — creatures have no work schedule.
+///   - No RationalAi — creature chores come from ChoreTable + state machine defs (already
+///     started by KPrefabID.OnSpawn → StartSMIS during TriggerLifecycle).
+///   - Sensors not present on most creatures (only Rovers/FetchDrones have them).
+///   - Uses CreatureBrainGroup (GameTags.CreatureBrain) not DupeBrainGroup.
+///
+/// Setup(brain) steps:
+///   1. Ensure brain.running=true — if false, re-register in BrainScheduler via Remove+Add.
+///   2. Ensure Navigator SM started — if nav.GetSMI()==null, call nav.smi.StartSM().
+///   3. Ensure consumerState != null (ChoreConsumer.OnSpawn may have failed).
+///   4. Sensors.Spawn for Rovers/FetchDrones.
+///   5. StandardWorker guard + ChoreDriver SM safety net.
+///   6. Diagnostic log: cell, brain.running, nav state, chore, consumerState.
+/// </summary>
+public static class CreaturePrefab {
+
+    // Reflection cache for Brain.running (private field).
+    // Used to force brain.running=true when Brain.Spawn() is a no-op (isSpawned already set).
+    private static readonly FieldInfo _brainRunningField =
+        typeof(Brain).GetField("running", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    public static void Setup(CreatureBrain brain) {
+        var go = brain.gameObject;
+        if (go == null) return;
+
+        // ── Step 1: ensure brain.running = true ──────────────────────────────────
+        // Brain.Spawn() is a no-op when isSpawned=true (already set by TriggerLifecycle).
+        // If OnSpawn crashed after "running=true" was set, brain is registered but running.
+        // If Components.Brains.Add() failed (BrainGroup.HasTag mismatch), brain is not in
+        // CreatureBrainGroup → UpdateBrain() never called → creature stuck.
+        // Fix: remove from Components.Brains, force running=true via reflection, re-add
+        // to retrigger BrainScheduler.OnAddBrain → HasTag(CreatureBrain) → AddBrain().
+        if (!brain.IsRunning()) {
+            try { Components.Brains.Remove(brain); } catch { /* ignore if not registered */ }
+            _brainRunningField?.SetValue(brain, true);
+            Components.Brains.Add(brain);
+            Console.WriteLine($"[Animals] {go.name}: brain was NOT running — re-registered");
+        }
+
+        // ── Step 2: ensure Navigator SM is running ────────────────────────────────
+        // Navigator.OnSpawn() starts the SM (normal.stopped state). In headless it may
+        // throw (TargetLocator KInstantiate → NullRef) leaving _smi=null → no movement.
+        var nav = go.GetComponent<Navigator>();
+        if (nav != null) {
+            if (!nav.IsInitialized()) {
+                try { nav.InitializeComponent(); }
+                catch (Exception ex) {
+                    Console.WriteLine($"[Animals] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
+                }
+            }
+            if (nav.GetSMI() == null) {
+                try {
+                    nav.smi.StartSM();
+                    Console.WriteLine($"[Animals] {go.name}: Navigator.StartSM() called");
+                } catch (Exception ex) {
+                    Console.WriteLine($"[Animals] {go.name}: Navigator.StartSM partial: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+
+        // ── Step 3: ensure ChoreConsumer.consumerState != null ────────────────────
+        var cc = go.GetComponent<ChoreConsumer>();
+        if (cc != null && cc.consumerState == null) {
+            try {
+                cc.consumerState = new ChoreConsumerState(cc);
+            } catch (Exception ex) {
+                Console.WriteLine($"[Animals] {go.name}: consumerState init failed: {ex.GetBaseException().Message}");
+            }
+        }
+
+        // ── Step 4: Sensors (Rovers/FetchDrones only — standard critters lack them) ──
+        var sensors = go.GetComponent<Sensors>();
+        if (sensors != null && !sensors.isSpawned) {
+            try { sensors.Spawn(); }
+            catch (Exception ex) {
+                Console.WriteLine($"[Animals] {go.name}: sensors.Spawn partial: {ex.GetBaseException().Message}");
+            }
+        }
+
+        // ── Step 5: ensure StandardWorker (WorkerBase) is present — DS-006 ─────────
+        // ChoreDriver.StatesInstance.ctor sets worker = GetComponent<WorkerBase>().
+        // Primary fix is in FixChoreConsumers: AddOrGet<StandardWorker>() runs before
+        // driver.Spawn() → ctor finds WorkerBase → worker set correctly.
+        // This AddOrGet is a safety net for any SM started outside FixChoreConsumers.
+        go.AddOrGet<StandardWorker>();
+        var choreDriver = go.GetComponent<ChoreDriver>();
+        if (choreDriver != null && choreDriver.GetSMI() == null) {
+            // SM was never started (shouldn't happen after FixChoreConsumers, but guard it).
+            choreDriver.smi.StartSM();
+            Console.WriteLine($"[Animals] {go.name}: ChoreDriver SM started (safety net)");
+        }
+
+        // ── Diagnostic: one line per creature ────────────────────────────────────
+        var cell  = Grid.PosToCell(go);
+        var chore = choreDriver?.GetCurrentChore();
+        Console.WriteLine(
+            $"[Animals] {go.name}: cell={cell} running={brain.IsRunning()} " +
+            $"nav={(nav?.GetSMI() != null ? "OK" : "null")} " +
+            $"chore={chore?.GetType().Name ?? "null"} " +
+            $"consumerState={cc?.consumerState != null} " +
+            $"worker={choreDriver?.GetSMI<ChoreDriver.StatesInstance>()?.worker != null}"
+        );
+    }
+}
