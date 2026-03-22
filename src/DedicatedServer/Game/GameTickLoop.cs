@@ -67,6 +67,16 @@ public class GameTickLoop {
                 }
                 // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets
                 Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
+
+                // Advance GameClock: mirrors SimAndRenderScheduler.sim33ms bucket calling
+                // GameClock.Sim33ms(dt) each subtick. Without this, GameClock.GetTime() stays
+                // frozen at its OnPrefabInit value (timeSinceStartOfCycle=50f) because
+                // SimAndRenderScheduler is never driven in headless.
+                // GameSchedulerClock.GetTime() returns GameClock.Instance.GetTime(), so a
+                // frozen clock means Scheduler.Update() never satisfies (time >= entry.time)
+                // → IdleMove callback (scheduled at GetTime()+Random(5,15)) never fires
+                // → IdleChore runs but dupe never moves.
+                GameClock.Instance?.Sim33ms(SubTickTime);
             } catch (Exception ex) {
                 // BreathMonitor.IsLowBreath() → WorldContainer.AlertManager → NPE fires 563K× per run.
                 // Without this catch the while-loop aborts → _tickCount never reaches SensorWarmupTick

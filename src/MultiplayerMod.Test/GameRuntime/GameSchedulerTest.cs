@@ -169,5 +169,80 @@ public class GameSchedulerTest : PlayableGameTest {
 
         handle.ClearScheduler();
     }
-}
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    // NPE #3: GameSchedulerClock frozen (IdleMove never fires)
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Verifies that GameClock.GetTime() starts at its OnPrefabInit seed value (50f).
+    /// Documents the pre-fix state: without Sim33ms being called, GetTime() never
+    /// advances from 50f → IdleMove (scheduled at 50+Random(5,15)) never triggers.
+    /// </summary>
+    [Test]
+    public void GameClock_GetTime_StartsAt50f_OnPrefabInitSeed() {
+        // GameClock.OnPrefabInit() sets timeSinceStartOfCycle = 50f, cycle = 0.
+        // GetTime() = timeSinceStartOfCycle + cycle * 600f = 50f.
+        Assert.That(GameClock.Instance.GetTime(), Is.EqualTo(50f),
+            "GameClock.GetTime() must return 50f after OnPrefabInit " +
+            "(timeSinceStartOfCycle=50, cycle=0). Documents the frozen-clock pre-fix state.");
+    }
+
+    /// <summary>
+    /// Verifies that GameClock.Sim33ms(dt) advances GetTime() — the fix calls this
+    /// each subtick in GameTickLoop to mirror SimAndRenderScheduler.sim33ms bucket.
+    ///
+    /// Root cause: SimAndRenderScheduler.sim33ms bucket (which calls GameClock.Sim33ms)
+    /// is never driven in headless. GetTime() stays frozen at 50f. IdleMove is scheduled
+    /// at GetTime()+Random(5,15)=55-65f. Scheduler.Update() condition (time>=entry.time)
+    /// is never true → IdleMove never fires → dupe never moves.
+    ///
+    /// Fix (GameTickLoop.cs): call GameClock.Instance?.Sim33ms(SubTickTime) each subtick.
+    /// </summary>
+    [Test]
+    public void GameClock_Sim33ms_AdvancesGetTime() {
+        var before = GameClock.Instance.GetTime();
+
+        // Simulate 60 subticks worth of clock advancement (≈ 1 second of game time).
+        const float subTickTime = 1f / 60f;
+        for (int i = 0; i < 60; i++)
+            GameClock.Instance.Sim33ms(subTickTime);
+
+        var after = GameClock.Instance.GetTime();
+
+        Assert.That(after, Is.GreaterThan(before),
+            "GameClock.GetTime() must increase after Sim33ms calls. " +
+            "Without this, IdleMove scheduler deadline is never reached.");
+        Assert.That(after, Is.EqualTo(before + 1f).Within(0.001f),
+            "60 subticks × (1/60)s = 1s total clock advance expected");
+    }
+
+    /// <summary>
+    /// Verifies the full IdleMove trigger chain: after enough Sim33ms calls to advance
+    /// the clock past the scheduled time, Scheduler.Update() fires the callback.
+    ///
+    /// IdleMove delay = Random(5,15) seconds. We advance 20 seconds to be safe.
+    /// GameSchedulerClock.GetTime() → GameClock.Instance.GetTime() → advances with Sim33ms.
+    /// </summary>
+    [Test]
+    public void GameSchedulerClock_AfterSim33msAdvance_SchedulerFiresDelayedCallback() {
+        // Schedule at a 2-second delay (deterministic, smaller than Random(5,15)).
+        const float delay = 2f;
+        bool fired = false;
+        var handle = GameScheduler.Instance.Schedule("idle-move-sim", delay, _ => fired = true);
+        Assert.IsNotNull(handle);
+
+        // Advance clock by 3 seconds (> 2s delay) via the same path GameTickLoop uses.
+        const float subTickTime = 1f / 60f;
+        for (int i = 0; i < 180; i++) {           // 180 × (1/60) = 3.0 s
+            GameClock.Instance.Sim33ms(subTickTime);
+            GameScheduler.Instance.GetScheduler().Update();
+        }
+
+        Assert.IsTrue(fired,
+            "Callback scheduled at +2s must fire after 3s of Sim33ms + Scheduler.Update() calls. " +
+            "This is the IdleMove trigger chain — if this fails, dupes never move in headless.");
+
+        if (!fired) handle.ClearScheduler();
+    }
+}
