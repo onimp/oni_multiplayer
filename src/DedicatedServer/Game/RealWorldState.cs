@@ -186,18 +186,29 @@ public class RealWorldState {
     }
 
     /// <summary>
-    /// Resolves building cell dimensions from the two available size sources.
-    /// Primary: <paramref name="getBuildingDef"/> — backed by the static _buildingDefCache populated
-    ///   during RegisterBuildingDefs() configTable harvest. Authoritative for all 342 registered defs.
-    /// Fallback: <paramref name="sizeMap"/> — instance PrefabSizeMap, populated during SpawnEntities().
-    ///   Can contain stale (1,1) entries if CaptureEntitySize fell through to OccupyArea/KBoxCollider2D.
+    /// Resolves building cell dimensions from three sources in priority order.
+    /// 1. <paramref name="buildingDefCache"/> — static _buildingDefCache populated during
+    ///    RegisterBuildingDefs() configTable harvest. Contains ALL 342 defs including buildings
+    ///    that failed full registration (HQ, Telepad) — dimensions read directly via
+    ///    WorldBuilder.ReadBuildingDefSize, no game API call needed.
+    /// 2. <paramref name="getBuildingDef"/> — Assets.GetBuildingDef wrapped — only works for
+    ///    buildings that completed registration successfully.
+    /// 3. <paramref name="sizeMap"/> — PrefabSizeMap populated during SpawnEntities().
+    ///    May have stale (1,1) entries if CaptureEntitySize fell through in headless.
     /// Static so it can be unit-tested without live GameObjects or game APIs.
     /// </summary>
     internal static (int w, int h) ResolveBuildingSize(
         string id,
         IReadOnlyDictionary<string, (int w, int h)> sizeMap,
+        IReadOnlyDictionary<string, BuildingDef> buildingDefCache,
         Func<string, BuildingDef> getBuildingDef) {
-        // Primary: BuildingDef from static _buildingDefCache — never overwritten by spawn-time logic.
+        // Primary: direct lookup in _buildingDefCache — populated from configTable harvest even
+        // for buildings whose Add2DComponents crashed (HQ, Telepad, GeneShuffler).
+        if (buildingDefCache != null && buildingDefCache.TryGetValue(id, out var cachedDef)) {
+            var cacheSize = WorldBuilder.ReadBuildingDefSize(cachedDef);
+            if (cacheSize.HasValue) return cacheSize.Value;
+        }
+        // Secondary: Assets.GetBuildingDef (works for fully-registered buildings).
         try {
             var def = getBuildingDef?.Invoke(id);
             if (def != null && def.WidthInCells > 0 && def.HeightInCells > 0)
@@ -230,7 +241,7 @@ public class RealWorldState {
 
         if (spawnData != null) {
             foreach (var b in spawnData.buildings) {
-                var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, world.GetBuildingDef);
+                var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, WorldBuilder.BuildingDefCache, world.GetBuildingDef);
                 entities.Add(new {
                     type = "building", name = b.id, x = b.location_x, y = b.location_y, w, h
                 });

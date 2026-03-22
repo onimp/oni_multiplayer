@@ -41,6 +41,7 @@ public class WorldBuilder {
     /// Used by RealWorldState.GetEntitySize to get correct sizes without relying on Assets.GetPrefab.
     /// </summary>
     public IReadOnlyDictionary<string, (int w, int h)> PrefabSizeMap => _prefabSizeMap;
+    public static IReadOnlyDictionary<string, BuildingDef> BuildingDefCache => _buildingDefCache;
     private readonly Dictionary<string, (int w, int h)> _prefabSizeMap = new();
 
     /// <summary>
