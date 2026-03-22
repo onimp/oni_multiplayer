@@ -78,6 +78,11 @@ public class GameTickLoop {
             _upsStopwatch.Restart();
         }
 
+        // Patch FIRST — before any SM tick can fire idle.move Enter/Exit actions.
+        // PatchIdleChoreExitActions is a one-shot: cheap bool check after _idleChorePatchApplied=true.
+        // Must run before AdvanceOneSimSubTick() so the wrapper is in place before the SM fires.
+        PatchIdleChoreExitActions();
+
         var clampedDt = Mathf.Min(dt, 0.2f);
         _accumulatedTime += clampedDt;
         _tickCount++;
@@ -158,10 +163,6 @@ public class GameTickLoop {
             DelayedChoreCheck();
         }
 
-        // One-shot patch: null-guard ALL idle.move enter+exit actions for headless.
-        // Applied as soon as the first IdleChore is live (SM singleton created). Cheap bool-check
-        // after success. See PatchIdleChoreExitActions() for full explanation.
-        PatchIdleChoreExitActions();
     }
 
     private static void ForceUpdateBrains() {
