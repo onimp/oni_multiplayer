@@ -21,10 +21,14 @@ var resolver = new DefaultAssemblyResolver();
 resolver.AddSearchDirectory(Path.GetDirectoryName(inputPath)!);
 resolver.AddSearchDirectory(Path.GetDirectoryName(runtimeDllPath)!);
 
-var module = ModuleDefinition.ReadModule(inputPath, new ReaderParameters { AssemblyResolver = resolver });
+// ReadSymbols = false: prevents Cecil from probing for PDB/MDB files, which can cause
+// BadImageFormatException when the host process arch (ARM64/x64) differs from the
+// assembly's PE format (PE32 x86 from net48 Prefer32Bit=true default).
+var noSymbols = new ReaderParameters { AssemblyResolver = resolver, ReadSymbols = false };
+var module = ModuleDefinition.ReadModule(inputPath, noSymbols);
 
 // Load DedicatedServer assembly to find UnityRuntime methods
-var runtimeAsm = AssemblyDefinition.ReadAssembly(runtimeDllPath, new ReaderParameters { AssemblyResolver = resolver });
+var runtimeAsm = AssemblyDefinition.ReadAssembly(runtimeDllPath, noSymbols);
 var runtimeType = runtimeAsm.MainModule.Types.First(t => t.FullName == "DedicatedServer.Game.UnityRuntime");
 
 // Build method map: "MethodName" -> MethodReference imported into CoreModule
@@ -210,7 +214,7 @@ void PatchAssemblyCSharp(string asmPath, string runtimePath) {
 
     // Read into memory first so we can write to the same path without file-lock conflicts
     var asmBytes = File.ReadAllBytes(asmPath);
-    var asmModule = ModuleDefinition.ReadModule(new MemoryStream(asmBytes), new ReaderParameters { AssemblyResolver = asmResolver });
+    var asmModule = ModuleDefinition.ReadModule(new MemoryStream(asmBytes), new ReaderParameters { AssemblyResolver = asmResolver, ReadSymbols = false });
 
     // Patch Assets::GetAnim to return stub when anim not found.
     // IMPORTANT: do NOT add DedicatedServer as assembly reference — Assembly-CSharp already

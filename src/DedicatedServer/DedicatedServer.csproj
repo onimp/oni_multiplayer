@@ -6,6 +6,11 @@
         <AssemblyTitle>ONI Multiplayer Dedicated Server</AssemblyTitle>
         <Copyright>MIT License (C) ONIMP Team</Copyright>
         <SkipAssemblyExposure>true</SkipAssemblyExposure>
+        <!-- net48 Exe defaults to Prefer32Bit=true which produces PE32 x86.
+             Cecil (net8.0, ARM64) cannot read PE32 x86 → BadImageFormatException
+             → Assembly-CSharp patch fails → 0 entities registered.
+             Prefer32Bit=false keeps AnyCPU but generates PE32+ (64-bit compatible). -->
+        <Prefer32Bit>false</Prefer32Bit>
     </PropertyGroup>
 
 
