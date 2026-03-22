@@ -24,6 +24,12 @@ namespace DedicatedServer.Game;
 /// </summary>
 public static class MinionPrefab {
 
+    // Reflection cache for ChoreConsumer.providers (private List<ChoreProvider>).
+    // Used for diagnostic: verify AddProvider took effect and the right consumer/provider objects are wired.
+    private static readonly FieldInfo _providersField =
+        typeof(ChoreConsumer).GetField("providers",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
     // Reflection cache for StateMachineController.stateMachines (private List<StateMachine.Instance>).
     // Used to ensure each dupe's SMC has its own isolated list before IdleMonitor creation.
     // CloneSingle resets this at instantiation time, but the save-load path may bypass CloneSingle.
@@ -182,6 +188,11 @@ public static class MinionPrefab {
             // This is the guaranteed execution path: BaseOnSpawn crashes for all 3 dupes.
             var consumerFallback = go.GetComponent<ChoreConsumer>();
             if (consumerFallback != null) consumerFallback.AddProvider(go.GetComponent<ChoreProvider>());
+            Console.WriteLine("[MINIONSETUP] go=" + go.GetInstanceID()
+                + " consumer=" + consumerFallback?.GetHashCode()
+                + " consumerViaGetComponent=" + go.GetComponent<ChoreConsumer>()?.GetHashCode()
+                + " providers.Count=" + (_providersField?.GetValue(consumerFallback) as System.Collections.IList)?.Count
+                + " choreProvider=" + go.GetComponent<ChoreProvider>()?.GetHashCode());
 
             StartMonitor<BreathMonitor>(smc,  "BreathMonitor");
             StartMonitor<CalorieMonitor>(smc, "CalorieMonitor");
