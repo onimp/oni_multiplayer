@@ -299,6 +299,18 @@ public class WorldBuilder {
         }
         DiagnosePrinterArea("post-tick");
 
+        // Ensure Game.Instance.accumulators is non-null before ANY dupe TriggerLifecycle fires.
+        // Game.OnPrefabInit() crashes at line ~820 (ConduitFlowVisualizer needs Lighting/
+        // GlobalResources — absent in headless). Lines 823-824 are never reached:
+        //   accumulators = new Accumulators();        // line 823 — NEVER REACHED
+        //   plantElementAbsorbers = new ...();        // line 824 — NEVER REACHED
+        // OxygenBreather.OnSpawn[IL_0x0021] calls Game.Instance.accumulators.Add("O2", this)
+        // → NullReferenceException → kills all 3 dupes during TriggerLifecycle Phase 2
+        // → StateMachine.Instance.error=true → all SM ticks halted.
+        // Must be set here, BEFORE SpawnStarterMinions (not in a catch block).
+        global::Game.Instance.accumulators ??= new Accumulators();
+        global::Game.Instance.plantElementAbsorbers ??= new PlantElementAbsorbers();
+
         // Spawn starter duplicants at the actual colony location.
         // Must run AFTER SpawnEntities so Telepad/PrintingPod is already in the world
         // (FindColonySpawnCell can then locate it via FindObjectsOfType).
@@ -474,13 +486,6 @@ public class WorldBuilder {
             game.travelTubeSystem ??= new UtilityNetworkTubesManager(Width, Height, 35);
             game.gasConduitFlow ??= new ConduitFlow(ConduitType.Gas, Width * Height, game.gasConduitSystem, 1f, 0.25f);
             game.liquidConduitFlow ??= new ConduitFlow(ConduitType.Liquid, Width * Height, game.liquidConduitSystem, 10f, 0.75f);
-            // accumulators: initialized at Game.OnPrefabInit line 823 (after crash at line 820).
-            // OxygenBreather.OnSpawn[IL_0x0021] calls Game.Instance.accumulators.Add("O2"/"CO2", this)
-            // → NullReferenceException if accumulators is null → kills all 3 dupes during TriggerLifecycle
-            // Phase 2 and sets StateMachine.Instance.error=true → all SM ticks halted.
-            // plantElementAbsorbers: initialized at line 824, same crash window.
-            game.accumulators ??= new Accumulators();
-            game.plantElementAbsorbers ??= new PlantElementAbsorbers();
             // fetchManager: initialized at Game.OnPrefabInit line 835 (after crash at line 820).
             // PickupableSensor.Update() calls Game.Instance.fetchManager.UpdatePickups() every
             // brain tick — NPEs 1,380×/min if null. Just add the component; FetchManager has no
