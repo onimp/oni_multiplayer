@@ -1333,6 +1333,24 @@ public class WorldBuilder {
                 if (identity != null)
                     EnsureAssignableProxy(go, identity);
 
+                // Ensure proxy GO has Ownables + Equipment (both : Assignables).
+                // AssignableReachabilitySensor.ctor calls proxy.GetComponents<Assignables>() — if
+                // the proxy was created from Assets.GetPrefab("MinionAssignablesProxy") (headless
+                // prefab is incomplete) those components may be missing → GetComponents returns empty
+                // → [0x00028] NPE → BaseOnSpawn fails.
+                // Our direct-creation fallback in EnsureAssignableProxy already adds them, but
+                // if ValidateProxy() succeeded and returned the game's prefab-based proxy we still
+                // need to patch it here.
+                var proxyGo = identity?.assignableProxy?.Get()?.gameObject;
+                if (proxyGo != null) {
+                    var assignables = proxyGo.GetComponents<Assignables>();
+                    if (assignables == null || assignables.Length == 0) {
+                        proxyGo.AddOrGet<Ownables>();
+                        proxyGo.AddOrGet<Equipment>();
+                        Debug.LogWarning($"[FixRationalAi] {go.name}: added Ownables+Equipment to proxy GO");
+                    }
+                }
+
                 // Primary: BaseMinionConfig.BaseOnSpawn — adds all 8 sensors, starts all 52 SMs
                 // via RationalAi.Instance.StartSM(), adds 7 navigator transition layers.
                 // Mirrors exactly what the real game does in MinionConfig.OnSpawn().
