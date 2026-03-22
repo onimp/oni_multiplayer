@@ -204,7 +204,87 @@ public static class CreaturePrefab {
         // (UnityRuntime.TriggerLifecycle adds it before Phase 2 → OnSpawn → StartSM → ctor).
         // No post-hoc retrofit needed here.
 
-        // ── Step 6: ensure CreatureFallMonitor SM is running ─────────────────────
+        // Declare smc here so both Step 6 and Step 7 can use it.
+        var smc = go.GetComponent<StateMachineController>();
+
+        // ── Step 6: fix broken/missing creature monitor SMs ──────────────────
+        // ROOT CAUSE (two-stage crash during TriggerLifecycle):
+        //
+        // Stage A — CreateSMIS() (KPrefabID.OnPrefabInit):
+        //   Activator.CreateInstance(CreatureThoughtGraph.Instance, master, def) fires the ctor
+        //   body AFTER base(master,def) which already added the partial instance to
+        //   smc.stateMachines.  The ctor immediately NPEs on
+        //   NameDisplayScreen.Instance.RegisterComponent() (null in headless) → CreateSMIS
+        //   throws, exits the foreach loop early → monitor defs AFTER CreatureThoughtGraph
+        //   (AnimInterruptMonitor, CritterTemperatureMonitor, CreatureFallMonitor,
+        //   BurrowMonitor, etc.) are NEVER instantiated.
+        //
+        // Stage B — StartSMIS() (KPrefabID.OnSpawn):
+        //   CritterEmoteMonitor.Instance was created successfully in Stage A (constructor
+        //   safe; only accesses Db.Get().Emotes.Critter), so StartSMIS finds it and calls
+        //   StartSM() → GoTo(cooldown) → cooldown.Enter callback:
+        //     NameDisplayScreen.Instance.SetThoughtBubbleDisplay(...)  ← NPE (null in headless)
+        //   Exception caught by GoTo's try/catch → Error() → StateMachine.Instance.error=True
+        //   → ALL subsequent GoTo() calls on any SM return immediately → every following
+        //   StartSM() in the loop is a no-op → DeathMonitor, Navigator, etc. stuck at null.
+        //
+        // FIX (performed after WorldBuilder resets Instance.error at line 328):
+        //   6a. Remove null entries left by partial CreateSMIS failures.
+        //   6b. Remove headless-unsafe instances (CritterEmoteMonitor crashes StartSM;
+        //       CreatureThoughtGraph has a corrupt partial instance from Stage A).
+        //   6c. For each monitor def in cmpdef.defs (skip unsafe), create the SMI if
+        //       missing (those never instantiated after the Stage A crash).
+        //   6d. Reset Instance.error (FixRationalAi may have re-set it for dupes),
+        //       then start all non-running monitor SMIs with per-SM try-catch.
+        if (smc != null && smc.cmpdef?.defs != null) {
+            // 6a: purge null entries (left by partial constructor failures)
+            smc.stateMachines.RemoveAll(s => s == null);
+
+            // 6b: remove headless-unsafe instances
+            var emoteSmi = smc.GetSMI<CritterEmoteMonitor.Instance>();
+            if (emoteSmi != null) {
+                smc.stateMachines.Remove(emoteSmi);
+                Console.WriteLine($"[Animals] {go.name}: 6b removed CritterEmoteMonitor (cooldown.Enter → NameDisplayScreen NPE)");
+            }
+            var thoughtSmi = smc.GetSMI<CreatureThoughtGraph.Instance>();
+            if (thoughtSmi != null) {
+                smc.stateMachines.Remove(thoughtSmi);
+                Console.WriteLine($"[Animals] {go.name}: 6b removed CreatureThoughtGraph (ctor → NameDisplayScreen NPE)");
+            }
+
+            // 6c+6d: for each monitor def, ensure SMI exists then start it
+            StateMachine.Instance.error = false;  // must reset BEFORE any StartSM call
+            foreach (var def in smc.cmpdef.defs) {
+                if (def is CritterEmoteMonitor.Def || def is CreatureThoughtGraph.Def)
+                    continue;  // headless-unsafe — skip entirely
+                StateMachine.Instance existingSmi = null;
+                try {
+                    var smType   = def.GetStateMachineType();
+                    var smiType  = Singleton<StateMachineManager>.Instance
+                                       .CreateStateMachine(smType)
+                                       .GetStateMachineInstanceType();
+                    existingSmi  = smc.GetSMI(smiType);
+                    if (existingSmi == null) {
+                        existingSmi = def.CreateSMI(smc);  // base ctor adds to smc.stateMachines
+                        Console.WriteLine($"[Animals] {go.name}: 6c created {smType.Name}");
+                    }
+                } catch (Exception ex) {
+                    Console.WriteLine($"[Animals] {go.name}: 6c CreateSMI {def.GetType().DeclaringType?.Name ?? def.GetType().Name} FAILED: {ex.GetBaseException().Message}");
+                    continue;
+                }
+                if (existingSmi != null && !existingSmi.IsRunning()) {
+                    try {
+                        existingSmi.StartSM();
+                        Console.WriteLine($"[Animals] {go.name}: 6d started {existingSmi.GetType().Name}");
+                    } catch (Exception ex) {
+                        smc.stateMachines.Remove(existingSmi);
+                        Console.WriteLine($"[Animals] {go.name}: 6d StartSM {existingSmi.GetType().Name} FAILED+removed: {ex.GetBaseException().Message}");
+                    }
+                }
+            }
+        }
+
+        // ── Step 7: ensure CreatureFallMonitor SM is running ─────────────────────
         // CreatureFallMonitor.grounded evaluates ShouldFall() each tick and toggles the
         // GameTags.Creatures.Falling behaviour → creates FallStates chore → ToggleGravity().
         // If TriggerLifecycle's StartSMIS() crashed before reaching CreatureFallMonitor.Def
@@ -212,7 +292,7 @@ public static class CreaturePrefab {
         // CreatureFallMonitor.Def is per-creature (added in individual config files, e.g.
         // BaseHatchConfig, BaseDreckoConfig, BasePacuConfig) — not in ExtendEntityToBasicCreature.
         // Fix: check GetSMI; if null and def is present, manually start the instance.
-        var smc = go.GetComponent<StateMachineController>();
+        // (smc declared above, before Step 6)
         if (smc != null) {
             var fallSmi = go.GetSMI<CreatureFallMonitor.Instance>();
             if (fallSmi == null) {
@@ -228,7 +308,7 @@ public static class CreaturePrefab {
             }
         }
 
-        // ── Diagnostic: one line per creature ────────────────────────────────────
+        // ── Step 8: Diagnostic: one line per creature ────────────────────────────
         var cell  = Grid.PosToCell(go);
         var chore = choreDriver?.GetCurrentChore();
         Console.WriteLine(
