@@ -88,6 +88,11 @@ public class WorldBuilder {
 
     private static readonly Dictionary<string, BuildingDef> _buildingDefCache = new Dictionary<string, BuildingDef>();
 
+    // Reflection accessor for ChoreConsumer.providers (private List<ChoreProvider>).
+    // Needed to check for existing entries before calling AddProvider() (no Contains API).
+    private static readonly FieldInfo _ccProvidersField =
+        typeof(ChoreConsumer).GetField("providers", BindingFlags.NonPublic | BindingFlags.Instance);
+
     public BuildingDef GetBuildingDef(string id) {
         if (_buildingDefCache.TryGetValue(id, out var def)) return def;
         return Assets.GetBuildingDef(id);
@@ -1137,17 +1142,56 @@ public class WorldBuilder {
             }
         }
 
-        // Diagnostic: log ChoreDriver/Brain state for each minion and critter brain.
+        // Step 3: fix ChoreConsumer.providers list.
+        // Normal game path: Modifiers.OnPrefabInit() calls consumer.AddProvider(GlobalChoreProvider.Instance).
+        // If Modifiers.OnPrefabInit() crashed (reported exception source), GlobalChoreProvider
+        // is never added → FindNextChore iterates 0 providers → succeededContexts empty →
+        // ChooseChore returns false → SetChore never called → chore=null → no movement.
+        // Also ensure entity's own ChoreProvider is present (added by ChoreConsumer.OnPrefabInit).
+        var providersFixed = 0;
+        foreach (var go in allBrainGOs) {
+            try {
+                var cc = go.GetComponent<ChoreConsumer>();
+                if (cc == null) continue;
+                var providersList = _ccProvidersField?.GetValue(cc) as List<ChoreProvider>;
+                if (providersList == null) continue;
+
+                // GlobalChoreProvider: registered by Modifiers.OnPrefabInit() — may be missing.
+                if (GlobalChoreProvider.Instance != null && !providersList.Contains(GlobalChoreProvider.Instance)) {
+                    cc.AddProvider(GlobalChoreProvider.Instance);
+                    Debug.LogWarning($"[FixChoreConsumers] {go.name}: added GlobalChoreProvider (had {providersList.Count - 1} providers before)");
+                    providersFixed++;
+                }
+                // Own ChoreProvider: registered by ChoreConsumer.OnPrefabInit() — may be null if
+                // MyAttributes didn't resolve [MyCmpAdd] fields before OnPrefabInit ran.
+                var ownProvider = go.GetComponent<ChoreProvider>();
+                if (ownProvider != null && !providersList.Contains(ownProvider)) {
+                    cc.AddProvider(ownProvider);
+                    Debug.LogWarning($"[FixChoreConsumers] {go.name}: added own ChoreProvider (was missing)");
+                    providersFixed++;
+                }
+            } catch (Exception ex) {
+                Debug.LogWarning($"[FixChoreConsumers] providers fix failed for {go.name}: {ex.GetBaseException().Message}");
+            }
+        }
+        Debug.LogWarning($"[WorldBuilder] FixChoreConsumers Step3: providers patched on {providersFixed} consumer(s)");
+
+        // Diagnostic: log ChoreDriver/Brain/providers state for each brain.
         foreach (var go in allBrainGOs) {
             var driver = go.GetComponent<ChoreDriver>();
             var brain  = go.GetComponent<Brain>();
             var cc     = go.GetComponent<ChoreConsumer>();
             var smiInst = driver?.GetSMI() as ChoreDriver.StatesInstance;
-            Console.WriteLine($"[FixChoreConsumers] {go.name}: " +
+            var providersList = _ccProvidersField?.GetValue(cc) as List<ChoreProvider>;
+            var providerNames = providersList != null
+                ? string.Join(",", providersList.ConvertAll(p => p?.GetType().Name ?? "null"))
+                : "?";
+            Debug.LogWarning($"[FixChoreConsumers] {go.name}: " +
                 $"driver={driver != null} init={driver?.IsInitialized()} spawned={driver?.isSpawned} smRunning={smiInst?.IsRunning()} " +
-                $"brainRunning={brain?.IsRunning()} consumerState={cc?.consumerState != null}");
+                $"brainRunning={brain?.IsRunning()} consumerState={cc?.consumerState != null} " +
+                $"providers=[{providerNames}]");
         }
-        Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{allBrainGOs.Count} consumerState(s) created (minions={minionGOs.Count} brains={Components.Brains.Count})");
+        Debug.LogWarning($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{allBrainGOs.Count} consumerState(s) created, {providersFixed} providers patched (minions={minionGOs.Count} brains={Components.Brains.Count})");
     }
 
     /// <summary>
@@ -1424,20 +1468,39 @@ public class WorldBuilder {
     /// Cannot use Harmony (KMonoBehaviour subclass methods → deadlock).
     /// component.enabled = false prevents RenderEveryTick/SimEveryTick callbacks.
     /// </summary>
+    /// <summary>
+    /// Unregisters render-only components from SimAndRenderScheduler.
+    ///
+    /// Root cause: KMonoBehaviour.Spawn() calls SimAndRenderScheduler.instance.Add(this)
+    /// for all components with autoRegisterSimRender=true, regardless of enabled state.
+    /// SimAndRenderScheduler.RenderEveryTickUpdater.Update() calls RenderEveryTick() directly
+    /// with NO enabled check — so disabled=true alone does not prevent the crash.
+    ///
+    /// Proper fix: call renderEveryTick.Remove(component) to unregister from the scheduler,
+    /// AND set enabled=false so any future re-registration via OnEnable is suppressed.
+    ///
+    /// Only skip visual-only components — NOT AI/physics ones (see architectural principle).
+    /// </summary>
     private static void DisableRenderingOnlyComponents() {
-        // P1 fix: wrap entire body — FindObjectsOfType itself can NPE in headless when the
-        // Unity object registry is in partial state after entity spawn (60eb4f3 regression).
         try {
             var count = 0;
+            var scheduler = SimAndRenderScheduler.instance;
             foreach (var lst in UnityEngine.Object.FindObjectsOfType<LightSymbolTracker>()) {
+                if (lst == null) continue;
                 try {
-                    if (lst != null) { lst.enabled = false; count++; }
-                } catch { /* individual object may be in partial state — skip */ }
+                    lst.enabled = false;
+                    // Remove from RenderEveryTick scheduler bucket — enabled=false alone is not enough
+                    // because SimAndRenderScheduler.Update() never checks enabled state.
+                    scheduler?.renderEveryTick?.Remove(lst);
+                    count++;
+                } catch (Exception ex) {
+                    Debug.LogWarning($"[WorldBuilder] LightSymbolTracker disable failed: {ex.GetBaseException().Message}");
+                }
             }
             if (count > 0)
-                Console.WriteLine($"[WorldBuilder] Disabled {count} LightSymbolTracker component(s)");
+                Debug.Log($"[WorldBuilder] Removed {count} LightSymbolTracker(s) from RenderEveryTick scheduler");
         } catch (Exception ex) {
-            Console.WriteLine($"[WorldBuilder] DisableRenderingOnlyComponents skipped: {ex.GetBaseException().Message}");
+            Debug.LogWarning($"[WorldBuilder] DisableRenderingOnlyComponents error: {ex.GetBaseException().Message}");
         }
     }
 
