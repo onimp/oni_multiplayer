@@ -599,11 +599,36 @@ public class WorldBuilder {
     }
 
     private void RegisterBuildingDefs() {
-        // GeneratedBuildings.LoadGeneratedBuildings() crashes for all 463 configs in headless
-        // (BuildingLoader.CreateBuildingComplete → Add2DComponents → NullRef without Unity renderer).
-        // Result: 0 defs in Assets → TemplateLoader.PlaceBuilding returns null for every building.
-        // HQ position is now read directly from SpawnData in SpawnEntities() instead.
-        Console.WriteLine("[WorldBuilder] RegisterBuildingDefs: skipped (LoadGeneratedBuildings broken in headless)");
+        // GeneratedBuildings.LoadGeneratedBuildings() has Activator.CreateInstance() OUTSIDE its
+        // try-catch, so a single bad config ctor aborts the entire loop → 0 defs registered.
+        // Our version wraps BOTH ctor and RegisterBuilding in per-config try-catch.
+        //
+        // Expected outcome: 1000+ of ~1433 configs succeed.
+        // Expected failures: rendering-heavy configs (KBatchedAnimController NPE in
+        //   BuildingLoader.CreateBuildingComplete → Add2DComponents). Buildings without
+        //   AnimFiles (flag=false) or with BlockTileAtlas take a different path and mostly succeed.
+        var configType = typeof(IBuildingConfig);
+        var types = typeof(BuildingConfigManager).Assembly.GetTypes()
+            .Where(t => configType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+            .ToList();
+
+        var success = 0;
+        var failed = 0;
+        var skipped = 0;
+        foreach (var type in types) {
+            try {
+                var config = (IBuildingConfig)Activator.CreateInstance(type);
+                if (!DlcManager.IsCorrectDlcSubscribed(config)) { skipped++; continue; }
+                BuildingConfigManager.Instance.RegisterBuilding(config);
+                success++;
+            } catch (Exception ex) {
+                failed++;
+                if (failed <= 5) {
+                    Console.WriteLine($"[BuildingDef] FAIL [{type.Name}]: {ex.GetBaseException().GetType().Name}: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+        Console.WriteLine($"[BuildingDef] Registered {success}/{types.Count} building defs ({failed} failed, {skipped} DLC-skipped)");
     }
 
     private void RegisterEntities() {
