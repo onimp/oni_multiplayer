@@ -218,8 +218,11 @@ public class WorldBuilder {
                     Console.WriteLine($"[N2] DefineWorldOffsets: {worldOffsets.Count} world(s): " +
                         string.Join(", ", worldOffsets.Select(wo => $"off=({wo.worldOffsetX},{wo.worldOffsetY}) sz=({wo.worldSizeX},{wo.worldSizeY})")));
                     SimMessages.DefineWorldOffsets(worldOffsets);
-                    Sim.HandleMessage(SimMessageHashes.ClearUnoccupiedCells, 0, null);
-                    Console.WriteLine("[N2] DefineWorldOffsets + ClearUnoccupiedCells sent");
+                    // P2: ClearUnoccupiedCells is NOT called here.
+                    // In SaveLoader new-game path it runs BEFORE Sim.Load() (before cell data exists).
+                    // Calling it AFTER SimDataInitializeFromCells+Sim.Start() zeros max_mass for cells
+                    // outside declared world bounds → O2 max_mass=0 → BreathMonitor treats as vacuum.
+                    Console.WriteLine("[N2] DefineWorldOffsets sent (ClearUnoccupiedCells skipped — would zero O2 mass)");
 
                     Console.WriteLine($"[N2] 5×5 cells AFTER DefineWorldOffsets:");
                     LogCellArea(sp.x, sp.y, 2);
@@ -1397,14 +1400,20 @@ public class WorldBuilder {
     /// component.enabled = false prevents RenderEveryTick/SimEveryTick callbacks.
     /// </summary>
     private static void DisableRenderingOnlyComponents() {
-        var count = 0;
-        foreach (var lst in UnityEngine.Object.FindObjectsOfType<LightSymbolTracker>()) {
-            try {
-                if (lst != null) { lst.enabled = false; count++; }
-            } catch { /* Unity objects may be in partial state post-spawn — safe to skip */ }
+        // P1 fix: wrap entire body — FindObjectsOfType itself can NPE in headless when the
+        // Unity object registry is in partial state after entity spawn (60eb4f3 regression).
+        try {
+            var count = 0;
+            foreach (var lst in UnityEngine.Object.FindObjectsOfType<LightSymbolTracker>()) {
+                try {
+                    if (lst != null) { lst.enabled = false; count++; }
+                } catch { /* individual object may be in partial state — skip */ }
+            }
+            if (count > 0)
+                Console.WriteLine($"[WorldBuilder] Disabled {count} LightSymbolTracker component(s)");
+        } catch (Exception ex) {
+            Console.WriteLine($"[WorldBuilder] DisableRenderingOnlyComponents skipped: {ex.GetBaseException().Message}");
         }
-        if (count > 0)
-            Console.WriteLine($"[WorldBuilder] Disabled {count} LightSymbolTracker component(s)");
     }
 
     /// <summary>
