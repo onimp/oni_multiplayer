@@ -396,19 +396,26 @@ public static class UnityRuntime {
 
         if (!GameObjectComponents.TryGetValue(go.m_CachedPtr, out var components)) return;
 
-        // Phase 0.5: Initialize Modifiers BEFORE KPrefabID.
-        // KPrefabID is first in component order (added in ConfigEntity) and fires prefabInitFn
-        // delegates during OnPrefabInit. Many critter prefabInitFn lambdas call
-        // inst.GetAttributes().Add(...) which reads Modifiers.attributes. If Modifiers hasn't
-        // had OnPrefabInit called yet (attributes field still null), GetAttributes() returns
-        // null → Add() NPEs for every critter with a prefabInitFn attribute-setup lambda
-        // (BasePuftConfig, BaseHatchConfig, BaseDreckoConfig, etc.).
-        // Pre-initializing Modifiers is safe: InitializeComponent() is idempotent (isInitialized guard).
-        foreach (var comp in components) {
-            if (comp is Modifiers) {
-                try { ((KMonoBehaviour) comp).InitializeComponent(); }
-                catch (Exception ex) {
-                    Console.WriteLine($"[Lifecycle] Modifiers pre-init failed: {ex.GetBaseException().Message}");
+        // Phase 0.5: Initialize Modifiers BEFORE KPrefabID — critter GOs ONLY.
+        // KPrefabID is first in component order and fires prefabInitFn delegates during OnPrefabInit.
+        // Many critter prefabInitFn lambdas call inst.GetAttributes().Add(...) which reads
+        // Modifiers.attributes. If Modifiers hasn't had OnPrefabInit called yet (attributes=null),
+        // GetAttributes() returns null → NPEs for BasePuftConfig, BaseHatchConfig, BaseDreckoConfig, etc.
+        //
+        // CRITTER-ONLY GUARD: `comp is Modifiers` also matches MinionModifiers (Modifiers subclass)
+        // on dupe GOs. Pre-initializing MinionModifiers runs its OnPrefabInit() BEFORE KPrefabID,
+        // which changes initialization order and breaks dupe chore setup (attributes/providers
+        // partially initialized before KPrefabID fires prefabInitFn → isInitialized=true set early
+        // → Phase 1 skips MinionModifiers → ForceUpdateBrains at tick=61 finds no chore).
+        // Dupe GOs have MinionBrain (not CreatureBrain) → the CreatureBrain check skips them.
+        var isCreatureGo = components.Any(c => c is CreatureBrain);
+        if (isCreatureGo) {
+            foreach (var comp in components) {
+                if (comp is Modifiers) {
+                    try { ((KMonoBehaviour) comp).InitializeComponent(); }
+                    catch (Exception ex) {
+                        Console.WriteLine($"[Lifecycle] Modifiers pre-init failed: {ex.GetBaseException().Message}");
+                    }
                 }
             }
         }
