@@ -37,18 +37,46 @@ public static class CreaturePrefab {
     private static readonly FieldInfo _brainRunningField =
         typeof(Brain).GetField("running", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
+    // Reflection cache for ChoreDriver.StatesInstance.<worker>k__BackingField.
+    //
+    // ROOT CAUSE: ChoreDriver.StatesInstance.ctor sets
+    //   worker = base.master.GetComponent<WorkerBase>()
+    // TriggerLifecycle Phase 1.5 injects StandardWorker BEFORE Phase 2 (Spawn→StartSM→ctor)
+    // so the ctor should see a non-null WorkerBase. However, for critters whose ChoreDriver is
+    // added via [MyCmpAdd] on ChoreConsumer and where Phase 1 partially fails, the Phase 1.5
+    // condition `components.Any(c => c is ChoreDriver)` may evaluate false → StandardWorker
+    // not injected → ctor sees null → worker=null → haschore.Update b__5_3 NPEs every tick.
+    //
+    // FIX: CreaturePrefab.Setup() adds StandardWorker unconditionally (step 0), then
+    // immediately checks the existing StatesInstance.worker and sets the backing field if null.
+    // This is a belt-and-suspenders safety net on top of the Phase 1.5 injection.
+    private static readonly FieldInfo _choreDriverWorkerField =
+        typeof(ChoreDriver.StatesInstance).GetField(
+            "<worker>k__BackingField",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
     public static void Setup(CreatureBrain brain) {
         var go = brain.gameObject;
         if (go == null) return;
 
-        // ── DS-006b: StandardWorker BEFORE any StartSM call ──────────────────────
+        // ── DS-006b: StandardWorker + worker-field retrofit ──────────────────────
         // ChoreDriver.StatesInstance.ctor: worker = GetComponent<WorkerBase>().
-        // If StandardWorker is absent when the ctor runs (TriggerLifecycle starts the SM
-        // before Setup() runs), worker=null → haschore.Update b__5_3 NPEs on
-        // smi.worker.GetWorkable() at 185/s, aborting every subtick (Navigator never updates).
-        // AddOrGet is idempotent. Must be FIRST — before navigator StartSM in Step 2 and
-        // ChoreDriver StartSM in Step 5 both of which create a StatesInstance.
+        // TriggerLifecycle Phase 1.5 injects StandardWorker before Phase 2 (Spawn→StartSM→ctor)
+        // so the ctor should see a non-null WorkerBase.  However, for critters whose ChoreDriver
+        // is added via [MyCmpAdd] on ChoreConsumer and where Phase 1 partially fails, the
+        // Phase 1.5 check may miss the GO → StandardWorker not injected → ctor sees null
+        // → worker=null → b__5_3 NPEs on smi.worker.GetWorkable() every tick.
+        // Belt-and-suspenders: re-add StandardWorker (idempotent), then retrofit the existing
+        // StatesInstance.worker backing field if it is still null.
         go.AddOrGet<StandardWorker>();
+        var existingChoreDriverSmi = go.GetSMI<ChoreDriver.StatesInstance>();
+        if (existingChoreDriverSmi != null && existingChoreDriverSmi.worker == null) {
+            var workerBase = go.GetComponent<WorkerBase>();
+            if (workerBase != null) {
+                _choreDriverWorkerField?.SetValue(existingChoreDriverSmi, workerBase);
+                Console.WriteLine($"[Animals] {go.name}: retrofitted ChoreDriver.worker (was null → {workerBase.GetType().Name})");
+            }
+        }
 
         // ── Remove render-only components that NPE during headless OnSpawn ──────
         // ExtendEntityToBasicCreature() adds both CharacterOverlay and AnimEventHandler to
