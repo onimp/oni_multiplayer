@@ -978,66 +978,71 @@ public class WorldBuilder {
 
     /// <summary>
     /// Finds the best cell to spawn duplicants, using the real colony terrain.
-    /// Priority 1: locate the Telepad/PrintingPod and stand on its floor.
-    /// Priority 2: scan Grid for the first breathable cell (non-Vacuum) above a solid floor.
+    ///
+    /// Mirrors NewBaseScreen.SpawnMinions() — the real game spawns dupes at the same Y as the
+    /// PrintingPod, offset +1 to the right: x2 = hqX + i + 1; y2 = hqY. The printer sits on a
+    /// solid-rock foundation (y=hqY-1), so cells at (hqX+1, hqY), (hqX+2, hqY) have a real solid
+    /// floor and are valid spawn positions. The prior vertical scan found the cave 10 cells above
+    /// (where Grid.Solid[floorCell] was finally True), which was wrong.
+    ///
+    /// Priority 1: scan horizontally at hqY for a gas cell with solid floor (mirrors real game).
+    /// Priority 2: scan vertically above hq for any gas cell with solid floor (legacy fallback).
+    /// Priority 3: scan the centre half of the map (full fallback).
     /// Requires Sim.Start() to have run (Grid.Solid must be populated).
     /// </summary>
     private int FindColonySpawnCell() {
         var w = Grid.WidthInCells;
 
-        // Priority 1: scan upward from HQ cell (captured from SpawnData during SpawnEntities).
-        // The starter cave: CO2 at y≈196 (2 cells, low mass), Oxygen at y≈198+ (40 cells, higher mass).
-        // Prefer Oxygen zone — more connected cells = more room for 3 dupes.
         if (_hqCell >= 0) {
-            var firstGasCell = -1;  // fallback: first any-gas cell with solid floor
-            Console.WriteLine($"[ScanAboveHQ] Starting scan from HQ cell={_hqCell} ({_hqCell % w},{_hqCell / w}), dy=1..30");
-            for (var dy = 1; dy <= 30; dy++) {
-                var candidate = _hqCell + dy * w;
-                if (!Grid.IsValidCell(candidate)) {
-                    Console.WriteLine($"[ScanAboveHQ] dy={dy} y={candidate / w} → break (invalid cell)");
-                    break;
-                }
+            var hqX = _hqCell % w;
+            var hqY = _hqCell / w;
+
+            // Priority 1: scan HORIZONTALLY at printer level — same logic as real game.
+            // NewBaseScreen.SpawnMinions(): x2 = x + i + 1; y2 = y  (same Y, right of printer).
+            // Cells at (hqX+1..hqX+6, hqY) have solid rock floor at y=hqY-1 (the cave foundation)
+            // and gas atmosphere in the printer cavity. The printer cell itself (hqX, hqY) is a
+            // building — not solid — so Grid.Solid is false there, but adjacent cells are valid.
+            for (var dx = 1; dx <= 6; dx++) {
+                var candidate = _hqCell + dx;
+                if (!Grid.IsValidCell(candidate)) break;
                 var floorCell = candidate - w;
-                var solid = Grid.Solid[candidate];
+                if (!Grid.IsValidCell(floorCell)) continue;
+                if (Grid.Solid[candidate]) continue; // skip solid tiles (walls adjacent to printer)
+                if (!Grid.Solid[floorCell]) continue; // must have solid floor
                 var elem = Grid.Element[candidate];
-                var mass = Grid.Mass[candidate];
-                Console.WriteLine($"[ScanAboveHQ] dy={dy} y={candidate / w} solid={solid} elem={elem?.tag ?? "null"} mass={mass:F2} floorSolid={Grid.Solid[floorCell]}");
-                if (solid) continue; // skip solid cells (rock layers between HQ and O2 cave)
                 if (elem == null || elem.IsLiquid || elem.id == SimHashes.Vacuum) continue;
-                if (!Grid.Solid[floorCell]) continue; // no floor to stand on
-                // Prefer Oxygen cells (higher mass, more connected space)
-                if (elem.id == SimHashes.Oxygen && mass > 1.0f) {
-                    Console.WriteLine($"[SpawnFinder] Oxygen zone above HQ: ({candidate % w},{candidate / w}) mass={mass:F2}");
-                    return candidate;
-                }
-                // Record first non-vacuum gas cell as fallback (e.g. CO2 layer)
-                if (firstGasCell < 0)
-                    firstGasCell = candidate;
+                Console.WriteLine($"[SpawnFinder] Printer-adjacent spawn at ({candidate % w},{candidate / w}) dx=+{dx} elem={elem.tag} mass={Grid.Mass[candidate]:F2}");
+                return candidate;
             }
-            if (firstGasCell >= 0) {
-                var e = Grid.Element[firstGasCell];
-                Console.WriteLine($"[SpawnFinder] No O2 found above HQ, using first gas cell: ({firstGasCell % w},{firstGasCell / w}) elem={e?.tag} mass={Grid.Mass[firstGasCell]:F2}");
-                return firstGasCell;
+            // Try left side too (in case right wall is immediately adjacent to printer).
+            for (var dx = 1; dx <= 6; dx++) {
+                var candidate = _hqCell - dx;
+                if (!Grid.IsValidCell(candidate)) break;
+                var floorCell = candidate - w;
+                if (!Grid.IsValidCell(floorCell)) continue;
+                if (Grid.Solid[candidate]) continue;
+                if (!Grid.Solid[floorCell]) continue;
+                var elem = Grid.Element[candidate];
+                if (elem == null || elem.IsLiquid || elem.id == SimHashes.Vacuum) continue;
+                Console.WriteLine($"[SpawnFinder] Printer-adjacent spawn at ({candidate % w},{candidate / w}) dx=-{dx} elem={elem.tag} mass={Grid.Mass[candidate]:F2}");
+                return candidate;
             }
 
-            // Priority 1b: O2 exists laterally (e.g. y=204-205 has O2 but no floor directly above HQ).
-            // Scan a ±15 wide band at dy=8..25 to find an O2 cell that has solid floor below it.
-            Console.WriteLine($"[SpawnFinder] Vertical scan found no valid cell — trying horizontal O2 scan (dy=8..25, dx=±15)");
-            for (var dy = 8; dy <= 25; dy++) {
-                for (var dx = -15; dx <= 15; dx++) {
-                    var c = _hqCell + dy * w + dx;
-                    if (!Grid.IsValidCell(c) || Grid.Solid[c]) continue;
-                    var floorC = c - w;
-                    if (!Grid.IsValidCell(floorC) || !Grid.Solid[floorC]) continue;
-                    var e = Grid.Element[c];
-                    if (e == null || e.IsLiquid || e.id == SimHashes.Vacuum) continue;
-                    if (e.id == SimHashes.Oxygen && Grid.Mass[c] > 1.0f) {
-                        Console.WriteLine($"[SpawnFinder] O2 with floor found laterally at ({c % w},{c / w}) dx={dx} dy={dy} mass={Grid.Mass[c]:F2}");
-                        return c;
-                    }
-                }
+            // Priority 2 (legacy fallback): scan vertically above HQ for a solid-floor gas cell.
+            // Kept for saves where the printer is embedded in a wall and horizontal cells are solid.
+            Console.WriteLine($"[SpawnFinder] No horizontal cell at printer level — falling back to vertical scan above ({hqX},{hqY})");
+            for (var dy = 1; dy <= 30; dy++) {
+                var candidate = _hqCell + dy * w;
+                if (!Grid.IsValidCell(candidate)) break;
+                var floorCell = candidate - w;
+                if (Grid.Solid[candidate]) continue;
+                if (!Grid.Solid[floorCell]) continue;
+                var elem = Grid.Element[candidate];
+                if (elem == null || elem.IsLiquid || elem.id == SimHashes.Vacuum) continue;
+                Console.WriteLine($"[SpawnFinder] Vertical fallback spawn at ({candidate % w},{candidate / w}) dy={dy} elem={elem.tag} mass={Grid.Mass[candidate]:F2}");
+                return candidate;
             }
-            Console.WriteLine($"[SpawnFinder] HQ known at cell={_hqCell} but no gas cell found in 30-row+lateral scan, falling back");
+            Console.WriteLine($"[SpawnFinder] HQ known at ({hqX},{hqY}) but no valid spawn cell found — falling through");
         } else {
             Console.WriteLine("[SpawnFinder] _hqCell not set — HQ not found in SpawnData");
         }
