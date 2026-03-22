@@ -127,6 +127,15 @@ public class WorldBuilder {
         Console.WriteLine("[WorldBuilder] Registering entities...");
         RegisterEntities();
 
+        // Remove render-only components from critter PREFABS before any instance is spawned.
+        // CharacterOverlay.OnSpawn → NameDisplayScreen.AddNewEntry NPEs (no canvas in headless).
+        // AnimEventHandler.OnSpawn[IL_0x4c] → animCollider (KBoxCollider2D) NPEs.
+        // These must be removed from PREFABS (not instances) so that KInstantiate copies don't
+        // inherit them. Removal in FixCreatureBrains() (post-spawn) is too late — TriggerLifecycle
+        // has already fired OnSpawn for both, crashing before ChoreConsumer.InitializeComponent()
+        // adds ChoreProvider/ChoreDriver/User, leaving those components not initialized.
+        FixCreaturePrefabsPreSpawn();
+
         Console.WriteLine("[WorldBuilder] Generating world...");
         Sim.Cell[] generatedCells = null;
 
@@ -739,6 +748,19 @@ public class WorldBuilder {
             } catch (Exception ex) {
                 Console.WriteLine($"[WorldBuilder] SaveLoader init partial: {ex.GetBaseException().Message}");
             }
+        }
+
+        // DiscoveredResources: needed by EntityTemplates.CreateAndRegisterBaggedCreature()
+        // prefabSpawnFn lambda fired from KPrefabID.OnSpawn():
+        //   DiscoveredResources.Instance.Discover(creature_prefab_id.PrefabTag, ...)
+        // All baggable critters (Puft, Hatch, Pacu, Drecko, etc.) have this lambda.
+        // Without Instance → NPE on every critter spawn during SpawnEntities().
+        // Only InitializeComponent() (OnPrefabInit → Instance = this) needed — OnSpawn()
+        // calls FilterDisabledContent() which accesses Assets/ElementLoader (safe in headless).
+        if (DiscoveredResources.Instance == null) {
+            var drGo = new GameObject("DiscoveredResources");
+            drGo.AddComponent<DiscoveredResources>().InitializeComponent();
+            Console.WriteLine($"[WorldBuilder] DiscoveredResources.Instance ready: {DiscoveredResources.Instance != null}");
         }
     }
 
@@ -1467,6 +1489,31 @@ public class WorldBuilder {
         foreach (var go in _spawnedMinions)
             MinionPrefab.Setup(go);
         Console.WriteLine($"[WorldBuilder] FixRationalAi done: {_spawnedMinions.Count} minion(s)");
+    }
+
+    /// <summary>
+    /// Removes render-only components from critter PREFABS before SpawnEntities fires.
+    ///
+    /// CharacterOverlay.OnSpawn() and AnimEventHandler.OnSpawn() crash in headless:
+    ///   CharacterOverlay.OnSpawn → Register() → "Could not find component ChoreProvider" NPE
+    ///   AnimEventHandler.OnSpawn[IL_0x4c] → animCollider (KBoxCollider2D) NPE
+    ///
+    /// Both are added by ExtendEntityToBasicCreature() to every critter prefab.
+    /// Removing them from PREFABS (not instances) ensures KInstantiate copies don't inherit them.
+    /// Removal happens AFTER RegisterEntities() so all prefabs are registered, and BEFORE
+    /// SpawnEntities() so TriggerLifecycle never fires OnSpawn() on these components.
+    /// </summary>
+    private static void FixCreaturePrefabsPreSpawn() {
+        var total = 0;
+        foreach (var prefab in Assets.PrefabsByTag.Values) {
+            if (prefab == null || prefab.GetComponent<CreatureBrain>() == null) continue;
+            var charOverlay = prefab.GetComponent<CharacterOverlay>();
+            if (charOverlay != null) UnityEngine.Object.DestroyImmediate(charOverlay);
+            var animHandler = prefab.GetComponent<AnimEventHandler>();
+            if (animHandler != null) UnityEngine.Object.DestroyImmediate(animHandler);
+            total++;
+        }
+        Console.WriteLine($"[WorldBuilder] FixCreaturePrefabsPreSpawn: patched {total} critter prefab(s)");
     }
 
     private void FixPickupables() {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using Klei.AI;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -395,6 +396,23 @@ public static class UnityRuntime {
 
         if (!GameObjectComponents.TryGetValue(go.m_CachedPtr, out var components)) return;
 
+        // Phase 0.5: Initialize Modifiers BEFORE KPrefabID.
+        // KPrefabID is first in component order (added in ConfigEntity) and fires prefabInitFn
+        // delegates during OnPrefabInit. Many critter prefabInitFn lambdas call
+        // inst.GetAttributes().Add(...) which reads Modifiers.attributes. If Modifiers hasn't
+        // had OnPrefabInit called yet (attributes field still null), GetAttributes() returns
+        // null → Add() NPEs for every critter with a prefabInitFn attribute-setup lambda
+        // (BasePuftConfig, BaseHatchConfig, BaseDreckoConfig, etc.).
+        // Pre-initializing Modifiers is safe: InitializeComponent() is idempotent (isInitialized guard).
+        foreach (var comp in components) {
+            if (comp is Modifiers) {
+                try { ((KMonoBehaviour) comp).InitializeComponent(); }
+                catch (Exception ex) {
+                    Console.WriteLine($"[Lifecycle] Modifiers pre-init failed: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+
         // Phase 1: Awake (InitializeComponent → OnPrefabInit)
         var snapshot = components.ToList(); // snapshot — components may be added during Awake
         foreach (var comp in snapshot) {
@@ -402,6 +420,21 @@ public static class UnityRuntime {
                 try { kmb.InitializeComponent(); }
                 catch (Exception ex) {
                     Console.WriteLine($"[Lifecycle] Awake failed [{comp.GetType().Name}]: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+
+        // Phase 1.5: Initialize components added via [MyCmpAdd] during Phase 1.
+        // ChoreConsumer.InitializeComponent() adds ChoreProvider, ChoreDriver, User via [MyCmpAdd].
+        // These components were not in the Phase 1 snapshot, so their InitializeComponent() was
+        // never called → isInitialized=false → .ChoreProvider/ChoreDriver/User "is not initialized"
+        // errors during OnSpawn. A second pass picks them up (InitializeComponent is idempotent).
+        snapshot = components.ToList();
+        foreach (var comp in snapshot) {
+            if (comp is KMonoBehaviour kmb) {
+                try { kmb.InitializeComponent(); }
+                catch (Exception ex) {
+                    Console.WriteLine($"[Lifecycle] Awake1.5 failed [{comp.GetType().Name}]: {ex.GetBaseException().Message}");
                 }
             }
         }

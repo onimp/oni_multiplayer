@@ -65,6 +65,10 @@ public static class CreaturePrefab {
         go.AddOrGet<FactionAlignment>();
         go.AddOrGet<Prioritizable>();                   // confirmed 858x NPE in server log
         go.AddOrGet<Effects>();
+        // Facing is added via [MyCmpAdd] on Navigator.InitializeComponent().
+        // If Navigator.InitializeComponent() failed in headless, Facing is absent →
+        // FallMonitor.GetBackCell(), FixedCaptureStates, etc. NPE on GetComponent<Facing>().
+        go.AddOrGet<Facing>();
 
         // SM Defs: ensure all creature behaviour defs are registered on the SMC.
         // AddOrGetDef is idempotent — no-op if def already present.
