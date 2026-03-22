@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -49,6 +50,15 @@ public class GameTickLoop {
     private int _tickCount;
     private readonly System.Action _tickSimDll;
 
+    // Rolling 1-second UPS counter.
+    // _upsTicks counts Update() calls in the current 1s window.
+    // _upsStopwatch measures wall-clock time; when it exceeds 1s the window resets.
+    private int _upsTicks;
+    private readonly Stopwatch _upsStopwatch = Stopwatch.StartNew();
+
+    /// <summary>Real updates-per-second measured over a rolling 1-second window.</summary>
+    public int Ups { get; private set; }
+
     /// <param name="tickSimDll">Called every 200ms to advance SimDLL (pass WorldBuilder.TickSimulation)</param>
     public GameTickLoop(System.Action tickSimDll) {
         _tickSimDll = tickSimDll;
@@ -56,6 +66,14 @@ public class GameTickLoop {
 
     /// <summary>Advance simulation by dt seconds. Call from main loop at ~60fps or any rate.</summary>
     public void Update(float dt) {
+        // Rolling 1s UPS: count calls in the current window; snapshot+reset when window expires.
+        _upsTicks++;
+        if (_upsStopwatch.ElapsedMilliseconds >= 1000) {
+            Ups = _upsTicks;
+            _upsTicks = 0;
+            _upsStopwatch.Restart();
+        }
+
         var clampedDt = Mathf.Min(dt, 0.2f);
         _accumulatedTime += clampedDt;
         _tickCount++;

@@ -380,7 +380,8 @@ public class RealWorldState {
             entityCount = (world.SpawnData?.otherEntities?.Count ?? 0) +
                           (world.SpawnData?.elementalOres?.Count ?? 0) +
                           (world.SpawnData?.pickupables?.Count ?? 0),
-            source = world.SimRunning ? "simdll" : "fallback"
+            source = world.SimRunning ? "simdll" : "fallback",
+            serverUps = world.TickLoop?.Ups ?? 0
         };
         var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(obj));
         Console.WriteLine($"[WorldState] Cache MISS: rebuilt state {bytes.Length}B");
