@@ -256,20 +256,38 @@ public static class CreaturePrefab {
             StateMachine.Instance.error = false;  // must reset BEFORE any StartSM call
             foreach (var def in smc.cmpdef.defs) {
                 if (def is CritterEmoteMonitor.Def || def is CreatureThoughtGraph.Def)
-                    continue;  // headless-unsafe — skip entirely
+                    continue;  // headless-unsafe — NameDisplayScreen NPE in ctor/StartSM
+                // CreatureCalorieMonitor and SolidConsumerMonitor both call
+                // DietManager.Instance.GetPrefabDiet() inside their Instance constructors
+                // (via Stomach(owner,...) for CalorieMonitor; directly for SolidConsumer).
+                // DietManager is a KMonoBehaviour singleton not initialized in headless
+                // → Instance=null → ctor throws → partial instance with metabolism=null
+                // left in smc.stateMachines → if StartSM ever fires, UpdateMetabolism-
+                // CalorieModifier ticks and NPEs at [0x00014] on smi.metabolism.GetTotalValue().
+                // Root cause of crash introduced by 6a6df02. Skip; requires DietManager.
+                if (def is CreatureCalorieMonitor.Def || def is SolidConsumerMonitor.Def)
+                    continue;
+                // smiType must be declared outside try so the catch block can use it to
+                // purge any partial instance the base ctor inserted before the body threw.
+                Type smiType = null;
                 StateMachine.Instance existingSmi = null;
                 try {
-                    var smType   = def.GetStateMachineType();
-                    var smiType  = Singleton<StateMachineManager>.Instance
-                                       .CreateStateMachine(smType)
-                                       .GetStateMachineInstanceType();
-                    existingSmi  = smc.GetSMI(smiType);
+                    var smType = def.GetStateMachineType();
+                    smiType    = Singleton<StateMachineManager>.Instance
+                                     .CreateStateMachine(smType)
+                                     .GetStateMachineInstanceType();
+                    existingSmi = smc.GetSMI(smiType);
                     if (existingSmi == null) {
                         existingSmi = def.CreateSMI(smc);  // base ctor adds to smc.stateMachines
                         Console.WriteLine($"[Animals] {go.name}: 6c created {smType.Name}");
                     }
                 } catch (Exception ex) {
-                    Console.WriteLine($"[Animals] {go.name}: 6c CreateSMI {def.GetType().DeclaringType?.Name ?? def.GetType().Name} FAILED: {ex.GetBaseException().Message}");
+                    // Remove any partial instance the base ctor inserted before the body threw.
+                    // Without this, a later tick can invoke Update callbacks on an instance
+                    // whose fields (e.g. metabolism) were never set → NPE.
+                    if (smiType != null)
+                        smc.stateMachines.RemoveAll(s => s != null && smiType.IsAssignableFrom(s.GetType()));
+                    Console.WriteLine($"[Animals] {go.name}: 6c CreateSMI {def.GetType().DeclaringType?.Name ?? def.GetType().Name} FAILED (partial purged): {ex.GetBaseException().Message}");
                     continue;
                 }
                 if (existingSmi != null && !existingSmi.IsRunning()) {
