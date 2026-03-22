@@ -38,9 +38,14 @@ public class ResolveBuildingSizeTests {
         IReadOnlyDictionary<string, (int w, int h)> sizeMap,
         IReadOnlyDictionary<string, (int w, int h)> buildingDefCache,
         Func<string, (int w, int h)?> getBuildingDefSize) {
-        // Primary: direct dict lookup — no game API call, no exception risk
-        if (buildingDefCache != null && buildingDefCache.TryGetValue(id, out var cs) && cs.w > 0 && cs.h > 0)
-            return cs;
+        // Primary: direct dict lookup — mirrors production's _buildingDefCache path.
+        // Wrapped in try-catch to mirror production: BuildingDef.WidthInCells can throw in headless.
+        try {
+            if (buildingDefCache != null && buildingDefCache.TryGetValue(id, out var cs) && cs.w > 0 && cs.h > 0)
+                return cs;
+        } catch {
+            // cache path threw — fall through to delegate
+        }
         // Secondary: getBuildingDef delegate (fully-registered buildings only)
         try {
             var defSize = getBuildingDefSize?.Invoke(id);
@@ -93,6 +98,23 @@ public class ResolveBuildingSizeTests {
             _ => throw new InvalidOperationException("Assets unavailable in headless"));
 
         Assert.That(result, Is.EqualTo((4, 4)), "cache is primary and must not be affected by delegate throw");
+    }
+
+    [Test]
+    public void ResolveBuildingSize_CacheDegenerateAndGetBuildingDefThrows_FallsBackToSizeMap() {
+        // Regression: if buildingDefCache has degenerate (0,0) AND getBuildingDef throws,
+        // sizeMap (4,4) must still be reached. In production, buildingDefCache stores BuildingDef
+        // refs and calls ReadBuildingDefSize (which can throw in headless) — this was wrapped in
+        // try-catch to ensure sizeMap is always the last resort.
+        var cache   = new Dictionary<string, (int w, int h)> { { "Headquarters", (0, 0) } };
+        var sizeMap = new Dictionary<string, (int w, int h)> { { "Headquarters", (4, 4) } };
+
+        var result = ResolveBuildingSize(
+            "Headquarters", sizeMap, cache,
+            _ => throw new InvalidOperationException("Assets unavailable in headless"));
+
+        Assert.That(result, Is.EqualTo((4, 4)),
+            "degenerate cache + throwing delegate must fall through to sizeMap (4×4)");
     }
 
     // --- Secondary path: getBuildingDef ---

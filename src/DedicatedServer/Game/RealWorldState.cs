@@ -202,23 +202,39 @@ public class RealWorldState {
         IReadOnlyDictionary<string, (int w, int h)> sizeMap,
         IReadOnlyDictionary<string, BuildingDef> buildingDefCache,
         Func<string, BuildingDef> getBuildingDef) {
+        Console.WriteLine($"[Size] Resolving id={id} → checking buildingDefCache(count={buildingDefCache?.Count ?? -1})...");
         // Primary: direct lookup in _buildingDefCache — populated from configTable harvest even
         // for buildings whose Add2DComponents crashed (HQ, Telepad, GeneShuffler).
-        if (buildingDefCache != null && buildingDefCache.TryGetValue(id, out var cachedDef)) {
-            var cacheSize = WorldBuilder.ReadBuildingDefSize(cachedDef);
-            if (cacheSize.HasValue) return cacheSize.Value;
+        // Wrapped in try-catch: BuildingDef property accessors (e.g. WidthInCells) can throw in
+        // headless mode after partial initialization — must not bypass the sizeMap fallback.
+        try {
+            if (buildingDefCache != null && buildingDefCache.TryGetValue(id, out var cachedDef)) {
+                var cacheSize = WorldBuilder.ReadBuildingDefSize(cachedDef);
+                Console.WriteLine($"[Size]   buildingDefCache hit: def={cachedDef?.PrefabID ?? "null"} cacheSize={cacheSize?.ToString() ?? "null"}");
+                if (cacheSize.HasValue) return cacheSize.Value;
+            } else {
+                Console.WriteLine($"[Size]   buildingDefCache miss for id={id}");
+            }
+        } catch (Exception ex) {
+            Console.WriteLine($"[Size]   buildingDefCache threw: {ex.GetBaseException().Message} — falling through to getBuildingDef");
         }
         // Secondary: Assets.GetBuildingDef (works for fully-registered buildings).
         try {
             var def = getBuildingDef?.Invoke(id);
-            if (def != null && def.WidthInCells > 0 && def.HeightInCells > 0)
+            if (def != null && def.WidthInCells > 0 && def.HeightInCells > 0) {
+                Console.WriteLine($"[Size]   getBuildingDef hit: {def.WidthInCells}x{def.HeightInCells}");
                 return (def.WidthInCells, def.HeightInCells);
+            }
         } catch {
             // Game API unavailable (headless or test context) — fall through to sizeMap.
         }
-        // Fallback: instance PrefabSizeMap.
-        if (sizeMap != null && sizeMap.TryGetValue(id, out var sz) && sz.w > 0 && sz.h > 0)
+        // Fallback: instance PrefabSizeMap (populated from configTable harvest — authoritative even
+        // for buildings that failed Add2DComponents, as long as CreateBuildingDef succeeded).
+        if (sizeMap != null && sizeMap.TryGetValue(id, out var sz) && sz.w > 0 && sz.h > 0) {
+            Console.WriteLine($"[Size]   sizeMap hit: {sz.w}x{sz.h}");
             return sz;
+        }
+        Console.WriteLine($"[Size]   all sources failed → 1x1");
         return (1, 1);
     }
 
