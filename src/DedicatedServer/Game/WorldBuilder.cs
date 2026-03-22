@@ -759,7 +759,10 @@ public class WorldBuilder {
             // entirely. We then manually initialize required private fields via reflection, set
             // game.assignmentManager = am FIRST, then init assignment_groups, then create the
             // "public" group — at which point the ctor's Add() call succeeds.
-            var tf = BindingFlags.NonPublic | BindingFlags.Instance;
+            var tf = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
+            // Discover actual field names at runtime — do not guess.
+            foreach (var f in typeof(AssignmentManager).GetFields(tf))
+                Console.WriteLine($"[AM_FIELDS] {f.FieldType.Name} {f.Name}");
             var am = (AssignmentManager)FormatterServices.GetUninitializedObject(typeof(AssignmentManager));
             typeof(AssignmentManager).GetField("assignables", tf)
                 ?.SetValue(am, new List<Assignable>());
