@@ -163,12 +163,13 @@ public static class CreaturePrefab {
         // AddOrGet<StandardWorker>() at the top adds WorkerBase to the GO, but the live SMI's
         // worker field still holds null. Patch it directly — no reflection needed (AssemblyExposer
         // promotes the private setter to public in the exposed DLL).
-        var smiInst = choreDriver?.GetSMI<ChoreDriver.StatesInstance>();
+        //
+        // GetSMI<>() returns null when the SMI was lazy-created via choreDriver.smi but StartSM
+        // threw before registering the instance in the SMC (same root cause as dupe fix a6baf2d).
+        // The ?? choreDriver.smi fallback catches this path — mirrors the dupe fix exactly.
+        var smiInst = choreDriver?.GetSMI<ChoreDriver.StatesInstance>() ?? choreDriver?.smi;
         if (smiInst != null && smiInst.worker == null)
             smiInst.worker = go.GetComponent<WorkerBase>();
-        // Diagnostic: log any critter that still has worker=null after the retrofit.
-        // This fires when GetComponent<WorkerBase>() returned null (AddOrGet<StandardWorker>
-        // failed) OR when smiInst itself was null (SM not started yet — safe, no NPE possible).
         if (smiInst != null && smiInst.worker == null)
             Debug.LogError(go.name + " worker still null after DS-006b retrofit");
 
