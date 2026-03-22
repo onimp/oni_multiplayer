@@ -759,21 +759,32 @@ public class WorldBuilder {
             // entirely. We then manually initialize required private fields via reflection, set
             // game.assignmentManager = am FIRST, then init assignment_groups, then create the
             // "public" group — at which point the ctor's Add() call succeeds.
+            // Confirmed field names from runtime AM_FIELDS output (ca9c645).
+            // FormatterServices bypasses ctor + all field initializers — every field is default/null.
+            // We must manually initialize all fields that are used before OnSpawn:
+            //   assignables              private List<Assignable>              (GetEnumerator, Add, Remove)
+            //   PreferredAssignableResults private List<Assignable>             (GetPreferredAssignables lock target)
+            //   assignment_groups        public  Dictionary<string, AssignGroup> (set directly below)
+            //   isInitialized            bool (KMonoBehaviour base) → must be true or lifecycle guards fire
             var tf = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
-            // Discover actual field names at runtime — do not guess.
-            foreach (var f in typeof(AssignmentManager).GetFields(tf))
-                Console.WriteLine($"[AM_FIELDS] {f.FieldType.Name} {f.Name}");
             var am = (AssignmentManager)FormatterServices.GetUninitializedObject(typeof(AssignmentManager));
             typeof(AssignmentManager).GetField("assignables", tf)
                 ?.SetValue(am, new List<Assignable>());
             typeof(AssignmentManager).GetField("PreferredAssignableResults", tf)
                 ?.SetValue(am, new List<Assignable>());
-            // Set BEFORE any AssignmentGroup.ctor runs — it will call assignment_groups.Add().
+            // isInitialized may be declared on AssignmentManager directly or on a base type —
+            // walk the hierarchy to be safe.
+            for (var t = typeof(AssignmentManager); t != null; t = t.BaseType) {
+                var fi = t.GetField("isInitialized", tf);
+                if (fi != null) { fi.SetValue(am, true); break; }
+            }
+            // Set game.assignmentManager BEFORE AssignmentGroup.ctor runs — ctor calls
+            // Game.Instance.assignmentManager.assignment_groups.Add(id, this).
             global::Game.Instance.assignmentManager = am;
             am.assignment_groups = new Dictionary<string, AssignmentGroup>();
-            // UI.UISIDESCREENS.ASSIGNABLESIDESCREEN.PUBLIC == "Public" — use literal (no UI namespace here).
+            // UI.UISIDESCREENS.ASSIGNABLESIDESCREEN.PUBLIC == "Public" — use literal (no UI ns here).
             new AssignmentGroup("public", new IAssignableIdentity[0], "Public");
-            Console.WriteLine($"[WorldBuilder] AssignmentManager (FormatterServices): groups={am.assignment_groups?.Count}");
+            Console.WriteLine($"[WorldBuilder] AssignmentManager ready: groups={am.assignment_groups?.Count}");
         }
 
         // BrainScheduler manages Dupe + Creature AI brain groups.
