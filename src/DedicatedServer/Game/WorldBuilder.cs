@@ -493,6 +493,16 @@ public class WorldBuilder {
             game.fetchManager ??= go.AddComponent<FetchManager>();
         }
 
+        // mingleCellTracker: assigned in Game.OnSpawn() line 977 via AddComponent<MingleCellTracker>().
+        // Game.OnSpawn() is NEVER called in headless (WorldBuilder only calls OnPrefabInit, which crashes).
+        // MingleCellSensor.Update[IL_0x0028]: ldfld mingleCellTracker on non-null Game.Instance → NPE.
+        // BalloonStandCellSensor.Update has the same access pattern — same fix covers both.
+        // MingleCellTracker has no custom OnPrefabInit; mingleCells List<int> is field-initialized.
+        // Sim1000ms will populate mingleCells once rooms exist. Adding the component is sufficient.
+        if (game.mingleCellTracker == null)
+            game.mingleCellTracker = go.AddComponent<MingleCellTracker>();
+        Console.WriteLine($"[WorldBuilder] mingleCellTracker ready: {game.mingleCellTracker != null}");
+
         // MinionBrain.UpdateBrain() checks discoveredSurface / discoveredOilField to fire
         // "first discovery" events. If false, it calls World.Instance.zoneRenderData.GetSubWorldZoneType()
         // which NPEs because SubworldZoneRenderData (rendering component) is null in headless.
