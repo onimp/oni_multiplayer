@@ -19,7 +19,7 @@ export default function App() {
   const [showEntities, setShowEntities] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(33);
+  const [refreshInterval, setRefreshInterval] = useState(16);
 
   // Initial full load (world + entities + state + elements)
   const refresh = useCallback(async () => {
