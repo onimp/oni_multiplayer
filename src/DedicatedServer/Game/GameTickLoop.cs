@@ -309,6 +309,8 @@ public class GameTickLoop {
         foreach (var brain in Components.Brains.Items) {
             if (brain == null) continue;
             if (!brain.gameObject.HasTag(GameTags.BaseMinion)) continue;
+            var go = brain.gameObject;
+            Console.WriteLine("[DS] Dupe SMC hash=" + go.GetComponent<StateMachineController>()?.GetHashCode() + " IdleMonitor=" + go.GetComponent<StateMachineController>()?.GetSMI<IdleMonitor.Instance>()?.GetHashCode());
             var driver     = brain.GetComponent<ChoreDriver>();
             var nav        = brain.GetComponent<Navigator>();
             var sensors    = brain.GetComponent<Sensors>();
