@@ -1318,10 +1318,19 @@ public class WorldBuilder {
         foreach (var go in allBrainGOs) {
             try {
                 var provider = go.GetComponent<ChoreProvider>();
-                if (provider != null && !provider.IsInitialized()) {
-                    provider.InitializeComponent();
-                    provider.Spawn();
-                    Console.WriteLine($"[FixChoreConsumers] Force-initialized ChoreProvider for {go.name}");
+                if (provider != null) {
+                    if (!provider.IsInitialized()) {
+                        // Case 1: never initialized → Init then Spawn (mirrors ChoreDriver Case 1)
+                        provider.InitializeComponent();
+                        provider.Spawn();
+                        Console.WriteLine($"[FixChoreConsumers] Force-initialized ChoreProvider for {go.name}");
+                    } else if (!provider.isSpawned) {
+                        // Case 2: initialized but OnSpawn() never ran → Spawn only
+                        // Root cause of 336x "ChoreProvider not initialized" errors:
+                        // isInitialized=true, isSpawned=false was silently skipped before this fix.
+                        provider.Spawn();
+                        Console.WriteLine($"[FixChoreConsumers] Force-spawned ChoreProvider (was init but !isSpawned) for {go.name}");
+                    }
                 }
                 var driver = go.GetComponent<ChoreDriver>();
                 if (driver != null) {
