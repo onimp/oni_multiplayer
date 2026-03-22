@@ -755,6 +755,12 @@ public class WorldBuilder {
         if (SaveLoader.Instance == null) {
             try {
                 var slGo = new GameObject("SaveLoader");
+                // SaveLoader.OnPrefabInit() at line 221: saveManager = GetComponent<SaveManager>()
+                // SaveManager must exist on the SAME GO before InitializeComponent() runs, or saveManager
+                // stays null. Every spawned entity has SaveLoadRoot (EntityTemplates line 40) and
+                // SaveLoadRoot.OnSpawn() calls SaveLoader.Instance.saveManager.Register(this) →
+                // NullReferenceException (saveManager null) on EVERY entity spawn.
+                slGo.AddComponent<SaveManager>().Awake();
                 var sl = slGo.AddComponent<SaveLoader>(); // OnPrefabInit → Instance = this (called below)
                 sl.InitializeComponent();
                 // Default SaveGame.GameInfo is zeroed (saveMajorVersion=0) → IsVersionOlderThan(7,15)=true
