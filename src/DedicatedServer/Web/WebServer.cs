@@ -243,11 +243,13 @@ public class WebServer {
                     cell           = Grid.PosToCell(go),
                     currentChore   = chore?.GetType().Name ?? "null",
                     navIsMoving    = nav?.IsMoving() ?? false,
-                    globalSMError  = globalError,
-                    idleMonState   = idleMon?.GetCurrentState()?.name ?? "null",
-                    idleMonCrashed = idleMon?.isCrashed ?? false,
-                    choreMapCount  = cp?.choreWorldMap?.Values.Sum(v => v?.Count ?? 0) ?? -1,
-                    providers      = consumer?.providers?.Count ?? -1
+                    globalSMError        = globalError,
+                    idleMonState         = idleMon?.GetCurrentState()?.name ?? "null",
+                    idleMonCrashed       = idleMon?.isCrashed ?? false,
+                    choreMapCount        = cp?.choreWorldMap?.Values.Sum(v => v?.Count ?? 0) ?? -1,
+                    providers            = consumer?.providers?.Count ?? -1,
+                    assignmentManagerId  = global::Game.Instance?.assignmentManager?.GetHashCode() ?? -1,
+                    assignmentManagerNull = global::Game.Instance?.assignmentManager == null
                 });
             }
             return new { globalSMError = globalError, dupes = result };

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using Database;
 using Klei;
 using ProcGen;
@@ -750,16 +751,26 @@ public class WorldBuilder {
         //
         // Must be initialized BEFORE SpawnEntities() / EnsureAssignableProxy().
         if (global::Game.Instance.assignmentManager == null) {
-            var amGo = new GameObject("AssignmentManager");
-            var am = amGo.AddComponent<AssignmentManager>();   // groups=null after bootstrap NPE
-            global::Game.Instance.assignmentManager = am;      // assign BEFORE group creation
+            // Bootstrap paradox: AssignmentManager field initializer calls new AssignmentGroup()
+            // whose ctor calls Game.Instance.assignmentManager.assignment_groups.Add(id, this)
+            // while assignmentManager is still null → NPE during AddComponent (before we assign).
+            //
+            // Fix: FormatterServices.GetUninitializedObject bypasses constructor + field initializers
+            // entirely. We then manually initialize required private fields via reflection, set
+            // game.assignmentManager = am FIRST, then init assignment_groups, then create the
+            // "public" group — at which point the ctor's Add() call succeeds.
+            var tf = BindingFlags.NonPublic | BindingFlags.Instance;
+            var am = (AssignmentManager)FormatterServices.GetUninitializedObject(typeof(AssignmentManager));
+            typeof(AssignmentManager).GetField("assignables", tf)
+                ?.SetValue(am, new List<Assignable>());
+            typeof(AssignmentManager).GetField("PreferredAssignableResults", tf)
+                ?.SetValue(am, new List<Assignable>());
+            // Set BEFORE any AssignmentGroup.ctor runs — it will call assignment_groups.Add().
+            global::Game.Instance.assignmentManager = am;
             am.assignment_groups = new Dictionary<string, AssignmentGroup>();
-            // AssignmentGroup.ctor calls Game.Instance.assignmentManager.assignment_groups.Add(id, this)
-            // — succeeds now that both assignmentManager and assignment_groups are set.
-            // UI.UISIDESCREENS.ASSIGNABLESIDESCREEN.PUBLIC == "Public" (display name only).
-            // UI namespace not available in DedicatedServer — use string literal directly.
+            // UI.UISIDESCREENS.ASSIGNABLESIDESCREEN.PUBLIC == "Public" — use literal (no UI namespace here).
             new AssignmentGroup("public", new IAssignableIdentity[0], "Public");
-            Console.WriteLine($"[WorldBuilder] AssignmentManager initialized: groups={am.assignment_groups?.Count}");
+            Console.WriteLine($"[WorldBuilder] AssignmentManager (FormatterServices): groups={am.assignment_groups?.Count}");
         }
 
         // BrainScheduler manages Dupe + Creature AI brain groups.
