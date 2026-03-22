@@ -1327,6 +1327,13 @@ public class WorldBuilder {
                 if (driver != null) {
                     var needsInit  = !driver.IsInitialized();
                     var needsSpawn = driver.IsInitialized() && !driver.isSpawned;
+                    // DS-006 fix: add StandardWorker BEFORE Spawn() so StatesInstance.ctor
+                    // finds GetComponent<WorkerBase>() non-null → worker set → no NPE at
+                    // haschore.Update b__5_3 IL[0x0075] (smi.worker.GetWorkable()).
+                    // Must run before Cases 1 and 2 (both call Spawn which triggers StartSM).
+                    if (needsInit || needsSpawn) {
+                        go.AddOrGet<StandardWorker>();
+                    }
                     // Case 1: never initialized → Init then Spawn
                     if (needsInit) {
                         driver.InitializeComponent();
@@ -1798,36 +1805,15 @@ public class WorldBuilder {
 
                 // ── Step 5: ensure StandardWorker (WorkerBase) is present — DS-006 ─────────
                 // ChoreDriver.StatesInstance.ctor sets worker = GetComponent<WorkerBase>().
-                // Critter prefabs may lack StandardWorker → worker=null → haschore.Update
-                // (b__5_3 IL[0x75]) NPEs on smi.worker.GetWorkable() every tick.
-                //
-                // Two sub-cases:
-                //   A. SM already started during TriggerLifecycle but worker=null (missing component):
-                //      StopSM+StartSM does NOT recreate StatesInstance (_smi only cleared in OnCleanUp).
-                //      Instead: add StandardWorker + set worker via reflection on the live instance.
-                //   B. SM was never started: add StandardWorker then StartSM normally.
-                //
-                // AddOrGet is a no-op if StandardWorker already present.
+                // Primary fix is in FixChoreConsumers: AddOrGet<StandardWorker>() runs before
+                // driver.Spawn() → ctor finds WorkerBase → worker set correctly.
+                // This AddOrGet is a safety net for any SM started outside FixChoreConsumers.
                 go.AddOrGet<StandardWorker>();
                 var choreDriver = go.GetComponent<ChoreDriver>();
-                if (choreDriver != null) {
-                    var cdSmi = choreDriver.GetSMI<ChoreDriver.StatesInstance>();
-                    if (cdSmi != null && cdSmi.worker == null) {
-                        // Case A: SM started before StandardWorker existed.
-                        // Set worker backing field directly on the live instance.
-                        var newWorker = go.GetComponent<WorkerBase>();
-                        if (newWorker != null) {
-                            var workerField = typeof(ChoreDriver.StatesInstance).GetField(
-                                "<worker>k__BackingField",
-                                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                            workerField?.SetValue(cdSmi, newWorker);
-                            Console.WriteLine($"[Animals] {go.name}: worker set via reflection (ok={cdSmi.worker != null})");
-                        }
-                    } else if (choreDriver.GetSMI() == null) {
-                        // Case B: SM was never started.
-                        choreDriver.smi.StartSM();
-                        Console.WriteLine($"[Animals] {go.name}: ChoreDriver SM started for first time");
-                    }
+                if (choreDriver != null && choreDriver.GetSMI() == null) {
+                    // SM was never started (shouldn't happen after FixChoreConsumers, but guard it).
+                    choreDriver.smi.StartSM();
+                    Console.WriteLine($"[Animals] {go.name}: ChoreDriver SM started (safety net)");
                 }
 
                 // ── Diagnostic: one line per creature ────────────────────────────────────

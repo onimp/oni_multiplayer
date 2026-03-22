@@ -66,39 +66,33 @@ public class ChoreDriverSmTest : PlayableGameTest {
     }
 
     /// <summary>
-    /// DS-006 critter regression: when SM was started WITHOUT StandardWorker,
-    /// worker=null. After adding StandardWorker and patching the backing field via
-    /// reflection (WorldBuilder.FixCreatureBrains Case A), worker becomes non-null.
+    /// DS-006 critter fix (proper): AddOrGet&lt;StandardWorker&gt;() BEFORE driver.Spawn() /
+    /// StartSM() ensures StatesInstance.ctor finds GetComponent&lt;WorkerBase&gt;() non-null.
     ///
-    /// Key insight: StopSM()+StartSM() does NOT recreate StatesInstance (_smi is only
-    /// cleared in OnCleanUp, not on manual StopSM).  The fix sets the backing field
-    /// directly on the live instance.
+    /// Root cause of original failure: FixChoreConsumers called driver.Spawn() (→ OnSpawn
+    /// → base.smi.StartSM() → StatesInstance.ctor → GetComponent&lt;WorkerBase&gt;() = null)
+    /// BEFORE adding StandardWorker to the GO.  Fix: AddOrGet&lt;StandardWorker&gt;() runs
+    /// before driver.Spawn() in FixChoreConsumers Cases 1 and 2.
+    ///
+    /// This test mirrors WorldBuilder.FixChoreConsumers Cases 1/2:
+    ///   go.AddOrGet&lt;StandardWorker&gt;() → driver.Spawn() (→ StartSM → ctor)
+    /// Result: worker is non-null immediately after Spawn().
     /// </summary>
     [Test]
-    public void ChoreDriver_CritterFix_WorkerSetViaReflection_IsNotNull() {
+    public void ChoreDriver_CritterFix_StandardWorkerBeforeSpawn_WorkerIsNotNull() {
         var go = createGameObject();
         go.AddComponent<ChoreConsumer>();
-        // Start SM WITHOUT StandardWorker — replicates broken critter state.
         var driver = go.AddComponent<ChoreDriver>();
-        driver.smi.StartSM();
-        var smi = driver.GetSMI<ChoreDriver.StatesInstance>();
-        Assert.IsNull(smi?.worker,
-            "Precondition: worker must be null when StandardWorker absent (broken state)");
 
-        // Apply fix: add StandardWorker, then set backing field via reflection.
-        go.AddComponent<StandardWorker>();
-        var workerField = typeof(ChoreDriver.StatesInstance).GetField(
-            "<worker>k__BackingField",
-            System.Reflection.BindingFlags.Instance |
-            System.Reflection.BindingFlags.Public   |
-            System.Reflection.BindingFlags.NonPublic);
-        Assert.IsNotNull(workerField,
-            "<worker>k__BackingField must be locatable via reflection (WorldBuilder.FixCreatureBrains depends on it)");
-        workerField!.SetValue(smi, go.GetComponent<WorkerBase>());
+        // Mirrors FixChoreConsumers: add StandardWorker BEFORE Spawn().
+        go.AddOrGet<StandardWorker>();
+        driver.smi.StartSM();  // StartSM = what Spawn() calls internally via OnSpawn()
 
+        var smi = (ChoreDriver.StatesInstance)driver.GetSMI();
         Assert.IsNotNull(smi?.worker,
-            "After reflection fix, worker must be non-null. " +
-            "This confirms WorldBuilder.FixCreatureBrains Case A works for critters.");
+            "worker must be non-null when StandardWorker is added before StartSM(). " +
+            "This is the DS-006 critter fix: FixChoreConsumers calls AddOrGet<StandardWorker>() " +
+            "before driver.Spawn() so StatesInstance.ctor finds WorkerBase → no NPE at b__5_3 IL[0x0075].");
     }
 
     // ─── DS-005 tests (pre-existing) ────────────────────────────────────────
