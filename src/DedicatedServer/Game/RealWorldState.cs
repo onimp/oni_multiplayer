@@ -35,8 +35,10 @@ public class RealWorldState {
     private const long StateCacheMs = 1000;
     private readonly object _stateCacheLock = new();
 
-    // --- Entity size cache (per-instance — populated from WorldBuilder.PrefabSizeMap on first use) ---
-    private readonly Dictionary<string, (int w, int h)> _entitySizeCache = new();
+    // --- Merged entity size map (built once on first call to GetEntitiesBytes) ---
+    // Combines WorldBuilder.PrefabSizeMap (entities/critters) with building sizes from
+    // WorldBuilder.BuildingDefCache — buildings always win over stale PrefabSizeMap entries.
+    private Dictionary<string, (int w, int h)>? _mergedSizeMap;
 
     public RealWorldState(int width, int height, WorldBuilder world) {
         this.width = width;
@@ -134,130 +136,37 @@ public class RealWorldState {
     }
 
     /// <summary>
-    /// Returns entity size in cells.
-    /// Priority order:
-    ///   1. _entitySizeCache — per-instance result cache
-    ///   2. WorldBuilder.BuildingDefCache — static, from configTable harvest (authoritative for
-    ///      buildings that failed Add2DComponents: HQ, Telepad, GeneShuffler). Checked BEFORE
-    ///      PrefabSizeMap because CaptureEntitySize can overwrite PrefabSizeMap with stale (1,1)
-    ///      — that's the "third silent path" that returns (1,1) with no log for HQ.
-    ///   3. WorldBuilder.PrefabSizeMap — from SpawnEntities CaptureEntitySize (may be stale 1,1)
-    ///   4. Assets.GetPrefab OccupyArea → KBoxCollider2D → (1,1)
+    /// Resolves entity size from the pre-built merged size map.
+    /// <para>
+    /// The <paramref name="sizeMap"/> is a single unified dictionary that combines:
+    ///   • WorldBuilder.BuildingDefCache sizes (all 342 building types, from configTable harvest)
+    ///   • WorldBuilder.PrefabSizeMap (entities, critters, geysers — from CaptureEntitySize)
+    /// Buildings always win when both sources have an entry (configTable is authoritative).
+    /// </para>
+    /// Static so it is unit-testable without live GameObjects.
     /// </summary>
-    private (int w, int h) GetEntitySize(string id) {
-        if (_entitySizeCache.TryGetValue(id, out var cached)) return cached;
-
-        // Primary: static BuildingDefCache — from configTable harvest, never overwritten by
-        // spawn-time logic. For buildings whose Add2DComponents crashed, this is the ONLY
-        // reliable source. Must be checked before PrefabSizeMap which can hold stale (1,1).
-        try {
-            if (WorldBuilder.BuildingDefCache.TryGetValue(id, out var buildingDef)) {
-                var defSize = WorldBuilder.ReadBuildingDefSize(buildingDef);
-                if (defSize.HasValue) {
-                    Console.WriteLine($"[EntitySize] {id} → {defSize.Value.w}×{defSize.Value.h} (BuildingDefCache)");
-                    _entitySizeCache[id] = defSize.Value;
-                    return defSize.Value;
-                }
-            }
-        } catch (Exception ex) {
-            Console.WriteLine($"[EntitySize] {id} BuildingDefCache threw: {ex.GetBaseException().Message}");
-        }
-
-        // Secondary: PrefabSizeMap — from SpawnEntities CaptureEntitySize (critters, dupes, etc.)
-        // NOTE: this was formerly primary. For buildings it can hold stale (1,1) if CaptureEntitySize
-        // ran before configTable harvest or failed to read Building.Def in headless.
-        if (world.PrefabSizeMap.TryGetValue(id, out var liveSize)) {
-            _entitySizeCache[id] = liveSize;
-            return liveSize;
-        }
-
-        // Fallback: inspect the registered prefab in Assets
-        (int w, int h) size = (1, 1);
-        try {
-            var prefab = Assets.GetPrefab(new Tag(id));
-            if (prefab != null) {
-                var occupyArea = prefab.GetComponent<OccupyArea>();
-                if (occupyArea?._UnrotatedOccupiedCellsOffsets?.Length > 0) {
-                    var offsets = occupyArea._UnrotatedOccupiedCellsOffsets;
-                    int minX = 0, maxX = 0, minY = 0, maxY = 0;
-                    foreach (var o in offsets) {
-                        if (o.x < minX) minX = o.x;
-                        if (o.x > maxX) maxX = o.x;
-                        if (o.y < minY) minY = o.y;
-                        if (o.y > maxY) maxY = o.y;
-                    }
-                    size = (maxX - minX + 1, maxY - minY + 1);
-                } else {
-                    // Fallback: KBoxCollider2D size (set in ConfigPlacedEntity alongside OccupyArea)
-                    var col = prefab.GetComponent<KBoxCollider2D>();
-                    if (col != null) {
-                        var s = col.size;
-                        size = (Math.Max(1, (int)Math.Round(s.x)), Math.Max(1, (int)Math.Round(s.y)));
-                    }
-                }
-                Console.WriteLine($"[EntitySize] {id} → {size.w}×{size.h} (Assets fallback, occupyArea={(prefab.GetComponent<OccupyArea>() != null ? "found" : "null")})");
-            } else {
-                Console.WriteLine($"[EntitySize] {id} → prefab not found in Assets, defaulting to 1×1");
-            }
-        } catch (Exception ex) {
-            Console.WriteLine($"[EntitySize] {id} → exception: {ex.GetBaseException().Message}, defaulting to 1×1");
-        }
-
-        _entitySizeCache[id] = size;
-        return size;
+    internal static (int w, int h) ResolveEntitySize(
+        string prefabId,
+        IReadOnlyDictionary<string, (int w, int h)>? sizeMap) {
+        if (sizeMap != null && sizeMap.TryGetValue(prefabId, out var sz) && sz.w > 0 && sz.h > 0)
+            return sz;
+        return (1, 1);
     }
 
     /// <summary>
-    /// Resolves building cell dimensions from three sources in priority order.
-    /// 1. <paramref name="buildingDefCache"/> — static _buildingDefCache populated during
-    ///    RegisterBuildingDefs() configTable harvest. Contains ALL 342 defs including buildings
-    ///    that failed full registration (HQ, Telepad) — dimensions read directly via
-    ///    WorldBuilder.ReadBuildingDefSize, no game API call needed.
-    /// 2. <paramref name="getBuildingDef"/> — Assets.GetBuildingDef wrapped — only works for
-    ///    buildings that completed registration successfully.
-    /// 3. <paramref name="sizeMap"/> — PrefabSizeMap populated during SpawnEntities().
-    ///    May have stale (1,1) entries if CaptureEntitySize fell through in headless.
-    /// Static so it can be unit-tested without live GameObjects or game APIs.
+    /// Builds the merged size map (computed once; entities are static after world load).
+    /// Starts from PrefabSizeMap (entities/critters), then overlays building sizes from
+    /// BuildingDefCache — buildings always win over any stale PrefabSizeMap entry.
     /// </summary>
-    internal static (int w, int h) ResolveBuildingSize(
-        string id,
-        IReadOnlyDictionary<string, (int w, int h)> sizeMap,
-        IReadOnlyDictionary<string, BuildingDef> buildingDefCache,
-        Func<string, BuildingDef> getBuildingDef) {
-        Console.WriteLine($"[Size] Resolving id={id} → checking buildingDefCache(count={buildingDefCache?.Count ?? -1})...");
-        // Primary: direct lookup in _buildingDefCache — populated from configTable harvest even
-        // for buildings whose Add2DComponents crashed (HQ, Telepad, GeneShuffler).
-        // Wrapped in try-catch: BuildingDef property accessors (e.g. WidthInCells) can throw in
-        // headless mode after partial initialization — must not bypass the sizeMap fallback.
-        try {
-            if (buildingDefCache != null && buildingDefCache.TryGetValue(id, out var cachedDef)) {
-                var cacheSize = WorldBuilder.ReadBuildingDefSize(cachedDef);
-                Console.WriteLine($"[Size]   buildingDefCache hit: def={cachedDef?.PrefabID ?? "null"} cacheSize={cacheSize?.ToString() ?? "null"}");
-                if (cacheSize.HasValue) return cacheSize.Value;
-            } else {
-                Console.WriteLine($"[Size]   buildingDefCache miss for id={id}");
-            }
-        } catch (Exception ex) {
-            Console.WriteLine($"[Size]   buildingDefCache threw: {ex.GetBaseException().Message} — falling through to getBuildingDef");
+    private Dictionary<string, (int w, int h)> BuildMergedSizeMap() {
+        var map = world.PrefabSizeMap.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        foreach (var kvp in WorldBuilder.BuildingDefCache) {
+            var size = WorldBuilder.ReadBuildingDefSize(kvp.Value);
+            if (size.HasValue) map[kvp.Key] = size.Value;
         }
-        // Secondary: Assets.GetBuildingDef (works for fully-registered buildings).
-        try {
-            var def = getBuildingDef?.Invoke(id);
-            if (def != null && def.WidthInCells > 0 && def.HeightInCells > 0) {
-                Console.WriteLine($"[Size]   getBuildingDef hit: {def.WidthInCells}x{def.HeightInCells}");
-                return (def.WidthInCells, def.HeightInCells);
-            }
-        } catch {
-            // Game API unavailable (headless or test context) — fall through to sizeMap.
-        }
-        // Fallback: instance PrefabSizeMap (populated from configTable harvest — authoritative even
-        // for buildings that failed Add2DComponents, as long as CreateBuildingDef succeeded).
-        if (sizeMap != null && sizeMap.TryGetValue(id, out var sz) && sz.w > 0 && sz.h > 0) {
-            Console.WriteLine($"[Size]   sizeMap hit: {sz.w}x{sz.h}");
-            return sz;
-        }
-        Console.WriteLine($"[Size]   all sources failed → 1x1");
-        return (1, 1);
+        Console.WriteLine($"[SizeMap] Built merged size map: {map.Count} entries " +
+            $"(prefabSizeMap={world.PrefabSizeMap.Count} buildingDefCache={WorldBuilder.BuildingDefCache.Count})");
+        return map;
     }
 
     public object GetEntities() {
@@ -297,47 +206,42 @@ public class RealWorldState {
         var entities = new List<object>();
         var spawnData = world.SpawnData;
 
+        // Build the merged size map once: buildings (from BuildingDefCache) always win over
+        // any stale PrefabSizeMap entry. All branches below use the same single source.
+        _mergedSizeMap ??= BuildMergedSizeMap();
+        var sizeMap = _mergedSizeMap;
+
         // Buildings branch: use TrackedBuildings (populated during SpawnEntities with offsets
-        // already applied) instead of spawnData.buildings.  This guarantees buildings appear
-        // in the entity list regardless of SpawnData reference validity at query time.
+        // already applied) so the buildings list is independent of SpawnData validity at query time.
         foreach (var b in world.TrackedBuildings) {
-            Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings");
-            var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, WorldBuilder.BuildingDefCache, world.GetBuildingDef);
-            entities.Add(new {
-                type = "building", name = b.id, x = b.x, y = b.y, w, h
-            });
+            var (w, h) = ResolveEntitySize(b.id, sizeMap);
+            Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings size={w}×{h}");
+            entities.Add(new { type = "building", name = b.id, x = b.x, y = b.y, w, h });
         }
 
         if (spawnData != null) {
             foreach (var e in spawnData.otherEntities) {
-                Console.WriteLine($"[EntityPath] id={e.id} → branch=otherEntities");
-                var entityType = ClassifyOtherEntity(e.id);
-                var (ew, eh) = GetEntitySize(e.id);
-                entities.Add(new { type = entityType, name = e.id, x = e.location_x, y = e.location_y, w = ew, h = eh });
+                var (ew, eh) = ResolveEntitySize(e.id, sizeMap);
+                Console.WriteLine($"[EntityPath] id={e.id} → branch=otherEntities size={ew}×{eh}");
+                entities.Add(new { type = ClassifyOtherEntity(e.id), name = e.id, x = e.location_x, y = e.location_y, w = ew, h = eh });
             }
             foreach (var p in spawnData.pickupables) {
-                Console.WriteLine($"[EntityPath] id={p.id} → branch=pickupables");
-                var (pw, ph) = GetEntitySize(p.id);
+                var (pw, ph) = ResolveEntitySize(p.id, sizeMap);
+                Console.WriteLine($"[EntityPath] id={p.id} → branch=pickupables size={pw}×{ph}");
                 entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y, w = pw, h = ph });
             }
             foreach (var o in spawnData.elementalOres) {
-                Console.WriteLine($"[EntityPath] id={o.id} → branch=elementalOres");
-                // Fix: was hardcoded w=1,h=1 — use GetEntitySize so BuildingDefCache
-                // is consulted first. If HQ or any other building ends up here (e.g. via
-                // the world-gen template serialisation), its real size is returned.
-                // Actual ores (Algae, Dirt, etc.) are not in BuildingDefCache and remain 1×1.
-                var (ow, oh) = GetEntitySize(o.id);
+                var (ow, oh) = ResolveEntitySize(o.id, sizeMap);
+                Console.WriteLine($"[EntityPath] id={o.id} → branch=elementalOres size={ow}×{oh}");
                 entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = ow, h = oh });
             }
         }
 
         // Include entities spawned directly (e.g. starter minions via SpawnStarterMinions).
-        // These bypass spawnData.otherEntities so they must be added here explicitly.
         foreach (var (id, x, y) in world.DirectlySpawnedEntities) {
-            Console.WriteLine($"[EntityPath] id={id} → branch=DirectlySpawnedEntities");
-            var entityType = ClassifyOtherEntity(id);
-            var (ew, eh) = GetEntitySize(id);
-            entities.Add(new { type = entityType, name = id, x, y, w = ew, h = eh });
+            var (ew, eh) = ResolveEntitySize(id, sizeMap);
+            Console.WriteLine($"[EntityPath] id={id} → branch=DirectlySpawnedEntities size={ew}×{eh}");
+            entities.Add(new { type = ClassifyOtherEntity(id), name = id, x, y, w = ew, h = eh });
         }
 
         var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new {

@@ -1112,73 +1112,83 @@ public class WorldBuilder {
     }
 
     /// <summary>
-    /// Reads entity size from a live spawned GO and caches its cell bounding box.
-    /// Priority: Building.Def (most reliable for buildings) → OccupyArea offsets → KBoxCollider2D.
-    /// Logs [EntitySize] for each unique ID to aid diagnostics.
+    /// Reads entity size from a live spawned GO (or its registered prefab) and caches it.
+    /// Priority order:
+    ///   1. Building.Def on spawned GO — authoritative for buildings spawned successfully
+    ///   2. Assets.GetBuildingDef — for buildings whose spawned GO lacks a Building component
+    ///   3. OccupyArea on spawned GO — for entities (critters, geysers, etc.)
+    ///   4. KBoxCollider2D on spawned GO — for dupes and entities without OccupyArea
+    ///   5. OccupyArea on registered prefab (Assets.GetPrefab) — fallback when spawned GO has
+    ///      null OccupyArea offsets in headless mode (geysers, some critters)
     /// </summary>
     private void CaptureEntitySize(string id, GameObject go) {
         try {
-            // Primary for buildings: read directly from Building.Def (set by BuildingConfigManager.RegisterBuilding).
-            // This is the most reliable source — OccupyArea._UnrotatedOccupiedCellsOffsets is often
-            // null in headless mode, and KBoxCollider2D may be uninitialized.
+            // 1. Building.Def on spawned GO (most reliable for buildings)
             var building = go.GetComponent<Building>();
-            // Diagnostic: log component state for known large buildings to help diagnose size issues.
-            if (id == "Headquarters" || id == "Telepad" || id == "GeneShuffler") {
-                Console.WriteLine($"[SizeDebug] {id}: building={building != null} def={building?.Def?.PrefabID ?? "null"} " +
-                    $"w={building?.Def?.WidthInCells.ToString() ?? "?"} h={building?.Def?.HeightInCells.ToString() ?? "?"}");
-            }
             var defSize = ReadBuildingDefSize(building?.Def);
             if (defSize.HasValue) {
                 _prefabSizeMap[id] = defSize.Value;
-                Console.WriteLine($"[EntitySize] id={id} → {defSize.Value.w}×{defSize.Value.h} (Building.Def)");
+                Console.WriteLine($"[EntitySize] {id} → {defSize.Value.w}×{defSize.Value.h} (Building.Def)");
                 return;
             }
 
-            // Building.Def unavailable (cloned GO has no Building component in headless mode).
-            // Fall back to the registered BuildingDef from Assets — always reliable for buildings.
+            // 2. Assets.GetBuildingDef — for buildings without a Building component on the GO
             if (building == null) {
-                var registeredDef = Assets.GetBuildingDef(id);
-                var registeredSize = ReadBuildingDefSize(registeredDef);
+                var registeredSize = ReadBuildingDefSize(Assets.GetBuildingDef(id));
                 if (registeredSize.HasValue) {
                     _prefabSizeMap[id] = registeredSize.Value;
-                    Console.WriteLine($"[EntitySize] id={id} → {registeredSize.Value.w}×{registeredSize.Value.h} (Assets.GetBuildingDef)");
+                    Console.WriteLine($"[EntitySize] {id} → {registeredSize.Value.w}×{registeredSize.Value.h} (Assets.GetBuildingDef)");
                     return;
                 }
             }
 
-            // Fallback for critters/dupes/other: OccupyArea offsets → KBoxCollider2D
+            // 3+4. OccupyArea offsets → KBoxCollider2D on spawned GO
             var occupy = go.GetComponent<OccupyArea>();
             int ew = 1, eh = 1;
-            int cellCount = 0;
 
             if (occupy?._UnrotatedOccupiedCellsOffsets?.Length > 0) {
-                var offsets = occupy._UnrotatedOccupiedCellsOffsets;
-                cellCount = offsets.Length;
-                int minX = 0, maxX = 0, minY = 0, maxY = 0;
-                foreach (var o in offsets) {
-                    if (o.x < minX) minX = o.x;
-                    if (o.x > maxX) maxX = o.x;
-                    if (o.y < minY) minY = o.y;
-                    if (o.y > maxY) maxY = o.y;
-                }
-                ew = maxX - minX + 1;
-                eh = maxY - minY + 1;
+                (ew, eh) = ComputeSizeFromOffsets(occupy._UnrotatedOccupiedCellsOffsets);
+                Console.WriteLine($"[EntitySize] {id} → {ew}×{eh} (OccupyArea on spawned GO, cells={occupy._UnrotatedOccupiedCellsOffsets.Length})");
             } else {
-                // KBoxCollider2D: e.g. Minion has size=(1, 1.5) → rounds to 1×2
                 var col = go.GetComponent<KBoxCollider2D>();
                 if (col != null) {
-                    var s = col.size;
-                    ew = Math.Max(1, (int)Math.Round(s.x));
-                    eh = Math.Max(1, (int)Math.Round(s.y));
+                    ew = Math.Max(1, (int)Math.Round(col.size.x));
+                    eh = Math.Max(1, (int)Math.Round(col.size.y));
+                    Console.WriteLine($"[EntitySize] {id} → {ew}×{eh} (KBoxCollider2D on spawned GO)");
                 }
             }
 
+            // 5. Registered prefab fallback: spawned GO may have null OccupyArea offsets in
+            // headless mode (common for geysers, some critters) even though the registered
+            // prefab created by EntityTemplates.CreatePlacedEntity has correct offsets.
+            if (ew == 1 && eh == 1) {
+                var prefab = Assets.GetPrefab(new Tag(id));
+                var prefabOccupy = prefab?.GetComponent<OccupyArea>();
+                if (prefabOccupy?._UnrotatedOccupiedCellsOffsets?.Length > 0) {
+                    (ew, eh) = ComputeSizeFromOffsets(prefabOccupy._UnrotatedOccupiedCellsOffsets);
+                    Console.WriteLine($"[EntitySize] {id} → {ew}×{eh} (OccupyArea on registered prefab, cells={prefabOccupy._UnrotatedOccupiedCellsOffsets.Length})");
+                }
+            }
+
+            if (ew == 1 && eh == 1)
+                Console.WriteLine($"[EntitySize] {id} → 1×1 (default — no size source found)");
+
             _prefabSizeMap[id] = (ew, eh);
-            Console.WriteLine($"[EntitySize] id={id} tag={go.GetComponent<KPrefabID>()?.PrefabTag} occupyCells={cellCount} → {ew}×{eh} (OccupyArea/Collider)");
         } catch (Exception ex) {
-            Console.WriteLine($"[EntitySize] id={id} FAILED: {ex.GetBaseException().Message}");
+            Console.WriteLine($"[EntitySize] {id} FAILED: {ex.GetBaseException().Message}");
             _prefabSizeMap[id] = (1, 1);
         }
+    }
+
+    private static (int w, int h) ComputeSizeFromOffsets(CellOffset[] offsets) {
+        int minX = 0, maxX = 0, minY = 0, maxY = 0;
+        foreach (var o in offsets) {
+            if (o.x < minX) minX = o.x;
+            if (o.x > maxX) maxX = o.x;
+            if (o.y < minY) minY = o.y;
+            if (o.y > maxY) maxY = o.y;
+        }
+        return (maxX - minX + 1, maxY - minY + 1);
     }
 
     /// <summary>
