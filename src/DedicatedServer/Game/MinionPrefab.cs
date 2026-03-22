@@ -212,16 +212,14 @@ public static class MinionPrefab {
         var choreDriver = go.GetComponent<ChoreDriver>();
         if (choreDriver != null) {
             if (choreDriver.GetSMI() == null) {
-                try {
-                    choreDriver.smi.StartSM(); // lazy-creates StatesInstance, enters nochore
-                    Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM started (smi={choreDriver.GetSMI() != null})");
-                } catch (Exception ex) {
-                    Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM start failed: {ex.GetBaseException().Message}");
-                }
+                choreDriver.smi.StartSM(); // lazy-creates StatesInstance, enters nochore
+                Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM started");
             }
-            // Retrofit: SM was started by TriggerLifecycle before StandardWorker was added.
-            // Patch the live SMI's worker field so haschore.Update no longer NPEs.
-            var smiInst = choreDriver.GetSMI<ChoreDriver.StatesInstance>();
+            // DS-006b retrofit: patch the live SMI's worker field so haschore.Update no longer NPEs.
+            // Use ?? choreDriver.smi so retrofit also applies when GetSMI<> returns null
+            // (e.g. smi was lazy-created by .smi accessor above but StartSM threw before
+            // registering it in SMC — same fix that 0d99648 applied correctly for critters).
+            var smiInst = choreDriver.GetSMI<ChoreDriver.StatesInstance>() ?? choreDriver.smi;
             if (smiInst != null && smiInst.worker == null) {
                 smiInst.worker = go.GetComponent<WorkerBase>();
                 if (smiInst.worker != null)

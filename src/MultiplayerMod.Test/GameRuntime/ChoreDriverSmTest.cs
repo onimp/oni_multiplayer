@@ -156,6 +156,44 @@ public class ChoreDriverSmTest : PlayableGameTest {
             "b__5_3 [0x0075] no longer NPEs on smi.worker.GetWorkable().");
     }
 
+    /// <summary>
+    /// DS-006b end-to-end: dupe with a PRE-EXISTING running SM (TriggerLifecycle path)
+    /// gets worker retrofitted by the new MinionPrefab.Setup() pattern:
+    ///   var smiInst = choreDriver.GetSMI&lt;ChoreDriver.StatesInstance&gt;() ?? choreDriver.smi;
+    ///   if (smiInst != null &amp;&amp; smiInst.worker == null)
+    ///       smiInst.worker = go.GetComponent&lt;WorkerBase&gt;();
+    ///
+    /// The ?? choreDriver.smi fallback ensures the retrofit also fires when GetSMI&lt;&gt;()
+    /// returns null (e.g. smi was lazy-created but StartSM threw before registering it
+    /// in the SMC — the same fix 0d99648 applied for critters).
+    /// </summary>
+    [Test]
+    public void ChoreDriver_DupeRetrofit_PreExistingRunningSmGetsWorkerPatched() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+
+        // TriggerLifecycle: SM started BEFORE StandardWorker added (worker baked as null).
+        driver.smi.StartSM();
+        // Confirm broken state: worker is null, SM is running.
+        var smiBeforeRetrofit = driver.GetSMI<ChoreDriver.StatesInstance>();
+        Assert.IsNotNull(smiBeforeRetrofit, "SM must be running (pre-existing TriggerLifecycle path)");
+        Assert.IsNull(smiBeforeRetrofit.worker, "worker must be null before retrofit");
+
+        // MinionPrefab.Setup() fix: unconditional AddOrGet<StandardWorker>().
+        go.AddOrGet<StandardWorker>();
+        // SM already running → GetSMI()!=null → StartSM skipped.
+        // Retrofit using ?? choreDriver.smi pattern (the fix from 2f0929b corrected):
+        var smiInst = driver.GetSMI<ChoreDriver.StatesInstance>() ?? driver.smi;
+        if (smiInst != null && smiInst.worker == null)
+            smiInst.worker = go.GetComponent<WorkerBase>();
+
+        Assert.IsNotNull(smiInst?.worker,
+            "worker must be non-null after retrofit on pre-existing running SM. " +
+            "GetSMI<StatesInstance>() returns the live SMI; ?? driver.smi is the safety net " +
+            "for cases where GetSMI<> returns null but smi was lazy-created.");
+    }
+
     // ─── DS-006b critter variant (CreaturePrefab.Setup) ─────────────────────
     // Critter GOs: TriggerLifecycle fires ChoreDriver.OnSpawn() → StartSM → StatesInstance.ctor
     // captures worker=null (StandardWorker not yet on the GO).  CreaturePrefab.Setup() runs
