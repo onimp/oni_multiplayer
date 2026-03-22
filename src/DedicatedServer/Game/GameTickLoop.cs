@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
@@ -108,6 +110,32 @@ public class GameTickLoop {
 
     private static void ForceUpdateBrains() {
         Debug.LogWarning("[DS-005] ForceUpdateBrains ENTERING");
+
+        // Global chore inventory: log total chores in GlobalChoreProvider across all worlds.
+        // choreWorldMap is public on ChoreProvider (base of GlobalChoreProvider).
+        try {
+            var gcp = GlobalChoreProvider.Instance;
+            if (gcp != null) {
+                var totalChores = 0;
+                foreach (var kvp in gcp.choreWorldMap) totalChores += kvp.Value.Count;
+                Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider: choreWorldMap worlds={gcp.choreWorldMap.Count} totalChores={totalChores} fetches={gcp.fetches.Count}");
+                // Log chore types present (first 10).
+                var sb2 = new StringBuilder();
+                var shown = 0;
+                foreach (var kvp in gcp.choreWorldMap) {
+                    foreach (var ch in kvp.Value) {
+                        if (shown++ >= 10) break;
+                        sb2.Append(ch?.GetType().Name ?? "null").Append(' ');
+                    }
+                }
+                if (shown > 0) Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider chore types: {sb2}");
+            } else {
+                Debug.LogWarning("[ChoreDebug] GlobalChoreProvider.Instance == null");
+            }
+        } catch (Exception e) {
+            Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider inspection failed: {e.GetBaseException().Message}");
+        }
+
         var updated = 0;
         foreach (var brain in Components.Brains.Items) {
             if (brain == null) continue;
@@ -119,16 +147,12 @@ public class GameTickLoop {
                     continue;
                 }
 
-                // Log providers list (private field) — who this consumer collects chores from.
-                // Should have at least: own ChoreProvider + GlobalChoreProvider.
+                // Log providers list.
                 var providerList = _providersField?.GetValue(consumer) as IList;
                 var sb = new StringBuilder();
-                if (providerList != null) {
-                    foreach (var p in providerList)
-                        sb.Append(p?.GetType().Name ?? "null").Append(' ');
-                }
+                if (providerList != null)
+                    foreach (var p in providerList) sb.Append(p?.GetType().Name ?? "null").Append(' ');
 
-                // GetCurrentChore() lives on ChoreDriver.StatesInstance, not ChoreDriver itself.
                 var smi = driver.GetSMI() as ChoreDriver.StatesInstance;
                 var choreBefore = smi?.GetCurrentChore()?.GetType().Name ?? "null";
 
@@ -136,6 +160,30 @@ public class GameTickLoop {
                     $"choreBefore={choreBefore} " +
                     $"providers({providerList?.Count ?? -1})=[{sb.ToString().TrimEnd()}] " +
                     $"smi={(smi != null ? "ok" : "null")} smiRunning={smi?.IsRunning()}");
+
+                // Deep per-provider diagnostic only for Minions (not critters).
+                if (brain.gameObject.HasTag(GameTags.BaseMinion) && consumer.consumerState != null) {
+                    try {
+                        if (providerList != null) {
+                            foreach (ChoreProvider provider in providerList) {
+                                if (provider == null) continue;
+                                var succeeded = new List<Chore.Precondition.Context>();
+                                var failed    = new List<Chore.Precondition.Context>();
+                                provider.CollectChores(consumer.consumerState, succeeded, failed);
+                                Debug.LogWarning($"[ChoreDebug] {brain.name} provider={provider.GetType().Name} succeeded={succeeded.Count} failed={failed.Count}");
+                                foreach (var ctx in succeeded.Take(3))
+                                    Debug.LogWarning($"  -> chore={ctx.chore?.GetType().Name} priority={ctx.masterPriority}");
+                                if (succeeded.Count == 0 && failed.Count > 0) {
+                                    // Show why top 3 chores failed (failedPreconditionId is the int id of the failing precondition).
+                                    foreach (var ctx in failed.Take(3))
+                                        Debug.LogWarning($"  xx failed chore={ctx.chore?.GetType().Name} failedPreconditionId={ctx.failedPreconditionId}");
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Debug.LogWarning($"[ChoreDebug] {brain.name} CollectChores inspection failed: {e.GetBaseException().Message}");
+                    }
+                }
 
                 brain.UpdateBrain();
                 updated++;
