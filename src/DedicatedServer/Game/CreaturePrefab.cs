@@ -41,6 +41,17 @@ public static class CreaturePrefab {
         var go = brain.gameObject;
         if (go == null) return;
 
+        // ── Remove render-only components that NPE during headless OnSpawn ──────
+        // ExtendEntityToBasicCreature() adds both CharacterOverlay and AnimEventHandler to
+        // every critter prefab. Both crash in headless:
+        //   CharacterOverlay.OnSpawn → NameDisplayScreen.AddNewEntry → nameDisplayCanvas NPE
+        //   AnimEventHandler.OnSpawn[IL_0x4c] → animCollider (KBoxCollider2D) NPE
+        // Mirrors the same fix applied to MinionPrefab.Setup().
+        var charOverlay = go.GetComponent<CharacterOverlay>();
+        if (charOverlay != null) UnityEngine.Object.DestroyImmediate(charOverlay);
+        var animEventHandler = go.GetComponent<AnimEventHandler>();
+        if (animEventHandler != null) UnityEngine.Object.DestroyImmediate(animEventHandler);
+
         // ── Canonical creature components (from ExtendEntityToBasicCreature) ──────
         // AddOrGet is idempotent: returns existing component or adds a new one.
         // Ensures components are present even if the prefab was partially registered

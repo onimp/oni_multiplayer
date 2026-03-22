@@ -481,6 +481,22 @@ public class WorldBuilder {
         // and ReportManager.ReportValue() doesn't NPE on every ChoreDriver tick.
         global::Game.Instance.Trigger(-1917495436);
 
+        // FactionManager: needed by FactionAlignment.OnSpawn[IL_0x64] on every dupe and critter.
+        // FactionAlignment.OnSpawn line 66: FactionManager.Instance.GetFaction(Alignment).Members.Add(this)
+        // fires when alignmentActive=true (default).  FactionManager.Instance null → NPE at 0x64.
+        // OnPrefabInit just sets Instance=this; OnSpawn() is empty (base only).
+        // Must be BEFORE SpawnEntities() so all entity OnSpawn calls find Instance non-null.
+        if (FactionManager.Instance == null)
+            Awake("FactionManager", () => go.AddComponent<FactionManager>().Awake());
+
+        // DrowningMonitorUpdater: needed by DrowningMonitor.OnSpawn[IL_0x6] on critters/plants.
+        // DrowningMonitor.OnSpawn: SlicedUpdaterSim1000ms<DrowningMonitor>.instance.RegisterUpdate1000ms(this)
+        // The static .instance field is set in SlicedUpdaterSim1000ms.OnPrefabInit → instance = this.
+        // Without this, any GO with DrowningMonitor (drownVulnerable critters, plants) NPEs on spawn.
+        // Must be BEFORE SpawnEntities().
+        if (SlicedUpdaterSim1000ms<DrowningMonitor>.instance == null)
+            Awake("DrowningMonitorUpdater", () => go.AddComponent<DrowningMonitorUpdater>().Awake());
+
         // Mirrors Game.OnPrefabInit() lines 830-842 (never reached there because it crashes at 820).
         // PathFinder.Initialize() — builds offset tables NavGrid uses.
         // GameNavGrids — registers all nav grids, including "MinionNavGrid" (DuplicantGrid).

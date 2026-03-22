@@ -36,6 +36,23 @@ public static class MinionPrefab {
             return;
         }
 
+        // ── Remove render-only components that NPE during headless OnSpawn ──────
+        // These components are added by BaseMinionConfig.BaseMinion() for visual/audio use
+        // but crash during OnSpawn in headless because their dependencies are absent:
+        //   CharacterOverlay.OnSpawn → NameDisplayScreen.Instance.AddNewEntry
+        //     → Util.KInstantiateUI(original, nameDisplayCanvas.gameObject) where
+        //       nameDisplayCanvas is a Unity-serialized Canvas, always null in headless.
+        //   AnimEventHandler.OnSpawn[IL_0x4c] → animCollider.offset where animCollider is
+        //     [MyCmpGet] KBoxCollider2D — null because KBoxCollider2D is render-only (absent).
+        // DestroyImmediate removes the component before any Spawn() can fire.
+        // AddOrGet on a render-only component is fine after this — it is a no-op if we
+        // previously removed the same component type, but we never add CharacterOverlay or
+        // AnimEventHandler (both are in the render-only skip list).
+        var charOverlay = go.GetComponent<CharacterOverlay>();
+        if (charOverlay != null) UnityEngine.Object.DestroyImmediate(charOverlay);
+        var animEventHandler = go.GetComponent<AnimEventHandler>();
+        if (animEventHandler != null) UnityEngine.Object.DestroyImmediate(animEventHandler);
+
         // ── Ensure all BaseMinionConfig.BaseMinion() functional components are present ──
         // AddOrGet is a no-op when the component already exists (e.g. loaded from save).
         // Components must be present before BaseOnSpawn() runs so all subscriptions and
