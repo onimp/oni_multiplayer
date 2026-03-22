@@ -1003,6 +1003,18 @@ public class WorldBuilder {
                 return;
             }
 
+            // Building.Def unavailable (cloned GO has no Building component in headless mode).
+            // Fall back to the registered BuildingDef from Assets — always reliable for buildings.
+            if (building == null) {
+                var registeredDef = Assets.GetBuildingDef(id);
+                var registeredSize = ReadBuildingDefSize(registeredDef);
+                if (registeredSize.HasValue) {
+                    _prefabSizeMap[id] = registeredSize.Value;
+                    Console.WriteLine($"[EntitySize] id={id} → {registeredSize.Value.w}×{registeredSize.Value.h} (Assets.GetBuildingDef)");
+                    return;
+                }
+            }
+
             // Fallback for critters/dupes/other: OccupyArea offsets → KBoxCollider2D
             var occupy = go.GetComponent<OccupyArea>();
             int ew = 1, eh = 1;
