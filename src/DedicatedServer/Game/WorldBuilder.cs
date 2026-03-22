@@ -647,10 +647,9 @@ public class WorldBuilder {
         // try-catch, so a single bad config ctor aborts the entire loop → 0 defs registered.
         // Our version wraps BOTH ctor and RegisterBuilding in per-config try-catch.
         //
-        // Expected outcome: 1000+ of ~1433 configs succeed.
-        // Expected failures: rendering-heavy configs (KBatchedAnimController NPE in
-        //   BuildingLoader.CreateBuildingComplete → Add2DComponents). Buildings without
-        //   AnimFiles (flag=false) or with BlockTileAtlas take a different path and mostly succeed.
+        // Actual outcome: 463/463 (all non-DLC-excluded) configs register successfully.
+        // KBatchedAnimController does NOT NPE because Assets.GetAnim() is pre-patched
+        // by PatchInternalCalls (4th arg) to return a stub KAnimFile in headless mode.
         var configType = typeof(IBuildingConfig);
         var types = typeof(BuildingConfigManager).Assembly.GetTypes()
             .Where(t => configType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
@@ -668,7 +667,7 @@ public class WorldBuilder {
             } catch (Exception ex) {
                 failed++;
                 if (failed <= 5) {
-                    Console.WriteLine($"[BuildingDef] FAIL [{type.Name}]: {ex.GetBaseException().GetType().Name}: {ex.GetBaseException().Message}");
+                    Console.WriteLine($"[BuildingDef] FAIL [{type.Name}]: {ex}");
                 }
             }
         }
