@@ -488,6 +488,22 @@ public class WorldBuilder {
         StateMachineManager.Instance.Clear();
         StateMachine.Instance.error = false;
 
+        // GameScheduler: initialized via Awake("GameScheduler", ...) at line 345, but
+        // OnPrefabInit() → RegisterScheduler may have crashed if StateMachineManager
+        // wasn't yet ready. Regardless, Instance=this is set before RegisterScheduler
+        // (first line of OnPrefabInit), so this re-init guard only fires if the Awake call
+        // itself failed. Ensures Schedule() calls from IdleChore.Begin() and others do not NPE.
+        if (GameScheduler.Instance == null) {
+            Console.WriteLine("[WorldBuilder] GameScheduler.Instance was null — re-initializing");
+            var gsGo = new GameObject("GameScheduler");
+            var gs = gsGo.AddComponent<GameScheduler>();
+            try { gs.InitializeComponent(); }
+            catch (Exception ex) {
+                Console.WriteLine($"[WorldBuilder] GameScheduler.InitializeComponent partial: {ex.GetBaseException().Message}");
+            }
+            Console.WriteLine($"[WorldBuilder] GameScheduler.Instance after re-init: {GameScheduler.Instance != null}");
+        }
+
         // ClusterManager is needed by ChoreProvider.AddChore / CollectChores via:
         //   GetMyParentWorldId() → GetMyWorld() → ClusterManager.Instance.GetWorld(worldId)
         // Without it: NPE fires 7,000+ times/tick, choreWorldMap never populated → localChores=0.
@@ -609,6 +625,55 @@ public class WorldBuilder {
         brainScheduler.Spawn();
         global::Game.BrainScheduler = brainScheduler;
         Console.WriteLine("[WorldBuilder] BrainScheduler ready");
+
+        // NameDisplayScreen: needed by OxygenBreather.OnSpawn() line 142:
+        //   NameDisplayScreen.Instance.RegisterComponent(base.gameObject, this)
+        // Without Instance, this NPEs and logs an error for EVERY dupe spawned.
+        // Only InitializeComponent() (→ OnPrefabInit → Instance = this) is called.
+        // OnSpawn() is intentionally NOT called: it registers with Components.Health/Equipment
+        // and binds overlay events — all render-only, not needed in headless.
+        if (NameDisplayScreen.Instance == null) {
+            try {
+                var ndsGo = new GameObject("NameDisplayScreen");
+                var nds = ndsGo.AddComponent<NameDisplayScreen>();
+                nds.InitializeComponent(); // OnPrefabInit → Instance = this
+                Console.WriteLine($"[WorldBuilder] NameDisplayScreen.Instance ready: {NameDisplayScreen.Instance != null}");
+            } catch (Exception ex) {
+                Console.WriteLine($"[WorldBuilder] NameDisplayScreen init partial: {ex.GetBaseException().Message}");
+            }
+        }
+
+        // SaveLoader: needed by Traits.OnSpawn() line 41:
+        //   SaveLoader.Instance.GameInfo.IsVersionOlderThan(7, 15)
+        // Without Instance, this NPEs and logs an error for EVERY dupe spawned.
+        // Only InitializeComponent() (→ OnPrefabInit → Instance = this) is called.
+        // OnSpawn() is intentionally NOT called: it triggers full save-file loading (fatal in headless).
+        // GameInfo is set to a modern version (7.37) so IsVersionOlderThan(7, 15) returns false →
+        // Traits.OnSpawn() returns early and skips the legacy joy-trait migration (correct for
+        // freshly-generated headless worlds).
+        if (SaveLoader.Instance == null) {
+            try {
+                var slGo = new GameObject("SaveLoader");
+                var sl = slGo.AddComponent<SaveLoader>(); // OnPrefabInit → Instance = this (called below)
+                sl.InitializeComponent();
+                // Default SaveGame.GameInfo is zeroed (saveMajorVersion=0) → IsVersionOlderThan(7,15)=true
+                // → migration path runs and tries to call game APIs unavailable in headless.
+                // Set to a current version (7.37) so the migration check returns false and exits early.
+                var gameInfoField = typeof(SaveLoader).GetField(
+                    "<GameInfo>k__BackingField",
+                    BindingFlags.NonPublic | BindingFlags.Instance);
+                if (gameInfoField != null && SaveLoader.Instance != null) {
+                    var info = default(SaveGame.GameInfo);
+                    info.saveMajorVersion = 7;
+                    info.saveMinorVersion = 37;
+                    gameInfoField.SetValue(SaveLoader.Instance, info);
+                }
+                Console.WriteLine($"[WorldBuilder] SaveLoader.Instance ready: {SaveLoader.Instance != null}, " +
+                    $"GameInfo={SaveLoader.Instance?.GameInfo.saveMajorVersion}.{SaveLoader.Instance?.GameInfo.saveMinorVersion}");
+            } catch (Exception ex) {
+                Console.WriteLine($"[WorldBuilder] SaveLoader init partial: {ex.GetBaseException().Message}");
+            }
+        }
     }
 
     // TODO: replace with game's own asset loading
