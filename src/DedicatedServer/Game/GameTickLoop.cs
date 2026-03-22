@@ -484,29 +484,28 @@ public class GameTickLoop {
     /// the SM framework's internal (State.Callback)action.callback cast still succeeds.
     /// </summary>
     private static void PatchMoveActions(IdleChore.States states) {
-        var enterCount = states.idle.move.enterActions?.Count ?? 0;
-        var exitCount  = states.idle.move.exitActions?.Count ?? 0;
-        Console.WriteLine($"[DS] IdleChore PatchMoveActions: enterActions={enterCount} exitActions={exitCount}");
         WrapActions(states.idle.move.enterActions, "enter");
         WrapActions(states.idle.move.exitActions,  "exit");
     }
 
     /// <summary>
-    /// Replaces every callback in the given action list with a null-safe wrapper.
-    /// The wrapper skips the original call when smi.animController is null (headless).
-    /// In the real game animController is always non-null — no behaviour change.
+    /// Replaces every callback in the given action list with a wrapper that skips
+    /// animation-dependent actions in headless (assets never loaded in DedicatedServer).
+    ///
+    /// Root cause: Assets.GetAnim() returns null in headless → ToggleAnims calls
+    /// AddAnimOverrides(null) → KAnimControllerBase.AddAnimOverrides logs the error
+    /// but continues → kanim_file.GetData() NPE (line 825) → SM.error=true → dupe freezes.
+    ///
+    /// Fix: skip actions identified by name as animation-asset-dependent.
+    /// All other actions (MoveTo, UpdateNavType, Trigger(BeginWalk/EndWalk), Transition)
+    /// execute normally — they have no dependency on loaded animation assets.
     /// </summary>
     private static void WrapActions(List<StateMachine.Action> actions, string listName) {
-        if (actions == null) {
-            Console.WriteLine($"[DS] IdleChore WrapActions({listName}): list is null — nothing to patch");
-            return;
-        }
+        if (actions == null) return;
+
         for (var i = 0; i < actions.Count; i++) {
             var originalDelegate = actions[i].callback as Delegate;
-            if (originalDelegate == null) {
-                Console.WriteLine($"[DS] IdleChore WrapActions({listName})[{i}] '{actions[i].name}': callback not a Delegate — skipping");
-                continue;
-            }
+            if (originalDelegate == null) continue;
 
             // Convert original to Action<StatesInstance> to invoke without DynamicInvoke.
             // All SM callbacks have the same single-parameter signature.
@@ -515,16 +514,13 @@ public class GameTickLoop {
                 originalDelegate.Target,
                 originalDelegate.Method);
 
-            // Capture name for closure (loop variable would be captured by ref otherwise).
+            // Capture name for closure (loop variable captured by ref would alias later iterations).
             var actionName = actions[i].name;
 
-            // Null-safe wrapper: skip call when animController is null (headless).
-            // Diagnostic log fires on EVERY invocation so we can confirm the wrapper is reached.
+            // Skip animation-asset actions; run all others unchanged.
             Action<IdleChore.StatesInstance> wrapper = smi => {
-                Console.WriteLine("[DS] WrapActions wrapper fired: action=" + actionName
-                    + " animController=" + (smi?.animController == null ? "NULL" : "OK"));
-                if (smi?.animController != null)
-                    captured(smi);
+                if (IsAnimAction(actionName)) return;
+                captured(smi);
             };
 
             // Restore original runtime delegate type so (State.Callback)action.callback cast works.
@@ -535,7 +531,20 @@ public class GameTickLoop {
 
             // StateMachine.Action is a struct — must replace by index.
             actions[i] = new StateMachine.Action(actions[i].name, patched);
-            Console.WriteLine($"[DS] IdleChore WrapActions({listName})[{i}] '{actions[i].name}': wrapped");
         }
     }
+
+    /// <summary>
+    /// Returns true for action names that call into KAnimControllerBase with a KAnimFile
+    /// loaded from Assets. In DedicatedServer, Assets.GetAnim() always returns null, so
+    /// these actions would NPE inside AddAnimOverrides/RemoveAnimOverrides.
+    ///
+    /// Actions NOT listed here (MoveTo, UpdateNavType, Trigger(BeginWalk/EndWalk),
+    /// Transition) have no asset dependency and execute normally.
+    /// </summary>
+    private static bool IsAnimAction(string name) =>
+        name != null && (
+            name.Contains("ToggleAnims") ||   // AddAnimOverrides / RemoveAnimOverrides
+            name == "ClearWalk"               // smi.animController.Play("idle_default")
+        );
 }
