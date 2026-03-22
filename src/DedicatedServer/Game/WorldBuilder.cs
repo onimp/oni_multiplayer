@@ -200,6 +200,31 @@ public class WorldBuilder {
                     Console.WriteLine($"[Grid] After Sim.Start(): solid={solidCount} vacuum={vacuumCount} nonVacuum={nonVacuumCount} total={Grid.CellCount}");
                 }
 
+                // N2: Tell SimDLL the world boundaries. Without this, SimDLL doesn't know which
+                // cells belong to each world → SimMessages.ClearUnoccupiedCells has no effect →
+                // gas cells outside world borders remain as vacuum → printer area stays vacuum.
+                // Mirrors SaveLoader line 1005-1013 (new-game path from WorldGen).
+                {
+                    var sp = SpawnData?.baseStartPos ?? new Vector2I(Width / 2, Height / 2);
+                    Console.WriteLine($"[N2] baseStartPos=({sp.x},{sp.y}) — 5×5 cells BEFORE DefineWorldOffsets:");
+                    LogCellArea(sp.x, sp.y, 2);
+
+                    var worldOffsets = cluster.worlds.Select(w => new SimMessages.WorldOffsetData {
+                        worldOffsetX = w.WorldOffset.x,
+                        worldOffsetY = w.WorldOffset.y,
+                        worldSizeX   = w.WorldSize.x,
+                        worldSizeY   = w.WorldSize.y
+                    }).ToList();
+                    Console.WriteLine($"[N2] DefineWorldOffsets: {worldOffsets.Count} world(s): " +
+                        string.Join(", ", worldOffsets.Select(wo => $"off=({wo.worldOffsetX},{wo.worldOffsetY}) sz=({wo.worldSizeX},{wo.worldSizeY})")));
+                    SimMessages.DefineWorldOffsets(worldOffsets);
+                    Sim.HandleMessage(SimMessageHashes.ClearUnoccupiedCells, 0, null);
+                    Console.WriteLine("[N2] DefineWorldOffsets + ClearUnoccupiedCells sent");
+
+                    Console.WriteLine($"[N2] 5×5 cells AFTER DefineWorldOffsets:");
+                    LogCellArea(sp.x, sp.y, 2);
+                }
+
                 // NavGrids were built in InitializeWorld() via new GameNavGrids() → NavGrid ctor
                 // → InitializeGraph(). At that time Grid.Solid was all-false (all vacuum), so the
                 // FloorValidator produced zero valid floor cells → no floor transitions.
@@ -1425,6 +1450,26 @@ public class WorldBuilder {
             }
         } catch (Exception ex) {
             Console.WriteLine($"[PrinterDiag:{label}] Error: {ex.GetBaseException().Message}");
+        }
+    }
+
+    /// <summary>
+    /// Logs element name + mass for a (2*radius+1)×(2*radius+1) area centred on (cx,cy).
+    /// Used to diagnose whether gas cells exist around the printer before/after N2 fixes.
+    /// </summary>
+    private static void LogCellArea(int cx, int cy, int radius) {
+        var w = Grid.WidthInCells;
+        for (var dy = radius; dy >= -radius; dy--) {
+            var row = new System.Text.StringBuilder();
+            for (var dx = -radius; dx <= radius; dx++) {
+                var cell = (cy + dy) * w + (cx + dx);
+                if (!Grid.IsValidCell(cell)) { row.Append(" [INV]"); continue; }
+                var elem = Grid.Element[cell];
+                var mass = Grid.Mass[cell];
+                var solid = Grid.Solid[cell] ? "S" : " ";
+                row.Append($" [{solid}{elem?.tag.ToString() ?? "?"}:{mass:F1}]");
+            }
+            Console.WriteLine($"[CellArea] y={cy + dy}:{row}");
         }
     }
 
