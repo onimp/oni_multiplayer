@@ -702,6 +702,33 @@ public class WorldBuilder {
             }
         }
         Console.WriteLine($"[BuildingDef] Registered {success}/{types.Count} building defs ({failed} failed, {skipped} DLC-skipped)");
+
+        // Harvest BuildingDef sizes from configTable even for configs whose full registration
+        // failed at BuildingLoader.Add2DComponents (rendering NPE).
+        // configTable[config] = buildingDef is set at RegisterBuilding line 70, BEFORE
+        // CreateBuildingComplete/Add2DComponents crash at line 85. So configTable holds defs
+        // for ALL successfully CreateBuildingDef()-able configs regardless of Add2DComponents.
+        // This populates _prefabSizeMap and _buildingDefCache so HQ/Telepad/GeneShuffler etc.
+        // have correct sizes in /api/entities even when PlaceBuilding returns null for them.
+        var sizePopulated = 0;
+        try {
+            foreach (var kvp in BuildingConfigManager.Instance.configTable) {
+                var def = kvp.Value;
+                if (def == null) continue;
+                var size = ReadBuildingDefSize(def);
+                if (!size.HasValue) continue;
+                if (!_prefabSizeMap.ContainsKey(def.PrefabID)) {
+                    _prefabSizeMap[def.PrefabID] = size.Value;
+                    sizePopulated++;
+                }
+                if (!_buildingDefCache.ContainsKey(def.PrefabID))
+                    _buildingDefCache[def.PrefabID] = def;
+            }
+        } catch (Exception ex) {
+            Console.WriteLine($"[BuildingDef] configTable harvest failed: {ex.GetBaseException().Message}");
+        }
+        Console.WriteLine($"[BuildingDef] SizeMap populated from configTable: {sizePopulated} entries. " +
+            $"HQ size: {(_prefabSizeMap.TryGetValue("Headquarters", out var hqSz) ? $"{hqSz.w}x{hqSz.h}" : "missing")}");
     }
 
     private void RegisterEntities() {
@@ -954,7 +981,11 @@ public class WorldBuilder {
                         }
                     }
                 } else {
-                    Console.WriteLine($"[Entities] Building skipped (no def or invalid cell): {b.id}");
+                    var skipDef  = Assets.GetBuildingDef(b.id);
+                    var skipCell = b.location_y * Grid.WidthInCells + b.location_x;
+                    Console.WriteLine($"[BuildingSkip] {b.id}: def={skipDef != null} " +
+                        $"cell={skipCell} cellValid={Grid.IsValidCell(skipCell)} " +
+                        $"xy=({b.location_x},{b.location_y}) sizeMapHasIt={_prefabSizeMap.ContainsKey(b.id)}");
                     skipped++;
                 }
             }
