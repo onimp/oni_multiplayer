@@ -128,6 +128,9 @@ public static class MinionPrefab {
             BaseMinionConfig.BaseOnSpawn(go, new Tag("Minion"), BaseMinionConfig.BaseRationalAiStateMachines());
             baseOnSpawnOk = true;
             Debug.LogWarning($"[FixRationalAi] {go.name}: baseOnSpawnOk=True");
+            // DS-007 (success path): own ChoreProvider in providers.
+            var consumerSuccess = go.GetComponent<ChoreConsumer>();
+            if (consumerSuccess != null) consumerSuccess.AddProvider(go.GetComponent<ChoreProvider>());
         } catch (Exception ex) {
             // Full chain: type, message, full stack, inner exception
             Debug.LogWarning($"[FixRationalAi] {go.name}: BaseOnSpawn EXCEPTION: {ex.GetType().Name}: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}");
@@ -157,6 +160,13 @@ public static class MinionPrefab {
             var idleMonitorSmi = new IdleMonitor.Instance(smc);
             idleMonitorSmi.StartSM();
             Console.WriteLine($"[FixRationalAi] {go.name}: fallback IdleMonitor started");
+            // DS-007 (fallback path): own ChoreProvider in providers.
+            // BaseOnSpawn crashed at ARS — providers list was never populated.
+            // Must be here, immediately after IdleMonitor.StartSM(), so the IdleChore
+            // that just got added to ChoreProvider is visible to FindNextChore.
+            // This is the guaranteed execution path: BaseOnSpawn crashes for all 3 dupes.
+            var consumerFallback = go.GetComponent<ChoreConsumer>();
+            if (consumerFallback != null) consumerFallback.AddProvider(go.GetComponent<ChoreProvider>());
 
             StartMonitor<BreathMonitor>(smc,  "BreathMonitor");
             StartMonitor<CalorieMonitor>(smc, "CalorieMonitor");
@@ -219,17 +229,6 @@ public static class MinionPrefab {
             // (UnityRuntime.TriggerLifecycle adds it before Phase 2 → OnSpawn → StartSM → ctor).
             // No post-hoc retrofit needed here.
         }
-
-        // DS-007: ensure the dupe's own ChoreProvider is in ChoreConsumer.providers.
-        // MinionModifiers.OnSpawn() normally calls AddProvider(GlobalChoreProvider.Instance)
-        // AND AddProvider(choreProvider) via OnPrefabInit's providers.Add(choreProvider).
-        // For clones whose providers list was reset to empty by CloneSingle (fdb3d2c),
-        // MinionModifiers.OnSpawn() may not re-run → list stays empty → FindNextChore
-        // iterates 0 providers → always returns false → no chore assigned → no movement.
-        // Same single-line fix as CreaturePrefab.Setup().
-        var consumer = go.GetComponent<ChoreConsumer>();
-        if (consumer != null)
-            consumer.AddProvider(go.GetComponent<ChoreProvider>());
 
         // Spawn Brain — sets running=true + choreConsumer + registers with BrainScheduler.
         // Without this: Brain.IsRunning()=false → BrainGroup.RenderEveryTick skips brain
