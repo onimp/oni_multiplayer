@@ -22,6 +22,10 @@ public class GameTickLoop {
     // IdleCellSensor runs once at tick≈5 (PathGrid cold → idleCell=-1) then never reruns.
     // By tick 60 (≈12s) AsyncPathProber has warmed PathGrid → sensors re-run → idleCell≠-1.
     private const int SensorWarmupTick = 60;
+    // One tick after sensor warmup: force Brain.UpdateBrain() on all brains.
+    // UpdateBrain → UpdateChores → FindBetterChore → choreConsumer.choreDriver.SetChore
+    // → ChoreDriver transitions nochore→haschore → BeginChore → chore running.
+    private const int ChoreKickTick = 61;
 
     private float _accumulatedTime;
     private int _simSubTick;
@@ -81,6 +85,27 @@ public class GameTickLoop {
         if (_tickCount == SensorWarmupTick) {
             ForceUpdateSensors();
         }
+        // tick=61: one frame after sensors warmed → force Brain.UpdateBrain() on every brain.
+        // BrainScheduler may not have fired yet (suspended brains, cold start).
+        // UpdateBrain → UpdateChores → FindBetterChore → choreDriver.SetChore
+        // → ChoreDriver nochore→haschore → BeginChore → chore starts.
+        if (_tickCount == ChoreKickTick) {
+            ForceUpdateBrains();
+        }
+    }
+
+    private static void ForceUpdateBrains() {
+        var updated = 0;
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null) continue;
+            try {
+                brain.UpdateBrain();
+                updated++;
+            } catch (Exception e) {
+                Console.WriteLine($"[DS-005] ForceUpdateBrains: {brain.name} error: {e.GetBaseException().Message}");
+            }
+        }
+        Console.WriteLine($"[DS-005] ForceUpdateBrains at tick={ChoreKickTick}: kicked {updated} brain(s)");
     }
 
     private static void ForceUpdateSensors() {

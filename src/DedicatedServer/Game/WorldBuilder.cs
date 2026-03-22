@@ -1053,27 +1053,6 @@ public class WorldBuilder {
 
         Console.WriteLine($"[WorldBuilder] FixChoreConsumers() called: tracked={_spawnedMinions.Count}, LiveMinions={Components.LiveMinionIdentities.Count}, Brains={Components.Brains.Count}");
 
-        // Step 0: force ChoreProvider and ChoreDriver initialization for any Minion
-        // where the lifecycle didn't complete (isInitialized=false → Spawn() bails early).
-        foreach (var go in minionGOs) {
-            try {
-                var provider = go.GetComponent<ChoreProvider>();
-                if (provider != null && !provider.IsInitialized()) {
-                    provider.InitializeComponent();
-                    provider.Spawn();
-                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreProvider for {go.name}");
-                }
-                var driver = go.GetComponent<ChoreDriver>();
-                if (driver != null && !driver.IsInitialized()) {
-                    driver.InitializeComponent();
-                    driver.Spawn();
-                    Console.WriteLine($"[WorldBuilder] Force-initialized ChoreDriver for {go.name}");
-                }
-            } catch (Exception ex) {
-                Console.WriteLine($"[WorldBuilder] ChoreProvider/Driver init failed for {go.name}: {ex.GetBaseException().Message}");
-            }
-        }
-
         // Step 1: assign default schedule to all Minions not yet scheduled.
         // Must happen BEFORE creating ChoreConsumerState — its ctor calls
         // schedulable.GetSchedule().GetCurrentScheduleBlock() which NPEs on null schedule.
@@ -1105,6 +1084,47 @@ public class WorldBuilder {
             if (brain?.gameObject != null) allBrainGOs.Add(brain.gameObject);
         }
 
+        // Step 0: force ChoreProvider and ChoreDriver initialization for any entity
+        // where the lifecycle didn't complete (isInitialized=false → Spawn() bails early,
+        // OR isInitialized=true but isSpawned=false → OnSpawn never ran → SM not started).
+        // Cover ALL brains (dupes + critters), not just minionGOs.
+        foreach (var go in allBrainGOs) {
+            try {
+                var provider = go.GetComponent<ChoreProvider>();
+                if (provider != null && !provider.IsInitialized()) {
+                    provider.InitializeComponent();
+                    provider.Spawn();
+                    Console.WriteLine($"[FixChoreConsumers] Force-initialized ChoreProvider for {go.name}");
+                }
+                var driver = go.GetComponent<ChoreDriver>();
+                if (driver != null) {
+                    var needsInit  = !driver.IsInitialized();
+                    var needsSpawn = driver.IsInitialized() && !driver.isSpawned;
+                    // Case 1: never initialized → Init then Spawn
+                    if (needsInit) {
+                        driver.InitializeComponent();
+                        driver.Spawn();
+                        Console.WriteLine($"[FixChoreConsumers] Force-initialized+spawned ChoreDriver for {go.name}");
+                    }
+                    // Case 2: initialized but OnSpawn() never ran (SM not started) → Spawn only
+                    else if (needsSpawn) {
+                        driver.Spawn();
+                        Console.WriteLine($"[FixChoreConsumers] Force-spawned ChoreDriver (was init but !isSpawned) for {go.name}");
+                    }
+                    // Case 3: initialized + spawned but SM not running → start SMI directly
+                    else if (driver.isSpawned) {
+                        var smiInst = driver.GetSMI() as ChoreDriver.StatesInstance;
+                        if (smiInst != null && !smiInst.IsRunning()) {
+                            smiInst.StartSM();
+                            Console.WriteLine($"[FixChoreConsumers] Force-started ChoreDriver SM for {go.name}");
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                Console.WriteLine($"[FixChoreConsumers] ChoreProvider/Driver init failed for {go.name}: {ex.GetBaseException().Message}");
+            }
+        }
+
         var fixedCount = 0;
         foreach (var go in allBrainGOs) {
             try {
@@ -1117,10 +1137,15 @@ public class WorldBuilder {
             }
         }
 
-        // Diagnostic: log ChoreDriver initialization state for each Minion.
-        foreach (var go in minionGOs) {
+        // Diagnostic: log ChoreDriver/Brain state for each minion and critter brain.
+        foreach (var go in allBrainGOs) {
             var driver = go.GetComponent<ChoreDriver>();
-            Console.WriteLine($"[FixChoreConsumers] {go.name}: ChoreDriver={driver != null} isInit={driver?.IsInitialized()} consumerState={go.GetComponent<ChoreConsumer>()?.consumerState != null} sensors={go.GetComponent<Sensors>() != null}");
+            var brain  = go.GetComponent<Brain>();
+            var cc     = go.GetComponent<ChoreConsumer>();
+            var smiInst = driver?.GetSMI() as ChoreDriver.StatesInstance;
+            Console.WriteLine($"[FixChoreConsumers] {go.name}: " +
+                $"driver={driver != null} init={driver?.IsInitialized()} spawned={driver?.isSpawned} smRunning={smiInst?.IsRunning()} " +
+                $"brainRunning={brain?.IsRunning()} consumerState={cc?.consumerState != null}");
         }
         Console.WriteLine($"[WorldBuilder] FixChoreConsumers done: {fixedCount}/{allBrainGOs.Count} consumerState(s) created (minions={minionGOs.Count} brains={Components.Brains.Count})");
     }
