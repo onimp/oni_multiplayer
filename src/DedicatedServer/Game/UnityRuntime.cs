@@ -38,6 +38,19 @@ public static class UnityRuntime {
     private static readonly FieldInfo _smcStateMachinesField =
         typeof(StateMachineController).GetField(
             "stateMachines", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    // Reflection cache: ChoreConsumer.providers (private List<ChoreProvider>).
+    // Same shallow-copy issue: all cloned ChoreConsumers share the prefab's providers list.
+    // OnPrefabInit for each dupe calls providers.Add(this.choreProvider) on the shared list.
+    // BUT if the save-load order causes providers to be populated only for the first dupe before
+    // subsequent clones are made, dupes 1+N start with a list already containing dupe 0's CP only.
+    // FindNextChore iterates providers → only searches dupe 0's ChoreProvider → finds dupe 0's
+    // IdleChore (driver != null) → IsPreemptable fails → dupes 1+N stuck in nochore, no movement.
+    // Fix: assign a fresh empty list to each cloned ChoreConsumer so OnPrefabInit populates only
+    // that dupe's own ChoreProvider → each dupe's providers = [own CP only].
+    private static readonly FieldInfo _choreConsumerProvidersField =
+        typeof(ChoreConsumer).GetField(
+            "providers", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly HashSet<IntPtr> SpawnedObjects = new();
 
     // --- Stats ---
@@ -218,12 +231,27 @@ public static class UnityRuntime {
                         .GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
                         .Invoke(srcComp, null);
                     cloneComp.m_CachedPtr = new IntPtr(NextId());
-                    // Break shared-list reference on StateMachineController clones.
-                    // MemberwiseClone copies the stateMachines List<> reference — all clones
-                    // from the same prefab would share one list → only the first dupe's SMIs
-                    // ever run → 1 IdleChore for all dupes → movement broken for dupes 1+N.
-                    if (cloneComp is StateMachineController)
-                        _smcStateMachinesField?.SetValue(cloneComp, new List<StateMachine.Instance>());
+                    // Break shared mutable-collection references introduced by MemberwiseClone.
+                    // All field-initializer collections (new List<>/new Dictionary<>()) are shared
+                    // across all clones from the same prefab — each clone needs its own instance.
+                    switch (cloneComp) {
+                        case StateMachineController:
+                            // stateMachines: shared → only first dupe's SMIs run → 1 IdleChore.
+                            _smcStateMachinesField?.SetValue(cloneComp, new List<StateMachine.Instance>());
+                            break;
+                        case ChoreConsumer:
+                            // providers: shared → all dupes iterate the same ChoreProvider list.
+                            // If list is populated with only dupe 0's CP (timing-dependent),
+                            // dupes 1+N never find their own IdleChore → stuck in nochore.
+                            _choreConsumerProvidersField?.SetValue(cloneComp, new List<ChoreProvider>());
+                            break;
+                        case ChoreProvider cp:
+                            // choreWorldMap: shared → all dupes' IdleChores land in the same
+                            // bucket. With providers fixed to [own CP], each dupe queries its
+                            // own CP which holds its own set of chores — no cross-contamination.
+                            cp.choreWorldMap = new Dictionary<int, List<Chore>>();
+                            break;
+                    }
                     ComponentToGameObject[cloneComp.m_CachedPtr] = clone;
                     cloneComponents.Add(cloneComp);
                 }

@@ -47,6 +47,11 @@ public class DupeMovementTest : PlayableGameTest {
         typeof(StateMachineController)
             .GetField("stateMachines", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
+    // Reflection accessor for ChoreConsumer.providers (private List<ChoreProvider>).
+    private static readonly FieldInfo _choreConsumerProvidersField =
+        typeof(ChoreConsumer)
+            .GetField("providers", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
     [SetUp]
     public void SetUp() {
         Singleton<StateMachineManager>.Instance.Clear();
@@ -222,6 +227,100 @@ public class DupeMovementTest : PlayableGameTest {
             "smc1 and smc3 must have different IdleMonitor instances.");
         Assert.AreNotSame(smc2.GetSMI<IdleMonitor.Instance>(), smc3.GetSMI<IdleMonitor.Instance>(),
             "All three IdleMonitor instances must be unique objects.");
+    }
+
+    // ── Shared providers / choreWorldMap: same MemberwiseClone issue ──────────
+
+    /// <summary>
+    /// Documents root cause: MemberwiseClone(ChoreConsumer) shares the providers list.
+    ///
+    /// Same shallow-copy pattern as SMC.stateMachines. All clones from the same prefab share
+    /// the same providers List reference. If the list is populated with only dupe 0's CP
+    /// before subsequent clones are made, dupes 1+N start with [dupe0_CP] in their providers.
+    /// FindNextChore iterates providers → only searches dupe 0's ChoreProvider → finds dupe 0's
+    /// IdleChore (chore.driver != null) → IsPreemptable fails → stuck in nochore.
+    /// </summary>
+    [Test]
+    public void ChoreConsumer_MemberwiseClone_SharesProvidersList() {
+        var go       = createGameObject();
+        var consumer = go.AddComponent<ChoreConsumer>();
+
+        var cloned = (ChoreConsumer) typeof(object)
+            .GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(consumer, null);
+
+        var list1 = _choreConsumerProvidersField.GetValue(consumer);
+        var list2 = _choreConsumerProvidersField.GetValue(cloned);
+
+        Assert.AreSame(list1, list2,
+            "MemberwiseClone produces a shallow copy — providers list is SHARED. " +
+            "If populated with dupe 0's CP before dupes 1+2 are cloned, " +
+            "FindNextChore for dupes 1+2 only searches dupe 0's ChoreProvider.");
+    }
+
+    /// <summary>
+    /// Verifies the fix: resetting providers on each clone gives independent lists.
+    /// Each dupe's OnPrefabInit then adds only its own ChoreProvider → providers = [own CP].
+    /// FindNextChore searches only the dupe's own chores → finds own IdleChore → movement.
+    /// </summary>
+    [Test]
+    public void ChoreConsumer_AfterFix_ClonedConsumerHasFreshProvidersList() {
+        var go       = createGameObject();
+        var consumer = go.AddComponent<ChoreConsumer>();
+
+        var cloned = (ChoreConsumer) typeof(object)
+            .GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(consumer, null);
+
+        // THE FIX: reset providers on the clone (mirrors CloneSingle change).
+        _choreConsumerProvidersField.SetValue(cloned, new List<ChoreProvider>());
+
+        var list1 = _choreConsumerProvidersField.GetValue(consumer);
+        var list2 = _choreConsumerProvidersField.GetValue(cloned);
+
+        Assert.AreNotSame(list1, list2,
+            "After fix: each cloned ChoreConsumer has its own providers list.");
+        Assert.AreEqual(0, ((List<ChoreProvider>) list2!).Count,
+            "The clone's providers list must be empty so OnPrefabInit populates it fresh.");
+    }
+
+    /// <summary>
+    /// Integration: after CloneSingle fix, 3 dupes' ChoreConsumers have independent
+    /// providers lists. Each dupe's FindNextChore searches only its own ChoreProvider.
+    /// </summary>
+    [Test]
+    public void ThreeDupes_IndependentProvidersList_EachDupeSearchesOwnProvider() {
+        var go1       = createGameObject();
+        var go2       = createGameObject();
+        var go3       = createGameObject();
+        go1.AddComponent<KPrefabID>();
+        go2.AddComponent<KPrefabID>();
+        go3.AddComponent<KPrefabID>();
+        var cp1       = go1.AddComponent<ChoreProvider>();
+        var cp2       = go2.AddComponent<ChoreProvider>();
+        var cp3       = go3.AddComponent<ChoreProvider>();
+        var consumer1 = go1.AddComponent<ChoreConsumer>();
+        var consumer2 = go2.AddComponent<ChoreConsumer>();
+        var consumer3 = go3.AddComponent<ChoreConsumer>();
+
+        // Simulate post-fix: each ChoreConsumer has its own fresh providers list.
+        // Add only own ChoreProvider (mirrors OnPrefabInit behaviour).
+        consumer1.AddProvider(cp1);
+        consumer2.AddProvider(cp2);
+        consumer3.AddProvider(cp3);
+
+        var list1 = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(consumer1)!;
+        var list2 = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(consumer2)!;
+        var list3 = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(consumer3)!;
+
+        Assert.AreNotSame(list1, list2,  "Dupe 0 and dupe 1 must have different providers lists.");
+        Assert.AreNotSame(list1, list3,  "Dupe 0 and dupe 2 must have different providers lists.");
+        Assert.AreEqual(1, list1.Count,  "Dupe 0 providers must contain exactly 1 entry (own CP).");
+        Assert.AreEqual(1, list2.Count,  "Dupe 1 providers must contain exactly 1 entry (own CP).");
+        Assert.AreEqual(1, list3.Count,  "Dupe 2 providers must contain exactly 1 entry (own CP).");
+        Assert.AreSame(cp1, list1[0],    "Dupe 0's providers[0] must be its own ChoreProvider.");
+        Assert.AreSame(cp2, list2[0],    "Dupe 1's providers[0] must be its own ChoreProvider.");
+        Assert.AreSame(cp3, list3[0],    "Dupe 2's providers[0] must be its own ChoreProvider.");
     }
 
     // ── World-ID reindex: chores mis-keyed under -1 move to correct key ───────
