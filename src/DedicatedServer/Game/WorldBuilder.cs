@@ -356,6 +356,12 @@ public class WorldBuilder {
         // Navigator SM not started → CreatureBrainGroup.RenderEveryTick skips them → no chore picked.
         FixCreatureBrains();
 
+        // Safety net: clear global SM error flag after all SMs are started.
+        // A single SM crash during Setup (e.g. dupe 0's StressMonitor) sets
+        // StateMachine.Instance.error=True, which halts ALL GoTo calls on ALL dupes.
+        // After Setup we know which SMs are running; a stale error flag must not poison tick 1+.
+        StateMachine.Instance.error = false;
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         WorldState = new RealWorldState(Width, Height, this);
@@ -438,6 +444,25 @@ public class WorldBuilder {
             InitDbField(ref db.ArtableStatuses, () => new ArtableStatuses(root), "ArtableStatuses");
             InitDbField(ref db.Permits, () => new PermitResources(root), "Permits");
             InitDbField(ref db.Spices, () => new Spices(root), "Spices");
+
+            // AccessorySlots constructor crashes in its AddAccessories() loop (null KAnimFiles in headless).
+            // However ALL slot fields (Eyes, Hair, HeadEffects, etc.) are assigned in the constructor
+            // BEFORE the crash. We create an uninitialized instance via FormatterServices, then invoke
+            // the constructor on it. After the constructor throws, the instance retains all slot fields.
+            // Without this: FaceGraph.UpdateFace() → Db.Get().AccessorySlots.HeadEffects → NPE →
+            //   StressMonitor sm crashes → globalSMError=True → ALL dupe SMs frozen.
+            if (db.AccessorySlots == null) {
+                var slotsObj = (AccessorySlots)System.Runtime.Serialization.FormatterServices
+                    .GetUninitializedObject(typeof(AccessorySlots));
+                var slotsCtor = typeof(AccessorySlots).GetConstructor(
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public,
+                    null, new[] { typeof(ResourceSet) }, null);
+                try { slotsCtor?.Invoke(slotsObj, new object[] { root }); }
+                catch { /* AddAccessories(null) throws — slot fields (incl HeadEffects) already set */ }
+                db.AccessorySlots = slotsObj;
+                Console.WriteLine($"[Db] AccessorySlots partial init: HeadEffects={db.AccessorySlots.HeadEffects?.Id ?? "NULL"}");
+            }
+
             Console.WriteLine("[WorldBuilder] Db.Initialize: AccessorySlots skipped, remaining fields initialized");
         }
         Console.WriteLine($"[WorldBuilder] Db: Diseases={Db._Instance.Diseases != null}, MiscStatusItems={Db._Instance.MiscStatusItems != null}, ChoreTypes={Db._Instance.ChoreTypes != null}, AssignableSlots={Db._Instance.AssignableSlots != null}");
