@@ -106,6 +106,11 @@ public class GameTickLoop {
         if (_tickCount == ChoreKickTick) {
             ForceUpdateBrains();
         }
+        // Delayed chore check: SM transition nochore→haschore may not complete in same frame
+        // as brain.UpdateBrain(). Check at tick=100 (39 ticks / ~650ms after ForceUpdateBrains).
+        if (_tickCount == 100) {
+            DelayedChoreCheck();
+        }
     }
 
     private static void ForceUpdateBrains() {
@@ -188,13 +193,42 @@ public class GameTickLoop {
                 brain.UpdateBrain();
                 updated++;
 
-                var choreAfter = (driver.GetSMI() as ChoreDriver.StatesInstance)?.GetCurrentChore()?.GetType().Name ?? "null";
-                Debug.LogWarning($"[Brain] {brain.name}: choreAfter={choreAfter} (was {choreBefore})");
+                // Note: UpdateBrain() returns void. Read chore via ChoreDriver.GetCurrentChore()
+                // (public method, delegates to smi.sm.currentChore.Get(smi)).
+                // SM transition nochore→haschore may not complete synchronously — see DelayedChoreCheck at tick=100.
+                var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "null";
+                Debug.LogWarning($"[Brain] {brain.name}: isRunning={brain.IsRunning()} choreAfter={choreAfter} (was {choreBefore})");
             } catch (Exception e) {
                 Debug.LogWarning($"[Brain] {brain.name} ForceUpdateBrains EXCEPTION: {e}");
             }
         }
         Debug.LogWarning($"[DS-005] ForceUpdateBrains DONE: kicked {updated} brain(s)");
+    }
+
+    /// <summary>
+    /// Checks chore + movement state 39 ticks after ForceUpdateBrains.
+    /// The nochore→haschore SM transition may not complete in the same frame as UpdateBrain().
+    /// At tick=100 the transition should have fired and the navigator should be moving.
+    /// </summary>
+    private static void DelayedChoreCheck() {
+        Debug.LogWarning("[DS-005] DelayedChoreCheck at tick=100");
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null) continue;
+            if (!brain.gameObject.HasTag(GameTags.BaseMinion)) continue;
+            try {
+                var driver = brain.GetComponent<ChoreDriver>();
+                var nav    = brain.GetComponent<Navigator>();
+                // ChoreDriver.GetCurrentChore() is public: delegates to smi.sm.currentChore.Get(smi)
+                var chore  = driver?.GetCurrentChore();
+                Debug.LogWarning($"[Tick100] {brain.name}: " +
+                    $"chore={chore?.GetType().Name ?? "null"} " +
+                    $"isRunning={brain.IsRunning()} " +
+                    $"nav.cachedCell={nav?.cachedCell} " +
+                    $"nav.IsMoving={nav?.IsMoving()}");
+            } catch (Exception e) {
+                Debug.LogWarning($"[Tick100] {brain.name} EXCEPTION: {e.GetBaseException().Message}");
+            }
+        }
     }
 
     private static void ForceUpdateSensors() {
