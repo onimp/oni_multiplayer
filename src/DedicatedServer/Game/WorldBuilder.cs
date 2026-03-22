@@ -1486,54 +1486,71 @@ public class WorldBuilder {
     ///
     /// Only skip visual-only components — NOT AI/physics ones (see architectural principle).
     /// </summary>
+    // Types to evict from the renderEveryTick scheduler — render/UI/audio only, no game logic.
+    // Determined from Cecil inspection of IRenderEveryTick implementors in Assembly-CSharp.dll.
+    // DO NOT add: BrainScheduler, KCollider2D, SolidTransferArm, LogicPorts, ColonyAchievementTracker.
+    private static readonly HashSet<Type> _renderOnlyRenderEveryTickTypes = new HashSet<Type> {
+        typeof(LightSymbolTracker),     // NPE: CameraController.Instance == null
+        typeof(LoopingSoundManager),    // audio only — no-op in headless
+        typeof(SpriteSheetAnimManager), // sprite rendering — no-op in headless
+        typeof(UIShake),                // UI visual effect
+    };
+
+    // Reflection accessor for UpdaterManager<IRenderEveryTick>.updaterHandles.
+    // Private Dictionary<IRenderEveryTick, SimAndRenderScheduler.Handle> — the canonical
+    // registry of everything registered in the renderEveryTick bucket.
+    // Use Public|NonPublic: server runs the exposed DLL where private → public.
+    private static readonly FieldInfo _updaterHandlesField =
+        typeof(SimAndRenderScheduler.RenderEveryTickUpdater)
+            .BaseType  // UpdaterManager<IRenderEveryTick>
+            ?.GetField("updaterHandles",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+    /// <summary>
+    /// Iterates the renderEveryTick scheduler bucket directly and removes all render/UI/audio
+    /// components that have no purpose in a headless dedicated server.
+    ///
+    /// FindObjectsOfType returns 0 in headless (Unity object registry inactive), so we go
+    /// straight to the source: UpdaterManager.updaterHandles dictionary.
+    /// </summary>
     private static void DisableRenderingOnlyComponents() {
-        // FindObjectsOfType<T>() can NPE in headless when Unity's object registry is in
-        // partial state. Fall back to Resources.FindObjectsOfTypeAll<T>() which uses a
-        // different internal path and is more robust in non-scene contexts.
-        LightSymbolTracker[] trackers;
         try {
-            trackers = UnityEngine.Object.FindObjectsOfType<LightSymbolTracker>();
-        } catch (Exception ex) {
-            Debug.LogWarning($"[WorldBuilder] FindObjectsOfType<LightSymbolTracker> threw — falling back to Resources.FindObjectsOfTypeAll. Exception:\n{ex}");
-            try {
-                trackers = Resources.FindObjectsOfTypeAll<LightSymbolTracker>();
-            } catch (Exception ex2) {
-                Debug.LogWarning($"[WorldBuilder] Resources.FindObjectsOfTypeAll<LightSymbolTracker> also threw — skipping disable:\n{ex2}");
+            var scheduler = SimAndRenderScheduler.instance;
+            if (scheduler?.renderEveryTick == null) {
+                Debug.LogWarning("[WorldBuilder] DisableRenderingOnlyComponents: scheduler or renderEveryTick is null");
                 return;
             }
-        }
 
-        if (trackers == null || trackers.Length == 0) {
-            Debug.Log("[WorldBuilder] DisableRenderingOnlyComponents: 0 LightSymbolTracker(s) found");
-            return;
-        }
-
-        // SimAndRenderScheduler.instance may be null if the scheduler was never set up
-        // (e.g. not created yet). Null-conditional guards all accesses below.
-        SimAndRenderScheduler scheduler;
-        try {
-            scheduler = SimAndRenderScheduler.instance;
-        } catch (Exception ex) {
-            Debug.LogWarning($"[WorldBuilder] SimAndRenderScheduler.instance access threw:\n{ex}");
-            scheduler = null;
-        }
-
-        var count = 0;
-        foreach (var lst in trackers) {
-            if (lst == null) continue;
-            try {
-                lst.enabled = false;
-                // Remove from RenderEveryTick scheduler bucket — enabled=false alone is not enough:
-                // SimAndRenderScheduler.RenderEveryTickUpdater.Update() calls RenderEveryTick()
-                // with no enabled check. Must explicitly unregister from the bucket.
-                scheduler?.renderEveryTick?.Remove(lst);
-                count++;
-            } catch (Exception ex) {
-                // Log full stack so we know exactly which line throws next time.
-                Debug.LogWarning($"[WorldBuilder] LightSymbolTracker '{lst?.name}' disable failed:\n{ex}");
+            // Read the private updaterHandles dictionary via reflection.
+            if (_updaterHandlesField == null) {
+                Debug.LogWarning("[WorldBuilder] DisableRenderingOnlyComponents: updaterHandles field not found via reflection");
+                return;
             }
+            var handles = _updaterHandlesField.GetValue(scheduler.renderEveryTick)
+                as System.Collections.IDictionary;
+            if (handles == null) {
+                Debug.LogWarning("[WorldBuilder] DisableRenderingOnlyComponents: updaterHandles cast to IDictionary failed");
+                return;
+            }
+
+            // Snapshot keys before removing to avoid modifying-while-iterating.
+            var toRemove = new List<IRenderEveryTick>();
+            foreach (IRenderEveryTick entry in handles.Keys) {
+                if (entry != null && _renderOnlyRenderEveryTickTypes.Contains(entry.GetType()))
+                    toRemove.Add(entry);
+            }
+
+            foreach (var entry in toRemove) {
+                scheduler.renderEveryTick.Remove(entry);
+                // Also set enabled=false so any future re-registration via OnEnable is suppressed.
+                if (entry is UnityEngine.Behaviour b) b.enabled = false;
+            }
+
+            Debug.LogWarning($"[WorldBuilder] DisableRenderingOnlyComponents: removed {toRemove.Count} render-only entries" +
+                $" from renderEveryTick (bucket had {handles.Count} total entries)");
+        } catch (Exception ex) {
+            Debug.LogWarning($"[WorldBuilder] DisableRenderingOnlyComponents failed:\n{ex}");
         }
-        Debug.Log($"[WorldBuilder] DisableRenderingOnlyComponents: {count}/{trackers.Length} LightSymbolTracker(s) removed from scheduler (scheduler={scheduler != null})");
     }
 
     /// <summary>
