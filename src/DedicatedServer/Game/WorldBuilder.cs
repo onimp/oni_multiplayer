@@ -560,43 +560,37 @@ public class WorldBuilder {
         var worldContainerGo = new GameObject("WorldContainer_0");
         var wc = worldContainerGo.AddComponent<WorldContainer>();
 
-        // Add AlertStateManager.Def BEFORE InitializeComponent() so CreateSMIS() (called in
-        // KPrefabID.OnPrefabInit → InitializeComponent) includes it. If added after, the SMI
-        // is never created and WorldContainer.AlertManager returns null → BreathMonitor NPE.
-        // In normal game: AsteroidConfig.CreatePrefab() → AddOrGetDef<AlertStateManager.Def>()
-        // is called on the prefab before any instance lifecycle fires.
-        try {
-            worldContainerGo.AddOrGetDef<AlertStateManager.Def>();
-            Console.WriteLine("[WorldBuilder] WorldContainer: AlertStateManager.Def registered (pre-init)");
-        } catch (Exception ex) {
-            Console.WriteLine($"[WorldBuilder] WorldContainer: AlertStateManager.Def failed: {ex.GetBaseException().Message}");
-        }
-
-        try { wc.InitializeComponent(); }
-        catch (Exception ex) {
-            Console.WriteLine($"[WorldBuilder] WorldContainer.InitializeComponent partial: {ex.GetBaseException().Message}");
-        }
+        // AlertStateManager is required so BreathMonitor.IsLowBreath() can call
+        //   wc.AlertManager.IsRedAlert()
+        // without NPE. Without it: WorldContainer.AlertManager getter returns null (Debug.Assert
+        // is non-throwing), and null.IsRedAlert() throws NullReferenceException ~600×/frame.
+        //
+        // Normal game path (AsteroidConfig.CreatePrefab → AddOrGetDef, KPrefabID.OnSpawn →
+        // StateMachineController.CreateSMIS/StartSMIS) never fires in headless because the
+        // WorldContainer is created manually, not via the prefab instantiation pipeline.
+        //
+        // We mirror the game path explicitly:
+        //   1. AddOrGetDef<AlertStateManager.Def>() → registers def + creates SMC (defHandle valid)
+        //   2. smc.CreateSMIS() → creates AlertStateManager.Instance, adds to smc.stateMachines
+        //   3. smc.StartSMIS() → calls alertSmi.StartSM(), enters default 'off' state (no NPE)
+        // This ensures smc.GetSMI<AlertStateManager.Instance>() returns non-null so
+        // WorldContainer.AlertManager populates m_alertManager correctly.
+        worldContainerGo.AddOrGetDef<AlertStateManager.Def>();
         wc.SetID(0);  // sets id=0 and ParentWorldId=0
         if (!ClusterManager.Instance.WorldContainers.Contains(wc))
             ClusterManager.Instance.RegisterWorldContainer(wc);
-
-        // Directly create and start AlertStateManager.Instance on the WorldContainer.
-        // KPrefabID.CreateSMIS/StartSMIS may not fire in headless (no KPrefabID on this manually-created GO,
-        // or SMC defHandle not initialized properly). The task is identical to StartMonitor<T> for dupes:
-        //   new AlertStateManager.Instance(wc).StartSM()
-        // This populates wc.m_alertManager lazily on next AlertManager access.
-        // Start AlertStateManager.Instance so WorldContainer.AlertManager is non-null.
-        // BreathMonitor.IsLowBreath calls wc.AlertManager which asserts non-null → NPE every tick.
-        // AlertStateManager.Instance takes (target, def) — different from most monitors.
-        try {
-            var alertSmi = new AlertStateManager.Instance(wc, new AlertStateManager.Def());
-            alertSmi.StartSM();
-            var am = wc.AlertManager;
-            Console.WriteLine($"[WorldBuilder] AlertStateManager.Instance started: AlertManager={(am != null ? "OK" : "null")}");
-        } catch (Exception ex) {
-            Console.WriteLine($"[WorldBuilder] AlertStateManager.StartSM partial: {ex.GetBaseException().Message}");
-        }
-
+        var smc = worldContainerGo.GetComponent<StateMachineController>();
+        smc.CreateSMIS();
+        smc.StartSMIS();
+        // Fail-fast: if AlertManager is still null, surface the bug here rather than letting
+        // BreathMonitor NPE 600×/frame (which the old try/catch was masking).
+        var alertManagerCheck = wc.AlertManager;
+        if (alertManagerCheck == null)
+            throw new InvalidOperationException(
+                "[WorldBuilder] wc.AlertManager is null after CreateSMIS/StartSMIS. " +
+                "BreathMonitor.IsLowBreath would NPE every tick. " +
+                "Check that StateMachineManager.scheduler was refreshed before this call.");
+        Console.WriteLine($"[WorldBuilder] AlertStateManager ready: IsRedAlert={alertManagerCheck.IsRedAlert()}");
         Console.WriteLine($"[WorldBuilder] ClusterManager ready: Instance={ClusterManager.Instance != null}, worlds={ClusterManager.Instance?.WorldContainers?.Count}, GetWorld(0)={ClusterManager.Instance?.GetWorld(0)?.id}");
 
         // GridRestrictionSerializer is a KMonoBehaviour singleton needed by
@@ -1633,6 +1627,29 @@ public class WorldBuilder {
                     sensors2.Spawn();
                 }
 
+                // Seed IdleCellSensor with the dupe's own spawn cell.
+                //
+                // Root cause: IdleCellSensor.cell defaults to 0 (not Grid.InvalidCell=-1).
+                // On the first Brain tick, IdleCellSensor.Update() runs a BFS for the
+                // best idle cell.  For two adjacent dupes (cells 50304 and 50305), the BFS
+                // may return the SAME cell (e.g. 50304) for BOTH — the one cell with the
+                // best SafeFlags score nearby.  Dupe 50304 claims that IdleChore first
+                // (sets chore.driver). When dupe 50305's consumer evaluates its IdleChore it
+                // also sees driver != null (both share the same chore via the same target
+                // cell path), so IsPreemptable (precondition 5) fails → failedPreconditionId=5.
+                //
+                // Fix: seed each dupe's IdleCellSensor to its OWN current cell so adjacent
+                // dupes start with unique idle cells.  The BFS will refine the cell on the
+                // first sensor update; the seed is only used until that first update runs.
+                var idleSensorToSeed = sensors2?.GetSensor<IdleCellSensor>();
+                if (idleSensorToSeed != null && _idleSensorCellField != null) {
+                    var dupeCell = Grid.PosToCell(go);
+                    if (Grid.IsValidCell(dupeCell)) {
+                        _idleSensorCellField.SetValue(idleSensorToSeed, dupeCell);
+                        Console.WriteLine($"[FixRationalAi] {go.name}: IdleCellSensor seeded to own cell {dupeCell}");
+                    }
+                }
+
                 fixedCount++;
                 Console.WriteLine($"[FixRationalAi] {go.name}: OK (baseOnSpawnOk={baseOnSpawnOk})");
             } catch (Exception ex) {
@@ -1645,6 +1662,13 @@ public class WorldBuilder {
     // Reflection cache for Brain.running (private field)
     private static readonly FieldInfo _brainRunningField =
         typeof(Brain).GetField("running", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    // Reflection cache for IdleCellSensor.cell (private int field).
+    // Used to seed the initial idle cell = dupe's own spawn cell so adjacent dupes
+    // don't share the same BFS result cell (which causes IsPreemptable to fail on one
+    // of them when both target the same cell and one dupe already has it as its chore).
+    private static readonly FieldInfo _idleSensorCellField =
+        typeof(IdleCellSensor).GetField("cell", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     /// <summary>
     /// Bootstraps the Brain→Chore→Navigator pipeline for each spawned critter (CreatureBrain).
