@@ -57,31 +57,22 @@ public class GameTickLoop {
 
         while (_accumulatedTime >= SubTickTime) {
             _simSubTick = (_simSubTick + 1) % SimFrameSubTicks;
-            try {
-                if (_simSubTick == 0) {
-                    _tickSimDll();
-                    // After each 200ms SimDLL step, process nav dirty cells. Mirrors Game.UnsafeSim200ms()
-                    // which calls Pathfinding.Instance.UpdateNavGrids() after world.UpdateCellInfo().
-                    // Without this, tile changes from the sim never propagate to the nav graph.
-                    Pathfinding.Instance?.UpdateNavGrids();
-                }
-                // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets
-                Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
-            } catch (Exception ex) {
-                // BreathMonitor.IsLowBreath() → WorldContainer.AlertManager → NPE fires 563K× per run.
-                // Without this catch the while-loop aborts → _tickCount never reaches SensorWarmupTick
-                // → ForceUpdateSensors never fires → idleCell=-1 forever → no movement.
-                // Log at low frequency to avoid console spam while still surfacing the root cause.
-                if (_tickCount % 200 == 0)
-                    Debug.LogWarning($"[GameTickLoop] SubTick ex (count={_tickCount}): {ex.GetBaseException().Message}");
-            } finally {
-                // Advance GameClock UNCONDITIONALLY — must run even when AdvanceOneSimSubTick()
-                // throws (BreathMonitor NPEs fire ~600×/frame and skip the rest of the try block).
-                // Mirrors SimAndRenderScheduler.sim33ms bucket calling GameClock.Sim33ms(dt).
-                // Without this, GameClock.GetTime() stays frozen at 50f → GameSchedulerClock
-                // returns 50f → Scheduler.Update() never fires IdleMove (scheduled at 55–65f).
-                GameClock.Instance?.Sim33ms(SubTickTime);
+            if (_simSubTick == 0) {
+                _tickSimDll();
+                // After each 200ms SimDLL step, process nav dirty cells. Mirrors Game.UnsafeSim200ms()
+                // which calls Pathfinding.Instance.UpdateNavGrids() after world.UpdateCellInfo().
+                // Without this, tile changes from the sim never propagate to the nav graph.
+                Pathfinding.Instance?.UpdateNavGrids();
             }
+            // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets.
+            // No try/catch: BreathMonitor NPE root cause is fixed (WorldContainer.AlertManager
+            // is properly initialized in WorldBuilder via smc.CreateSMIS()/StartSMIS()).
+            // Any remaining exception here is a real bug that must surface, not be silenced.
+            Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
+            // Advance GameClock each subtick — mirrors SimAndRenderScheduler.sim33ms bucket.
+            // Placed after AdvanceOneSimSubTick() in the normal code path (no finally needed
+            // since AdvanceOneSimSubTick no longer throws after the AlertStateManager fix).
+            GameClock.Instance?.Sim33ms(SubTickTime);
             _accumulatedTime -= SubTickTime;
         }
 
