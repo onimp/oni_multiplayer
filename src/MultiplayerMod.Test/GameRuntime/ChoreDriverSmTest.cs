@@ -156,6 +156,63 @@ public class ChoreDriverSmTest : PlayableGameTest {
             "b__5_3 [0x0075] no longer NPEs on smi.worker.GetWorkable().");
     }
 
+    // ─── DS-006b critter variant (CreaturePrefab.Setup) ─────────────────────
+    // Critter GOs: TriggerLifecycle fires ChoreDriver.OnSpawn() → StartSM → StatesInstance.ctor
+    // captures worker=null (StandardWorker not yet on the GO).  CreaturePrefab.Setup() runs
+    // after TriggerLifecycle → AddOrGet<StandardWorker>() adds WorkerBase, but live SMI still
+    // holds worker=null → haschore.Update b__5_3 NPEs at 185/s, aborting every subtick.
+    // Fix: (1) AddOrGet<StandardWorker>() BEFORE any StartSM in Setup(); (2) retrofit patch.
+
+    /// <summary>
+    /// Documents critter broken state: SM started by TriggerLifecycle BEFORE
+    /// CreaturePrefab.Setup() adds StandardWorker → smi.worker is null.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_Critter_SmStartedBeforeStandardWorker_WorkerIsNull() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+
+        // Simulate TriggerLifecycle: ChoreDriver.OnSpawn fires StartSM before Setup() runs.
+        driver.smi.StartSM();
+
+        // CreaturePrefab.Setup() runs here — but StandardWorker arrives too late for the ctor.
+        go.AddOrGet<StandardWorker>();
+
+        var smi = driver.GetSMI<ChoreDriver.StatesInstance>();
+        Assert.IsNull(smi.worker,
+            "worker is null when SM was started before StandardWorker — " +
+            "StatesInstance.ctor already captured GetComponent<WorkerBase>()=null. " +
+            "This is DS-006b for critters: haschore.Update b__5_3 NPEs at 185/s killing every subtick.");
+    }
+
+    /// <summary>
+    /// Fix for critter DS-006b: AddOrGet&lt;StandardWorker&gt;() FIRST (before any StartSM),
+    /// then retrofit: smiInst.worker = go.GetComponent&lt;WorkerBase&gt;() patches the live SMI.
+    /// Mirrors CreaturePrefab.Setup() with StandardWorker at top + retrofit in Step 5.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_Critter_StandardWorkerFirstPlusRetrofit_WorkerIsNotNull() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+
+        // CreaturePrefab.Setup() fix: StandardWorker unconditionally added BEFORE any StartSM.
+        go.AddOrGet<StandardWorker>();
+
+        // TriggerLifecycle (or ChoreDriver safety-net in Step 5) starts the SM.
+        driver.smi.StartSM();
+
+        // DS-006b retrofit: patch live SMI if worker still null (covers re-entrant paths).
+        var smiInst = driver.GetSMI<ChoreDriver.StatesInstance>();
+        if (smiInst != null && smiInst.worker == null)
+            smiInst.worker = go.GetComponent<WorkerBase>();
+
+        Assert.IsNotNull(smiInst?.worker,
+            "worker must be non-null after AddOrGet<StandardWorker>() before StartSM + retrofit. " +
+            "CreaturePrefab.Setup() now applies both steps so haschore.Update b__5_3 no longer NPEs.");
+    }
+
     // ─── DS-005 tests (pre-existing) ────────────────────────────────────────
 
     /// <summary>

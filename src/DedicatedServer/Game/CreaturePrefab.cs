@@ -41,6 +41,15 @@ public static class CreaturePrefab {
         var go = brain.gameObject;
         if (go == null) return;
 
+        // ── DS-006b: StandardWorker BEFORE any StartSM call ──────────────────────
+        // ChoreDriver.StatesInstance.ctor: worker = GetComponent<WorkerBase>().
+        // If StandardWorker is absent when the ctor runs (TriggerLifecycle starts the SM
+        // before Setup() runs), worker=null → haschore.Update b__5_3 NPEs on
+        // smi.worker.GetWorkable() at 185/s, aborting every subtick (Navigator never updates).
+        // AddOrGet is idempotent. Must be FIRST — before navigator StartSM in Step 2 and
+        // ChoreDriver StartSM in Step 5 both of which create a StatesInstance.
+        go.AddOrGet<StandardWorker>();
+
         // ── Remove render-only components that NPE during headless OnSpawn ──────
         // ExtendEntityToBasicCreature() adds both CharacterOverlay and AnimEventHandler to
         // every critter prefab. Both crash in headless:
@@ -141,18 +150,22 @@ public static class CreaturePrefab {
             }
         }
 
-        // ── Step 5: ensure StandardWorker (WorkerBase) is present — DS-006 ─────────
-        // ChoreDriver.StatesInstance.ctor sets worker = GetComponent<WorkerBase>().
-        // Primary fix is in FixChoreConsumers: AddOrGet<StandardWorker>() runs before
-        // driver.Spawn() → ctor finds WorkerBase → worker set correctly.
-        // This AddOrGet is a safety net for any SM started outside FixChoreConsumers.
-        go.AddOrGet<StandardWorker>();
+        // ── Step 5: ChoreDriver SM + DS-006b worker retrofit ─────────────────────
+        // StandardWorker is already added unconditionally at the top of Setup().
+        // If ChoreDriver SM was never started (shouldn't happen after FixChoreConsumers, but guard).
         var choreDriver = go.GetComponent<ChoreDriver>();
         if (choreDriver != null && choreDriver.GetSMI() == null) {
-            // SM was never started (shouldn't happen after FixChoreConsumers, but guard it).
             choreDriver.smi.StartSM();
             Console.WriteLine($"[Animals] {go.name}: ChoreDriver SM started (safety net)");
         }
+        // DS-006b retrofit: TriggerLifecycle may have started ChoreDriver SM (via ChoreDriver.OnSpawn)
+        // BEFORE Setup() ran — StatesInstance.ctor already captured worker=null at that point.
+        // AddOrGet<StandardWorker>() at the top adds WorkerBase to the GO, but the live SMI's
+        // worker field still holds null. Patch it directly — no reflection needed (AssemblyExposer
+        // promotes the private setter to public in the exposed DLL).
+        var smiInst = choreDriver?.GetSMI<ChoreDriver.StatesInstance>();
+        if (smiInst != null && smiInst.worker == null)
+            smiInst.worker = go.GetComponent<WorkerBase>();
 
         // ── Diagnostic: one line per creature ────────────────────────────────────
         var cell  = Grid.PosToCell(go);
