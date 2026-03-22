@@ -85,10 +85,15 @@ public static class Program {
                     tickLoop.Update(1f / 60f); // 60 UPS — one subtick per call, mirrors real game SimEveryTick rhythm
                 }
                 finally {
-                    // Always sleep the remainder of the 16ms budget so UPS stays ≤ 60
-                    // even during exception floods (Update throwing skipped the old sleep).
-                    var elapsed = (int)sw.ElapsedMilliseconds;
-                    if (elapsed < 16) Thread.Sleep(16 - elapsed);
+                    // Target exactly 60 UPS = 16.666...ms per tick.
+                    // Old code used 16ms (= 62.5 UPS target), and Thread.Sleep jitter
+                    // on macOS/Linux pushed actual UPS down to ~54.
+                    // Fix: sleep the integer milliseconds, then spin-wait the sub-ms remainder
+                    // so the actual cycle lands on the 16.666ms boundary precisely.
+                    const double targetMs = 1000.0 / 60.0;  // 16.666...
+                    var remainingMs = targetMs - sw.Elapsed.TotalMilliseconds;
+                    if (remainingMs > 1.5) Thread.Sleep((int)(remainingMs - 1));
+                    while (sw.Elapsed.TotalMilliseconds < targetMs) { /* spin <1ms for precision */ }
                 }
             }
         } else {
