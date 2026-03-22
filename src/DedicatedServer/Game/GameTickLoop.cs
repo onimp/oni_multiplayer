@@ -89,6 +89,16 @@ public class GameTickLoop {
         // → Navigator.GetNavigationCost() always returns -1 → path-cost-based chore selection fails.
         AsyncPathProber.Instance?.TickFrame();
 
+        // GameScheduler ticks: mirrors GameScheduler.Update() (private Unity callback).
+        // IdleChore.Begin() → StateMachine.States root.idle.onfloor.AddScheduledCallback →
+        // GameScheduler.Instance.Schedule("IdleMove", ...) registers a callback.
+        // Without Update() being called, the Scheduler never dequeues entries → IdleMove
+        // callback never fires → Navigator stays idle → dupe never moves.
+        // GameScheduler.Instance is set in GameScheduler.OnPrefabInit() (called from
+        // WorldBuilder.InitializeWorld). GetScheduler() exposes the internal Scheduler
+        // (its Update() is public).
+        GameScheduler.Instance?.GetScheduler()?.Update();
+
         // DS-005: force-refresh dupe sensors once PathGrid is warm.
         // IdleCellSensor.Update() runs once at tick≈5 when PathGrid is cold → idleCell=-1.
         // It only re-runs when Brain.onPreUpdate fires, which requires a chore to exist first
