@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -187,12 +188,18 @@ public static class MinionPrefab {
             // that just got added to ChoreProvider is visible to FindNextChore.
             // This is the guaranteed execution path: BaseOnSpawn crashes for all 3 dupes.
             var consumerFallback = go.GetComponent<ChoreConsumer>();
-            if (consumerFallback != null) consumerFallback.AddProvider(go.GetComponent<ChoreProvider>());
-            Console.WriteLine("[MINIONSETUP] go=" + go.GetInstanceID()
-                + " consumer=" + consumerFallback?.GetHashCode()
-                + " consumerViaGetComponent=" + go.GetComponent<ChoreConsumer>()?.GetHashCode()
-                + " providers.Count=" + (_providersField?.GetValue(consumerFallback) as System.Collections.IList)?.Count
-                + " choreProvider=" + go.GetComponent<ChoreProvider>()?.GetHashCode());
+            if (consumerFallback != null) {
+                int providersBefore = consumerFallback.providers?.Count ?? -1;
+                consumerFallback.AddProvider(go.GetComponent<ChoreProvider>());
+                int providersAfter = consumerFallback.providers?.Count ?? -1;
+                int cpChores = go.GetComponent<ChoreProvider>().choreWorldMap?.Values?.Sum(v => v?.Count ?? 0) ?? -1;
+                Console.WriteLine("[MINIONSETUP] go=" + go.GetInstanceID()
+                    + " providersBefore=" + providersBefore
+                    + " providersAfter=" + providersAfter
+                    + " cpChores=" + cpChores
+                    + " consumer=" + consumerFallback?.GetHashCode()
+                    + " choreProvider=" + go.GetComponent<ChoreProvider>()?.GetHashCode());
+            }
 
             StartMonitor<BreathMonitor>(smc,  "BreathMonitor");
             StartMonitor<CalorieMonitor>(smc, "CalorieMonitor");
