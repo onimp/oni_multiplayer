@@ -82,9 +82,9 @@ public static class Program {
             while (!cts.IsCancellationRequested) {
                 try {
                     sw.Restart();
-                    tickLoop.Update(0.2f); // Each tick = 200ms (1/5 sec) for now
-                    var elapsed = sw.ElapsedMilliseconds;
-                    if (elapsed < 200) Thread.Sleep(200 - (int)elapsed);
+                    tickLoop.Update(1f / 60f); // 60 UPS — one subtick per call, mirrors real game SimEveryTick rhythm
+                    var elapsed = (int)sw.ElapsedMilliseconds;
+                    if (elapsed < 16) Thread.Sleep(16 - elapsed); // target 60fps (16ms per frame)
                 }
                 catch (Exception ex) { Console.WriteLine($"[StateMachineTick] Error: {ex.Message}\n{ex.StackTrace}"); }
             }
