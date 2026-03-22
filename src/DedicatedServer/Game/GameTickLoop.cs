@@ -669,8 +669,9 @@ public class GameTickLoop {
             if (smc?.stateMachines == null) continue;
             for (var i = 0; i < smc.stateMachines.Count; i++) {
                 var sm = smc.stateMachines[i];
-                if (sm != null && sm.isCrashed)
-                    Console.WriteLine($"[SM_ERROR] go={go.GetInstanceID()} sm[{i}]={sm.GetType().Name} isCrashed=True");
+                if (sm == null) continue;
+                var typeName = sm.GetType().DeclaringType?.FullName ?? sm.GetType().FullName;
+                Console.WriteLine($"[SM_LIST] go={go.GetInstanceID()} sm[{i}]={typeName} crashed={sm.isCrashed}");
             }
         }
     }
