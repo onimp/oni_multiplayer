@@ -265,6 +265,11 @@ public class WorldBuilder {
         // → Brain.FindBetterChore always returns null → dupes never move.
         FixRationalAi();
 
+        // Ensure CreatureBrain.running=true and Navigator SM started for all spawned critters.
+        // TriggerLifecycle calls Spawn() on components but fails may leave brain not running or
+        // Navigator SM not started → CreatureBrainGroup.RenderEveryTick skips them → no chore picked.
+        FixCreatureBrains();
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         WorldState = new RealWorldState(Width, Height, this);
@@ -1183,6 +1188,115 @@ public class WorldBuilder {
             }
         }
         Console.WriteLine($"[WorldBuilder] FixRationalAi done: {fixedCount}/{_spawnedMinions.Count} minion(s) started");
+    }
+
+    // Reflection cache for Brain.running (private field)
+    private static readonly FieldInfo _brainRunningField =
+        typeof(Brain).GetField("running", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    /// <summary>
+    /// Bootstraps the Brain→Chore→Navigator pipeline for each spawned critter (CreatureBrain).
+    ///
+    /// Same problem as dupes: TriggerLifecycle fires Brain.OnSpawn() but may partially fail,
+    /// leaving brain.running=false or Navigator SM unstarted → CreatureBrainGroup skips the brain.
+    ///
+    /// Key differences from FixRationalAi (dupe fix):
+    ///   - No Schedule/Schedulable — creatures have no work schedule.
+    ///   - No RationalAi — creature chores come from ChoreTable + state machine defs (already
+    ///     started by KPrefabID.OnSpawn → StartSMIS during TriggerLifecycle).
+    ///   - Sensors not present on most creatures (only Rovers/FetchDrones have them).
+    ///   - Uses CreatureBrainGroup (GameTags.CreatureBrain) not DupeBrainGroup.
+    ///
+    /// Steps per creature:
+    ///   1. Ensure brain.running=true — if false, re-register in BrainScheduler via Remove+Add.
+    ///   2. Ensure Navigator SM started — if nav.GetSMI()==null, call nav.smi.StartSM().
+    ///   3. Ensure consumerState != null (ChoreConsumer.OnSpawn may have failed).
+    ///   4. Log diagnostic: cell, brain.running, currentChore for each creature.
+    /// </summary>
+    private void FixCreatureBrains() {
+        var fixed_brain = 0;
+        var fixed_nav   = 0;
+        var fixed_cs    = 0;
+        var alreadyOk   = 0;
+        var total       = 0;
+
+        foreach (var brain in Components.Brains.Items) {
+            if (brain is not CreatureBrain) continue;
+            total++;
+            var go = brain.gameObject;
+            if (go == null) continue;
+
+            try {
+                // ── Step 1: ensure brain.running = true ──────────────────────────────────
+                // Brain.Spawn() is no-op when isSpawned=true (already set by TriggerLifecycle).
+                // If OnSpawn crashed after "running=true" was set, brain is registered but running.
+                // If Components.Brains.Add() failed (BrainGroup.HasTag mismatch), brain is not in
+                // CreatureBrainGroup → UpdateBrain() never called → creature stuck.
+                // Fix: remove from Components.Brains, force running=true via reflection, re-add
+                // to retrigger BrainScheduler.OnAddBrain → HasTag(CreatureBrain) → AddBrain().
+                if (!brain.IsRunning()) {
+                    try { Components.Brains.Remove(brain); } catch { /* ignore if not registered */ }
+                    _brainRunningField?.SetValue(brain, true);
+                    Components.Brains.Add(brain);
+                    Console.WriteLine($"[Animals] {go.name}: brain was NOT running — re-registered");
+                    fixed_brain++;
+                } else {
+                    alreadyOk++;
+                }
+
+                // ── Step 2: ensure Navigator SM is running ────────────────────────────────
+                // Navigator.OnSpawn() starts the SM (normal.stopped state). In headless it may
+                // throw (TargetLocator KInstantiate → NullRef) leaving _smi=null → no movement.
+                var nav = go.GetComponent<Navigator>();
+                if (nav != null) {
+                    if (!nav.IsInitialized()) {
+                        try { nav.InitializeComponent(); }
+                        catch (Exception ex) {
+                            Console.WriteLine($"[Animals] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
+                        }
+                    }
+                    if (nav.GetSMI() == null) {
+                        try {
+                            nav.smi.StartSM();
+                            fixed_nav++;
+                            Console.WriteLine($"[Animals] {go.name}: Navigator.StartSM() called");
+                        } catch (Exception ex) {
+                            Console.WriteLine($"[Animals] {go.name}: Navigator.StartSM partial: {ex.GetBaseException().Message}");
+                        }
+                    }
+                }
+
+                // ── Step 3: ensure ChoreConsumer.consumerState != null ────────────────────
+                var cc = go.GetComponent<ChoreConsumer>();
+                if (cc != null && cc.consumerState == null) {
+                    try {
+                        cc.consumerState = new ChoreConsumerState(cc);
+                        fixed_cs++;
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[Animals] {go.name}: consumerState init failed: {ex.GetBaseException().Message}");
+                    }
+                }
+
+                // ── Step 4: Sensors (Rovers/FetchDrones only — standard critters lack them) ──
+                var sensors = go.GetComponent<Sensors>();
+                if (sensors != null && !sensors.isSpawned) {
+                    try { sensors.Spawn(); }
+                    catch (Exception ex) {
+                        Console.WriteLine($"[Animals] {go.name}: sensors.Spawn partial: {ex.GetBaseException().Message}");
+                    }
+                }
+
+                // ── Diagnostic: one line per creature ────────────────────────────────────
+                var cell   = Grid.PosToCell(go);
+                var chore  = go.GetComponent<ChoreDriver>()?.GetCurrentChore();
+                Console.WriteLine($"[Animals] {go.name}: cell={cell} running={brain.IsRunning()} nav={(nav?.GetSMI() != null ? "OK" : "null")} chore={chore?.GetType().Name ?? "null"} consumerState={cc?.consumerState != null}");
+
+            } catch (Exception ex) {
+                Console.WriteLine($"[Animals] {go.name}: ERROR: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
+            }
+        }
+
+        Console.WriteLine($"[Animals] FixCreatureBrains: total={total} alreadyOk={alreadyOk} fixed_brain={fixed_brain} fixed_nav={fixed_nav} fixed_cs={fixed_cs}");
     }
 
     /// <summary>
