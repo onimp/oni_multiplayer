@@ -306,6 +306,13 @@ public class WorldBuilder {
         // Without this reset, StateMachineUpdater would skip all SM ticks.
         StateMachine.Instance.error = false;
 
+        // Ensure Clearable + Prioritizable on all spawned pickupable / plant GOs.
+        // EntityTemplates.CreateBaseOreTemplates / ExtendEntityToBasicPlant add these to every
+        // ore and plant prefab but the headless code path sometimes misses them.
+        // Must run AFTER SpawnEntities so all entity GOs are live; BEFORE FixCreatureBrains
+        // so creature GOs that also have Pickupable are handled by the creature path.
+        FixPickupables();
+
         // Fix consumerState for all Brains after spawn.
         // ChoreConsumer.OnSpawn() may fail before initializing consumerState for two reasons:
         //   1. Minions: schedulable.GetSchedule() returns null because MinionIdentity.OnSpawn()
@@ -425,7 +432,12 @@ public class WorldBuilder {
         // UI/rendering stubs
         StateMachineDebuggerSettings._Instance = new StateMachineDebuggerSettings();
         StateMachineDebuggerSettings._Instance.Initialize();
-        GameComps.InfraredVisualizers = new InfraredVisualizerComponents();
+        // Initialize ALL GameComps static fields (InfraredVisualizers, StructureTemperatures,
+        // DiseaseContainers, Gravities, etc.) via reflection, exactly as KComponentsInitializer
+        // would do in a real Unity session. Without this, PrimaryElement.OnPrefabInit() NPEs:
+        //   InfraredVisualizerData(go): GameComps.StructureTemperatures.GetHandle(go) → null
+        //   PrimaryElement.OnPrefabInit: GameComps.DiseaseContainers.Add(...) → null
+        new GameComps();
         GameScreenManager.Instance = new GameScreenManager();
         GameScreenManager.Instance.worldSpaceCanvas = new GameObject();
         TuningData<CPUBudget.Tuning>._TuningData = new CPUBudget.Tuning();
@@ -1452,6 +1464,20 @@ public class WorldBuilder {
         foreach (var go in _spawnedMinions)
             MinionPrefab.Setup(go);
         Console.WriteLine($"[WorldBuilder] FixRationalAi done: {_spawnedMinions.Count} minion(s)");
+    }
+
+    private void FixPickupables() {
+        var total = 0;
+        foreach (var pickupable in Components.Pickupables.Items) {
+            var go = pickupable.gameObject;
+            if (go == null) continue;
+            if (go.GetComponent<MinionBrain>() != null) continue;   // dupes handled by FixRationalAi
+            if (go.GetComponent<CreatureBrain>() != null) continue; // creatures handled by FixCreatureBrains
+            if (go.GetComponent<Building>() != null) continue;      // buildings not loose pickupables
+            total++;
+            PickupablePrefab.Setup(go);
+        }
+        Console.WriteLine($"[WorldBuilder] FixPickupables: total={total}");
     }
 
     private void FixCreatureBrains() {
