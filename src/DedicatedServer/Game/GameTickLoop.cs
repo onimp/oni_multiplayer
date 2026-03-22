@@ -213,11 +213,21 @@ public class GameTickLoop {
                     }
                 }
 
-                brain.UpdateBrain();
-                updated++;
+                // Direct FindNextChore instead of brain.UpdateBrain():
+                // UpdateBrain() checks IsRunning() first — if false (brain not fully started in
+                // fallback path) it's a no-op and no chore is ever assigned.
+                // FindNextChore bypasses that guard and goes straight to provider.CollectChores →
+                // ChooseChore → driver.SetChore, which transitions nochore→haschore immediately.
+                var context = default(Chore.Precondition.Context);
+                var found = consumer.FindNextChore(ref context);
+                if (found) {
+                    driver.SetChore(context);
+                    updated++;
+                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore FOUND choreType={context.chore?.GetType().Name} choreType.id={context.chore?.choreType?.Id}");
+                } else {
+                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore returned false (no chore available) running={brain.IsRunning()}");
+                }
 
-                // Note: UpdateBrain() returns void. Read chore via ChoreDriver.GetCurrentChore()
-                // (public method, delegates to smi.sm.currentChore.Get(smi)).
                 // SM transition nochore→haschore may not complete synchronously — see DelayedChoreCheck at tick=100.
                 var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "null";
                 Debug.LogWarning($"[Brain] {brain.name}: isRunning={brain.IsRunning()} choreAfter={choreAfter} (was {choreBefore})");
