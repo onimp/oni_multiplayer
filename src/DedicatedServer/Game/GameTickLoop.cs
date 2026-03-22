@@ -108,11 +108,16 @@ public class GameTickLoop {
         // in WorldBuilder.DisableRenderingOnlyComponents() — no try/catch needed here.
         Singleton<StateMachineUpdater>.Instance.RenderEveryTick(clampedDt);
 
-        // Dispatch async path probe work orders to the background thread and apply completed
-        // PathGrid results back to navigators. Mirrors Game.LateUpdate() where TickFrame()
-        // is called every Unity frame. Without this, PathGrid costs are never populated
-        // → Navigator.GetNavigationCost() always returns -1 → path-cost-based chore selection fails.
-        AsyncPathProber.Instance?.TickFrame();
+        // AsyncPathProber.TickFrame() is intentionally NOT called here.
+        // Root cause of crash: PotentialScratchPad is sized from Pathfinding.MaxLinksPerCell()
+        // at background worker thread start time (NavGrids minimal). After WorldBuilder loads the
+        // save and calls UpdateNavGrids(), maxLinksPerCell grows → AddPotentials accesses
+        // scratch.linksInCellRange[k] beyond original array size → ArgumentOutOfRangeException
+        // stored in agentException → rethrown here via TickFrame() → server crash.
+        // Without TickFrame(): background worker stays idle (NextTask always false → Sleep(1)).
+        // TryBuildPathFromCache always misses → Navigator falls back to synchronous
+        // PathFinder.UpdatePath() BFS on every navigation step. Fully supported: BrainScheduler
+        // already sets executePathProbeTaskAsync=false for some navigators (same sync-only path).
 
         // GameScheduler ticks: mirrors GameScheduler.Update() (private Unity callback).
         // IdleChore.Begin() → StateMachine.States root.idle.onfloor.AddScheduledCallback →
