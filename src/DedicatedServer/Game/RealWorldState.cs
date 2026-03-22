@@ -149,6 +149,23 @@ public class RealWorldState {
             return liveSize;
         }
 
+        // Secondary: static BuildingDefCache — populated from configTable harvest BEFORE Add2DComponents
+        // crashes. Covers buildings (HQ, Telepad, GeneShuffler) that fail full registration and
+        // therefore have no entry in Assets.GetPrefab(), PrefabSizeMap, or live spawned GOs.
+        // "Building component is null / def=False for HQ" → this cache is the only reliable source.
+        try {
+            if (WorldBuilder.BuildingDefCache.TryGetValue(id, out var buildingDef)) {
+                var defSize = WorldBuilder.ReadBuildingDefSize(buildingDef);
+                if (defSize.HasValue) {
+                    Console.WriteLine($"[EntitySize] {id} → {defSize.Value.w}×{defSize.Value.h} (BuildingDefCache)");
+                    _entitySizeCache[id] = defSize.Value;
+                    return defSize.Value;
+                }
+            }
+        } catch (Exception ex) {
+            Console.WriteLine($"[EntitySize] {id} BuildingDefCache threw: {ex.GetBaseException().Message}");
+        }
+
         // Fallback: inspect the registered prefab in Assets
         (int w, int h) size = (1, 1);
         try {
