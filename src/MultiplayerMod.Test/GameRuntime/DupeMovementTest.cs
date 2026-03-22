@@ -421,6 +421,71 @@ public class DupeMovementTest : PlayableGameTest {
             "(holds the IdleChore created by IdleMonitor during OnSpawn).");
     }
 
+    // ── Per-SMC IdleMonitor isolation ─────────────────────────────────────────
+
+    /// <summary>
+    /// Documents the root cause: when stateMachines lists are SHARED (CloneSingle fix
+    /// not applied in production save-load path), GetSMI returns the FIRST IdleMonitor
+    /// (index 0 of the shared list) for ALL SMCs. Dupes 1+2 get dupe 0's IdleMonitor
+    /// → only 1 IdleChore ever visible to any dupe → dupes 1+2 never move.
+    /// </summary>
+    [Test]
+    public void TwoDupes_SharedSmcList_GetSmiReturnsSameIdleMonitor() {
+        var go1 = createGameObject();
+        var go2 = createGameObject();
+        go1.AddComponent<KPrefabID>();
+        go2.AddComponent<KPrefabID>();
+        var smc1 = go1.AddComponent<StateMachineController>();
+        var smc2 = go2.AddComponent<StateMachineController>();
+
+        // Simulate CloneSingle fix NOT applied: both SMCs share the same list.
+        var sharedList = new List<StateMachine.Instance>();
+        SmcStateMachinesField.SetValue(smc1, sharedList);
+        SmcStateMachinesField.SetValue(smc2, sharedList);
+
+        var idle1 = new IdleMonitor.Instance(smc1); // ctor: smc1.AddStateMachineInstance → sharedList[0]
+        var idle2 = new IdleMonitor.Instance(smc2); // ctor: smc2.AddStateMachineInstance → sharedList[1]
+
+        // ROOT CAUSE: GetSMI iterates from index 0 — returns sharedList[0] = idle1 for BOTH.
+        Assert.AreSame(smc1.GetSMI<IdleMonitor.Instance>(), smc2.GetSMI<IdleMonitor.Instance>(),
+            "With shared stateMachines list, GetSMI<IdleMonitor>() returns the SAME instance " +
+            "for both SMCs (index 0 of shared list). Only 1 IdleChore created → dupes 1+2 blocked.");
+    }
+
+    /// <summary>
+    /// Verifies the fix: after MinionPrefab.Setup() resets smc.stateMachines to a fresh
+    /// private list before IdleMonitor creation, each SMC's GetSMI returns its OWN instance.
+    ///
+    /// This is the direct inverse of TwoDupes_SharedSmcList_GetSmiReturnsSameIdleMonitor.
+    /// </summary>
+    [Test]
+    public void TwoDupes_FreshSmcList_GetSmiReturnsDistinctIdleMonitors() {
+        var go1 = createGameObject();
+        var go2 = createGameObject();
+        go1.AddComponent<KPrefabID>();
+        go2.AddComponent<KPrefabID>();
+        var smc1 = go1.AddComponent<StateMachineController>();
+        var smc2 = go2.AddComponent<StateMachineController>();
+
+        // Apply fix: each SMC gets its own fresh list BEFORE IdleMonitor creation.
+        var list1 = new List<StateMachine.Instance>();
+        var list2 = new List<StateMachine.Instance>();
+        SmcStateMachinesField.SetValue(smc1, list1);
+        SmcStateMachinesField.SetValue(smc2, list2);
+
+        var idle1 = new IdleMonitor.Instance(smc1); // ctor → list1[0]
+        var idle2 = new IdleMonitor.Instance(smc2); // ctor → list2[0]
+
+        Assert.AreNotSame(idle1, idle2,
+            "Each dupe must get a distinct IdleMonitor instance after fresh-list reset.");
+        Assert.AreSame(idle1, smc1.GetSMI<IdleMonitor.Instance>(),
+            "smc1.GetSMI must return idle1 (own instance), not idle2.");
+        Assert.AreSame(idle2, smc2.GetSMI<IdleMonitor.Instance>(),
+            "smc2.GetSMI must return idle2 (own instance), not idle1.");
+        Assert.That(list1, Does.Not.Contain(idle2), "smc1.stateMachines must not contain smc2's IdleMonitor.");
+        Assert.That(list2, Does.Not.Contain(idle1), "smc2.stateMachines must not contain smc1's IdleMonitor.");
+    }
+
     // ── 1000-tick stability: 3 dupes, no crash ────────────────────────────────
 
     /// <summary>
