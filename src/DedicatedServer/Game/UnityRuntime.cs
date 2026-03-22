@@ -51,6 +51,17 @@ public static class UnityRuntime {
     private static readonly FieldInfo _choreConsumerProvidersField =
         typeof(ChoreConsumer).GetField(
             "providers", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    // Reflection cache: WiltCondition.WiltConditions (private Dictionary<int,bool>).
+    // MemberwiseClone in CloneSingle shares this dict across all clones from the same prefab.
+    // The first clone's TriggerLifecycle.OnPrefabInit adds 13 keys. The second clone's
+    // OnPrefabInit tries to Add(0,...) to the SAME shared dict → ArgumentException "duplicate key".
+    // Affects all plant types (261 instances per server run).
+    // Fix: reset to a fresh empty dict in CloneSingle so each plant instance gets its own dict.
+    private static readonly FieldInfo _wiltConditionsField =
+        typeof(WiltCondition).GetField(
+            "WiltConditions", BindingFlags.Instance | BindingFlags.NonPublic);
+
     private static readonly HashSet<IntPtr> SpawnedObjects = new();
 
     // --- Stats ---
@@ -82,6 +93,18 @@ public static class UnityRuntime {
 
         if (GameObjectComponents.TryGetValue(self.m_CachedPtr, out var components))
             components.Add(comp);
+
+        // If the GO is already inside TriggerLifecycle (SpawnedObjects), immediately call
+        // InitializeComponent on the new KMonoBehaviour. This matches Unity's Awake() behavior
+        // (called synchronously when AddComponent is invoked in play mode) and prevents
+        // Util.FindOrAddComponent<T> from logging "Could not find component T" false errors
+        // when [MyCmpAdd] adds components like Prioritizable/Clearable during Phase 1.
+        //
+        // Guard: only during TriggerLifecycle (SpawnedObjects contains the GO).
+        // For prefab creation (before TriggerLifecycle), defer to Phase 1 to preserve
+        // the Phase 0.5 Modifiers→KPrefabID initialization order needed for critter GOs.
+        if (comp is KMonoBehaviour kmbNew && SpawnedObjects.Contains(self.m_CachedPtr))
+            kmbNew.InitializeComponent();
 
         return comp;
     }
@@ -250,6 +273,17 @@ public static class UnityRuntime {
                             // bucket. With providers fixed to [own CP], each dupe queries its
                             // own CP which holds its own set of chores — no cross-contamination.
                             cp.choreWorldMap = new Dictionary<int, List<Chore>>();
+                            break;
+                        case WiltCondition:
+                            // WiltConditions (private Dictionary<int,bool>) is populated by
+                            // OnPrefabInit with 13 keys. MemberwiseClone shares the dict across
+                            // all clones from the same plant prefab. The first clone's
+                            // TriggerLifecycle populates the shared dict; subsequent clones'
+                            // OnPrefabInit tries Add(0,...) on an already-populated dict →
+                            // ArgumentException "duplicate key" (261 times per server run).
+                            // Fix: give each clone its own empty dict.
+                            _wiltConditionsField?.SetValue(cloneComp,
+                                new Dictionary<int, bool>());
                             break;
                     }
                     ComponentToGameObject[cloneComp.m_CachedPtr] = clone;
