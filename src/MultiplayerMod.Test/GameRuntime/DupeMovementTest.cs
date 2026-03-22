@@ -692,6 +692,47 @@ public class DupeMovementTest : PlayableGameTest {
         Assert.AreEqual(0, cp3.choreWorldMap.Count, "cp3.choreWorldMap must be empty after reset.");
     }
 
+    // ── Game.Instance.accumulators initialization ─────────────────────────────
+
+    /// <summary>
+    /// Regression: OxygenBreather.OnSpawn[IL_0x0021] NPE — Game.Instance.accumulators was null.
+    ///
+    /// ROOT CAUSE:
+    ///   Game.OnPrefabInit() crashes at line ~820 (ConduitFlowVisualizer needs
+    ///   Lighting/GlobalResources — absent in headless).
+    ///   accumulators = new Accumulators()  ← line 823 — NEVER REACHED.
+    ///   plantElementAbsorbers = new ...()  ← line 824 — NEVER REACHED.
+    ///
+    ///   OxygenBreather.OnSpawn() (runs during TriggerLifecycle Phase 2):
+    ///     o2Accumulator = Game.Instance.accumulators.Add("O2", this);  // IL 0x0021 → NPE!
+    ///
+    ///   This NPE crashed all 3 dupes and set StateMachine.Instance.error = true,
+    ///   halting all SM ticks → regression: all 3 dupes chore=None (commit 6ef111a).
+    ///
+    /// FIX (WorldBuilder.InitializeWorld catch block):
+    ///   game.accumulators ??= new Accumulators();
+    ///   game.plantElementAbsorbers ??= new PlantElementAbsorbers();
+    ///
+    /// This test documents that Accumulators is independently constructible and its
+    /// Add() API works without Unity context — verifying the fix is sound.
+    /// </summary>
+    [Test]
+    public void Accumulators_ConstructibleAndAddable_WithoutUnityContext() {
+        var acc = new Accumulators();
+        Assert.IsNotNull(acc,
+            "Accumulators must be constructible without Unity context. " +
+            "WorldBuilder catch block initializes it via 'new Accumulators()' after " +
+            "Game.OnPrefabInit() crashes at ConduitFlowVisualizer (line 820).");
+
+        // Add() must return a valid handle — OxygenBreather.OnSpawn stores the result
+        // and uses it to call Accumulate() each breath tick. An InvalidHandle would
+        // silently produce wrong metrics but not crash; a valid handle is required.
+        var handle = acc.Add("O2", null!);
+        Assert.AreNotEqual(HandleVector<int>.Handle.InvalidHandle, handle,
+            "Accumulators.Add must return a valid handle so OxygenBreather.OnSpawn " +
+            "can accumulate O2 data per breath tick without NPE.");
+    }
+
     // ── 1000-tick stability: 3 dupes, no crash ────────────────────────────────
 
     /// <summary>
