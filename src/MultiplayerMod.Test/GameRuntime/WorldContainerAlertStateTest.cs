@@ -1,4 +1,6 @@
+using System.Reflection;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace MultiplayerMod.Test.GameRuntime;
 
@@ -70,6 +72,42 @@ public class WorldContainerAlertStateTest : PlayableGameTest {
         Assert.IsFalse(result,
             "IsRedAlert() must return false in default 'off' state — " +
             "no red alert has been triggered after initialization.");
+    }
+
+    /// <summary>
+    /// Regression guard: in headless, AddComponent does NOT trigger Awake() →
+    /// KMonoBehaviour.obj stays null on the component.
+    ///
+    /// When CreateSMIS() runs, GenericInstance.ctor calls:
+    ///   masterTarget.Set(go, smi)
+    ///   → go.GetComponent&lt;KMonoBehaviour&gt;().Subscribe(1969584890, handler, this)
+    ///   → obj.GetOrCreateEventSystem() → NullReferenceException at [0x00000]
+    ///
+    /// Fix (WorldBuilder.cs): call wc.InitializeComponent() BEFORE smc.CreateSMIS().
+    /// This sets obj = KObjectManager.GetOrCreateObject(go) so Subscribe can proceed.
+    ///
+    /// This test documents the root cause: obj IS null on a freshly AddComponent'd WorldContainer
+    /// when no Awake() was triggered (headless mode).
+    /// </summary>
+    [Test]
+    public void WorldContainer_ObjField_IsNull_BeforeInitializeComponent() {
+        // Use a plain new GameObject (no createGameObject()) — mirrors WorldBuilder's
+        // new GameObject("WorldContainer_0") which has no pre-initialized KMonoBehaviour.
+        var go = new GameObject("PlainGO_NoBaseKMB");
+        var wc = go.AddComponent<WorldContainer>();
+
+        // obj is the KObject backing field set by Awake/InitializeComponent.
+        // Public|NonPublic required: AssemblyExposer may have rewritten private→public.
+        var objField = typeof(KMonoBehaviour)
+            .GetField("obj", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.IsNotNull(objField, "KMonoBehaviour.obj field must be locatable via reflection");
+
+        var obj = objField.GetValue(wc);
+        Assert.IsNull(obj,
+            "WorldContainer.obj must be null before InitializeComponent() — in headless, " +
+            "AddComponent does not trigger Awake. This is the root cause of the " +
+            "KMonoBehaviour.Subscribe NPE ([0x00000]) in WorldBuilder.cs when " +
+            "CreateSMIS() is called without prior InitializeComponent().");
     }
 
     /// <summary>

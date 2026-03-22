@@ -576,7 +576,20 @@ public class WorldBuilder {
         // This ensures smc.GetSMI<AlertStateManager.Instance>() returns non-null so
         // WorldContainer.AlertManager populates m_alertManager correctly.
         worldContainerGo.AddOrGetDef<AlertStateManager.Def>();
-        wc.SetID(0);  // sets id=0 and ParentWorldId=0
+        wc.SetID(0);  // set id=0 BEFORE InitializeComponent so OnPrefabInit registers with correct id
+        // Ensure KMonoBehaviour.obj is initialized BEFORE CreateSMIS.
+        // In headless, AddComponent<WorldContainer>() does NOT trigger Awake() → obj stays null on
+        // the WorldContainer's KMonoBehaviour. When CreateSMIS() runs, GenericInstance.ctor calls
+        //   masterTarget.Set(worldContainerGo, smi)
+        //   → worldContainerGo.GetComponent<KMonoBehaviour>().Subscribe(1969584890, ...)
+        //   → obj.GetOrCreateEventSystem() → NullReferenceException at [0x00000]  (obj is null)
+        // InitializeComponent() sets obj = KObjectManager.GetOrCreateObject(go) AND calls
+        // WorldContainer.OnPrefabInit() which:
+        //   1. RegisterWorldContainer(this) — ClusterManager.Instance is already set above ✓
+        //   2. Game.Instance.Subscribe(880851192, ...) — Game.Instance is set at line 433 ✓
+        //   3. ClusterManager.Instance.Subscribe(-1078710002, ...) — ClusterManager.Instance ✓
+        // The guard below is now a safety no-op (OnPrefabInit already registered wc with id=0).
+        wc.InitializeComponent();
         if (!ClusterManager.Instance.WorldContainers.Contains(wc))
             ClusterManager.Instance.RegisterWorldContainer(wc);
         var smc = worldContainerGo.GetComponent<StateMachineController>();
