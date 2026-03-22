@@ -1219,6 +1219,61 @@ public class WorldBuilder {
     ///   - Pre-add GameTags.Idle (breaks IdleCellSensor deadlock).
     ///   - Spawn Sensors (subscribes OnBrainPreUpdate; must follow Brain.Spawn()).
     /// </summary>
+    /// <summary>
+    /// Ensures MinionIdentity.assignableProxy is non-null before BaseOnSpawn runs.
+    ///
+    /// Normal game path: MinionIdentity.OnSpawn() → ValidateProxy() →
+    ///   MinionAssignablesProxy.InitAssignableProxy() → GameUtil.KInstantiate(Assets.GetPrefab("MinionAssignablesProxy")).
+    ///
+    /// In headless: Assets.GetPrefab("MinionAssignablesProxy") may be null if
+    /// RegisterEntities() silently failed for MinionAssignablesProxyConfig (exception
+    /// caught, failure only logged for first 3 errors).
+    /// GameUtil.KInstantiate(null) → Object.Instantiate(null) → ArgumentException →
+    /// ValidateProxy() throws → proxy stays null → AssignableReachabilitySensor.ctor NPE.
+    ///
+    /// Fix: try ValidateProxy() first; if it fails or leaves proxy null, create the
+    /// proxy directly without the prefab system (mirrors CreatePrefab + InitAssignableProxy).
+    /// The GO must be inactive when components are added so Awake/OnPrefabInit fires only
+    /// once, after SetTarget is called — matching the game's KInstantiate flow.
+    /// </summary>
+    private static void EnsureAssignableProxy(GameObject go, MinionIdentity identity) {
+        if (identity.assignableProxy?.Get() != null) return;
+
+        // Try the standard game path first.
+        try {
+            identity.ValidateProxy();
+            if (identity.assignableProxy?.Get() != null) {
+                Debug.LogWarning($"[FixRationalAi] {go.name}: ValidateProxy OK");
+                return;
+            }
+            Debug.LogWarning($"[FixRationalAi] {go.name}: ValidateProxy returned but proxy still null — using direct creation");
+        } catch (Exception ex) {
+            Debug.LogWarning($"[FixRationalAi] {go.name}: ValidateProxy threw ({ex.GetBaseException().Message}) — using direct proxy creation");
+        }
+
+        // Fallback: create the MinionAssignablesProxy GO directly, bypassing Assets.GetPrefab.
+        // Replicates MinionAssignablesProxyConfig.CreatePrefab() + InitAssignableProxy().
+        // Create INACTIVE so Awake/OnPrefabInit fires only after SetTarget is called.
+        try {
+            var proxyGO = new GameObject("MinionAssignablesProxy");
+            proxyGO.SetActive(false);          // suppress Awake until fully wired
+            proxyGO.AddOrGet<Ownables>();      // AssignableReachabilitySensor.GetComponents<Assignables>()
+            proxyGO.AddOrGet<Equipment>();     // ConfigureAssignableSlots needs Equipment for EquipmentSlots
+            var proxy = proxyGO.AddOrGet<MinionAssignablesProxy>();
+
+            // Wire ref BEFORE SetActive so OnPrefabInit (fired on activation) can use it.
+            if (identity.assignableProxy == null)
+                identity.assignableProxy = new Ref<MinionAssignablesProxy>();
+            identity.assignableProxy.Set(proxy);
+            proxy.SetTarget(identity, go);    // mirrors SetTarget call in InitAssignableProxy
+
+            proxyGO.SetActive(true);           // Awake fires → OnPrefabInit → ConfigureAssignableSlots
+            Debug.LogWarning($"[FixRationalAi] {go.name}: direct proxy creation OK, proxy={identity.assignableProxy.Get() != null}");
+        } catch (Exception ex) {
+            Debug.LogWarning($"[FixRationalAi] {go.name}: direct proxy creation FAILED:\n{ex}");
+        }
+    }
+
     private void FixRationalAi() {
         var fixedCount = 0;
         foreach (var go in _spawnedMinions) {
@@ -1230,17 +1285,10 @@ public class WorldBuilder {
                 }
 
                 // ValidateProxy BEFORE BaseOnSpawn: AssignableReachabilitySensor.ctor calls
-                // identity.assignableProxy.Get() → NPE if MinionIdentity.OnSpawn() hasn't run.
-                // This normally runs in MinionIdentity.OnSpawn() → OnAddDupe callback.
+                // identity.assignableProxy.Get() → NPE if null.
                 var identity = go.GetComponent<MinionIdentity>();
-                if (identity != null && identity.assignableProxy?.Get() == null) {
-                    try {
-                        identity.ValidateProxy();
-                        Console.WriteLine($"[FixRationalAi] {go.name}: ValidateProxy OK, proxy={identity.assignableProxy?.Get() != null}");
-                    } catch (Exception ex) {
-                        Console.WriteLine($"[FixRationalAi] {go.name}: ValidateProxy partial: {ex.GetBaseException().Message}");
-                    }
-                }
+                if (identity != null)
+                    EnsureAssignableProxy(go, identity);
 
                 // Primary: BaseMinionConfig.BaseOnSpawn — adds all 8 sensors, starts all 52 SMs
                 // via RationalAi.Instance.StartSM(), adds 7 navigator transition layers.
