@@ -488,13 +488,25 @@ public class WorldBuilder {
         StateMachineManager.Instance.Clear();
         StateMachine.Instance.error = false;
 
-        // GameScheduler: initialized via Awake("GameScheduler", ...) at line 345, but
-        // OnPrefabInit() → RegisterScheduler may have crashed if StateMachineManager
-        // wasn't yet ready. Regardless, Instance=this is set before RegisterScheduler
-        // (first line of OnPrefabInit), so this re-init guard only fires if the Awake call
-        // itself failed. Ensures Schedule() calls from IdleChore.Begin() and others do not NPE.
-        if (GameScheduler.Instance == null) {
-            Console.WriteLine("[WorldBuilder] GameScheduler.Instance was null — re-initializing");
+        // StateMachineManager.Clear() calls scheduler.FreeResources() on the Scheduler that
+        // GameScheduler.OnPrefabInit() registered at line 345. FreeResources() nulls out
+        // the Scheduler's internal entries list AND clock field:
+        //   entries = null → Scheduler.Update(): Count => entries.Count → NPE (15k/90s)
+        //   clock   = null → scheduler.Schedule() → time + clock.GetTime() → NPE
+        //                   (ClothingWearer.OnSpawn: GameScheduler.Instance.Schedule("ApplySpawnClothes"...))
+        //
+        // Fix: after Clear(), give GameScheduler a fresh Scheduler and re-register it with
+        // StateMachineManager so both share one clean instance going forward.
+        if (GameScheduler.Instance != null) {
+            var freshScheduler = new Scheduler(new GameScheduler.GameSchedulerClock());
+            typeof(GameScheduler)
+                .GetField("scheduler", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .SetValue(GameScheduler.Instance, freshScheduler);
+            Singleton<StateMachineManager>.Instance.RegisterScheduler(freshScheduler);
+            Console.WriteLine("[WorldBuilder] GameScheduler.scheduler refreshed after StateMachineManager.Clear()");
+        } else {
+            // Fallback: Awake() at line 345 crashed entirely — re-create from scratch.
+            Console.WriteLine("[WorldBuilder] GameScheduler.Instance was null — re-initializing from scratch");
             var gsGo = new GameObject("GameScheduler");
             var gs = gsGo.AddComponent<GameScheduler>();
             try { gs.InitializeComponent(); }
@@ -1428,6 +1440,9 @@ public class WorldBuilder {
             proxyGO.SetActive(false);          // suppress Awake until fully wired
             proxyGO.AddOrGet<Ownables>();      // AssignableReachabilitySensor.GetComponents<Assignables>()
             proxyGO.AddOrGet<Equipment>();     // ConfigureAssignableSlots needs Equipment for EquipmentSlots
+            proxyGO.AddOrGet<KPrefabID>();     // Ref<T>.Set(proxy) calls proxy.GetComponent<KPrefabID>().InstanceID
+                                               //   → NPE if KPrefabID absent → proxy obj field never stored
+                                               //   → assignableProxy.Get() returns null in ARS.ctor → NPE
             var proxy = proxyGO.AddOrGet<MinionAssignablesProxy>();
 
             // Wire ref BEFORE SetActive so OnPrefabInit (fired on activation) can use it.
