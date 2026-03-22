@@ -528,6 +528,18 @@ public class WorldBuilder {
             game.mingleCellTracker = go.AddComponent<MingleCellTracker>();
         Console.WriteLine($"[WorldBuilder] mingleCellTracker ready: {game.mingleCellTracker != null}");
 
+        // roomProber: assigned in Game.OnPrefabInit() line 833 via new RoomProber().
+        // Game.OnPrefabInit() crashes at ~line 820 (ConduitFlowVisualizer) in headless,
+        // so roomProber is never initialized.
+        // RoomMonitor.UpdateRoomType[IL_0x0015]: Game.Instance.roomProber.GetRoomOfGameObject(...)
+        // → NPE when roomProber==null. Fires on PathAdvanced event during Navigator.AdvancePath
+        // (i.e., the MOMENT a dupe first tries to walk). Without this fix, movement never starts.
+        // RoomProber() ctor is safe in headless: uses Grid.CellCount (valid post-load),
+        // Game.Instance, World.Instance, and GameScenePartitioner.Instance (initialized above).
+        if (game.roomProber == null)
+            game.roomProber = new RoomProber();
+        Console.WriteLine($"[WorldBuilder] roomProber ready: {game.roomProber != null}");
+
         // MinionBrain.UpdateBrain() checks discoveredSurface / discoveredOilField to fire
         // "first discovery" events. If false, it calls World.Instance.zoneRenderData.GetSubWorldZoneType()
         // which NPEs because SubworldZoneRenderData (rendering component) is null in headless.

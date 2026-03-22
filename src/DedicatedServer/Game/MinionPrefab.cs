@@ -159,6 +159,18 @@ public static class MinionPrefab {
             try {
                 var smInst = factory(rationalAiSmi);
                 smType = smInst.GetType().Name;
+
+                // SpeechMonitor: pure mouth-animation + audio SM — useless in headless.
+                // root.Enter(CreateMouth) → SetMouthId() → Db.Get().Personalities.Get(personalityResourceId)
+                // returns null when personalityResourceId=HashedString.Invalid (0x0) in headless.
+                // null.speech_mouth → NullReferenceException → globalSMError=True → all dupes frozen.
+                // Fix: remove from smc.stateMachines (added by ctor) and skip StartSM.
+                if (smInst is SpeechMonitor.Instance) {
+                    smc.stateMachines.Remove(smInst);
+                    Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType}: SKIPPED (headless-unsafe, mouth anim+audio)");
+                    continue;
+                }
+
                 smInst.StartSM();
                 Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType}: OK");
             } catch (Exception ex) {
