@@ -1621,7 +1621,7 @@ public class WorldBuilder {
         foreach (var brain in Components.Brains.Items) {
             if (brain is not CreatureBrain) continue;
             var smc = brain.gameObject.GetComponent<StateMachineController>();
-            if (smc == null || smc.stateMachines == null) continue;
+            if (smc == null || smc.stateMachines == null) continue; // REQUIRED: critter SMCs may be null in headless — do not remove.
             total++;
             CreaturePrefab.Setup((CreatureBrain)brain);
         }
