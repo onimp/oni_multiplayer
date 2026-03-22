@@ -90,6 +90,9 @@ public abstract class PlayableGameTest {
         Singleton<CellChangeMonitor>.DestroyInstance();
         GameScheduler.Instance = null;
         ElementLoader.elements = null;
+        ElementLoader.elementTable    = null;
+        ElementLoader.elementTagTable = null;
+        SaveLoader.DestroyInstance();
     }
 
     protected static GameObject createGameObject() {
@@ -137,6 +140,23 @@ public abstract class PlayableGameTest {
         GameComps.InfraredVisualizers = new InfraredVisualizerComponents();
         GameScreenManager.Instance = new GameScreenManager();
         GameScreenManager.Instance.worldSpaceCanvas = new GameObject();
+
+        // SaveLoader: needed by RecreationTimeMonitor.Instance ctor:
+        //   SaveLoader.Instance.GameInfo.saveMajorVersion != 0 → NPE if Instance null.
+        // OnPrefabInit() only does: Instance = this; saveManager = GetComponent<SaveManager>();
+        // Set GameInfo to a modern version (7.37) so IsVersionOlderThan(7, 35) = false
+        // → RestoreFromSchedule() skipped (correct for fresh non-save-file test runs).
+        var sl = worldGameObject.AddComponent<SaveLoader>();
+        sl.InitializeComponent(); // sets SaveLoader.Instance = sl
+        var gameInfoField = typeof(SaveLoader).GetField(
+            "<GameInfo>k__BackingField",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        if (gameInfoField != null) {
+            var info = default(SaveGame.GameInfo);
+            info.saveMajorVersion = 7;
+            info.saveMinorVersion = 37;
+            gameInfoField.SetValue(sl, info);
+        }
     }
 
     private static void SetupAssets(GameObject worldGameObject) {
@@ -153,6 +173,12 @@ public abstract class PlayableGameTest {
         assets.BlockTileDecorInfoAssets = new List<BlockTileDecorInfo>();
         Assets.ModLoadedKAnims = new List<KAnimFile>() { ScriptableObject.CreateInstance<KAnimFile>() };
         assets.elementAudio = new TextAsset("");
+        // Required by Disease ctor (called from new Diseases(root) in DbPatch):
+        //   overlayColourName = Assets.instance.DiseaseVisualization.GetInfo(id).overlayColourName
+        // Without this, Disease ctor NPEs → Diseases never populated → MinionModifiers NPE.
+        // An empty DiseaseVisualization returns default(Info) from GetInfo() — overlayColourName
+        // will be null, which is fine for headless tests (overlay rendering not used).
+        assets.DiseaseVisualization = ScriptableObject.CreateInstance<DiseaseVisualization>();
         assets.personalitiesFile = new TextAsset(TestPersonalitiesCsv);
         Assets.instance = assets;
 
@@ -205,6 +231,15 @@ public abstract class PlayableGameTest {
         GameScheduler.Instance = worldGameObject.AddComponent<GameScheduler>();
 
         ElementLoader.elements = new List<Element> { new() };
+        // Disease.InitializeElemGrowthArray (called from Disease ctor → new Diseases(root) in DbPatch)
+        // calls ElementLoader.GetElementIndex(SimHashes.X) which does elementTable.TryGetValue(...)
+        // → NPE if elementTable is null. Populate with the two SimHashes that base Disease uses:
+        // Polypropylene and Vacuum, both pointing to elements[0] (idx=0). The resulting
+        // infoArray[0] is overwritten twice harmlessly — test-env diseases don't need per-element data.
+        ElementLoader.elementTable    = new Dictionary<int, Element>();
+        ElementLoader.elementTagTable = new Dictionary<Tag, Element>();
+        ElementLoader.elementTable[(int)SimHashes.Polypropylene] = ElementLoader.elements[0];
+        ElementLoader.elementTable[(int)SimHashes.Vacuum]        = ElementLoader.elements[0];
         ResetGrid(widthInCells, heightInCells);
 
         GameScenePartitioner.instance?.OnForcedCleanUp();

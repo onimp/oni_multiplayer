@@ -52,6 +52,15 @@ public class DbPatch {
         // SlipperyMonitor.Instance ctor (factory [39]):
         __instance.effects.Add(new Effect("RecentlySlippedTracker", "RecentlySlippedTracker", "", 0f, false, false, false));
         __instance.AttributeConverters = new AttributeConverters();
+        // Diseases must be initialized AFTER Attributes+AttributeConverters because
+        // Disease ctor calls Db.Get().Attributes.Add(cureSpeedBase) for each disease.
+        // Without this, MinionModifiers.OnPrefabInit() NPEs in
+        //   foreach (Disease resource2 in Db.Get().Diseases.resources)
+        // → null.resources → NullReferenceException.
+        // Uses statsOnly=false (full initialization) so resource2.amount and
+        // resource2.cureSpeedBase are non-null (MinionModifiers reads both fields).
+        // Requires Assets.instance.DiseaseVisualization != null (set in SetupAssets).
+        __instance.Diseases = new Database.Diseases(root);
         __instance.StatusItemCategories = new StatusItemCategories(root);
         __instance.Personalities = new Personalities();
         __instance.TechItems = new TechItems(root);

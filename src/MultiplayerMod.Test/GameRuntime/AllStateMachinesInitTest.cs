@@ -224,6 +224,13 @@ public class AllStateMachinesInitTest : PlayableGameTest {
 
         // ── Identity / tags ───────────────────────────────────────────────────
         var kpid = go.AddComponent<KPrefabID>();
+        // BaseMinion + Minion model tags required by DUPLICANTSTATS.GetStatsFor(gameObject):
+        //   GetStatsFor(KPrefabID): if (!HasTag(BaseMinion)) return null
+        //   Then: foreach model in AllModels if (HasTag(model)) return GetStatsFor(model)
+        // Without these: DUPLICANTSTATS.GetStatsFor → null → .DiseaseImmunities → NPE
+        // Fixes [11] GermExposureMonitor: inateImmunities = GetStatsFor(go).DiseaseImmunities.IMMUNITIES
+        kpid.AddTag(GameTags.BaseMinion);
+        kpid.AddTag(new Tag("Minion")); // GameTags.Minions.Models.AllModels includes "Minion"
         go.AddComponent<Prioritizable>();
         go.AddComponent<KSelectable>();
         go.AddComponent<ConsumableConsumer>().forbiddenTagSet = new HashSet<Tag>();
@@ -235,11 +242,38 @@ public class AllStateMachinesInitTest : PlayableGameTest {
         go.AddComponent<Facing>();
 
         // ── Modifiers / Attributes / Amounts ──────────────────────────────────
-        // StressMonitor, TemperatureMonitor, CalorieMonitor etc. look up Amounts on the dupe GO.
+        // Use MinionModifiers (not plain Modifiers) — its OnPrefabInit adds ALL
+        // Db.Attributes.resources (Sneezyness, ScaldingThreshold, QualityOfLife, GermResistance…)
+        // and creates Sicknesses. Plain Modifiers only added attributes we explicitly listed.
+        //
+        // Fixes:
+        //   [05] SneezeMonitor: Db.Get().Attributes.Sneezyness.Lookup(go) → null without this
+        //   [10] SicknessMonitor: GetComponent<MinionModifiers>().sicknesses → NPE without this
+        //   [11] GermExposureMonitor: GetComponent<MinionModifiers>().sicknesses → NPE without this
+        //   [15] ScaldingMonitor: attributes.Get(Db.Get().Attributes.ScaldingThreshold) → null without this
         go.AddComponent<Effects>();
-        var modifiers = go.AddComponent<Modifiers>();
-        modifiers.Awake();
-        modifiers.attributes.Add(Db.Get().Attributes.CarryAmount);
+        go.AddComponent<Traits>();  // Modifiers.OnPrefabInit calls GetComponent<Traits>(); also
+                                    // GermExposureMonitor stores traits = GetComponent<Traits>()
+        var modifiers = go.AddComponent<MinionModifiers>();
+        modifiers.Awake(); // → InitializeComponent → MinionModifiers.OnPrefabInit:
+                           //   base.OnPrefabInit → amounts=new Amounts, sicknesses=new Sicknesses,
+                           //   attributes=new Attributes (empty)
+                           //   MinionModifiers adds all Db.Attributes.resources + disease amounts
+
+        // Klei.AI.AttributeConverters component — needed by MinionModifiers.OnSpawn():
+        //   SetupDependentAttribute(CarryAmount, CarryAmountFromStrength):
+        //     attributeConverter.Lookup(this).Evaluate()
+        //     → go.GetComponent<Klei.AI.AttributeConverters>().Get(CarryAmountFromStrength) → null
+        //     → null.Evaluate() → NPE if the component is absent.
+        // MUST be added AFTER modifiers.Awake() so GetAttributes() returns the populated
+        // attribute set (Strength etc.) that OnPrefabInit iterates to build converter instances.
+        go.AddComponent<Klei.AI.AttributeConverters>().Awake();
+
+        // ScaldingMonitor [15]: Instance.ctor stores internalTemperature = Amounts.Temperature.Lookup(go).
+        // StartSM root.Enter(SetInitialAverageExternalTemperature) reads internalTemperature.value
+        // → NPE if Temperature amount was never added to the GO.
+        // MinionModifiers only adds disease amounts; Temperature must be added explicitly.
+        modifiers.AddAmount(Db.Get().Amounts.Temperature);
 
         // ── Additional components needed by sub-SMs ───────────────────────────
         go.AddComponent<MinionResume>();
