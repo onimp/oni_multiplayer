@@ -215,16 +215,9 @@ public static class MinionPrefab {
                 choreDriver.smi.StartSM(); // lazy-creates StatesInstance, enters nochore
                 Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM started");
             }
-            // DS-006b retrofit: patch the live SMI's worker field so haschore.Update no longer NPEs.
-            // Use ?? choreDriver.smi so retrofit also applies when GetSMI<> returns null
-            // (e.g. smi was lazy-created by .smi accessor above but StartSM threw before
-            // registering it in SMC — same fix that 0d99648 applied correctly for critters).
-            var smiInst = choreDriver.GetSMI<ChoreDriver.StatesInstance>() ?? choreDriver.smi;
-            if (smiInst != null && smiInst.worker == null) {
-                smiInst.worker = go.GetComponent<WorkerBase>();
-                if (smiInst.worker != null)
-                    Console.WriteLine($"[FixRationalAi] {go.name}: patched smi.worker → {smiInst.worker.GetType().Name}");
-            }
+            // DS-006b: StandardWorker is guaranteed by TriggerLifecycle Phase 1.5 injection
+            // (UnityRuntime.TriggerLifecycle adds it before Phase 2 → OnSpawn → StartSM → ctor).
+            // No post-hoc retrofit needed here.
         }
 
         // Spawn Brain — sets running=true + choreConsumer + registers with BrainScheduler.

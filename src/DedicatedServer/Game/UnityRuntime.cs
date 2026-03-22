@@ -436,6 +436,19 @@ public static class UnityRuntime {
         // These components were not in the Phase 1 snapshot, so their InitializeComponent() was
         // never called → isInitialized=false → .ChoreProvider/ChoreDriver/User "is not initialized"
         // errors during OnSpawn. A second pass picks them up (InitializeComponent is idempotent).
+        //
+        // DS-006b root fix: inject StandardWorker BEFORE Phase 2 (OnSpawn → StartSM).
+        // ChoreDriver.StatesInstance.ctor captures: worker = GetComponent<WorkerBase>().
+        // If StandardWorker is absent at ctor time, worker=null → haschore.Update b__5_3
+        // NPEs on smi.worker.GetWorkable() every subtick.  All post-hoc retrofit (patching
+        // the live SMI after ctor) was unreliable because BucketUpdater already holds a
+        // reference to the ctor-captured null.  The only correct fix is to add StandardWorker
+        // BEFORE Phase 2 fires so the ctor sees GetComponent<WorkerBase>() != null.
+        if (components.Any(c => c is ChoreDriver) && !components.Any(c => c is StandardWorker)) {
+            var sw = go.AddOrGet<StandardWorker>();
+            sw.InitializeComponent();
+        }
+
         snapshot = components.ToList();
         foreach (var comp in snapshot) {
             if (comp is KMonoBehaviour kmb) {

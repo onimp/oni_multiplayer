@@ -251,6 +251,47 @@ public class ChoreDriverSmTest : PlayableGameTest {
             "CreaturePrefab.Setup() now applies both steps so haschore.Update b__5_3 no longer NPEs.");
     }
 
+    // ─── DS-006b root fix: Phase 1.5 StandardWorker injection ───────────────
+    // True root fix: TriggerLifecycle Phase 1.5 injects StandardWorker BEFORE Phase 2
+    // (OnSpawn → StartSM → StatesInstance.ctor).  This ensures every ctor sees
+    // GetComponent<WorkerBase>() != null → worker baked in correctly.
+    // All post-hoc retrofit code in MinionPrefab.Setup() and CreaturePrefab.Setup()
+    // has been removed — Phase 1.5 is the single correct injection point.
+
+    /// <summary>
+    /// Root fix for DS-006b: when StandardWorker is injected via Phase 1.5
+    /// (i.e. BEFORE StartSM / OnSpawn fires), StatesInstance.ctor finds
+    /// GetComponent&lt;WorkerBase&gt;() != null → worker is non-null from the start.
+    ///
+    /// Pattern mirrors UnityRuntime.TriggerLifecycle Phase 1.5:
+    ///   if (components.Any(c =&gt; c is ChoreDriver) &amp;&amp; !components.Any(c =&gt; c is StandardWorker))
+    ///       { go.AddOrGet&lt;StandardWorker&gt;(); sw.InitializeComponent(); }
+    /// Then Phase 2 fires StartSM → ctor runs → worker non-null.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_Phase1_5_StandardWorkerInjection_CtorFindsWorker() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+
+        // Phase 1.5: GO has ChoreDriver but no StandardWorker yet —
+        // inject StandardWorker before Phase 2 fires (mirrors UnityRuntime.TriggerLifecycle).
+        if (go.GetComponent<StandardWorker>() == null) {
+            var sw = go.AddOrGet<StandardWorker>();
+            sw.InitializeComponent();
+        }
+
+        // Phase 2: OnSpawn → StartSM → StatesInstance.ctor → worker = GetComponent<WorkerBase>()
+        driver.smi.StartSM();
+
+        var smi = driver.GetSMI<ChoreDriver.StatesInstance>();
+        Assert.IsNotNull(smi, "SM must be started and SMI registered in SMC");
+        Assert.IsNotNull(smi.worker,
+            "worker must be non-null when StandardWorker is injected in Phase 1.5 before StartSM. " +
+            "This is the DS-006b root fix: TriggerLifecycle Phase 1.5 ensures StandardWorker is on " +
+            "the GO before Phase 2 fires OnSpawn → StartSM → ctor → GetComponent<WorkerBase>().");
+    }
+
     // ─── DS-005 tests (pre-existing) ────────────────────────────────────────
 
     /// <summary>

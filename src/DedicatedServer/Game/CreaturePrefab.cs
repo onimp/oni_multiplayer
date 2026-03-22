@@ -158,20 +158,9 @@ public static class CreaturePrefab {
             choreDriver.smi.StartSM();
             Console.WriteLine($"[Animals] {go.name}: ChoreDriver SM started (safety net)");
         }
-        // DS-006b retrofit: TriggerLifecycle may have started ChoreDriver SM (via ChoreDriver.OnSpawn)
-        // BEFORE Setup() ran — StatesInstance.ctor already captured worker=null at that point.
-        // AddOrGet<StandardWorker>() at the top adds WorkerBase to the GO, but the live SMI's
-        // worker field still holds null. Patch it directly — no reflection needed (AssemblyExposer
-        // promotes the private setter to public in the exposed DLL).
-        //
-        // GetSMI<>() returns null when the SMI was lazy-created via choreDriver.smi but StartSM
-        // threw before registering the instance in the SMC (same root cause as dupe fix a6baf2d).
-        // The ?? choreDriver.smi fallback catches this path — mirrors the dupe fix exactly.
-        var smiInst = choreDriver?.GetSMI<ChoreDriver.StatesInstance>() ?? choreDriver?.smi;
-        if (smiInst != null && smiInst.worker == null)
-            smiInst.worker = go.GetComponent<WorkerBase>();
-        if (smiInst != null && smiInst.worker == null)
-            Debug.LogError(go.name + " worker still null after DS-006b retrofit");
+        // DS-006b: StandardWorker is guaranteed by TriggerLifecycle Phase 1.5 injection
+        // (UnityRuntime.TriggerLifecycle adds it before Phase 2 → OnSpawn → StartSM → ctor).
+        // No post-hoc retrofit needed here.
 
         // ── Diagnostic: one line per creature ────────────────────────────────────
         var cell  = Grid.PosToCell(go);
