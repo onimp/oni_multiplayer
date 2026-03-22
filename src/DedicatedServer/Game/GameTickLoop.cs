@@ -150,6 +150,13 @@ public class GameTickLoop {
         // → ChoreDriver nochore→haschore → BeginChore → chore starts.
         if (_tickCount == ChoreKickTick) {
             ForceUpdateBrains();
+            // Re-index any dupe ChoreProvider entries stored under world key -1.
+            // IdleChore is added to ChoreProvider during IdleMonitor.OnSpawn (TriggerLifecycle),
+            // when Grid.WorldIdx may not yet be populated → GetMyParentWorldId() returns -1.
+            // CollectChores queries with the real world key → miss → no chores found.
+            // After ForceUpdateBrains (which logs the miss), fix the keys so the
+            // natural BrainScheduler.RenderEveryTick at tick=62+ can find them.
+            ReindexChoreProviders();
         }
         // tick=62: kick creature brains one tick after dupe brains.
         // ForceUpdateBrains() skips creatures (they may lack ChoreDriver component
@@ -402,6 +409,46 @@ public class GameTickLoop {
         }
 
         Debug.LogWarning($"[Animals] ForceUpdateCreatureBrains DONE: kicked={updated} skipped={skipped}");
+    }
+
+    /// <summary>
+    /// Re-indexes any dupe ChoreProvider entries stored under world key -1.
+    ///
+    /// ROOT CAUSE:
+    ///   IdleMonitor enters 'idle' during TriggerLifecycle Phase 3 (OnSpawn).
+    ///   ToggleRecurringChore Enter fires → new IdleChore → provider.AddChore(this).
+    ///   AddChore calls chore.gameObject.GetMyParentWorldId() for the map key.
+    ///   If Grid.WorldIdx[cell] == byte.MaxValue at that moment (not yet written),
+    ///   GetMyParentWorldId() returns -1 → chore stored under key -1.
+    ///   CollectChores queries with the valid world key (0+) → no match → miss.
+    ///
+    /// FIX: move all chores from choreWorldMap[-1] to choreWorldMap[correctKey],
+    ///   where correctKey = go.GetMyParentWorldId() (returns a valid ID post warm-up).
+    ///   Called once at tick=61, right after ForceUpdateBrains. The natural
+    ///   BrainScheduler.RenderEveryTick at tick=62+ then finds the re-indexed chores.
+    /// </summary>
+    private static void ReindexChoreProviders() {
+        var reindexed = 0;
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null) continue;
+            if (!brain.gameObject.HasTag(GameTags.BaseMinion)) continue;
+            var go       = brain.gameObject;
+            var provider = go.GetComponent<ChoreProvider>();
+            if (provider == null) continue;
+            if (!provider.choreWorldMap.TryGetValue(-1, out var miskeyed) || miskeyed.Count == 0) continue;
+            var correctKey = go.GetMyParentWorldId();
+            if (correctKey == -1) {
+                Debug.LogWarning($"[WorldID] {go.name}: GetMyParentWorldId still -1, deferring reindex");
+                continue;
+            }
+            if (!provider.choreWorldMap.ContainsKey(correctKey))
+                provider.choreWorldMap[correctKey] = new List<Chore>();
+            provider.choreWorldMap[correctKey].AddRange(miskeyed);
+            provider.choreWorldMap.Remove(-1);
+            reindexed++;
+            Debug.LogWarning($"[WorldID] {go.name}: reindexed {miskeyed.Count} chore(s) key=-1 → key={correctKey}");
+        }
+        Debug.LogWarning($"[WorldID] ReindexChoreProviders: {reindexed} provider(s) reindexed");
     }
 
     private static void ForceUpdateSensors() {

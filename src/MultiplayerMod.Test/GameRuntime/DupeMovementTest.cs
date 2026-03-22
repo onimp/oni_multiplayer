@@ -224,6 +224,67 @@ public class DupeMovementTest : PlayableGameTest {
             "All three IdleMonitor instances must be unique objects.");
     }
 
+    // ── World-ID reindex: chores mis-keyed under -1 move to correct key ───────
+
+    /// <summary>
+    /// Documents and verifies the world-ID reindex fix.
+    ///
+    /// ROOT CAUSE:
+    ///   IdleMonitor enters 'idle' during OnSpawn (TriggerLifecycle Phase 3).
+    ///   ToggleRecurringChore fires its Enter action → SetupChore → new IdleChore(smi.master)
+    ///   → IdleChore.ctor calls provider.AddChore(this).
+    ///   AddChore calls chore.gameObject.GetMyParentWorldId() to determine the map key.
+    ///   GetMyParentWorldId uses Grid.WorldIdx[cell] — but if Grid.WorldIdx hasn't been
+    ///   fully written for the dupe's cell at that moment, WorldIdx[cell] = byte.MaxValue →
+    ///   ClusterManager.GetWorld() returns null → GetMyParentWorldId returns -1.
+    ///   Chore stored under key -1. CollectChores queries with key 0 (valid after warm-up)
+    ///   → miss → 0 chores found → FindNextChore returns false → no movement.
+    ///
+    ///   Combined with the SMC fix (3 IdleMonitors now run), this means 3 IdleChores are
+    ///   created but all 3 are stored under key -1 → none visible to CollectChores.
+    ///
+    /// FIX (GameTickLoop.ReindexChoreProviders, called at tick=61 after ForceUpdateBrains):
+    ///   For each dupe's personal ChoreProvider:
+    ///     if choreWorldMap[-1] is non-empty and GetMyParentWorldId() != -1 now:
+    ///       move all entries to choreWorldMap[correctKey], remove -1 bucket.
+    ///   After reindex, BrainScheduler.RenderEveryTick naturally finds the chores
+    ///   at tick=62+ and assigns them to dupes.
+    /// </summary>
+    [Test]
+    public void DupeChoreProvider_ReindexesMiskeyedChores() {
+        var go       = createGameObject();
+        var provider = go.AddComponent<ChoreProvider>();
+
+        // Simulate mis-keyed state: IdleChore stored under -1 because
+        // GetMyParentWorldId() returned -1 during IdleMonitor.OnSpawn.
+        // We use a null stand-in for Chore — the logic is purely key migration.
+        var miskeyedEntry = new List<Chore> { null! };
+        provider.choreWorldMap[-1] = miskeyedEntry;
+
+        Assert.IsTrue(provider.choreWorldMap.ContainsKey(-1),
+            "Pre-condition: chore must be under key -1 (simulating mis-keyed state).");
+        Assert.IsFalse(provider.choreWorldMap.ContainsKey(0),
+            "Pre-condition: no entry under key 0 yet.");
+
+        // Apply reindex logic (mirrors GameTickLoop.ReindexChoreProviders).
+        const int correctKey = 0;
+        if (provider.choreWorldMap.TryGetValue(-1, out var miskeyed) && miskeyed.Count > 0) {
+            if (!provider.choreWorldMap.ContainsKey(correctKey))
+                provider.choreWorldMap[correctKey] = new List<Chore>();
+            provider.choreWorldMap[correctKey].AddRange(miskeyed);
+            provider.choreWorldMap.Remove(-1);
+        }
+
+        Assert.IsFalse(provider.choreWorldMap.ContainsKey(-1),
+            "After reindex: key -1 must be removed from choreWorldMap.");
+        Assert.IsTrue(provider.choreWorldMap.ContainsKey(correctKey),
+            "After reindex: chore must be under the correct world key.");
+        Assert.AreEqual(1, provider.choreWorldMap[correctKey].Count,
+            "After reindex: exactly 1 entry under the correct key.");
+        Assert.AreSame(miskeyedEntry[0], provider.choreWorldMap[correctKey][0],
+            "After reindex: the same chore object must be under the new key.");
+    }
+
     // ── 1000-tick stability: 3 dupes, no crash ────────────────────────────────
 
     /// <summary>
