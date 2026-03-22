@@ -185,6 +185,32 @@ public class RealWorldState {
         return size;
     }
 
+    /// <summary>
+    /// Resolves building cell dimensions from the two available size sources.
+    /// Primary: <paramref name="getBuildingDef"/> — backed by the static _buildingDefCache populated
+    ///   during RegisterBuildingDefs() configTable harvest. Authoritative for all 342 registered defs.
+    /// Fallback: <paramref name="sizeMap"/> — instance PrefabSizeMap, populated during SpawnEntities().
+    ///   Can contain stale (1,1) entries if CaptureEntitySize fell through to OccupyArea/KBoxCollider2D.
+    /// Static so it can be unit-tested without live GameObjects or game APIs.
+    /// </summary>
+    internal static (int w, int h) ResolveBuildingSize(
+        string id,
+        IReadOnlyDictionary<string, (int w, int h)> sizeMap,
+        Func<string, BuildingDef> getBuildingDef) {
+        // Primary: BuildingDef from static _buildingDefCache — never overwritten by spawn-time logic.
+        try {
+            var def = getBuildingDef?.Invoke(id);
+            if (def != null && def.WidthInCells > 0 && def.HeightInCells > 0)
+                return (def.WidthInCells, def.HeightInCells);
+        } catch {
+            // Game API unavailable (headless or test context) — fall through to sizeMap.
+        }
+        // Fallback: instance PrefabSizeMap.
+        if (sizeMap != null && sizeMap.TryGetValue(id, out var sz) && sz.w > 0 && sz.h > 0)
+            return sz;
+        return (1, 1);
+    }
+
     public object GetEntities() {
         return JsonConvert.DeserializeObject(Encoding.UTF8.GetString(GetEntitiesBytes()))!;
     }
@@ -204,20 +230,7 @@ public class RealWorldState {
 
         if (spawnData != null) {
             foreach (var b in spawnData.buildings) {
-                int w = 1, h = 1;
-                // Primary: PrefabSizeMap populated from Building.Def during SpawnEntities().
-                // Most reliable in headless mode — reads directly from the spawned GO's BuildingDef.
-                if (world.PrefabSizeMap.TryGetValue(b.id, out var sz)) {
-                    w = sz.w; h = sz.h;
-                } else {
-                    // Fallback: Assets.GetBuildingDef (for buildings that weren't spawned or skipped).
-                    try {
-                        var def = world.GetBuildingDef(b.id);
-                        if (def != null) { w = def.WidthInCells; h = def.HeightInCells; }
-                    } catch (Exception ex) {
-                        Console.WriteLine($"[EntitySize] {b.id}: GetBuildingDef failed: {ex.GetBaseException().Message}");
-                    }
-                }
+                var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, world.GetBuildingDef);
                 entities.Add(new {
                     type = "building", name = b.id, x = b.location_x, y = b.location_y, w, h
                 });
