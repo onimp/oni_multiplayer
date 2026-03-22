@@ -300,8 +300,9 @@ public static class MinionPrefab {
     /// These are removed from smc.stateMachines before StartSM is called.
     /// </summary>
     private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) =>
-        smi is SpeechMonitor.Instance    // mouth anim + audio; SetMouthId NPEs (personality=0x0)
-     || smi is SleepChoreMonitor.Instance; // UpdateBed → AutoAssignSlot → Game.assignmentManager NPE
+        smi is SpeechMonitor.Instance         // mouth anim + audio; SetMouthId NPEs (personality=0x0)
+     || smi is SleepChoreMonitor.Instance     // UpdateBed → AutoAssignSlot → Game.assignmentManager NPE
+     || smi is CreatureCalorieMonitor.Instance; // requires DietManager (not initialized in headless)
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.
