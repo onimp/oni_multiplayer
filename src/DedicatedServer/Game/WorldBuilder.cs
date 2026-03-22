@@ -571,17 +571,30 @@ public class WorldBuilder {
 
         // AssignmentManager — needed by MinionAssignablesProxy.OnSpawn() which calls
         // Game.Instance.assignmentManager.AddToAssignmentGroup("public", this).
-        // Without it, proxy OnSpawn NPEs → proxy in incomplete state →
-        // AssignableReachabilitySensor.ctor NPE → baseOnSpawnOk=False → no chore sensors.
+        //
+        // Bootstrap paradox: AssignmentManager field initializer does:
+        //   assignment_groups = new Dictionary { { "public", new AssignmentGroup(...) } }
+        // AssignmentGroup.ctor calls Game.Instance.assignmentManager.assignment_groups.Add(id, this).
+        // At that point Game.Instance.assignmentManager == null → NPE → assignment never completes
+        // → assignment_groups stays null.
+        //
+        // Fix order:
+        //   1. AddComponent — groups=null after NPE in field initializer (expected)
+        //   2. Assign Game.Instance.assignmentManager = am  ← FIRST
+        //   3. Manually init assignment_groups dict
+        //   4. new AssignmentGroup(...) — ctor now finds assignmentManager non-null, adds itself
+        //
         // Must be initialized BEFORE SpawnEntities() / EnsureAssignableProxy().
         if (global::Game.Instance.assignmentManager == null) {
             var amGo = new GameObject("AssignmentManager");
-            var am = amGo.AddComponent<AssignmentManager>();
-            try { am.InitializeComponent(); }
-            catch (Exception ex) {
-                Console.WriteLine($"[WorldBuilder] AssignmentManager.InitializeComponent partial: {ex.GetBaseException().Message}");
-            }
-            global::Game.Instance.assignmentManager = am;
+            var am = amGo.AddComponent<AssignmentManager>();   // groups=null after bootstrap NPE
+            global::Game.Instance.assignmentManager = am;      // assign BEFORE group creation
+            am.assignment_groups = new Dictionary<string, AssignmentGroup>();
+            // AssignmentGroup.ctor calls Game.Instance.assignmentManager.assignment_groups.Add(id, this)
+            // — succeeds now that both assignmentManager and assignment_groups are set.
+            // UI.UISIDESCREENS.ASSIGNABLESIDESCREEN.PUBLIC == "Public" (display name only).
+            // UI namespace not available in DedicatedServer — use string literal directly.
+            new AssignmentGroup("public", new IAssignableIdentity[0], "Public");
             Console.WriteLine($"[WorldBuilder] AssignmentManager initialized: groups={am.assignment_groups?.Count}");
         }
 
