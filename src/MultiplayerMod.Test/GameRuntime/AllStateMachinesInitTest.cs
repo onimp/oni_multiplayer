@@ -275,8 +275,15 @@ public class AllStateMachinesInitTest : PlayableGameTest {
             new OwnableSlotInstance(ownables, (OwnableSlot) Db.Get().AssignableSlots.MessStation)
         );
 
-        // ── Sensors (empty — BaseOnSpawn adds PathProber, SafeCell, IdleCell, …) ─
-        go.AddComponent<Sensors>();
+        // ── Sensors — add SafeCellSensor so SafeCellMonitor.Instance ctor can find it ─
+        // BaseOnSpawn normally adds sensors via component.Add(new SafeCellSensor(component))
+        // etc., but in the per-factory test we call factories directly without BaseOnSpawn.
+        // SafeCellMonitor.Instance ctor calls GetSensor<SafeCellSensor>() which logs
+        // Debug.LogError → DebugLogHandlerPatch exception if the sensor is missing.
+        // SensorsPatch.Sensors_Add_Prefix skips Update() so the ctor is safe even without
+        // full game state (Navigator / MinionBrain are present; Traits may be null, OK).
+        var sensors = go.AddComponent<Sensors>();
+        sensors.Add(new SafeCellSensor(sensors)); // needed by SafeCellMonitor (factory [23])
 
         // ── MinionBrain ───────────────────────────────────────────────────────
         go.AddComponent<MinionBrain>().Awake();
