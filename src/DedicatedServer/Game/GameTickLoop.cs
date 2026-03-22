@@ -217,20 +217,51 @@ public class GameTickLoop {
                 // UpdateBrain() checks IsRunning() first — if false (brain not fully started in
                 // fallback path) it's a no-op and no chore is ever assigned.
                 // FindNextChore bypasses that guard and goes straight to provider.CollectChores →
-                // ChooseChore → driver.SetChore, which transitions nochore→haschore immediately.
-                var context = default(Chore.Precondition.Context);
-                var found = consumer.FindNextChore(ref context);
+                // ChooseChore. We then assign the chore (see below).
+                var choreContext = default(Chore.Precondition.Context);
+                var found = consumer.FindNextChore(ref choreContext);
                 if (found) {
-                    driver.SetChore(context);
-                    updated++;
-                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore FOUND choreType={context.chore?.GetType().Name} choreType.id={context.chore?.choreType?.Id}");
+                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore FOUND choreType={choreContext.chore?.GetType().Name} choreType.id={choreContext.chore?.choreType?.Id}");
                 } else {
                     Debug.LogWarning($"[Brain] {brain.name}: FindNextChore returned false (no chore available) running={brain.IsRunning()}");
                 }
 
-                // SM transition nochore→haschore may not complete synchronously — see DelayedChoreCheck at tick=100.
+                if (found && choreContext.chore != null) {
+                    // PRE-SetChore diagnostic.
+                    // SetChore internally calls context.chore.IsValid() which checks:
+                    //   StandardChoreBase: provider != null && gameObject.GetMyWorldId() != -1
+                    // If GetMyWorldId() returns -1 (WorldIdx not set for dupe's cell in headless),
+                    // IsValid() returns false → SetChore silently exits without setting nextChore
+                    // → no SM transition → GetCurrentChore() stays null.
+                    var isValid = choreContext.chore.IsValid();
+                    Debug.LogWarning($"[Brain] {brain.name}: PRE-SetChore: " +
+                        $"chore={choreContext.chore.GetType().Name} " +
+                        $"isNull={choreContext.chore == null} " +
+                        $"isValid={isValid} " +
+                        $"provider={(choreContext.chore as StandardChoreBase)?.provider?.GetType().Name ?? "n/a"} " +
+                        $"worldId={choreContext.chore.gameObject.GetMyWorldId()}");
+
+                    if (isValid) {
+                        // Normal path: SetChore handles the SM transition internally.
+                        driver.SetChore(choreContext);
+                    } else {
+                        // IsValid() returns false — SetChore's internal guard blocks the assignment.
+                        // Bypass by setting driver.context + nextChore directly.
+                        // nextChore.Set() triggers ParamTransition(nextChore, haschore) synchronously →
+                        // haschore.Enter → BeginChore() → currentChore.Set() + chore.Begin().
+                        driver.context = choreContext;
+                        driver.smi.sm.nextChore.Set(choreContext.chore, driver.smi);
+                        Debug.LogWarning($"[Brain] {brain.name}: IsValid=false bypass: set nextChore directly");
+                    }
+                    updated++;
+                }
+
+                // POST-SetChore: read GetCurrentChore() immediately after assignment.
+                // If normal path: currentChore is set synchronously via SM ParamTransition.
+                // If bypass path: same — nextChore.Set triggers the transition synchronously.
                 var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "null";
-                Debug.LogWarning($"[Brain] {brain.name}: isRunning={brain.IsRunning()} choreAfter={choreAfter} (was {choreBefore})");
+                Debug.LogWarning($"[Brain] {brain.name}: POST-SetChore: currentChore={choreAfter} " +
+                    $"(was {choreBefore}) isRunning={brain.IsRunning()}");
             } catch (Exception e) {
                 Debug.LogWarning($"[Brain] {brain.name} ForceUpdateBrains EXCEPTION: {e}");
             }
