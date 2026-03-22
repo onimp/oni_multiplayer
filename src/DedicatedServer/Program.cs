@@ -80,13 +80,17 @@ public static class Program {
             var tickLoop = loader.World.TickLoop;
             var sw = System.Diagnostics.Stopwatch.StartNew();
             while (!cts.IsCancellationRequested) {
+                sw.Restart();
                 try {
-                    sw.Restart();
                     tickLoop.Update(1f / 60f); // 60 UPS — one subtick per call, mirrors real game SimEveryTick rhythm
-                    var elapsed = (int)sw.ElapsedMilliseconds;
-                    if (elapsed < 16) Thread.Sleep(16 - elapsed); // target 60fps (16ms per frame)
                 }
                 catch (Exception ex) { Console.WriteLine($"[StateMachineTick] Error: {ex.Message}\n{ex.StackTrace}"); }
+                finally {
+                    // Always sleep the remainder of the 16ms budget so UPS stays ≤ 60
+                    // even during exception floods (Update throwing skipped the old sleep).
+                    var elapsed = (int)sw.ElapsedMilliseconds;
+                    if (elapsed < 16) Thread.Sleep(16 - elapsed);
+                }
             }
         } else {
             Console.WriteLine("Press Ctrl+C to stop.");
