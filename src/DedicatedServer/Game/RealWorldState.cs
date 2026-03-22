@@ -135,24 +135,21 @@ public class RealWorldState {
 
     /// <summary>
     /// Returns entity size in cells.
-    /// Primary source: WorldBuilder.PrefabSizeMap — sizes captured from live spawned GOs
-    ///   during SpawnEntities() via OccupyArea._UnrotatedOccupiedCellsOffsets (most reliable).
-    /// Fallback: Assets.GetPrefab OccupyArea → KBoxCollider2D → (1,1).
-    /// Results are instance-cached in _entitySizeCache.
+    /// Priority order:
+    ///   1. _entitySizeCache — per-instance result cache
+    ///   2. WorldBuilder.BuildingDefCache — static, from configTable harvest (authoritative for
+    ///      buildings that failed Add2DComponents: HQ, Telepad, GeneShuffler). Checked BEFORE
+    ///      PrefabSizeMap because CaptureEntitySize can overwrite PrefabSizeMap with stale (1,1)
+    ///      — that's the "third silent path" that returns (1,1) with no log for HQ.
+    ///   3. WorldBuilder.PrefabSizeMap — from SpawnEntities CaptureEntitySize (may be stale 1,1)
+    ///   4. Assets.GetPrefab OccupyArea → KBoxCollider2D → (1,1)
     /// </summary>
     private (int w, int h) GetEntitySize(string id) {
         if (_entitySizeCache.TryGetValue(id, out var cached)) return cached;
 
-        // Primary: captured from live spawned GO in SpawnEntities (has real OccupyArea data)
-        if (world.PrefabSizeMap.TryGetValue(id, out var liveSize)) {
-            _entitySizeCache[id] = liveSize;
-            return liveSize;
-        }
-
-        // Secondary: static BuildingDefCache — populated from configTable harvest BEFORE Add2DComponents
-        // crashes. Covers buildings (HQ, Telepad, GeneShuffler) that fail full registration and
-        // therefore have no entry in Assets.GetPrefab(), PrefabSizeMap, or live spawned GOs.
-        // "Building component is null / def=False for HQ" → this cache is the only reliable source.
+        // Primary: static BuildingDefCache — from configTable harvest, never overwritten by
+        // spawn-time logic. For buildings whose Add2DComponents crashed, this is the ONLY
+        // reliable source. Must be checked before PrefabSizeMap which can hold stale (1,1).
         try {
             if (WorldBuilder.BuildingDefCache.TryGetValue(id, out var buildingDef)) {
                 var defSize = WorldBuilder.ReadBuildingDefSize(buildingDef);
@@ -164,6 +161,14 @@ public class RealWorldState {
             }
         } catch (Exception ex) {
             Console.WriteLine($"[EntitySize] {id} BuildingDefCache threw: {ex.GetBaseException().Message}");
+        }
+
+        // Secondary: PrefabSizeMap — from SpawnEntities CaptureEntitySize (critters, dupes, etc.)
+        // NOTE: this was formerly primary. For buildings it can hold stale (1,1) if CaptureEntitySize
+        // ran before configTable harvest or failed to read Building.Def in headless.
+        if (world.PrefabSizeMap.TryGetValue(id, out var liveSize)) {
+            _entitySizeCache[id] = liveSize;
+            return liveSize;
         }
 
         // Fallback: inspect the registered prefab in Assets
@@ -274,27 +279,38 @@ public class RealWorldState {
 
         if (spawnData != null) {
             foreach (var b in spawnData.buildings) {
+                if (b.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
+                    Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings");
                 var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, WorldBuilder.BuildingDefCache, world.GetBuildingDef);
                 entities.Add(new {
                     type = "building", name = b.id, x = b.location_x, y = b.location_y, w, h
                 });
             }
             foreach (var e in spawnData.otherEntities) {
+                if (e.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
+                    Console.WriteLine($"[EntityPath] id={e.id} → branch=otherEntities");
                 var entityType = ClassifyOtherEntity(e.id);
                 var (ew, eh) = GetEntitySize(e.id);
                 entities.Add(new { type = entityType, name = e.id, x = e.location_x, y = e.location_y, w = ew, h = eh });
             }
             foreach (var p in spawnData.pickupables) {
+                if (p.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
+                    Console.WriteLine($"[EntityPath] id={p.id} → branch=pickupables");
                 var (pw, ph) = GetEntitySize(p.id);
                 entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y, w = pw, h = ph });
             }
-            foreach (var o in spawnData.elementalOres)
+            foreach (var o in spawnData.elementalOres) {
+                if (o.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
+                    Console.WriteLine($"[EntityPath] id={o.id} → branch=elementalOres (hardcoded 1x1!)");
                 entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = 1, h = 1 });
+            }
         }
 
         // Include entities spawned directly (e.g. starter minions via SpawnStarterMinions).
         // These bypass spawnData.otherEntities so they must be added here explicitly.
         foreach (var (id, x, y) in world.DirectlySpawnedEntities) {
+            if (id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
+                Console.WriteLine($"[EntityPath] id={id} → branch=DirectlySpawnedEntities");
             var entityType = ClassifyOtherEntity(id);
             var (ew, eh) = GetEntitySize(id);
             entities.Add(new { type = entityType, name = id, x, y, w = ew, h = eh });
