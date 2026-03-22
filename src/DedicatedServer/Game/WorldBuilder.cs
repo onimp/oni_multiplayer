@@ -473,14 +473,44 @@ public class WorldBuilder {
         // because ClusterManager.Instance is already set above.
         var worldContainerGo = new GameObject("WorldContainer_0");
         var wc = worldContainerGo.AddComponent<WorldContainer>();
+
+        // Add AlertStateManager.Def BEFORE InitializeComponent() so CreateSMIS() (called in
+        // KPrefabID.OnPrefabInit → InitializeComponent) includes it. If added after, the SMI
+        // is never created and WorldContainer.AlertManager returns null → BreathMonitor NPE.
+        // In normal game: AsteroidConfig.CreatePrefab() → AddOrGetDef<AlertStateManager.Def>()
+        // is called on the prefab before any instance lifecycle fires.
+        try {
+            worldContainerGo.AddOrGetDef<AlertStateManager.Def>();
+            Console.WriteLine("[WorldBuilder] WorldContainer: AlertStateManager.Def registered (pre-init)");
+        } catch (Exception ex) {
+            Console.WriteLine($"[WorldBuilder] WorldContainer: AlertStateManager.Def failed: {ex.GetBaseException().Message}");
+        }
+
         try { wc.InitializeComponent(); }
         catch (Exception ex) {
             Console.WriteLine($"[WorldBuilder] WorldContainer.InitializeComponent partial: {ex.GetBaseException().Message}");
-            // Fallback: register manually if OnPrefabInit didn't complete
-            if (!ClusterManager.Instance.WorldContainers.Contains(wc))
-                ClusterManager.Instance.RegisterWorldContainer(wc);
         }
         wc.SetID(0);  // sets id=0 and ParentWorldId=0
+        if (!ClusterManager.Instance.WorldContainers.Contains(wc))
+            ClusterManager.Instance.RegisterWorldContainer(wc);
+
+        // Directly create and start AlertStateManager.Instance on the WorldContainer.
+        // KPrefabID.CreateSMIS/StartSMIS may not fire in headless (no KPrefabID on this manually-created GO,
+        // or SMC defHandle not initialized properly). The task is identical to StartMonitor<T> for dupes:
+        //   new AlertStateManager.Instance(wc).StartSM()
+        // This populates wc.m_alertManager lazily on next AlertManager access.
+        // Start AlertStateManager.Instance so WorldContainer.AlertManager is non-null.
+        // BreathMonitor.IsLowBreath calls wc.AlertManager which asserts non-null → NPE every tick.
+        // AlertStateManager.Instance takes (target, def) — different from most monitors.
+        try {
+            var alertSmi = new AlertStateManager.Instance(wc, new AlertStateManager.Def());
+            alertSmi.StartSM();
+            var am = wc.AlertManager;
+            Console.WriteLine($"[WorldBuilder] AlertStateManager.Instance started: AlertManager={(am != null ? "OK" : "null")}");
+        } catch (Exception ex) {
+            Console.WriteLine($"[WorldBuilder] AlertStateManager.StartSM partial: {ex.GetBaseException().Message}");
+        }
+
         Console.WriteLine($"[WorldBuilder] ClusterManager ready: Instance={ClusterManager.Instance != null}, worlds={ClusterManager.Instance?.WorldContainers?.Count}, GetWorld(0)={ClusterManager.Instance?.GetWorld(0)?.id}");
 
         // GridRestrictionSerializer is a KMonoBehaviour singleton needed by
