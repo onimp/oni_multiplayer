@@ -191,46 +191,46 @@ export class WorldRenderer {
     const { ctx, cellSize } = this;
     const cw = this.canvas.width;
     const ch = this.canvas.height;
-    const TAU = Math.PI * 2;
 
-    // Collect visible entities by render category
-    type PillInfo   = { cx: number; cy: number; rx: number; ry: number };
-    type CircleInfo = { cx: number; cy: number; r: number };
+    // Collect visible entities by render category.
+    // PillInfo covers both duplicants and critters: rx=ry gives a circle, rx≠ry gives a pill.
+    type PillInfo = { cx: number; cy: number; rx: number; ry: number };
 
-    const dupes:   PillInfo[]   = [];
-    const critters: CircleInfo[] = [];
+    const dupes:    PillInfo[] = [];
+    const critters: PillInfo[] = [];
     const dotsByColor = new Map<string, Array<[number, number, number]>>();
-    const buildings:   Array<[number, number, number, number, string]> = [];
+    const rects: Array<[number, number, number, number, string]> = [];  // [sx, sy, pw, ph, color]
 
     console.time('entities');
 
     for (const entity of entities) {
-      // w/h come from the server and reflect actual entity footprint in cells.
-      // duplicant=1x2, critters=1x1 (Drecko=1x2), buildings=real size, rest=1x1.
+      // w/h from server reflect the real cell footprint (duplicant=1×2, Drecko=1×2, etc.)
       const ew = entity.w ?? 1;
       const eh = entity.h ?? 1;
 
-      // Canvas top-left of entity bounding box (Y-axis inverted: ONI y=0 is bottom)
+      // Canvas top-left of bounding box (Y-axis inverted: ONI y=0 is world bottom)
       const sx = this.offsetX + entity.x * cellSize;
       const sy = this.offsetY + (world.height - entity.y - eh) * cellSize;
 
       // Frustum cull
       if (sx + ew * cellSize < 0 || sx > cw || sy + eh * cellSize < 0 || sy > ch) continue;
 
-      // Center of entity footprint in canvas pixels
+      // Canvas center of footprint
       const cx = this.offsetX + (entity.x + ew / 2) * cellSize;
       const cy = this.offsetY + (world.height - entity.y - eh / 2) * cellSize;
 
       if (entity.type === 'duplicant') {
-        // Tall pill spanning the full footprint (server sends h=2 for duplicants)
-        dupes.push({ cx, cy, rx: cellSize * 0.38, ry: eh * cellSize * 0.44 });
+        // Pill using actual w/h from server — rx/ry leave ~12% padding inside each cell
+        dupes.push({ cx, cy, rx: ew * cellSize * 0.44, ry: eh * cellSize * 0.44 });
       } else if (entity.type === 'critter') {
-        // Circle — radius scales with the larger dimension in case of non-square critters
-        const r = Math.max(3, Math.min(ew, eh) * cellSize * 0.44);
-        critters.push({ cx, cy, r });
-      } else if (entity.type === 'building' && (ew > 1 || eh > 1)) {
-        buildings.push([sx, sy, ew * cellSize, eh * cellSize, ENTITY_COLORS['building'] ?? '#f5a623']);
+        // Same pill logic: 1×1 → circle (rx=ry), 1×2 Drecko → tall pill (ry > rx)
+        critters.push({ cx, cy, rx: ew * cellSize * 0.44, ry: eh * cellSize * 0.44 });
+      } else if (ew > 1 || eh > 1) {
+        // Any multi-cell entity (building, pickupable, ore, …) → filled rect
+        const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
+        rects.push([sx, sy, ew * cellSize, eh * cellSize, color]);
       } else {
+        // 1×1 dot
         const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
         const size = Math.max(2, cellSize * 0.3);
         if (!dotsByColor.has(color)) dotsByColor.set(color, []);
@@ -238,8 +238,8 @@ export class WorldRenderer {
       }
     }
 
-    // --- Buildings (rare, not worth batching) ---
-    for (const [x, y, w, h, color] of buildings) {
+    // --- Multi-cell rects (buildings + any oversized entity) ---
+    for (const [x, y, w, h, color] of rects) {
       ctx.fillStyle = color;
       ctx.globalAlpha = 0.4;
       ctx.fillRect(x, y, w, h);
@@ -257,43 +257,26 @@ export class WorldRenderer {
       }
     }
 
-    // --- Duplicants: shadow pass (all pills, one fill) ---
-    if (dupes.length > 0) {
+    // Helper: batch-draw pills for one type (shadow + fill in two passes)
+    const drawPills = (pills: PillInfo[], color: string) => {
+      if (pills.length === 0) return;
+      const shadow = 1.5;
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.beginPath();
-      for (const d of dupes) {
-        ctx.roundRect(d.cx - d.rx - 1.5, d.cy - d.ry - 1.5, (d.rx + 1.5) * 2, (d.ry + 1.5) * 2, d.rx + 1.5);
-      }
+      for (const p of pills)
+        ctx.roundRect(p.cx - p.rx - shadow, p.cy - p.ry - shadow,
+                      (p.rx + shadow) * 2, (p.ry + shadow) * 2, p.rx + shadow);
       ctx.fill();
 
-      // fill pass
-      ctx.fillStyle = ENTITY_COLORS['duplicant'] ?? '#ffe033';
+      ctx.fillStyle = color;
       ctx.beginPath();
-      for (const d of dupes) {
-        ctx.roundRect(d.cx - d.rx, d.cy - d.ry, d.rx * 2, d.ry * 2, d.rx);
-      }
+      for (const p of pills)
+        ctx.roundRect(p.cx - p.rx, p.cy - p.ry, p.rx * 2, p.ry * 2, p.rx);
       ctx.fill();
-    }
+    };
 
-    // --- Critters: shadow pass (all circles, one fill) ---
-    if (critters.length > 0) {
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.beginPath();
-      for (const c of critters) {
-        ctx.moveTo(c.cx + c.r + 1.5, c.cy);
-        ctx.arc(c.cx, c.cy, c.r + 1.5, 0, TAU);
-      }
-      ctx.fill();
-
-      // fill pass
-      ctx.fillStyle = ENTITY_COLORS['critter'] ?? '#4cff91';
-      ctx.beginPath();
-      for (const c of critters) {
-        ctx.moveTo(c.cx + c.r, c.cy);
-        ctx.arc(c.cx, c.cy, c.r, 0, TAU);
-      }
-      ctx.fill();
-    }
+    drawPills(dupes,    ENTITY_COLORS['duplicant'] ?? '#ffe033');
+    drawPills(critters, ENTITY_COLORS['critter']   ?? '#4cff91');
 
     // --- Labels (one font set, all fillText calls, only when zoomed in) ---
     if (cellSize >= 8 && (dupes.length > 0 || critters.length > 0)) {
@@ -307,5 +290,25 @@ export class WorldRenderer {
     }
 
     console.timeEnd('entities');
+  }
+
+  /** Draws a small UPS counter overlay in the top-right corner of the canvas. */
+  renderUpsOverlay(serverUps: number | undefined, clientUps: number) {
+    const { ctx, canvas } = this;
+    const text = `Server: ${serverUps ?? '--'} UPS | Client: ${clientUps} UPS`;
+    const hPad = 8;
+    const vPad = 5;
+    ctx.font = 'bold 12px monospace';
+    const textW = ctx.measureText(text).width;
+    const boxW = textW + hPad * 2;
+    const boxH = 12 + vPad * 2;
+    const bx = canvas.width - boxW - 6;
+    const by = 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(bx, by, boxW, boxH);
+    ctx.fillStyle = '#e0e0e0';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, bx + hPad, by + vPad);
   }
 }

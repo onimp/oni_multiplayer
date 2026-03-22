@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { WorldData, EntitiesResponse, GameState, OverlayMode } from './api/types';
-import { fetchAll, fetchElements } from './api/client';
+import { fetchAll, fetchElements, fetchGameState } from './api/client';
 import { loadElements, areElementsLoaded } from './renderer/constants';
 import type { CellInfo } from './renderer/WorldRenderer';
 import { Header } from './components/Header';
@@ -14,6 +14,7 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [connected, setConnected] = useState(false);
   const [cellInfo, setCellInfo] = useState<CellInfo | null>(null);
+  const [serverUps, setServerUps] = useState<number | undefined>(undefined);
 
   const [overlay, setOverlay] = useState<OverlayMode>('element');
   const [showEntities, setShowEntities] = useState(true);
@@ -23,6 +24,15 @@ export default function App() {
 
   const timerRef    = useRef<number | null>(null);
   const fetchingRef = useRef(false);
+
+  // Dedicated 1s poll for serverUps — independent of main refresh rate
+  useEffect(() => {
+    const id = window.setInterval(async () => {
+      const state = await fetchGameState();
+      setServerUps(state.serverUps);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -83,6 +93,7 @@ export default function App() {
             overlay={overlay}
             showEntities={showEntities}
             showGrid={showGrid}
+            serverUps={serverUps}
             onCellHover={setCellInfo}
           />
         </div>

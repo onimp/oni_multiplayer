@@ -9,14 +9,26 @@ interface Props {
   overlay: OverlayMode;
   showEntities: boolean;
   showGrid: boolean;
+  serverUps: number | undefined;
   onCellHover: (info: CellInfo | null) => void;
 }
 
-export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, onCellHover }: Props) {
+export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, serverUps, onCellHover }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WorldRenderer | null>(null);
   const isDragging = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
+
+  // Client UPS tracking: count renders per second
+  const renderCountRef = useRef(0);
+  const clientUpsRef = useRef(0);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      clientUpsRef.current = renderCountRef.current;
+      renderCountRef.current = 0;
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Initialize renderer
   useEffect(() => {
@@ -36,6 +48,7 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       canvas.height = parent.clientHeight;
       if (rendererRef.current && world) {
         rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
+        rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
       }
     });
 
@@ -47,7 +60,9 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   useEffect(() => {
     if (!rendererRef.current || !world) return;
     rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
-  }, [world, entities, overlay, showEntities, showGrid]);
+    renderCountRef.current++;
+    rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
+  }, [world, entities, overlay, showEntities, showGrid, serverUps]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -57,7 +72,8 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     const mouseY = e.clientY - rect.top;
     rendererRef.current.zoom(e.deltaY > 0 ? -1 : 1, mouseX, mouseY);
     rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
-  }, [world, entities, overlay, showEntities, showGrid]);
+    rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
+  }, [world, entities, overlay, showEntities, showGrid, serverUps]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 0) {
@@ -75,6 +91,7 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       lastMouse.current = { x: e.clientX, y: e.clientY };
       rendererRef.current.pan(dx, dy);
       rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
+      rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
     } else {
       const rect = canvasRef.current!.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
@@ -82,7 +99,7 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       const info = rendererRef.current.getCellAt(mouseX, mouseY, world, entities);
       onCellHover(info);
     }
-  }, [world, entities, overlay, showEntities, showGrid, onCellHover]);
+  }, [world, entities, overlay, showEntities, showGrid, serverUps, onCellHover]);
 
   const handleMouseUp = useCallback(() => {
     isDragging.current = false;
