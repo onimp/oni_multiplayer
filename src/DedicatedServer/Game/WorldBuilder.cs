@@ -269,6 +269,12 @@ public class WorldBuilder {
         // Also requires Grid.Solid to be populated (only valid after Sim.Start()).
         SpawnStarterMinions();
 
+        // Disable rendering-only components that NPE every tick in headless (no camera/animator).
+        // LightSymbolTracker.RenderEveryTick calls IsEnableAndVisible() → KAnimControllerBase NPE.
+        // Must run after SpawnStarterMinions so all entities (including manually-spawned dupes)
+        // are present. component.enabled=false prevents SimAndRenderScheduler callbacks.
+        DisableRenderingOnlyComponents();
+
         // Reset SM error flag — some entity OnSpawn() may have tripped it during boot.
         // Without this reset, StateMachineUpdater would skip all SM ticks.
         StateMachine.Instance.error = false;
@@ -1119,28 +1125,22 @@ public class WorldBuilder {
     /// <summary>
     /// Bootstraps the Brain→Chore→Navigator pipeline for each spawned Minion.
     ///
-    /// In the live game the full chain runs via Unity.Start() → KMonoBehaviour.Spawn() →
-    ///   KPrefabID.OnSpawn() → MinionConfig.OnSpawn() → BaseMinionConfig.BaseOnSpawn()
-    ///   → RationalAi.Instance.StartSM() → ToggleStateMachineList → IdleMonitor.StartSM().
-    ///   Also Unity.Start() → KMonoBehaviour.Spawn() → Brain.OnSpawn() sets running=true
-    ///   and adds brain to Components.Brains → BrainScheduler ticks UpdateBrain().
-    ///   And Sensors.OnSpawn() subscribes OnBrainPreUpdate → sensors update before each brain tick.
+    /// Primary path: call BaseMinionConfig.BaseOnSpawn() directly — this is exactly what the
+    /// real game runs via Unity.Start() → KMonoBehaviour.Spawn() → MinionConfig.OnSpawn().
+    /// BaseOnSpawn adds ALL 8 sensors, creates RationalAi.Instance (starts all 52 sub-SMs),
+    /// and adds 7 navigator transition layers.
     ///
-    /// In headless Unity.Start() never fires → none of this runs → chore stays null forever.
+    /// Prerequisite: ValidateProxy() must run BEFORE BaseOnSpawn because
+    ///   AssignableReachabilitySensor.ctor calls identity.assignableProxy.Get() → NPE if null.
     ///
-    /// Steps performed here (each per Minion GO):
-    ///   1. Add safe sensors (PathProberSensor + IdleCellSensor — both are no-ops at Add() time).
-    ///      AssignableReachabilitySensor EXCLUDED — its ctor NPEs on MinionIdentity.assignableProxy.
-    ///   2. Start IdleMonitor.Instance directly with StateMachineController as master.
-    ///      IdleMonitor.Instance ctor = base(master) only — pure C#.
-    ///      StartSM() → idle state → ToggleRecurringChore → new IdleChore → registered in ChoreProvider.
-    ///   3. Spawn Brain (MinionBrain) directly via KMonoBehaviour.Spawn().
-    ///      Brain.OnSpawn(): sets choreConsumer, sets running=true, calls Components.Brains.Add(this)
-    ///      → BrainScheduler.OnAddBrain → brain added to DupeBrainGroup → UpdateBrain() scheduled.
-    ///   4. Spawn Sensors directly via KMonoBehaviour.Spawn().
-    ///      Sensors.OnSpawn(): subscribes OnBrainPreUpdate to Brain.onPreUpdate
-    ///      → sensors update before each brain tick → IdleCellSensor finds idle cell.
-    ///   5. Add navigator transition override layers (pure List.Add — no callbacks).
+    /// Fallback (if BaseOnSpawn crashes): start only safe sensors + critical monitors individually.
+    ///   AssignableReachabilitySensor excluded in fallback — still NPEs on assignableProxy.
+    ///
+    /// Always (regardless of BaseOnSpawn success/failure):
+    ///   - Start Navigator SM (BaseOnSpawn adds layers but does NOT call nav.smi.StartSM()).
+    ///   - Spawn Brain (sets running=true, registers with BrainScheduler).
+    ///   - Pre-add GameTags.Idle (breaks IdleCellSensor deadlock).
+    ///   - Spawn Sensors (subscribes OnBrainPreUpdate; must follow Brain.Spawn()).
     /// </summary>
     private void FixRationalAi() {
         var fixedCount = 0;
@@ -1152,70 +1152,9 @@ public class WorldBuilder {
                     continue;
                 }
 
-                // Step 1: add safe sensors BEFORE Sensors.Spawn() subscribes onPreUpdate.
-                // PathProberSensor.Update() → navigator.UpdateProbe() (no-op for async probers).
-                // SafeCellSensor.Update() → RunSafeCellQuery → populates safe-cell for IdleCellQuery.
-                //   Required: without it, SafeCellQuery never runs → allMet flags wrong → idle fails.
-                // IdleCellSensor.Update() → uses SafeCellQuery result to find idle cell.
-                // AssignableReachabilitySensor EXCLUDED: ctor calls assignableProxy.Get() → NPE.
-                var sensors = go.GetComponent<Sensors>();
-                if (sensors != null) {
-                    sensors.Add(new PathProberSensor(sensors));
-                    sensors.Add(new SafeCellSensor(sensors));   // P0 Fix 4 (Sol): needed for SafeFlags
-                    sensors.Add(new IdleCellSensor(sensors));
-                }
-
-                // Step 2: start IdleMonitor FIRST — must be before any other monitor so
-                // IdleChore is registered in ChoreProvider before anything else runs.
-                // Bypasses RationalAi entirely to avoid DeathMonitor / AddUrge() NPEs in headless.
-                // Direct instantiation (not StartMonitor<T>) guarantees correct ctor call.
-                var idleMonitorSmi = new IdleMonitor.Instance(smc);
-                idleMonitorSmi.StartSM();
-                Console.WriteLine($"[FixRationalAi] {go.name}: IdleMonitor started, smi={idleMonitorSmi != null}");
-
-                // Step 1b: start vital monitors AFTER IdleMonitor so IdleChore already exists.
-                // Each wrapped in try/catch — ctors access Db.Amounts (safe post-Db.Initialize).
-                StartMonitor<BreathMonitor>(smc,   "BreathMonitor");
-                StartMonitor<CalorieMonitor>(smc,  "CalorieMonitor");
-                StartMonitor<BladderMonitor>(smc,  "BladderMonitor");
-                StartMonitor<StaminaMonitor>(smc,  "StaminaMonitor");
-
-                // Step 3a: ensure Navigator is fully initialised AND its SM is started.
-                //
-                // InitializeComponent() → OnPrefabInit() sets NavGrid, PathGrid, transitionDriver.
-                // MinionBrain.OnPrefabInit() calls new MinionPathFinderAbilities(Navigator) which
-                // accesses Navigator.NavGrid.transitions — NPEs if NavGrid is null.
-                //
-                // Navigator.Spawn() → OnSpawn() → base.OnSpawn() → StartSM() starts the
-                // Navigator state machine (normal.stopped → normal.moving on GoTo()).
-                // Without Spawn(), the SM never starts → normal.moving never runs →
-                // SIM_EVERY_TICK bucket never registered → SimEveryTick(dt) never fires →
-                // transitionDriver.UpdateTransition(dt) never called → Navigator.Advance() = 0.
-                var nav3 = go.GetComponent<Navigator>();
-                if (nav3 != null && !nav3.IsInitialized()) {
-                    try {
-                        nav3.InitializeComponent();
-                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent OK, NavGrid={nav3.NavGrid?.id ?? "null"}");
-                    } catch (Exception ex) {
-                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
-                    }
-                }
-                // isSpawned=true after headless entity creation, so !isSpawned never triggers.
-                // GetSMI() returns the private _smi field (not lazy property) — reliable null check.
-                // If _smi is null the SM was never started. smi property lazy-creates + StartSM starts it.
-                if (nav3 != null && nav3.GetSMI() == null) {
-                    try {
-                        nav3.smi.StartSM(); // lazy-creates instance, transitions to normal.stopped
-                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM() called, smi={nav3.GetSMI() != null}");
-                    } catch (Exception ex) {
-                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM partial: {ex.GetBaseException().Message}");
-                    }
-                }
-
-                // Step 3b: ensure MinionIdentity.assignableProxy is set.
-                // MinionIdentity.ValidateProxy() creates the proxy GO and sets the assignableProxy ref.
+                // ValidateProxy BEFORE BaseOnSpawn: AssignableReachabilitySensor.ctor calls
+                // identity.assignableProxy.Get() → NPE if MinionIdentity.OnSpawn() hasn't run.
                 // This normally runs in MinionIdentity.OnSpawn() → OnAddDupe callback.
-                // Without it: MinionPathFinderAbilities.Refresh() calls assignableProxy.Get() → NPE.
                 var identity = go.GetComponent<MinionIdentity>();
                 if (identity != null && identity.assignableProxy?.Get() == null) {
                     try {
@@ -1226,43 +1165,94 @@ public class WorldBuilder {
                     }
                 }
 
-                // Step 3: spawn Brain — sets running=true + choreConsumer + registers with BrainScheduler.
+                // Primary: BaseMinionConfig.BaseOnSpawn — adds all 8 sensors, starts all 52 SMs
+                // via RationalAi.Instance.StartSM(), adds 7 navigator transition layers.
+                // Mirrors exactly what the real game does in MinionConfig.OnSpawn().
+                var baseOnSpawnOk = false;
+                try {
+                    BaseMinionConfig.BaseOnSpawn(go, new Tag("Minion"), BaseMinionConfig.BaseRationalAiStateMachines());
+                    baseOnSpawnOk = true;
+                    Console.WriteLine($"[FixRationalAi] {go.name}: BaseOnSpawn OK (all SMs + sensors + nav layers)");
+                } catch (Exception ex) {
+                    Console.WriteLine($"[FixRationalAi] {go.name}: BaseOnSpawn FAILED: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
+                }
+
+                if (!baseOnSpawnOk) {
+                    // Fallback: minimal sensor set + critical monitors only.
+                    // PathProberSensor + SafeCellSensor: needed for SafeFlags / IdleCellQuery allMet.
+                    // IdleCellSensor: finds the idle cell Brain picks for IdleChore.
+                    // AssignableReachabilitySensor EXCLUDED: ctor NPEs on assignableProxy.Get().
+                    var sensorsFb = go.GetComponent<Sensors>();
+                    if (sensorsFb != null) {
+                        sensorsFb.Add(new PathProberSensor(sensorsFb));
+                        sensorsFb.Add(new SafeCellSensor(sensorsFb));
+                        sensorsFb.Add(new IdleCellSensor(sensorsFb));
+                    }
+
+                    // IdleMonitor first so IdleChore exists in ChoreProvider before other monitors.
+                    var idleMonitorSmi = new IdleMonitor.Instance(smc);
+                    idleMonitorSmi.StartSM();
+                    Console.WriteLine($"[FixRationalAi] {go.name}: fallback IdleMonitor started");
+
+                    StartMonitor<BreathMonitor>(smc,  "BreathMonitor");
+                    StartMonitor<CalorieMonitor>(smc, "CalorieMonitor");
+                    StartMonitor<BladderMonitor>(smc, "BladderMonitor");
+                    StartMonitor<StaminaMonitor>(smc, "StaminaMonitor");
+
+                    // Navigator transition layers (BaseOnSpawn adds them; must add manually in fallback).
+                    var navFb = go.GetComponent<Navigator>();
+                    if (navFb?.transitionDriver != null) {
+                        navFb.transitionDriver.overrideLayers.Add(new BipedTransitionLayer(navFb, 3.325f, 2.5f));
+                        navFb.transitionDriver.overrideLayers.Add(new DoorTransitionLayer(navFb));
+                        navFb.transitionDriver.overrideLayers.Add(new LadderDiseaseTransitionLayer(navFb));
+                        navFb.transitionDriver.overrideLayers.Add(new NavTeleportTransitionLayer(navFb));
+                    }
+                }
+
+                // Navigator SM: BaseOnSpawn adds transition layers but does NOT call nav.smi.StartSM().
+                // The SM must be started so normal.moving fires and Navigator.Advance() works.
+                var nav3 = go.GetComponent<Navigator>();
+                if (nav3 != null && !nav3.IsInitialized()) {
+                    try {
+                        nav3.InitializeComponent();
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent OK, NavGrid={nav3.NavGrid?.id ?? "null"}");
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
+                    }
+                }
+                if (nav3 != null && nav3.GetSMI() == null) {
+                    try {
+                        nav3.smi.StartSM(); // lazy-creates instance, transitions to normal.stopped
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM() called, smi={nav3.GetSMI() != null}");
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM partial: {ex.GetBaseException().Message}");
+                    }
+                }
+
+                // Spawn Brain — sets running=true + choreConsumer + registers with BrainScheduler.
                 // Without this: Brain.IsRunning()=false → BrainGroup.RenderEveryTick skips brain
                 // → UpdateBrain() never called → chore never picked even though IdleChore exists.
-                // KMonoBehaviour.Spawn() is public; requires isInitialized=true (set by Awake — already done).
                 var brain = go.GetComponent<MinionBrain>();
                 if (brain != null && !brain.isSpawned) {
                     brain.Spawn();
                     Console.WriteLine($"[FixRationalAi] {go.name}: Brain spawned (running={brain.IsRunning()})");
                 }
 
-                // Step 3c: pre-add GameTags.Idle to break the deadlock.
-                // IdleCellSensor.Update() returns Grid.InvalidCell immediately when
-                //   !prefabid.HasTag(GameTags.Idle) → idleCell=-1 → Brain never finds idleCell.
-                // IdleChore.idle.ToggleTag(GameTags.Idle) adds the tag only AFTER Brain picks
-                // IdleChore — creating a deadlock: no tag → no idleCell → chore not picked →
-                // no tag. Pre-adding the tag breaks the cycle; IdleChore will redundantly
-                // re-add/remove it via ToggleTag when it enters/exits the idle state.
+                // Pre-add GameTags.Idle to break the IdleCellSensor deadlock.
+                // IdleCellSensor.Update() returns InvalidCell when !prefabid.HasTag(GameTags.Idle).
+                // IdleChore adds the tag only AFTER Brain picks it — circular dependency.
+                // Pre-adding breaks the cycle; IdleChore will re-add/remove via ToggleTag normally.
                 go.GetComponent<KPrefabID>()?.AddTag(GameTags.Idle);
 
-                // Step 4: spawn Sensors — subscribes OnBrainPreUpdate to Brain.onPreUpdate.
-                // Without this: sensors never update → IdleCellSensor always returns InvalidCell.
+                // Spawn Sensors — subscribes OnBrainPreUpdate to Brain.onPreUpdate.
                 // Must happen AFTER Brain.Spawn() so Brain.onPreUpdate delegate is initialised.
-                if (sensors != null && !sensors.isSpawned) {
-                    sensors.Spawn();
-                }
-
-                // Step 5: navigator transition layers (pure List.Add — no immediate callbacks).
-                var nav = go.GetComponent<Navigator>();
-                if (nav?.transitionDriver != null) {
-                    nav.transitionDriver.overrideLayers.Add(new BipedTransitionLayer(nav, 3.325f, 2.5f));
-                    nav.transitionDriver.overrideLayers.Add(new DoorTransitionLayer(nav));
-                    nav.transitionDriver.overrideLayers.Add(new LadderDiseaseTransitionLayer(nav));
-                    nav.transitionDriver.overrideLayers.Add(new NavTeleportTransitionLayer(nav));
+                var sensors2 = go.GetComponent<Sensors>();
+                if (sensors2 != null && !sensors2.isSpawned) {
+                    sensors2.Spawn();
                 }
 
                 fixedCount++;
-                Console.WriteLine($"[FixRationalAi] {go.name}: OK");
+                Console.WriteLine($"[FixRationalAi] {go.name}: OK (baseOnSpawnOk={baseOnSpawnOk})");
             } catch (Exception ex) {
                 Console.WriteLine($"[FixRationalAi] {go.name}: ERROR: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
             }
