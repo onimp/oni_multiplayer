@@ -1351,6 +1351,22 @@ public class WorldBuilder {
                     }
                 }
 
+                // Diagnostic: pre-BaseOnSpawn proxy/slot state
+                {
+                    var proxy2 = identity?.assignableProxy?.Get();
+                    var proxyGo2 = proxy2?.gameObject;
+                    var ownables2   = proxyGo2?.GetComponent<Ownables>();
+                    var equipment2  = proxyGo2?.GetComponent<Equipment>();
+                    var assignables2 = proxyGo2?.GetComponents<Assignables>();
+                    var slots2 = Db._Instance?.AssignableSlots;
+                    Debug.LogWarning($"[FixRationalAi] {go.name} pre-BaseOnSpawn: " +
+                        $"proxy={proxy2 != null} ownables={ownables2 != null} equipment={equipment2 != null} " +
+                        $"assignables.Length={assignables2?.Length ?? -1} " +
+                        $"slotsConfigured={proxy2?.slotsConfigured} " +
+                        $"Db.AssignableSlots={slots2 != null} " +
+                        $"Db.AssignableSlots.resources={(slots2?.resources == null ? "null" : slots2.resources.Count.ToString())}");
+                }
+
                 // Primary: BaseMinionConfig.BaseOnSpawn — adds all 8 sensors, starts all 52 SMs
                 // via RationalAi.Instance.StartSM(), adds 7 navigator transition layers.
                 // Mirrors exactly what the real game does in MinionConfig.OnSpawn().
@@ -1358,9 +1374,18 @@ public class WorldBuilder {
                 try {
                     BaseMinionConfig.BaseOnSpawn(go, new Tag("Minion"), BaseMinionConfig.BaseRationalAiStateMachines());
                     baseOnSpawnOk = true;
-                    Console.WriteLine($"[FixRationalAi] {go.name}: BaseOnSpawn OK (all SMs + sensors + nav layers)");
+                    Debug.LogWarning($"[FixRationalAi] {go.name}: baseOnSpawnOk=True");
                 } catch (Exception ex) {
-                    Console.WriteLine($"[FixRationalAi] {go.name}: BaseOnSpawn FAILED: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");
+                    // Full chain: type, message, full stack, inner exception
+                    Debug.LogWarning($"[FixRationalAi] {go.name}: BaseOnSpawn EXCEPTION: {ex.GetType().Name}: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}");
+                    // Directly probe AssignableReachabilitySensor ctor to isolate exact crash line
+                    try {
+                        var sensors = go.GetComponent<Sensors>();
+                        var ars = new AssignableReachabilitySensor(sensors);
+                        Debug.LogWarning($"[FixRationalAi] {go.name}: Direct ARS ctor: OK (unexpected)");
+                    } catch (Exception e2) {
+                        Debug.LogWarning($"[FixRationalAi] {go.name}: Direct ARS ctor CRASH: {e2.GetType().Name}: {e2.Message}\nStack: {e2.StackTrace}");
+                    }
                 }
 
                 if (!baseOnSpawnOk) {
