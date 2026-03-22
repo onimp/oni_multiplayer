@@ -213,15 +213,29 @@ public class GameTickLoop {
                     }
                 }
 
-                // Root fix for DS-005 SetChore-not-sticking:
-                // StateMachine.Instance.error is a global static bool. Any GoTo() failure during
-                // the dupe spawn sequence (e.g. PlayAnim with null animController in headless)
-                // sets it true, making ALL subsequent GoTo() calls silent no-ops via the guard:
-                //   if (App.IsExiting || Instance.error || ...) return;
-                // This blocks ChoreDriver's nochore→haschore ParamTransition inside SetChore,
-                // so BeginChore() never runs and currentChore stays null.
-                // Fix: reset per-brain before FindNextChore so SetChore's GoTo(haschore) proceeds.
+                // Reset SM error flags per-brain before FindNextChore:
+                //   Instance.error  — global static; GoTo guard: if (Instance.error || ...) return;
+                //   smi.isCrashed   — per-instance bool, set alongside Instance.error by Error().
+                // Any GoTo() failure during spawn sets both. Instance.error was addressed in
+                // aa4bb54; smi.isCrashed is reset here as a companion per-instance reset.
+                var smiState = driver.smi?.GetCurrentState();
+                Debug.LogWarning($"[Brain] {brain.name}: SMState PRE: " +
+                    $"globalError={StateMachine.Instance.error} " +
+                    $"smiCrashed={driver.smi?.isCrashed} " +
+                    $"smiState={smiState?.name ?? "null"} " +
+                    $"smiRunning={driver.smi?.IsRunning()}");
+
                 StateMachine.Instance.error = false;
+                if (driver.smi != null)
+                    driver.smi.isCrashed = false;
+
+                // If the SM isn't in nochore (wrong state or null), force it there so
+                // SetChore's nextChore.Set() → ParamTransition → GoTo(haschore) has a clean base.
+                if (driver.smi != null && smiState != driver.smi.sm.nochore) {
+                    Debug.LogWarning($"[Brain] {brain.name}: SM not in nochore " +
+                        $"(was '{smiState?.name ?? "null"}') — forcing GoTo(nochore)");
+                    driver.smi.GoTo(driver.smi.sm.nochore);
+                }
 
                 // Direct FindNextChore instead of brain.UpdateBrain():
                 // UpdateBrain() checks IsRunning() first — if false (brain not fully started in
@@ -244,7 +258,10 @@ public class GameTickLoop {
 
                 var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "NULL";
                 Debug.LogWarning($"[Brain] {brain.name}: POST-SetChore: currentChore={choreAfter} " +
-                    $"(was {choreBefore}) smError={StateMachine.Instance.error}");
+                    $"(was {choreBefore}) " +
+                    $"globalError={StateMachine.Instance.error} " +
+                    $"smiCrashed={driver.smi?.isCrashed} " +
+                    $"smiState={driver.smi?.GetCurrentState()?.name ?? "null"}");
             } catch (Exception e) {
                 Debug.LogWarning($"[Brain] {brain.name} ForceUpdateBrains EXCEPTION: {e}");
             }

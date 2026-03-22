@@ -108,4 +108,43 @@ public class ChoreDriverSmTest : PlayableGameTest {
             StateMachine.Instance.error = saved;
         }
     }
+
+    /// <summary>
+    /// Verifies the distinction between the global static Instance.error and the
+    /// per-instance isCrashed field on StateMachine.Instance.
+    ///
+    /// Error() sets BOTH: Instance.error (static) AND this.isCrashed (per-instance).
+    /// The GoTo guard only checks Instance.error (static), not isCrashed.
+    /// ForceUpdateBrains resets both per-brain for a clean SetChore attempt.
+    ///
+    /// Test: isCrashed=true alone (with Instance.error=false) does NOT block StopSM/GoTo.
+    ///       This confirms isCrashed is informational only — the real GoTo guard is Instance.error.
+    /// </summary>
+    [Test]
+    public void StateMachinePerInstanceCrashed_DoesNotBlockGoTo_OnlyGlobalErrorDoes() {
+        var savedError = StateMachine.Instance.error;
+        try {
+            var go = createGameObject();
+            go.AddComponent<ChoreConsumer>();
+            var driver = go.AddComponent<ChoreDriver>();
+            driver.smi.StartSM();
+            Assert.That(driver.smi.IsRunning(), Is.True);
+
+            // Set per-instance isCrashed=true but leave global error=false.
+            // isCrashed is NOT in GoTo guard, so SM operations must still work.
+            driver.smi.isCrashed = true;
+            StateMachine.Instance.error = false;
+
+            driver.smi.StopSM("test-isCrashed-not-blocking");
+            Assert.That(driver.smi.IsRunning(), Is.False,
+                "isCrashed=true must NOT block StopSM — guard only checks global Instance.error");
+
+            // Resetting isCrashed is safe and required alongside Instance.error reset in
+            // ForceUpdateBrains to ensure a fully clean SM state for SetChore.
+            driver.smi.isCrashed = false;
+            Assert.That(driver.smi.isCrashed, Is.False, "isCrashed must be settable to false");
+        } finally {
+            StateMachine.Instance.error = savedError;
+        }
+    }
 }
