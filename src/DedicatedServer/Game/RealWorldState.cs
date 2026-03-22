@@ -269,6 +269,26 @@ public class RealWorldState {
     /// Cached permanently — SpawnData never changes after world load.
     /// </summary>
     public byte[] GetEntitiesBytes() {
+        // [EntityCollect] diagnostic: runs every call (including cache hits) so the pipeline
+        // state is always visible in server logs without waiting for a cache-cold run.
+        {
+            var diagSpawnData = world.SpawnData;
+            var diagTracked   = world.TrackedBuildings;
+            Console.WriteLine(
+                $"[EntityCollect] spawnData={(diagSpawnData != null ? "OK" : "NULL")} " +
+                $"buildings={diagSpawnData?.buildings?.Count ?? -1} " +
+                $"trackedBuildings={diagTracked?.Count ?? -1} " +
+                $"otherEntities={diagSpawnData?.otherEntities?.Count ?? -1} " +
+                $"elementalOres={diagSpawnData?.elementalOres?.Count ?? -1} " +
+                $"pickupables={diagSpawnData?.pickupables?.Count ?? -1} " +
+                $"directlySpawned={world.DirectlySpawnedEntities?.Count ?? -1}");
+            if (diagTracked != null && diagTracked.Count > 0) {
+                var preview = string.Join(", ", diagTracked.Take(10).Select(b => b.id));
+                var hasHq   = diagTracked.Any(b => b.id == "Headquarters");
+                Console.WriteLine($"[EntityCollect] trackedBuildings[0..9]=[{preview}]  hasHeadquarters={hasHq}");
+            }
+        }
+
         lock (_entitiesCacheLock) {
             if (_entitiesBytes != null) return _entitiesBytes;
         }
@@ -277,14 +297,18 @@ public class RealWorldState {
         var entities = new List<object>();
         var spawnData = world.SpawnData;
 
+        // Buildings branch: use TrackedBuildings (populated during SpawnEntities with offsets
+        // already applied) instead of spawnData.buildings.  This guarantees buildings appear
+        // in the entity list regardless of SpawnData reference validity at query time.
+        foreach (var b in world.TrackedBuildings) {
+            Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings");
+            var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, WorldBuilder.BuildingDefCache, world.GetBuildingDef);
+            entities.Add(new {
+                type = "building", name = b.id, x = b.x, y = b.y, w, h
+            });
+        }
+
         if (spawnData != null) {
-            foreach (var b in spawnData.buildings) {
-                Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings");
-                var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, WorldBuilder.BuildingDefCache, world.GetBuildingDef);
-                entities.Add(new {
-                    type = "building", name = b.id, x = b.location_x, y = b.location_y, w, h
-                });
-            }
             foreach (var e in spawnData.otherEntities) {
                 Console.WriteLine($"[EntityPath] id={e.id} → branch=otherEntities");
                 var entityType = ClassifyOtherEntity(e.id);

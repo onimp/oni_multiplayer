@@ -51,6 +51,15 @@ public class WorldBuilder {
     public IReadOnlyList<(string id, int x, int y)> DirectlySpawnedEntities => _directlySpawnedEntities;
     private readonly List<(string id, int x, int y)> _directlySpawnedEntities = new();
 
+    /// <summary>
+    /// Buildings collected from SpawnData during SpawnEntities() with world offsets already applied.
+    /// Used by RealWorldState.GetEntitiesBytes instead of world.SpawnData.buildings so the
+    /// buildings branch is independent of SpawnData validity at query time.
+    /// Populated once in SpawnEntities(); never cleared.
+    /// </summary>
+    public IReadOnlyList<(string id, int x, int y)> TrackedBuildings => _trackedBuildings;
+    private readonly List<(string id, int x, int y)> _trackedBuildings = new();
+
     public unsafe void TickSimulation() {
         if (!SimRunning) return;
         SimTick++;
@@ -1016,6 +1025,9 @@ public class WorldBuilder {
                     _hqCell = b.location_y * Grid.WidthInCells + b.location_x;
                     Console.WriteLine($"[SpawnFinder] HQ from SpawnData: id={b.id} at ({b.location_x},{b.location_y}) cell={_hqCell}");
                 }
+                // Track building for GetEntitiesBytes — independent of SpawnData validity at
+                // query time (SpawnData reference may be stale if WorldGen objects are GC'd).
+                _trackedBuildings.Add((b.id, b.location_x, b.location_y));
             }
             foreach (var e in world.SpawnData.otherEntities) {
                 e.location_x += offsetX;
