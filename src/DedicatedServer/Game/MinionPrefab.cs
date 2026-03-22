@@ -229,6 +229,18 @@ public static class MinionPrefab {
             Console.WriteLine($"[FixRationalAi] {go.name}: Brain spawned (running={brain.IsRunning()})");
         }
 
+        // Re-register brain with BrainScheduler if IsRunning()==false.
+        // Scenario: TriggerLifecycle called Brain.OnSpawn() (isSpawned=true) but
+        // BrainScheduler.AddBrain() failed or was skipped → running=false baked in.
+        // The isSpawned guard above skips brain.Spawn() for these dupes.
+        // Fix: Remove + Add re-triggers BrainScheduler.OnAddBrain → sets running=true.
+        // Mirrors the same fix in CreaturePrefab.Setup() for critter brains.
+        if (brain != null && !brain.IsRunning()) {
+            Components.Brains.Remove(brain);
+            Components.Brains.Add(brain);
+            Console.WriteLine($"[FixRationalAi] {go.name}: brain re-registered with BrainScheduler, IsRunning={brain.IsRunning()}");
+        }
+
         // Pre-add GameTags.Idle to break the IdleCellSensor deadlock.
         // IdleCellSensor.Update() returns InvalidCell when !prefabid.HasTag(GameTags.Idle).
         // IdleChore adds the tag only AFTER Brain picks it — circular dependency.
