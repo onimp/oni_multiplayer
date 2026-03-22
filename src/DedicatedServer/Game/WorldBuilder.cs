@@ -32,6 +32,10 @@ public class WorldBuilder {
     // which may be empty if MinionIdentity.OnSpawn() didn't complete.
     private readonly List<GameObject> _spawnedMinions = new List<GameObject>();
 
+    /// <summary>Live list of all spawned duplicant GameObjects (Minion + BionicMinion).
+    /// Used by RealWorldState to read current chore, SM state, and nav position each tick.</summary>
+    public IReadOnlyList<GameObject> SpawnedMinions => _spawnedMinions;
+
     // HQ/Headquarters cell read directly from SpawnData during SpawnEntities(),
     // used by FindColonySpawnCell() to locate the starter cave without needing the GO.
     private int _hqCell = -1;

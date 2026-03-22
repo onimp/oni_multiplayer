@@ -25,8 +25,10 @@ public class RealWorldState {
     private static readonly System.TimeSpan WorldCacheTTL = System.TimeSpan.FromMilliseconds(1000);
     private readonly object _worldCacheLock = new();
 
-    // --- Entities cache (static per world — SpawnData never changes) ---
-    private byte[]? _entitiesBytes;
+    // --- Entities cache (static portion — buildings/ores/pickupables never change) ---
+    // Live duplicant state is NOT cached here — dupes are recomputed fresh on each call
+    // from world.SpawnedMinions so currentChore, smState, navIsMoving, navCell are up-to-date.
+    private List<object>? _staticEntities;
     private readonly object _entitiesCacheLock = new();
 
     // --- State cache (time-based, 200ms TTL) ---
@@ -173,13 +175,92 @@ public class RealWorldState {
         return JsonConvert.DeserializeObject(Encoding.UTF8.GetString(GetEntitiesBytes()))!;
     }
 
+    // ─── Minion live-state DTO ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Builds a duplicant entity DTO from live GO state.
+    /// Called on every <see cref="GetEntitiesBytes"/> request (not cached) so the
+    /// client always sees current chore, SM state, and nav position.
+    /// </summary>
+    private object BuildLiveMinionDto(GameObject go) {
+        _mergedSizeMap ??= BuildMergedSizeMap();
+        var (w, h) = ResolveEntitySize("Minion", _mergedSizeMap);
+
+        var pos = go.transform.GetPosition();
+        var x   = Mathf.RoundToInt(pos.x);
+        var y   = Mathf.RoundToInt(pos.y);
+
+        // Current chore: ChoreDriver.GetCurrentChore().choreType.Name (null = no chore)
+        string? currentChore = null;
+        var choreDriver = go.GetComponent<ChoreDriver>();
+        if (choreDriver?.GetSMI() != null)
+            currentChore = choreDriver.GetCurrentChore()?.choreType?.Name;
+
+        // ChoreDriver SM state: "nochore" or "haschore"
+        string? smState = choreDriver?.GetSMI<ChoreDriver.StatesInstance>()
+                                     ?.GetCurrentState()?.name;
+
+        // Navigator: IsMoving + current cell
+        var nav         = go.GetComponent<Navigator>();
+        var navIsMoving = nav?.IsMoving() ?? false;
+        var navCell     = nav != null ? Grid.PosToCell(go) : -1;
+
+        var name = go.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Minion";
+        return BuildMinionDto(name, x, y, w, h, currentChore, smState, navIsMoving, navCell);
+    }
+
+    /// <summary>
+    /// Constructs the duplicant entity DTO with live chore/SM/nav fields.
+    /// <para>
+    /// Exposed as <c>internal static</c> so unit tests can verify the JSON shape
+    /// without requiring a running game instance.
+    /// </para>
+    /// Fields:
+    ///   type         — always "duplicant"
+    ///   name         — prefab tag name (e.g. "Minion")
+    ///   x, y         — world position (rounded to int)
+    ///   w, h         — bounding box in cells (typically 1×2 for a dupe)
+    ///   currentChore — ChoreType.Name of the active chore, or null when idle/no chore
+    ///   smState      — ChoreDriver SM state name: "nochore" or "haschore"
+    ///   navIsMoving  — true when Navigator is executing a path
+    ///   navCell      — grid cell index at current position (Grid.PosToCell)
+    /// </summary>
+    internal static object BuildMinionDto(
+        string  name,
+        int     x,
+        int     y,
+        int     w,
+        int     h,
+        string? currentChore,
+        string? smState,
+        bool    navIsMoving,
+        int     navCell)
+    {
+        return new {
+            type         = "duplicant",
+            name,
+            x, y, w, h,
+            currentChore,
+            smState,
+            navIsMoving,
+            navCell
+        };
+    }
+
+    // ─── Entities serialization ────────────────────────────────────────────────
+
     /// <summary>
     /// Returns pre-serialized JSON bytes for the entity list.
-    /// Cached permanently — SpawnData never changes after world load.
+    ///
+    /// Static entities (buildings, ores, pickupables, non-dupe critters) are cached
+    /// permanently — SpawnData never changes after world load.
+    ///
+    /// Duplicant entries are NOT cached: they are recomputed on every call from
+    /// <c>world.SpawnedMinions</c> so <c>currentChore</c>, <c>smState</c>,
+    /// <c>navIsMoving</c>, and <c>navCell</c> always reflect current game state.
     /// </summary>
     public byte[] GetEntitiesBytes() {
-        // [EntityCollect] diagnostic: runs every call (including cache hits) so the pipeline
-        // state is always visible in server logs without waiting for a cache-cold run.
+        // [EntityCollect] diagnostic: runs every call so the pipeline state is always visible.
         {
             var diagSpawnData = world.SpawnData;
             var diagTracked   = world.TrackedBuildings;
@@ -190,7 +271,8 @@ public class RealWorldState {
                 $"otherEntities={diagSpawnData?.otherEntities?.Count ?? -1} " +
                 $"elementalOres={diagSpawnData?.elementalOres?.Count ?? -1} " +
                 $"pickupables={diagSpawnData?.pickupables?.Count ?? -1} " +
-                $"directlySpawned={world.DirectlySpawnedEntities?.Count ?? -1}");
+                $"directlySpawned={world.DirectlySpawnedEntities?.Count ?? -1} " +
+                $"spawnedMinions={world.SpawnedMinions?.Count ?? -1}");
             if (diagTracked != null && diagTracked.Count > 0) {
                 var preview = string.Join(", ", diagTracked.Take(10).Select(b => b.id));
                 var hasHq   = diagTracked.Any(b => b.id == "Headquarters");
@@ -198,63 +280,78 @@ public class RealWorldState {
             }
         }
 
+        // ── Step 1: static entities (permanent cache) ──────────────────────────
         lock (_entitiesCacheLock) {
-            if (_entitiesBytes != null) return _entitiesBytes;
+            if (_staticEntities == null) {
+                _staticEntities = BuildStaticEntities();
+            }
         }
 
-        var sw = Stopwatch.StartNew();
+        // ── Step 2: live duplicant DTOs (always fresh — never cached) ──────────
+        var liveMinions = new List<object>();
+        foreach (var go in world.SpawnedMinions) {
+            if (go == null) continue;
+            liveMinions.Add(BuildLiveMinionDto(go));
+        }
+
+        // ── Step 3: combine and serialize ──────────────────────────────────────
+        var allEntities = new List<object>(_staticEntities!.Count + liveMinions.Count);
+        allEntities.AddRange(_staticEntities!);
+        allEntities.AddRange(liveMinions);
+
+        return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new {
+            tick     = world.SimTick,
+            entities = allEntities.ToArray()
+        }));
+    }
+
+    /// <summary>
+    /// Builds the list of static (non-dupe) entities from SpawnData and TrackedBuildings.
+    /// Duplicant prefabs (Minion, BionicMinion) are intentionally excluded — they are
+    /// serialized live via <see cref="BuildLiveMinionDto"/> on each request.
+    /// Called once; result is cached permanently in <c>_staticEntities</c>.
+    /// </summary>
+    private List<object> BuildStaticEntities() {
+        var sw       = Stopwatch.StartNew();
         var entities = new List<object>();
         var spawnData = world.SpawnData;
 
-        // Build the merged size map once: buildings (from BuildingDefCache) always win over
-        // any stale PrefabSizeMap entry. All branches below use the same single source.
+        // Build the merged size map once: buildings (from BuildingDefCache) always win.
         _mergedSizeMap ??= BuildMergedSizeMap();
         var sizeMap = _mergedSizeMap;
 
-        // Buildings branch: use TrackedBuildings (populated during SpawnEntities with offsets
-        // already applied) so the buildings list is independent of SpawnData validity at query time.
+        // Buildings (TrackedBuildings has world-offsets already applied).
         foreach (var b in world.TrackedBuildings) {
             var (w, h) = ResolveEntitySize(b.id, sizeMap);
-            Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings size={w}×{h}");
             entities.Add(new { type = "building", name = b.id, x = b.x, y = b.y, w, h });
         }
 
         if (spawnData != null) {
             foreach (var e in spawnData.otherEntities) {
+                if (DuplicantPrefabs.Contains(e.id)) continue; // handled via SpawnedMinions
                 var (ew, eh) = ResolveEntitySize(e.id, sizeMap);
-                Console.WriteLine($"[EntityPath] id={e.id} → branch=otherEntities size={ew}×{eh}");
                 entities.Add(new { type = ClassifyOtherEntity(e.id), name = e.id, x = e.location_x, y = e.location_y, w = ew, h = eh });
             }
             foreach (var p in spawnData.pickupables) {
                 var (pw, ph) = ResolveEntitySize(p.id, sizeMap);
-                Console.WriteLine($"[EntityPath] id={p.id} → branch=pickupables size={pw}×{ph}");
                 entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y, w = pw, h = ph });
             }
             foreach (var o in spawnData.elementalOres) {
                 var (ow, oh) = ResolveEntitySize(o.id, sizeMap);
-                Console.WriteLine($"[EntityPath] id={o.id} → branch=elementalOres size={ow}×{oh}");
                 entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = ow, h = oh });
             }
         }
 
-        // Include entities spawned directly (e.g. starter minions via SpawnStarterMinions).
+        // Directly-spawned non-dupe entities (starter dupes are excluded, handled via SpawnedMinions).
         foreach (var (id, x, y) in world.DirectlySpawnedEntities) {
+            if (DuplicantPrefabs.Contains(id)) continue;
             var (ew, eh) = ResolveEntitySize(id, sizeMap);
-            Console.WriteLine($"[EntityPath] id={id} → branch=DirectlySpawnedEntities size={ew}×{eh}");
             entities.Add(new { type = ClassifyOtherEntity(id), name = id, x, y, w = ew, h = eh });
         }
 
-        var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new {
-            tick = world.SimTick,
-            entities = entities.ToArray()
-        }));
         sw.Stop();
-        Console.WriteLine($"[WorldState] Built entities list: {entities.Count} entities in {sw.ElapsedMilliseconds}ms");
-
-        lock (_entitiesCacheLock) {
-            _entitiesBytes = bytes;
-        }
-        return bytes;
+        Console.WriteLine($"[WorldState] Built static entities list: {entities.Count} entities in {sw.ElapsedMilliseconds}ms");
+        return entities;
     }
 
     /// <summary>
