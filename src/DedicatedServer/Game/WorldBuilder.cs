@@ -560,6 +560,19 @@ public class WorldBuilder {
         if (FactionManager.Instance == null)
             Awake("FactionManager", () => go.AddComponent<FactionManager>().Awake());
 
+        // TemperatureVulnerableUpdater: needed by TemperatureVulnerable.OnSpawn line 201:
+        //   SlicedUpdaterSim1000ms<TemperatureVulnerable>.instance.RegisterUpdate1000ms(this)
+        // instance is set in SlicedUpdaterSim1000ms.OnPrefabInit → instance = this.
+        // TemperatureVulnerable is on ALL plants (EntityTemplates.CreatePlant). Without this: NPE on every plant spawn.
+        if (SlicedUpdaterSim1000ms<TemperatureVulnerable>.instance == null)
+            Awake("TemperatureVulnerableUpdater", () => go.AddComponent<TemperatureVulnerableUpdater>().Awake());
+
+        // PressureVulnerableUpdater: needed by PressureVulnerable.OnSpawn line 231:
+        //   SlicedUpdaterSim1000ms<PressureVulnerable>.instance.RegisterUpdate1000ms(this)
+        // PressureVulnerable is on ALL plants. Without this: NPE on every plant spawn.
+        if (SlicedUpdaterSim1000ms<PressureVulnerable>.instance == null)
+            Awake("PressureVulnerableUpdater", () => go.AddComponent<PressureVulnerableUpdater>().Awake());
+
         // DrowningMonitorUpdater: needed by DrowningMonitor.OnSpawn[IL_0x6] on critters/plants.
         // DrowningMonitor.OnSpawn: SlicedUpdaterSim1000ms<DrowningMonitor>.instance.RegisterUpdate1000ms(this)
         // The static .instance field is set in SlicedUpdaterSim1000ms.OnPrefabInit → instance = this.
