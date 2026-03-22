@@ -279,38 +279,38 @@ public class RealWorldState {
 
         if (spawnData != null) {
             foreach (var b in spawnData.buildings) {
-                if (b.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
-                    Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings");
+                Console.WriteLine($"[EntityPath] id={b.id} → branch=buildings");
                 var (w, h) = ResolveBuildingSize(b.id, world.PrefabSizeMap, WorldBuilder.BuildingDefCache, world.GetBuildingDef);
                 entities.Add(new {
                     type = "building", name = b.id, x = b.location_x, y = b.location_y, w, h
                 });
             }
             foreach (var e in spawnData.otherEntities) {
-                if (e.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
-                    Console.WriteLine($"[EntityPath] id={e.id} → branch=otherEntities");
+                Console.WriteLine($"[EntityPath] id={e.id} → branch=otherEntities");
                 var entityType = ClassifyOtherEntity(e.id);
                 var (ew, eh) = GetEntitySize(e.id);
                 entities.Add(new { type = entityType, name = e.id, x = e.location_x, y = e.location_y, w = ew, h = eh });
             }
             foreach (var p in spawnData.pickupables) {
-                if (p.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
-                    Console.WriteLine($"[EntityPath] id={p.id} → branch=pickupables");
+                Console.WriteLine($"[EntityPath] id={p.id} → branch=pickupables");
                 var (pw, ph) = GetEntitySize(p.id);
                 entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y, w = pw, h = ph });
             }
             foreach (var o in spawnData.elementalOres) {
-                if (o.id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
-                    Console.WriteLine($"[EntityPath] id={o.id} → branch=elementalOres (hardcoded 1x1!)");
-                entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = 1, h = 1 });
+                Console.WriteLine($"[EntityPath] id={o.id} → branch=elementalOres");
+                // Fix: was hardcoded w=1,h=1 — use GetEntitySize so BuildingDefCache
+                // is consulted first. If HQ or any other building ends up here (e.g. via
+                // the world-gen template serialisation), its real size is returned.
+                // Actual ores (Algae, Dirt, etc.) are not in BuildingDefCache and remain 1×1.
+                var (ow, oh) = GetEntitySize(o.id);
+                entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = ow, h = oh });
             }
         }
 
         // Include entities spawned directly (e.g. starter minions via SpawnStarterMinions).
         // These bypass spawnData.otherEntities so they must be added here explicitly.
         foreach (var (id, x, y) in world.DirectlySpawnedEntities) {
-            if (id.IndexOf("Headquarters", StringComparison.OrdinalIgnoreCase) >= 0)
-                Console.WriteLine($"[EntityPath] id={id} → branch=DirectlySpawnedEntities");
+            Console.WriteLine($"[EntityPath] id={id} → branch=DirectlySpawnedEntities");
             var entityType = ClassifyOtherEntity(id);
             var (ew, eh) = GetEntitySize(id);
             entities.Add(new { type = entityType, name = id, x, y, w = ew, h = eh });
