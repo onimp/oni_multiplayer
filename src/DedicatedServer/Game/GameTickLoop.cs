@@ -38,6 +38,13 @@ public class GameTickLoop {
     // We kick them separately here so they get chores and begin moving.
     private const int CreatureChoreKickTick = ChoreKickTick + 1;
 
+    // Reflection accessor for StateMachineController.stateMachines (private List<StateMachine.Instance>).
+    // Used to log the list's identity (hash) and contents per dupe at specific ticks so we can
+    // pinpoint exactly WHEN the shared-list collapse happens (fresh list at Setup, same list at tick=100).
+    private static readonly FieldInfo _smcStateMachinesField =
+        typeof(StateMachineController)
+            .GetField("stateMachines", BindingFlags.Instance | BindingFlags.NonPublic);
+
     // Reflection accessor for ChoreConsumer.providers (List<ChoreProvider>).
     // IL field: "providers". Server runs the exposed DLL where it is Public — must include
     // BindingFlags.Public so the lookup succeeds against both the exposed and original DLL.
@@ -133,6 +140,15 @@ public class GameTickLoop {
         // WorldBuilder.InitializeWorld). GetScheduler() exposes the internal Scheduler
         // (its Update() is public).
         GameScheduler.Instance?.GetScheduler()?.Update();
+
+        // Tick-level SMC list diagnostic: log listHash+count+item0 for each dupe at ticks
+        // 1, 10, 61, 62, 100 to pinpoint WHEN the stateMachines list is replaced or shared.
+        // item0 hash shows which IdleMonitor instance is at [0] — if all dupes show the same
+        // item0 hash after initially having distinct ones, that tick is the collapse point.
+        if (_tickCount == 1 || _tickCount == 10 || _tickCount == 61 ||
+            _tickCount == 62 || _tickCount == 100) {
+            DiagSmcStateMachines(_tickCount);
+        }
 
         // DS-005: force-refresh dupe sensors once PathGrid is warm.
         // IdleCellSensor.Update() runs once at tick≈5 when PathGrid is cold → idleCell=-1.
@@ -302,6 +318,28 @@ public class GameTickLoop {
     /// <summary>
     /// Checks chore + movement state 39 ticks after ForceUpdateBrains.
     /// The nochore→haschore SM transition may not complete in the same frame as UpdateBrain().
+    /// <summary>
+    /// Logs smc.stateMachines list identity (hash, count, item[0] hash) for each dupe at the
+    /// given tick. Used to find the exact tick where the list is replaced/shared post-Setup.
+    ///
+    /// Reading: if listHash changes between tick=1 and tick=N, the list was replaced at tick N.
+    ///          if item0 hash changes, a different SM is now at position 0 (prepended or swapped).
+    ///          if all dupes share the same listHash at tick N, the lists were re-merged at tick N.
+    /// </summary>
+    private void DiagSmcStateMachines(int tick) {
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null) continue;
+            if (!brain.gameObject.HasTag(GameTags.BaseMinion)) continue;
+            var go  = brain.gameObject;
+            var smc = go.GetComponent<StateMachineController>();
+            var list = _smcStateMachinesField?.GetValue(smc) as IList;
+            Console.WriteLine("[DIAG tick=" + tick + "] dupe=" + go.GetInstanceID() +
+                " listHash=" + list?.GetHashCode() +
+                " count=" + list?.Count +
+                " item0=" + list?[0]?.GetHashCode());
+        }
+    }
+
     /// At tick=100 the transition should have fired and the navigator should be moving.
     /// </summary>
     private static void DelayedChoreCheck() {
