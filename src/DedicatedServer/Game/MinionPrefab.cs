@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -24,19 +23,6 @@ namespace DedicatedServer.Game;
 ///   8. IdleCellSensor seeding to own cell
 /// </summary>
 public static class MinionPrefab {
-
-    // Reflection cache for ChoreConsumer.providers (private List<ChoreProvider>).
-    // Used for diagnostic: verify AddProvider took effect and the right consumer/provider objects are wired.
-    private static readonly FieldInfo _providersField =
-        typeof(ChoreConsumer).GetField("providers",
-            BindingFlags.NonPublic | BindingFlags.Instance);
-
-    // Reflection cache for StateMachineController.stateMachines (private List<StateMachine.Instance>).
-    // Used to ensure each dupe's SMC has its own isolated list before IdleMonitor creation.
-    // CloneSingle resets this at instantiation time, but the save-load path may bypass CloneSingle.
-    private static readonly FieldInfo _smcStateMachinesField =
-        typeof(StateMachineController)
-            .GetField("stateMachines", BindingFlags.Instance | BindingFlags.NonPublic);
 
     // Reflection cache for IdleCellSensor.cell (private int).
     // Used to seed the initial idle cell = dupe's own spawn cell so adjacent dupes
@@ -171,35 +157,24 @@ public static class MinionPrefab {
                 sensorsFb.Add(new IdleCellSensor(sensorsFb));
             }
 
-            // IdleMonitor first so IdleChore exists in ChoreProvider before other monitors.
-            // NOTE: do NOT reset smc.stateMachines here — that caused a boot crash (8e0c637)
-            // by wiping the list on critter SMCs too (via CloneSingle's unguarded reset path).
-            // The tick-level diagnostic (6a4d58f) will show exactly WHEN the list gets shared
-            // so we can fix it correctly after. For now: just create and start the IdleMonitor.
-            var smcListPre = (List<StateMachine.Instance>?) _smcStateMachinesField?.GetValue(smc);
-            Console.WriteLine($"[FixRationalAi] {go.name}: smc.stateMachines pre-IdleMonitor listHash={smcListPre?.GetHashCode()} count={smcListPre?.Count}");
+            // Reset shared mutable references BEFORE IdleMonitor creation.
+            // On the save-load path, CloneSingle is bypassed; Unity uses MemberwiseClone
+            // internally. MemberwiseClone is a shallow copy — all reference-type fields
+            // (List<>, Dictionary<>, class instances) are SHARED across all dupe clones.
+            // Diagnostic confirmed (752c1a4): providersBefore=4,5,6 (shared list),
+            // cpChores=1 for CP0 only (shared choreProvider pointing to dupe0's CP).
+            // Must happen before IdleMonitor.Instance(smc) so the new IdleChore is stored
+            // in THIS dupe's own fresh choreWorldMap under the correct world key.
+            ResetSharedReferences(go);
 
+            // IdleMonitor first so IdleChore exists in ChoreProvider before other monitors.
             var idleMonitorSmi = new IdleMonitor.Instance(smc);
             idleMonitorSmi.StartSM();
-            Console.WriteLine($"[FixRationalAi] {go.name}: fallback IdleMonitor started hash={idleMonitorSmi.GetHashCode()}");
-            // DS-007 (fallback path): own ChoreProvider in providers.
-            // BaseOnSpawn crashed at ARS — providers list was never populated.
-            // Must be here, immediately after IdleMonitor.StartSM(), so the IdleChore
-            // that just got added to ChoreProvider is visible to FindNextChore.
-            // This is the guaranteed execution path: BaseOnSpawn crashes for all 3 dupes.
+
+            // Own ChoreProvider in providers (AddProvider mirrors OnPrefabInit behaviour).
             var consumerFallback = go.GetComponent<ChoreConsumer>();
-            if (consumerFallback != null) {
-                int providersBefore = consumerFallback.providers?.Count ?? -1;
+            if (consumerFallback != null)
                 consumerFallback.AddProvider(go.GetComponent<ChoreProvider>());
-                int providersAfter = consumerFallback.providers?.Count ?? -1;
-                int cpChores = go.GetComponent<ChoreProvider>().choreWorldMap?.Values?.Sum(v => v?.Count ?? 0) ?? -1;
-                Console.WriteLine("[MINIONSETUP] go=" + go.GetInstanceID()
-                    + " providersBefore=" + providersBefore
-                    + " providersAfter=" + providersAfter
-                    + " cpChores=" + cpChores
-                    + " consumer=" + consumerFallback?.GetHashCode()
-                    + " choreProvider=" + go.GetComponent<ChoreProvider>()?.GetHashCode());
-            }
 
             StartMonitor<BreathMonitor>(smc,  "BreathMonitor");
             StartMonitor<CalorieMonitor>(smc, "CalorieMonitor");
@@ -371,6 +346,49 @@ public static class MinionPrefab {
         } catch (Exception ex) {
             Debug.LogWarning($"[FixRationalAi] {go.name}: direct proxy creation FAILED:\n{ex}");
         }
+    }
+
+    /// <summary>
+    /// Resets all shared mutable reference fields on ChoreConsumer and ChoreProvider
+    /// to fresh per-dupe instances.
+    ///
+    /// On the save-load path, Unity uses MemberwiseClone internally (CloneSingle is
+    /// bypassed). MemberwiseClone is a shallow copy — every reference-type field points
+    /// to the SAME object across all dupe clones that share the prefab template:
+    ///
+    ///   consumer.providers (List)             → shared; providersBefore=4,5,6 in diagnostic
+    ///   consumer.choreProvider ([MyCmpAdd])   → shared; points to dupe0's CP for all dupes
+    ///   consumer.urges (List)                 → shared; urge-based chore routing broken
+    ///   consumer.behaviourPreconditions (Dict)→ shared; RunBehaviourPrecondition misrouted
+    ///   consumer.preconditionSnapshot (class) → shared; snapshot state corrupted
+    ///   consumer.lastSuccessful... (class)    → shared; same issue
+    ///   consumer.choreGroupPriorities (Dict)  → shared; priority overrides leak across dupes
+    ///   consumer.choreTypePriorities (Dict)   → shared; type-priority leaks
+    ///   consumer.traitDisabledChoreGroups     → shared; trait data crosses dupes
+    ///   consumer.userDisabledChoreGroups      → shared; user-disabled state crosses dupes
+    ///   cp.choreWorldMap (Dict)               → shared; all IdleChores land in dupe0's map
+    ///
+    /// Must be called BEFORE new IdleMonitor.Instance(smc) so the IdleChore created
+    /// during StartSM() is routed to THIS dupe's own fresh choreWorldMap.
+    /// providers is set to empty here; caller must call AddProvider(cp) after StartSM.
+    /// </summary>
+    private static void ResetSharedReferences(GameObject go) {
+        var consumer = go.GetComponent<ChoreConsumer>();
+        var cp = go.GetComponent<ChoreProvider>();
+        if (consumer == null || cp == null) return;
+
+        consumer.choreProvider = cp;
+        consumer.providers = new List<ChoreProvider>();
+        consumer.urges = new List<Urge>();
+        consumer.behaviourPreconditions = new Dictionary<Tag, ChoreConsumer.BehaviourPrecondition>();
+        consumer.preconditionSnapshot = new ChoreConsumer.PreconditionSnapshot();
+        consumer.lastSuccessfulPreconditionSnapshot = new ChoreConsumer.PreconditionSnapshot();
+        consumer.choreGroupPriorities = new Dictionary<HashedString, ChoreConsumer.PriorityInfo>();
+        consumer.choreTypePriorities = new Dictionary<HashedString, int>();
+        consumer.traitDisabledChoreGroups = new List<HashedString>();
+        consumer.userDisabledChoreGroups = new List<HashedString>();
+
+        cp.choreWorldMap = new Dictionary<int, List<Chore>>();
     }
 
     /// <summary>

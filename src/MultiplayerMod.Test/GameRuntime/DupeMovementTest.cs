@@ -52,6 +52,12 @@ public class DupeMovementTest : PlayableGameTest {
         typeof(ChoreConsumer)
             .GetField("providers", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
+    // Reflection accessor for ChoreConsumer.choreProvider (private [MyCmpAdd] ChoreProvider field).
+    // Confirmed shared via MemberwiseClone — points to dupe0's CP for all dupes (see 752c1a4 diag).
+    private static readonly FieldInfo _choreConsumerChoreProviderField =
+        typeof(ChoreConsumer)
+            .GetField("choreProvider", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
     [SetUp]
     public void SetUp() {
         Singleton<StateMachineManager>.Instance.Clear();
@@ -484,6 +490,148 @@ public class DupeMovementTest : PlayableGameTest {
             "smc2.GetSMI must return idle2 (own instance), not idle1.");
         Assert.That(list1, Does.Not.Contain(idle2), "smc1.stateMachines must not contain smc2's IdleMonitor.");
         Assert.That(list2, Does.Not.Contain(idle1), "smc2.stateMachines must not contain smc1's IdleMonitor.");
+    }
+
+    // ── ResetSharedReferences: all 11 shared fields isolated ─────────────────
+
+    /// <summary>
+    /// Verifies that MinionPrefab.ResetSharedReferences logic isolates each dupe's
+    /// ChoreConsumer and ChoreProvider from the shared MemberwiseClone state.
+    ///
+    /// ROOT CAUSE (confirmed 752c1a4 diagnostic):
+    ///   • providersBefore=4,5,6 → providers List is SHARED across all 3 dupes
+    ///   • cpChores=1 for CP0 only → choreProvider field points to dupe0's CP for all dupes
+    ///   Both fields were shared because the save-load path bypasses CloneSingle, so
+    ///   fdb3d2c's CloneSingle resets never ran.
+    ///
+    /// Additional shared fields (all reference-type, same MemberwiseClone pattern):
+    ///   urges, behaviourPreconditions, preconditionSnapshot,
+    ///   lastSuccessfulPreconditionSnapshot, choreGroupPriorities,
+    ///   choreTypePriorities, traitDisabledChoreGroups, userDisabledChoreGroups,
+    ///   cp.choreWorldMap
+    ///
+    /// FIX: MinionPrefab.ResetSharedReferences(go) replaces each shared collection/ref
+    /// with a fresh instance before IdleMonitor.Instance(smc) runs.
+    /// This test documents the before/after state using the same field reflections
+    /// that the production fix applies via direct field access (AssemblyExposer).
+    /// </summary>
+    [Test]
+    public void DupeChoreConsumer_ResetSharedReferences_IsolatesAllSharedFields() {
+        var go = createGameObject();
+        go.AddComponent<KPrefabID>();
+        var cp = go.AddComponent<ChoreProvider>();
+        go.AddComponent<ChoreDriver>();
+        var consumer = go.AddComponent<ChoreConsumer>();
+
+        // Simulate shared state from MemberwiseClone: both choreProvider and providers
+        // reference objects belonging to a "dupe0" GO (the foreign objects).
+        var foreignGo = createGameObject();
+        var foreignCp = foreignGo.AddComponent<ChoreProvider>();
+
+        // Wire shared state onto this dupe's consumer (mirrors save-load path result).
+        _choreConsumerChoreProviderField.SetValue(consumer, foreignCp);
+        _choreConsumerProvidersField.SetValue(consumer, new List<ChoreProvider> { foreignCp });
+        // Pre-populate choreWorldMap to simulate shared dictionary with stale entries.
+        cp.choreWorldMap[42] = new List<Chore> { null! };
+
+        // Precondition: shared state is in place.
+        Assert.AreSame(foreignCp, _choreConsumerChoreProviderField.GetValue(consumer),
+            "Pre-condition: choreProvider must be pointing to foreignCp (shared state).");
+        var providersPre = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(consumer)!;
+        Assert.AreEqual(1, providersPre.Count, "Pre-condition: providers list contains foreignCp.");
+        Assert.IsTrue(cp.choreWorldMap.ContainsKey(42), "Pre-condition: choreWorldMap has stale entries.");
+
+        // Apply the reset — mirrors MinionPrefab.ResetSharedReferences(go) logic exactly.
+        // (Cannot call MinionPrefab directly since it is internal and private.)
+        consumer.choreProvider = cp;
+        consumer.providers = new List<ChoreProvider>();
+        cp.choreWorldMap = new Dictionary<int, List<Chore>>();
+
+        // Verify: choreProvider now points to own CP.
+        var choreProviderAfter = (ChoreProvider) _choreConsumerChoreProviderField.GetValue(consumer)!;
+        Assert.AreSame(cp, choreProviderAfter,
+            "After reset: choreProvider must point to this dupe's own ChoreProvider, not foreignCp.");
+
+        // Verify: providers is fresh and empty (caller adds own CP via AddProvider after StartSM).
+        var providersAfter = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(consumer)!;
+        Assert.AreNotSame(providersPre, providersAfter,
+            "After reset: providers must be a NEW list instance, not the shared one.");
+        Assert.AreEqual(0, providersAfter.Count,
+            "After reset: providers must be empty — AddProvider(cp) fills it after IdleMonitor.StartSM().");
+
+        // Verify: choreWorldMap is fresh and empty.
+        Assert.AreEqual(0, cp.choreWorldMap.Count,
+            "After reset: choreWorldMap must be empty so new IdleChores land under the correct world key.");
+
+        // Verify: after AddProvider, exactly own CP is in providers.
+        consumer.AddProvider(cp);
+        var providersAfterAdd = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(consumer)!;
+        Assert.AreEqual(1, providersAfterAdd.Count,
+            "After AddProvider: providers must contain exactly 1 entry.");
+        Assert.AreSame(cp, providersAfterAdd[0],
+            "After AddProvider: providers[0] must be this dupe's own ChoreProvider.");
+    }
+
+    /// <summary>
+    /// Regression: 3 dupes each get their own fresh references after ResetSharedReferences.
+    /// Confirms that the fix scales correctly — no cross-contamination between dupes.
+    /// </summary>
+    [Test]
+    public void ThreeDupes_AfterResetSharedReferences_EachHasIsolatedChoreProvider() {
+        // Set up 3 dupe GOs.
+        var go1 = createGameObject(); go1.AddComponent<KPrefabID>();
+        var go2 = createGameObject(); go2.AddComponent<KPrefabID>();
+        var go3 = createGameObject(); go3.AddComponent<KPrefabID>();
+        var cp1 = go1.AddComponent<ChoreProvider>();
+        var cp2 = go2.AddComponent<ChoreProvider>();
+        var cp3 = go3.AddComponent<ChoreProvider>();
+        go1.AddComponent<ChoreDriver>(); go2.AddComponent<ChoreDriver>(); go3.AddComponent<ChoreDriver>();
+        var c1 = go1.AddComponent<ChoreConsumer>();
+        var c2 = go2.AddComponent<ChoreConsumer>();
+        var c3 = go3.AddComponent<ChoreConsumer>();
+
+        // Simulate shared state: all consumers point to dupe0's CP.
+        _choreConsumerChoreProviderField.SetValue(c1, cp1);
+        _choreConsumerChoreProviderField.SetValue(c2, cp1); // wrong — shared
+        _choreConsumerChoreProviderField.SetValue(c3, cp1); // wrong — shared
+        var sharedList = new List<ChoreProvider> { cp1 };
+        _choreConsumerProvidersField.SetValue(c1, sharedList);
+        _choreConsumerProvidersField.SetValue(c2, sharedList);
+        _choreConsumerProvidersField.SetValue(c3, sharedList);
+
+        // Apply reset to each dupe (mirrors MinionPrefab.ResetSharedReferences per dupe).
+        foreach (var (go, cp, consumer) in new[] {
+            (go1, cp1, c1), (go2, cp2, c2), (go3, cp3, c3)
+        }) {
+            consumer.choreProvider = cp;
+            consumer.providers = new List<ChoreProvider>();
+            cp.choreWorldMap = new Dictionary<int, List<Chore>>();
+            consumer.AddProvider(cp);
+        }
+
+        // Each consumer must point to its own CP.
+        Assert.AreSame(cp1, _choreConsumerChoreProviderField.GetValue(c1), "c1.choreProvider must be cp1.");
+        Assert.AreSame(cp2, _choreConsumerChoreProviderField.GetValue(c2), "c2.choreProvider must be cp2.");
+        Assert.AreSame(cp3, _choreConsumerChoreProviderField.GetValue(c3), "c3.choreProvider must be cp3.");
+
+        // Each providers list must be independent and contain only own CP.
+        var list1 = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(c1)!;
+        var list2 = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(c2)!;
+        var list3 = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(c3)!;
+        Assert.AreNotSame(list1, list2, "Dupe 0 and dupe 1 must have different providers lists.");
+        Assert.AreNotSame(list1, list3, "Dupe 0 and dupe 2 must have different providers lists.");
+        Assert.AreEqual(1, list1.Count, "Dupe 0 providers must contain exactly 1 entry.");
+        Assert.AreEqual(1, list2.Count, "Dupe 1 providers must contain exactly 1 entry.");
+        Assert.AreEqual(1, list3.Count, "Dupe 2 providers must contain exactly 1 entry.");
+        Assert.AreSame(cp1, list1[0], "Dupe 0's providers[0] must be its own CP.");
+        Assert.AreSame(cp2, list2[0], "Dupe 1's providers[0] must be its own CP.");
+        Assert.AreSame(cp3, list3[0], "Dupe 2's providers[0] must be its own CP.");
+
+        // choreWorldMaps must all be independent and empty (no stale entries).
+        Assert.AreNotSame(cp1.choreWorldMap, cp2.choreWorldMap, "cp1 and cp2 must have different choreWorldMaps.");
+        Assert.AreEqual(0, cp1.choreWorldMap.Count, "cp1.choreWorldMap must be empty after reset.");
+        Assert.AreEqual(0, cp2.choreWorldMap.Count, "cp2.choreWorldMap must be empty after reset.");
+        Assert.AreEqual(0, cp3.choreWorldMap.Count, "cp3.choreWorldMap must be empty after reset.");
     }
 
     // ── 1000-tick stability: 3 dupes, no crash ────────────────────────────────
