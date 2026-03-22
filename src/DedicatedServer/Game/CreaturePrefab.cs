@@ -166,6 +166,11 @@ public static class CreaturePrefab {
         var smiInst = choreDriver?.GetSMI<ChoreDriver.StatesInstance>();
         if (smiInst != null && smiInst.worker == null)
             smiInst.worker = go.GetComponent<WorkerBase>();
+        // Diagnostic: log any critter that still has worker=null after the retrofit.
+        // This fires when GetComponent<WorkerBase>() returned null (AddOrGet<StandardWorker>
+        // failed) OR when smiInst itself was null (SM not started yet — safe, no NPE possible).
+        if (smiInst != null && smiInst.worker == null)
+            Debug.LogError(go.name + " worker still null after DS-006b retrofit");
 
         // ── Diagnostic: one line per creature ────────────────────────────────────
         var cell  = Grid.PosToCell(go);
