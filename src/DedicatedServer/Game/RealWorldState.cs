@@ -205,10 +205,19 @@ public class RealWorldState {
         if (spawnData != null) {
             foreach (var b in spawnData.buildings) {
                 int w = 1, h = 1;
-                try {
-                    var def = world.GetBuildingDef(b.id);
-                    if (def != null) { w = def.WidthInCells; h = def.HeightInCells; }
-                } catch { /* BuildingDef not registered */ }
+                // Primary: PrefabSizeMap populated from Building.Def during SpawnEntities().
+                // Most reliable in headless mode — reads directly from the spawned GO's BuildingDef.
+                if (world.PrefabSizeMap.TryGetValue(b.id, out var sz)) {
+                    w = sz.w; h = sz.h;
+                } else {
+                    // Fallback: Assets.GetBuildingDef (for buildings that weren't spawned or skipped).
+                    try {
+                        var def = world.GetBuildingDef(b.id);
+                        if (def != null) { w = def.WidthInCells; h = def.HeightInCells; }
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[EntitySize] {b.id}: GetBuildingDef failed: {ex.GetBaseException().Message}");
+                    }
+                }
                 entities.Add(new {
                     type = "building", name = b.id, x = b.location_x, y = b.location_y, w, h
                 });

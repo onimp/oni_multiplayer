@@ -64,22 +64,22 @@ else:
 }
 
 # ── Building sizes ─────────────────────────────────────────────────────────────
-# Headquarters (Command Module) is 4 wide × 3 tall
-assert_size "Headquarters" 4 3 "building"
+# Headquarters (Command Module): HeadquartersConfig.CreateBuildingDef("Headquarters", 4, 4, ...)
+assert_size "Headquarters" 4 4 "building"
 
-# Telepad (Printing Pod) is 2 wide × 3 tall
-assert_size "Telepad" 2 3 "building"
+# Telepad (Printing Pod): size from BuildingDef (skipped if not present in world)
+assert_size "Telepad" 4 3 "building"
 
 # ── Duplicant sizes ────────────────────────────────────────────────────────────
-# Minion is 1 wide × 2 tall
+# Minion: KBoxCollider2D.size=(1, 1.5) → rounds to 1×2
 assert_size "Minion" 1 2 "duplicant"
 
 # ── Critter sizes ──────────────────────────────────────────────────────────────
-# Hatch critter is 2 wide × 2 tall
-assert_size "Hatch" 2 2 "critter"
+# Hatch: BaseHatchConfig.CreatePlacedEntity(..., width:1, height:1) → 1×1
+assert_size "Hatch" 1 1 "critter"
 
-# Puft critter is 1 wide × 2 tall
-assert_size "Puft" 1 2 "critter"
+# Puft: BasePuftConfig.CreatePlacedEntity(..., width:1, height:1) → 1×1
+assert_size "Puft" 1 1 "critter"
 
 # ── Default / unknown entity fallback ─────────────────────────────────────────
 # Entities without explicit size rules should default to 1×1

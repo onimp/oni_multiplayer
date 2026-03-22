@@ -981,13 +981,27 @@ public class WorldBuilder {
     }
 
     /// <summary>
-    /// Reads OccupyArea from a live spawned GO and caches its cell bounding box.
-    /// Logs [CritterSize] for each unique ID to aid diagnostics.
+    /// Reads entity size from a live spawned GO and caches its cell bounding box.
+    /// Priority: Building.Def (most reliable for buildings) → OccupyArea offsets → KBoxCollider2D.
+    /// Logs [EntitySize] for each unique ID to aid diagnostics.
     /// </summary>
     private void CaptureEntitySize(string id, GameObject go) {
         try {
+            // Primary for buildings: read directly from Building.Def (set in BuildingLoader.CreateBuilding).
+            // This is the most reliable source — OccupyArea._UnrotatedOccupiedCellsOffsets is often
+            // null in headless mode, and KBoxCollider2D may be uninitialized.
+            var building = go.GetComponent<Building>();
+            if (building?.Def != null) {
+                var w = building.Def.WidthInCells;
+                var h = building.Def.HeightInCells;
+                _prefabSizeMap[id] = (w, h);
+                Console.WriteLine($"[EntitySize] id={id} → {w}×{h} (Building.Def)");
+                return;
+            }
+
+            // Fallback for critters/dupes/other: OccupyArea offsets → KBoxCollider2D
             var occupy = go.GetComponent<OccupyArea>();
-            int w = 1, h = 1;
+            int ew = 1, eh = 1;
             int cellCount = 0;
 
             if (occupy?._UnrotatedOccupiedCellsOffsets?.Length > 0) {
@@ -1000,22 +1014,22 @@ public class WorldBuilder {
                     if (o.y < minY) minY = o.y;
                     if (o.y > maxY) maxY = o.y;
                 }
-                w = maxX - minX + 1;
-                h = maxY - minY + 1;
+                ew = maxX - minX + 1;
+                eh = maxY - minY + 1;
             } else {
-                // Fallback: KBoxCollider2D (set in ConfigPlacedEntity alongside OccupyArea)
+                // KBoxCollider2D: e.g. Minion has size=(1, 1.5) → rounds to 1×2
                 var col = go.GetComponent<KBoxCollider2D>();
                 if (col != null) {
                     var s = col.size;
-                    w = Math.Max(1, (int)Math.Round(s.x));
-                    h = Math.Max(1, (int)Math.Round(s.y));
+                    ew = Math.Max(1, (int)Math.Round(s.x));
+                    eh = Math.Max(1, (int)Math.Round(s.y));
                 }
             }
 
-            _prefabSizeMap[id] = (w, h);
-            Console.WriteLine($"[CritterSize] id={id} tag={go.GetComponent<KPrefabID>()?.PrefabTag} occupyCells={cellCount} w={w} h={h}");
+            _prefabSizeMap[id] = (ew, eh);
+            Console.WriteLine($"[EntitySize] id={id} tag={go.GetComponent<KPrefabID>()?.PrefabTag} occupyCells={cellCount} → {ew}×{eh} (OccupyArea/Collider)");
         } catch (Exception ex) {
-            Console.WriteLine($"[CritterSize] id={id} FAILED: {ex.GetBaseException().Message}");
+            Console.WriteLine($"[EntitySize] id={id} FAILED: {ex.GetBaseException().Message}");
             _prefabSizeMap[id] = (1, 1);
         }
     }
