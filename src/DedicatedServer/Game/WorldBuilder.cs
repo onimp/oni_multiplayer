@@ -1374,68 +1374,60 @@ public class WorldBuilder {
         // OR isInitialized=true but isSpawned=false → OnSpawn never ran → SM not started).
         // Cover ALL brains (dupes + critters), not just minionGOs.
         foreach (var go in allBrainGOs) {
-            try {
-                var provider = go.GetComponent<ChoreProvider>();
-                if (provider != null) {
-                    if (!provider.IsInitialized()) {
-                        // Case 1: never initialized → Init then Spawn (mirrors ChoreDriver Case 1)
-                        provider.InitializeComponent();
-                        provider.Spawn();
-                        Console.WriteLine($"[FixChoreConsumers] Force-initialized ChoreProvider for {go.name}");
-                    } else if (!provider.isSpawned) {
-                        // Case 2: initialized but OnSpawn() never ran → Spawn only
-                        // Root cause of 336x "ChoreProvider not initialized" errors:
-                        // isInitialized=true, isSpawned=false was silently skipped before this fix.
-                        provider.Spawn();
-                        Console.WriteLine($"[FixChoreConsumers] Force-spawned ChoreProvider (was init but !isSpawned) for {go.name}");
+            var provider = go.GetComponent<ChoreProvider>();
+            if (provider != null) {
+                if (!provider.IsInitialized()) {
+                    // Case 1: never initialized → Init then Spawn (mirrors ChoreDriver Case 1)
+                    provider.InitializeComponent();
+                    provider.Spawn();
+                    Console.WriteLine($"[FixChoreConsumers] Force-initialized ChoreProvider for {go.name}");
+                } else if (!provider.isSpawned) {
+                    // Case 2: initialized but OnSpawn() never ran → Spawn only
+                    // Root cause of 336x "ChoreProvider not initialized" errors:
+                    // isInitialized=true, isSpawned=false was silently skipped before this fix.
+                    provider.Spawn();
+                    Console.WriteLine($"[FixChoreConsumers] Force-spawned ChoreProvider (was init but !isSpawned) for {go.name}");
+                }
+            }
+            var driver = go.GetComponent<ChoreDriver>();
+            if (driver != null) {
+                var needsInit  = !driver.IsInitialized();
+                var needsSpawn = driver.IsInitialized() && !driver.isSpawned;
+                // DS-006 fix: add StandardWorker BEFORE Spawn() so StatesInstance.ctor
+                // finds GetComponent<WorkerBase>() non-null → worker set → no NPE at
+                // haschore.Update b__5_3 IL[0x0075] (smi.worker.GetWorkable()).
+                // Must run before Cases 1 and 2 (both call Spawn which triggers StartSM).
+                if (needsInit || needsSpawn) {
+                    go.AddOrGet<StandardWorker>();
+                }
+                // Case 1: never initialized → Init then Spawn
+                if (needsInit) {
+                    driver.InitializeComponent();
+                    driver.Spawn();
+                    Console.WriteLine($"[FixChoreConsumers] Force-initialized+spawned ChoreDriver for {go.name}");
+                }
+                // Case 2: initialized but OnSpawn() never ran (SM not started) → Spawn only
+                else if (needsSpawn) {
+                    driver.Spawn();
+                    Console.WriteLine($"[FixChoreConsumers] Force-spawned ChoreDriver (was init but !isSpawned) for {go.name}");
+                }
+                // Case 3: initialized + spawned but SM not running → start SMI directly
+                else if (driver.isSpawned) {
+                    var smiInst = driver.GetSMI() as ChoreDriver.StatesInstance;
+                    if (smiInst != null && !smiInst.IsRunning()) {
+                        smiInst.StartSM();
+                        Console.WriteLine($"[FixChoreConsumers] Force-started ChoreDriver SM for {go.name}");
                     }
                 }
-                var driver = go.GetComponent<ChoreDriver>();
-                if (driver != null) {
-                    var needsInit  = !driver.IsInitialized();
-                    var needsSpawn = driver.IsInitialized() && !driver.isSpawned;
-                    // DS-006 fix: add StandardWorker BEFORE Spawn() so StatesInstance.ctor
-                    // finds GetComponent<WorkerBase>() non-null → worker set → no NPE at
-                    // haschore.Update b__5_3 IL[0x0075] (smi.worker.GetWorkable()).
-                    // Must run before Cases 1 and 2 (both call Spawn which triggers StartSM).
-                    if (needsInit || needsSpawn) {
-                        go.AddOrGet<StandardWorker>();
-                    }
-                    // Case 1: never initialized → Init then Spawn
-                    if (needsInit) {
-                        driver.InitializeComponent();
-                        driver.Spawn();
-                        Console.WriteLine($"[FixChoreConsumers] Force-initialized+spawned ChoreDriver for {go.name}");
-                    }
-                    // Case 2: initialized but OnSpawn() never ran (SM not started) → Spawn only
-                    else if (needsSpawn) {
-                        driver.Spawn();
-                        Console.WriteLine($"[FixChoreConsumers] Force-spawned ChoreDriver (was init but !isSpawned) for {go.name}");
-                    }
-                    // Case 3: initialized + spawned but SM not running → start SMI directly
-                    else if (driver.isSpawned) {
-                        var smiInst = driver.GetSMI() as ChoreDriver.StatesInstance;
-                        if (smiInst != null && !smiInst.IsRunning()) {
-                            smiInst.StartSM();
-                            Console.WriteLine($"[FixChoreConsumers] Force-started ChoreDriver SM for {go.name}");
-                        }
-                    }
-                }
-            } catch (Exception ex) {
-                Console.WriteLine($"[FixChoreConsumers] ChoreProvider/Driver init failed for {go.name}: {ex.GetBaseException().Message}");
             }
         }
 
         var fixedCount = 0;
         foreach (var go in allBrainGOs) {
-            try {
-                var cc = go.GetComponent<ChoreConsumer>();
-                if (cc == null || cc.consumerState != null) continue;
-                cc.consumerState = new ChoreConsumerState(cc);
-                fixedCount++;
-            } catch (Exception ex) {
-                Console.WriteLine($"[WorldBuilder] consumerState init failed for {go.name}: {ex.GetBaseException().Message}");
-            }
+            var cc = go.GetComponent<ChoreConsumer>();
+            if (cc == null || cc.consumerState != null) continue;
+            cc.consumerState = new ChoreConsumerState(cc);
+            fixedCount++;
         }
 
         // Step 3: fix ChoreConsumer.providers list.
@@ -1446,28 +1438,24 @@ public class WorldBuilder {
         // Also ensure entity's own ChoreProvider is present (added by ChoreConsumer.OnPrefabInit).
         var providersFixed = 0;
         foreach (var go in allBrainGOs) {
-            try {
-                var cc = go.GetComponent<ChoreConsumer>();
-                if (cc == null) continue;
-                var providersList = _ccProvidersField?.GetValue(cc) as List<ChoreProvider>;
-                if (providersList == null) continue;
+            var cc = go.GetComponent<ChoreConsumer>();
+            if (cc == null) continue;
+            var providersList = _ccProvidersField?.GetValue(cc) as List<ChoreProvider>;
+            if (providersList == null) continue;
 
-                // GlobalChoreProvider: registered by Modifiers.OnPrefabInit() — may be missing.
-                if (GlobalChoreProvider.Instance != null && !providersList.Contains(GlobalChoreProvider.Instance)) {
-                    cc.AddProvider(GlobalChoreProvider.Instance);
-                    Debug.LogWarning($"[FixChoreConsumers] {go.name}: added GlobalChoreProvider (had {providersList.Count - 1} providers before)");
-                    providersFixed++;
-                }
-                // Own ChoreProvider: registered by ChoreConsumer.OnPrefabInit() — may be null if
-                // MyAttributes didn't resolve [MyCmpAdd] fields before OnPrefabInit ran.
-                var ownProvider = go.GetComponent<ChoreProvider>();
-                if (ownProvider != null && !providersList.Contains(ownProvider)) {
-                    cc.AddProvider(ownProvider);
-                    Debug.LogWarning($"[FixChoreConsumers] {go.name}: added own ChoreProvider (was missing)");
-                    providersFixed++;
-                }
-            } catch (Exception ex) {
-                Debug.LogWarning($"[FixChoreConsumers] providers fix failed for {go.name}: {ex.GetBaseException().Message}");
+            // GlobalChoreProvider: registered by Modifiers.OnPrefabInit() — may be missing.
+            if (GlobalChoreProvider.Instance != null && !providersList.Contains(GlobalChoreProvider.Instance)) {
+                cc.AddProvider(GlobalChoreProvider.Instance);
+                Debug.LogWarning($"[FixChoreConsumers] {go.name}: added GlobalChoreProvider (had {providersList.Count - 1} providers before)");
+                providersFixed++;
+            }
+            // Own ChoreProvider: registered by ChoreConsumer.OnPrefabInit() — may be null if
+            // MyAttributes didn't resolve [MyCmpAdd] fields before OnPrefabInit ran.
+            var ownProvider = go.GetComponent<ChoreProvider>();
+            if (ownProvider != null && !providersList.Contains(ownProvider)) {
+                cc.AddProvider(ownProvider);
+                Debug.LogWarning($"[FixChoreConsumers] {go.name}: added own ChoreProvider (was missing)");
+                providersFixed++;
             }
         }
         Debug.LogWarning($"[WorldBuilder] FixChoreConsumers Step3: providers patched on {providersFixed} consumer(s)");
