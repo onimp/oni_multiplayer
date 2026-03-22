@@ -50,7 +50,7 @@ public class GameTickLoop {
     private int _tickCount;
     private readonly System.Action _tickSimDll;
 
-    // One-shot flag: set to true once idle.move Exit("ClearWalk") is patched.
+    // One-shot flag: set to true once idle.move enterActions+exitActions are all wrapped.
     // Checked every tick; after patching it becomes a single bool test (near-zero cost).
     private bool _idleChorePatchApplied;
 
@@ -153,7 +153,7 @@ public class GameTickLoop {
             DelayedChoreCheck();
         }
 
-        // One-shot patch: null-guard IdleChore idle.move Exit("ClearWalk") animController usage.
+        // One-shot patch: null-guard ALL idle.move enter+exit actions for headless.
         // Applied as soon as the first IdleChore is live (SM singleton created). Cheap bool-check
         // after success. See PatchIdleChoreExitActions() for full explanation.
         PatchIdleChoreExitActions();
@@ -411,21 +411,28 @@ public class GameTickLoop {
     }
 
     /// <summary>
-    /// One-shot patch: replaces the idle.move Exit("ClearWalk") callback with a null-safe
-    /// wrapper so KBatchedAnimController.Play() is skipped when animController is null (headless).
+    /// One-shot patch: wraps ALL idle.move enter+exit actions so KBatchedAnimController
+    /// calls are skipped when animController is null (headless).
     ///
-    /// ROOT CAUSE:
-    ///   idle.move.Exit("ClearWalk", smi => smi.animController.Play("idle_default"))
-    ///   smi.animController = GetComponent&lt;KBatchedAnimController&gt;() = null in headless.
-    ///   NPE when idle.move exits → StateMachine.Instance.error=true → GoTo() no-ops →
-    ///   dupe freezes; also the Console.Error flush per NPE caused 3.7 real tps bottleneck.
+    /// ROOT CAUSE (two NPE sites):
+    ///   1. idle.move.ToggleAnims("anim_loco_walk_kanim")
+    ///      Enter: state_target.Get&lt;KAnimControllerBase&gt;(smi).AddAnimOverrides(…)  ← NPE first
+    ///      Exit:  state_target.Get&lt;KAnimControllerBase&gt;(smi).RemoveAnimOverrides(…) ← NPE second
+    ///      ToggleAnims has NO null-check before AddAnimOverrides/RemoveAnimOverrides.
+    ///   2. idle.move.Exit("ClearWalk", smi => smi.animController.Play("idle_default"))
+    ///      Direct field access with no null check (fires after ToggleAnims Exit).
+    ///   All three NPE when KBatchedAnimController = null in headless → SM.error=true →
+    ///   GoTo() no-ops → dupe freezes.
+    ///
+    /// FIX: wrap ALL enter+exit actions — not just ClearWalk — with an animController guard.
+    ///   WrapActions replaces every callback with a wrapper that skips the call when
+    ///   smi.animController is null. Works for both ToggleAnims lambdas and ClearWalk.
     ///
     /// APPROACH:
     ///   Harmony patching InitializeStates on the generic GameStateMachine type triggers
     ///   a JIT/type-resolution infinite loop at boot (99.6% CPU, server never starts).
     ///   Instead: access the IdleChore.States singleton directly via a live chore's smi.sm,
-    ///   then rewrite its exitActions list in-place. Safe to call every tick — once the flag
-    ///   is set it short-circuits in one bool check.
+    ///   then rewrite its enterActions+exitActions lists in-place.
     /// </summary>
     private void PatchIdleChoreExitActions() {
         if (_idleChorePatchApplied) return;
@@ -454,65 +461,69 @@ public class GameTickLoop {
             if (chore?.smi == null) continue;
 
             // smi.sm is the IdleChore.States singleton (created on first IdleChore instantiation).
-            PatchMoveExitActions(chore.smi.sm);
+            PatchMoveActions(chore.smi.sm);
             _idleChorePatchApplied = true;
             return;
         }
     }
 
     /// <summary>
-    /// Patches idle.move exitActions in-place: finds the "ClearWalk" callback and replaces
-    /// it with a null-safe wrapper that skips Play() when animController is null.
+    /// Patches idle.move enterActions AND exitActions in-place: wraps every callback with
+    /// an animController null-guard so KBatchedAnimController calls are skipped in headless.
     ///
     /// StateMachine.Action is a struct { public string name; public object callback; }.
-    /// exitActions is public List&lt;StateMachine.Action&gt; on StateMachine.BaseState.
-    /// The callback type is StateMachine&lt;States,StatesInstance&gt;.State.Callback =
-    ///   delegate void(IdleChore.StatesInstance smi)  [single parameter].
-    /// Delegate.CreateDelegate preserves the original runtime type so the SM framework's
-    /// internal  (State.Callback)action.callback  cast continues to succeed at execution.
+    /// enterActions/exitActions are public List&lt;StateMachine.Action&gt; on StateMachine.BaseState.
+    /// All callbacks have signature delegate void(IdleChore.StatesInstance smi).
+    /// Delegate.CreateDelegate preserves each callback's original runtime delegate type so
+    /// the SM framework's internal (State.Callback)action.callback cast still succeeds.
     /// </summary>
-    private static void PatchMoveExitActions(IdleChore.States states) {
-        var exitActions = states.idle.move.exitActions;
-        if (exitActions == null) {
-            Console.WriteLine("[DS] IdleChore PatchMoveExitActions: exitActions is null — nothing to patch");
+    private static void PatchMoveActions(IdleChore.States states) {
+        var enterCount = states.idle.move.enterActions?.Count ?? 0;
+        var exitCount  = states.idle.move.exitActions?.Count ?? 0;
+        Console.WriteLine($"[DS] IdleChore PatchMoveActions: enterActions={enterCount} exitActions={exitCount}");
+        WrapActions(states.idle.move.enterActions, "enter");
+        WrapActions(states.idle.move.exitActions,  "exit");
+    }
+
+    /// <summary>
+    /// Replaces every callback in the given action list with a null-safe wrapper.
+    /// The wrapper skips the original call when smi.animController is null (headless).
+    /// In the real game animController is always non-null — no behaviour change.
+    /// </summary>
+    private static void WrapActions(List<StateMachine.Action> actions, string listName) {
+        if (actions == null) {
+            Console.WriteLine($"[DS] IdleChore WrapActions({listName}): list is null — nothing to patch");
             return;
         }
-
-        for (var i = 0; i < exitActions.Count; i++) {
-            if (exitActions[i].name != "ClearWalk") continue;
-
-            var originalDelegate = exitActions[i].callback as Delegate;
+        for (var i = 0; i < actions.Count; i++) {
+            var originalDelegate = actions[i].callback as Delegate;
             if (originalDelegate == null) {
-                Console.WriteLine("[DS] IdleChore ClearWalk callback is not a Delegate — skipping patch");
-                break;
+                Console.WriteLine($"[DS] IdleChore WrapActions({listName})[{i}] '{actions[i].name}': callback not a Delegate — skipping");
+                continue;
             }
 
-            // Convert original to Action<StatesInstance> to call it without DynamicInvoke.
-            // The original delegate type has the same single-parameter signature.
-            var originalAsAction = (Action<IdleChore.StatesInstance>) Delegate.CreateDelegate(
+            // Convert original to Action<StatesInstance> to invoke without DynamicInvoke.
+            // All SM callbacks have the same single-parameter signature.
+            var captured = (Action<IdleChore.StatesInstance>) Delegate.CreateDelegate(
                 typeof(Action<IdleChore.StatesInstance>),
                 originalDelegate.Target,
                 originalDelegate.Method);
 
-            // Null-safe wrapper: skip Play() when animController is null (headless).
-            // In real game animController is always non-null — no behaviour change there.
+            // Null-safe wrapper: skip call when animController is null (headless).
             Action<IdleChore.StatesInstance> wrapper = smi => {
                 if (smi?.animController != null)
-                    originalAsAction(smi);
+                    captured(smi);
             };
 
-            // Convert wrapper back to the original delegate type so the SM framework cast works.
-            var patchedDelegate = Delegate.CreateDelegate(
+            // Restore original runtime delegate type so (State.Callback)action.callback cast works.
+            var patched = Delegate.CreateDelegate(
                 originalDelegate.GetType(),
                 wrapper.Target,
                 wrapper.Method);
 
-            // StateMachine.Action is a struct — replace by index, not by reference.
-            exitActions[i] = new StateMachine.Action("ClearWalk", patchedDelegate);
-            Console.WriteLine("[DS] IdleChore idle.move Exit(ClearWalk) patched — animController null-guarded");
-            return;
+            // StateMachine.Action is a struct — must replace by index.
+            actions[i] = new StateMachine.Action(actions[i].name, patched);
+            Console.WriteLine($"[DS] IdleChore WrapActions({listName})[{i}] '{actions[i].name}': wrapped");
         }
-
-        Console.WriteLine("[DS] IdleChore ClearWalk action NOT FOUND in idle.move exitActions");
     }
 }
