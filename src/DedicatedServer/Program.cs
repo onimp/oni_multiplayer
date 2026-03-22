@@ -84,7 +84,6 @@ public static class Program {
                 try {
                     tickLoop.Update(1f / 60f); // 60 UPS — one subtick per call, mirrors real game SimEveryTick rhythm
                 }
-                catch (Exception ex) { Console.WriteLine($"[StateMachineTick] Error: {ex.Message}\n{ex.StackTrace}"); }
                 finally {
                     // Always sleep the remainder of the 16ms budget so UPS stays ≤ 60
                     // even during exception floods (Update throwing skipped the old sleep).
