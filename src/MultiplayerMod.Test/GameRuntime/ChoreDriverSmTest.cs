@@ -65,6 +65,42 @@ public class ChoreDriverSmTest : PlayableGameTest {
             "This ensures haschore.Update (b__5_3) can call smi.worker.GetWorkable() without NPE.");
     }
 
+    /// <summary>
+    /// DS-006 critter regression: when SM was started WITHOUT StandardWorker,
+    /// worker=null. After adding StandardWorker and patching the backing field via
+    /// reflection (WorldBuilder.FixCreatureBrains Case A), worker becomes non-null.
+    ///
+    /// Key insight: StopSM()+StartSM() does NOT recreate StatesInstance (_smi is only
+    /// cleared in OnCleanUp, not on manual StopSM).  The fix sets the backing field
+    /// directly on the live instance.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_CritterFix_WorkerSetViaReflection_IsNotNull() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        // Start SM WITHOUT StandardWorker — replicates broken critter state.
+        var driver = go.AddComponent<ChoreDriver>();
+        driver.smi.StartSM();
+        var smi = driver.GetSMI<ChoreDriver.StatesInstance>();
+        Assert.IsNull(smi?.worker,
+            "Precondition: worker must be null when StandardWorker absent (broken state)");
+
+        // Apply fix: add StandardWorker, then set backing field via reflection.
+        go.AddComponent<StandardWorker>();
+        var workerField = typeof(ChoreDriver.StatesInstance).GetField(
+            "<worker>k__BackingField",
+            System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.Public   |
+            System.Reflection.BindingFlags.NonPublic);
+        Assert.IsNotNull(workerField,
+            "<worker>k__BackingField must be locatable via reflection (WorldBuilder.FixCreatureBrains depends on it)");
+        workerField!.SetValue(smi, go.GetComponent<WorkerBase>());
+
+        Assert.IsNotNull(smi?.worker,
+            "After reflection fix, worker must be non-null. " +
+            "This confirms WorldBuilder.FixCreatureBrains Case A works for critters.");
+    }
+
     // ─── DS-005 tests (pre-existing) ────────────────────────────────────────
 
     /// <summary>

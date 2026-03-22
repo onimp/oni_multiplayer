@@ -1796,10 +1796,44 @@ public class WorldBuilder {
                     }
                 }
 
+                // ── Step 5: ensure StandardWorker (WorkerBase) is present — DS-006 ─────────
+                // ChoreDriver.StatesInstance.ctor sets worker = GetComponent<WorkerBase>().
+                // Critter prefabs may lack StandardWorker → worker=null → haschore.Update
+                // (b__5_3 IL[0x75]) NPEs on smi.worker.GetWorkable() every tick.
+                //
+                // Two sub-cases:
+                //   A. SM already started during TriggerLifecycle but worker=null (missing component):
+                //      StopSM+StartSM does NOT recreate StatesInstance (_smi only cleared in OnCleanUp).
+                //      Instead: add StandardWorker + set worker via reflection on the live instance.
+                //   B. SM was never started: add StandardWorker then StartSM normally.
+                //
+                // AddOrGet is a no-op if StandardWorker already present.
+                go.AddOrGet<StandardWorker>();
+                var choreDriver = go.GetComponent<ChoreDriver>();
+                if (choreDriver != null) {
+                    var cdSmi = choreDriver.GetSMI<ChoreDriver.StatesInstance>();
+                    if (cdSmi != null && cdSmi.worker == null) {
+                        // Case A: SM started before StandardWorker existed.
+                        // Set worker backing field directly on the live instance.
+                        var newWorker = go.GetComponent<WorkerBase>();
+                        if (newWorker != null) {
+                            var workerField = typeof(ChoreDriver.StatesInstance).GetField(
+                                "<worker>k__BackingField",
+                                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                            workerField?.SetValue(cdSmi, newWorker);
+                            Console.WriteLine($"[Animals] {go.name}: worker set via reflection (ok={cdSmi.worker != null})");
+                        }
+                    } else if (choreDriver.GetSMI() == null) {
+                        // Case B: SM was never started.
+                        choreDriver.smi.StartSM();
+                        Console.WriteLine($"[Animals] {go.name}: ChoreDriver SM started for first time");
+                    }
+                }
+
                 // ── Diagnostic: one line per creature ────────────────────────────────────
                 var cell   = Grid.PosToCell(go);
-                var chore  = go.GetComponent<ChoreDriver>()?.GetCurrentChore();
-                Console.WriteLine($"[Animals] {go.name}: cell={cell} running={brain.IsRunning()} nav={(nav?.GetSMI() != null ? "OK" : "null")} chore={chore?.GetType().Name ?? "null"} consumerState={cc?.consumerState != null}");
+                var chore  = choreDriver?.GetCurrentChore();
+                Console.WriteLine($"[Animals] {go.name}: cell={cell} running={brain.IsRunning()} nav={(nav?.GetSMI() != null ? "OK" : "null")} chore={chore?.GetType().Name ?? "null"} consumerState={cc?.consumerState != null} worker={choreDriver?.GetSMI<ChoreDriver.StatesInstance>()?.worker != null}");
 
             } catch (Exception ex) {
                 Console.WriteLine($"[Animals] {go.name}: ERROR: {ex.GetBaseException().Message}\n  {ex.GetBaseException().StackTrace?.Split('\n')[0]}");

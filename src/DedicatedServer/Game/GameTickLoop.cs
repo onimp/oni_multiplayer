@@ -137,162 +137,124 @@ public class GameTickLoop {
 
         // Global chore inventory: log total chores in GlobalChoreProvider across all worlds.
         // choreWorldMap is public on ChoreProvider (base of GlobalChoreProvider).
-        try {
-            var gcp = GlobalChoreProvider.Instance;
-            if (gcp != null) {
-                var totalChores = 0;
-                foreach (var kvp in gcp.choreWorldMap) totalChores += kvp.Value.Count;
-                Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider: choreWorldMap worlds={gcp.choreWorldMap.Count} totalChores={totalChores} fetches={gcp.fetches.Count}");
-                // Log chore types present (first 10).
-                var sb2 = new StringBuilder();
-                var shown = 0;
-                foreach (var kvp in gcp.choreWorldMap) {
-                    foreach (var ch in kvp.Value) {
-                        if (shown++ >= 10) break;
-                        sb2.Append(ch?.GetType().Name ?? "null").Append(' ');
-                    }
+        var gcp = GlobalChoreProvider.Instance;
+        if (gcp != null) {
+            var totalChores = 0;
+            foreach (var kvp in gcp.choreWorldMap) totalChores += kvp.Value.Count;
+            Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider: choreWorldMap worlds={gcp.choreWorldMap.Count} totalChores={totalChores} fetches={gcp.fetches.Count}");
+            // Log chore types present (first 10).
+            var sb2 = new StringBuilder();
+            var shown = 0;
+            foreach (var kvp in gcp.choreWorldMap) {
+                foreach (var ch in kvp.Value) {
+                    if (shown++ >= 10) break;
+                    sb2.Append(ch?.GetType().Name ?? "null").Append(' ');
                 }
-                if (shown > 0) Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider chore types: {sb2}");
-            } else {
-                Debug.LogWarning("[ChoreDebug] GlobalChoreProvider.Instance == null");
             }
-        } catch (Exception e) {
-            Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider inspection failed: {e.GetBaseException().Message}");
+            if (shown > 0) Debug.LogWarning($"[ChoreDebug] GlobalChoreProvider chore types: {sb2}");
+        } else {
+            Debug.LogWarning("[ChoreDebug] GlobalChoreProvider.Instance == null");
         }
 
         var updated = 0;
         foreach (var brain in Components.Brains.Items) {
             if (brain == null) continue;
-            try {
-                var consumer = brain.GetComponent<ChoreConsumer>();
-                var driver   = brain.GetComponent<ChoreDriver>();
-                if (consumer == null || driver == null) {
-                    Debug.LogWarning($"[Brain] {brain.name}: consumer={consumer != null} driver={driver != null} SKIP");
-                    continue;
-                }
-
-                // Log providers list.
-                var providerList = _providersField?.GetValue(consumer) as IList;
-                var sb = new StringBuilder();
-                if (providerList != null)
-                    foreach (var p in providerList) sb.Append(p?.GetType().Name ?? "null").Append(' ');
-
-                var smi = driver.GetSMI() as ChoreDriver.StatesInstance;
-                var choreBefore = smi?.GetCurrentChore()?.GetType().Name ?? "null";
-
-                Debug.LogWarning($"[Brain] {brain.name}: running={brain.IsRunning()} " +
-                    $"choreBefore={choreBefore} " +
-                    $"providers({providerList?.Count ?? -1})=[{sb.ToString().TrimEnd()}] " +
-                    $"smi={(smi != null ? "ok" : "null")} smiRunning={smi?.IsRunning()}");
-
-                // Nav + cell diagnostic for Minions at tick=61 (after sensor warmup).
-                // Hypothesis 1: nav.cachedCell != physicalCell → pathfinding uses wrong origin.
-                // Hypothesis 2: idleCell == cachedCell → IdleChore finishes immediately (already there).
-                if (brain.gameObject.HasTag(GameTags.BaseMinion)) {
-                    try {
-                        var nav2       = brain.GetComponent<Navigator>();
-                        var sensors2   = brain.GetComponent<Sensors>();
-                        var idleSensor = sensors2?.GetSensor<IdleCellSensor>();
-                        var idleCell   = idleSensor?.GetCell() ?? -1;
-                        var physCell   = Grid.PosToCell(brain.transform.position);
-                        var navCell    = nav2?.cachedCell ?? -1;
-                        var cdSmi      = driver?.GetSMI() as ChoreDriver.StatesInstance;
-                        Debug.LogWarning($"[NavDiag] {brain.name}: physicalCell={physCell} nav.cachedCell={navCell} " +
-                            $"idleCell={idleCell} sameAsPhys={physCell == navCell} idleIsPhys={idleCell == physCell} " +
-                            $"choreDriverSmi={(cdSmi != null ? "ok" : "null")} choreDriverSmiRunning={cdSmi?.IsRunning()}");
-                    } catch (Exception e) {
-                        Debug.LogWarning($"[NavDiag] {brain.name} EXCEPTION: {e.GetBaseException().Message}");
-                    }
-                }
-
-                // Deep per-provider diagnostic only for Minions (not critters).
-                if (brain.gameObject.HasTag(GameTags.BaseMinion) && consumer.consumerState != null) {
-                    try {
-                        if (providerList != null) {
-                            foreach (ChoreProvider provider in providerList) {
-                                if (provider == null) continue;
-                                var succeeded = new List<Chore.Precondition.Context>();
-                                var failed    = new List<Chore.Precondition.Context>();
-                                provider.CollectChores(consumer.consumerState, succeeded, failed);
-                                Debug.LogWarning($"[ChoreDebug] {brain.name} provider={provider.GetType().Name} succeeded={succeeded.Count} failed={failed.Count}");
-                                foreach (var ctx in succeeded.Take(3)) {
-                                    // Log FullName + choreType.id to identify ChoreTableChore`2 actual type.
-                                    Debug.LogWarning($"  -> chore={ctx.chore?.GetType().FullName} " +
-                                        $"choreType.id={ctx.chore?.choreType?.Id} " +
-                                        $"priority={ctx.masterPriority}");
-                                }
-                                if (succeeded.Count == 0 && failed.Count > 0) {
-                                    foreach (var ctx in failed.Take(3))
-                                        Debug.LogWarning($"  xx failed chore={ctx.chore?.GetType().Name} failedPreconditionId={ctx.failedPreconditionId}");
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        Debug.LogWarning($"[ChoreDebug] {brain.name} CollectChores inspection failed: {e.GetBaseException().Message}");
-                    }
-                }
-
-                // Reset SM error flags per-brain before FindNextChore:
-                //   Instance.error  — global static; GoTo guard: if (Instance.error || ...) return;
-                //   smi.isCrashed   — per-instance bool, set alongside Instance.error by Error().
-                // Any GoTo() failure during spawn sets both. Instance.error was addressed in
-                // aa4bb54; smi.isCrashed is reset here as a companion per-instance reset.
-                var smiState = driver.smi?.GetCurrentState();
-                Debug.LogWarning($"[Brain] {brain.name}: SMState PRE: " +
-                    $"globalError={StateMachine.Instance.error} " +
-                    $"smiCrashed={driver.smi?.isCrashed} " +
-                    $"smiState={smiState?.name ?? "null"} " +
-                    $"smiRunning={driver.smi?.IsRunning()}");
-
-                StateMachine.Instance.error = false;
-                if (driver.smi != null)
-                    driver.smi.isCrashed = false;
-
-                // If the SM isn't in nochore (wrong state or null), force it there so
-                // SetChore's nextChore.Set() → ParamTransition → GoTo(haschore) has a clean base.
-                if (driver.smi != null && smiState != driver.smi.sm.nochore) {
-                    Debug.LogWarning($"[Brain] {brain.name}: SM not in nochore " +
-                        $"(was '{smiState?.name ?? "null"}') — forcing GoTo(nochore)");
-                    driver.smi.GoTo(driver.smi.sm.nochore);
-                }
-
-                // Direct FindNextChore instead of brain.UpdateBrain():
-                // UpdateBrain() checks IsRunning() first — if false (brain not fully started in
-                // fallback path) it's a no-op and no chore is ever assigned.
-                // FindNextChore bypasses that guard and goes straight to provider.CollectChores →
-                // ChooseChore → driver.SetChore, which transitions nochore→haschore immediately.
-                var choreContext = default(Chore.Precondition.Context);
-                var found = consumer.FindNextChore(ref choreContext);
-                if (found) {
-                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore FOUND " +
-                        $"choreType={choreContext.chore?.GetType().Name} " +
-                        $"choreType.id={choreContext.chore?.choreType?.Id} " +
-                        $"isValid={choreContext.chore?.IsValid()}");
-                    // DS-005 fix: Parameter<T>.Context.Set() has an equality guard —
-                    //   if (!EqualityComparer<T>.Default.Equals(value, this.value)) { onDirty(smi) }
-                    // If a previous blocked GoTo attempt already set nextChore to the same chore
-                    // object, the subsequent Set(same chore) is a no-op → ParamTransition never fires
-                    // → SM stays in nochore → BeginChore never runs → currentChore stays null.
-                    // Fix: pre-clear nextChore to null to force a null→chore value change that
-                    // always fires onDirty regardless of what nextChore held before.
-                    if (driver.smi != null)
-                        driver.smi.sm.nextChore.Set(null, driver.smi);
-                    driver.SetChore(choreContext);
-                    updated++;
-                } else {
-                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore returned false " +
-                        $"(no chore available) running={brain.IsRunning()}");
-                }
-
-                var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "NULL";
-                Debug.LogWarning($"[Brain] {brain.name}: POST-SetChore: currentChore={choreAfter} " +
-                    $"(was {choreBefore}) " +
-                    $"globalError={StateMachine.Instance.error} " +
-                    $"smiCrashed={driver.smi?.isCrashed} " +
-                    $"smiState={driver.smi?.GetCurrentState()?.name ?? "null"}");
-            } catch (Exception e) {
-                Debug.LogWarning($"[Brain] {brain.name} ForceUpdateBrains EXCEPTION: {e}");
+            var consumer = brain.GetComponent<ChoreConsumer>();
+            var driver   = brain.GetComponent<ChoreDriver>();
+            if (consumer == null || driver == null) {
+                Debug.LogWarning($"[Brain] {brain.name}: consumer={consumer != null} driver={driver != null} SKIP");
+                continue;
             }
+
+            // Log providers list.
+            var providerList = _providersField?.GetValue(consumer) as IList;
+            var sb = new StringBuilder();
+            if (providerList != null)
+                foreach (var p in providerList) sb.Append(p?.GetType().Name ?? "null").Append(' ');
+
+            var smi = driver.GetSMI() as ChoreDriver.StatesInstance;
+            var choreBefore = smi?.GetCurrentChore()?.GetType().Name ?? "null";
+
+            Debug.LogWarning($"[Brain] {brain.name}: running={brain.IsRunning()} " +
+                $"choreBefore={choreBefore} " +
+                $"providers({providerList?.Count ?? -1})=[{sb.ToString().TrimEnd()}] " +
+                $"smi={(smi != null ? "ok" : "null")} smiRunning={smi?.IsRunning()}");
+
+            // Nav + cell diagnostic for Minions at tick=61 (after sensor warmup).
+            if (brain.gameObject.HasTag(GameTags.BaseMinion)) {
+                var nav2       = brain.GetComponent<Navigator>();
+                var sensors2   = brain.GetComponent<Sensors>();
+                var idleSensor = sensors2?.GetSensor<IdleCellSensor>();
+                var idleCell   = idleSensor?.GetCell() ?? -1;
+                var physCell   = Grid.PosToCell(brain.transform.position);
+                var navCell    = nav2?.cachedCell ?? -1;
+                var cdSmi      = driver.GetSMI() as ChoreDriver.StatesInstance;
+                Debug.LogWarning($"[NavDiag] {brain.name}: physicalCell={physCell} nav.cachedCell={navCell} " +
+                    $"idleCell={idleCell} sameAsPhys={physCell == navCell} idleIsPhys={idleCell == physCell} " +
+                    $"choreDriverSmi={(cdSmi != null ? "ok" : "null")} choreDriverSmiRunning={cdSmi?.IsRunning()}");
+            }
+
+            // Deep per-provider diagnostic only for Minions (not critters).
+            if (brain.gameObject.HasTag(GameTags.BaseMinion) && consumer.consumerState != null && providerList != null) {
+                foreach (ChoreProvider provider in providerList) {
+                    if (provider == null) continue;
+                    var succeeded = new List<Chore.Precondition.Context>();
+                    var failed    = new List<Chore.Precondition.Context>();
+                    provider.CollectChores(consumer.consumerState, succeeded, failed);
+                    Debug.LogWarning($"[ChoreDebug] {brain.name} provider={provider.GetType().Name} succeeded={succeeded.Count} failed={failed.Count}");
+                    foreach (var ctx in succeeded.Take(3)) {
+                        Debug.LogWarning($"  -> chore={ctx.chore?.GetType().FullName} " +
+                            $"choreType.id={ctx.chore?.choreType?.Id} " +
+                            $"priority={ctx.masterPriority}");
+                    }
+                    if (succeeded.Count == 0 && failed.Count > 0) {
+                        foreach (var ctx in failed.Take(3))
+                            Debug.LogWarning($"  xx failed chore={ctx.chore?.GetType().Name} failedPreconditionId={ctx.failedPreconditionId}");
+                    }
+                }
+            }
+
+            // Reset SM error flags per-brain before FindNextChore.
+            var smiState = driver.smi?.GetCurrentState();
+            Debug.LogWarning($"[Brain] {brain.name}: SMState PRE: " +
+                $"globalError={StateMachine.Instance.error} " +
+                $"smiCrashed={driver.smi?.isCrashed} " +
+                $"smiState={smiState?.name ?? "null"} " +
+                $"smiRunning={driver.smi?.IsRunning()}");
+
+            StateMachine.Instance.error = false;
+            if (driver.smi != null)
+                driver.smi.isCrashed = false;
+
+            // If the SM isn't in nochore, force it there.
+            if (driver.smi != null && smiState != driver.smi.sm.nochore) {
+                Debug.LogWarning($"[Brain] {brain.name}: SM not in nochore " +
+                    $"(was '{smiState?.name ?? "null"}') — forcing GoTo(nochore)");
+                driver.smi.GoTo(driver.smi.sm.nochore);
+            }
+
+            var choreContext = default(Chore.Precondition.Context);
+            var found = consumer.FindNextChore(ref choreContext);
+            if (found) {
+                Debug.LogWarning($"[Brain] {brain.name}: FindNextChore FOUND " +
+                    $"choreType={choreContext.chore?.GetType().Name} " +
+                    $"choreType.id={choreContext.chore?.choreType?.Id} " +
+                    $"isValid={choreContext.chore?.IsValid()}");
+                if (driver.smi != null)
+                    driver.smi.sm.nextChore.Set(null, driver.smi);
+                driver.SetChore(choreContext);
+                updated++;
+            } else {
+                Debug.LogWarning($"[Brain] {brain.name}: FindNextChore returned false " +
+                    $"(no chore available) running={brain.IsRunning()}");
+            }
+
+            var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "NULL";
+            Debug.LogWarning($"[Brain] {brain.name}: POST-SetChore: currentChore={choreAfter} " +
+                $"(was {choreBefore}) " +
+                $"globalError={StateMachine.Instance.error} " +
+                $"smiCrashed={driver.smi?.isCrashed} " +
+                $"smiState={driver.smi?.GetCurrentState()?.name ?? "null"}");
         }
         Debug.LogWarning($"[DS-005] ForceUpdateBrains DONE: kicked {updated} brain(s)");
     }
@@ -307,27 +269,22 @@ public class GameTickLoop {
         foreach (var brain in Components.Brains.Items) {
             if (brain == null) continue;
             if (!brain.gameObject.HasTag(GameTags.BaseMinion)) continue;
-            try {
-                var driver     = brain.GetComponent<ChoreDriver>();
-                var nav        = brain.GetComponent<Navigator>();
-                var sensors    = brain.GetComponent<Sensors>();
-                var idleSensor = sensors?.GetSensor<IdleCellSensor>();
-                var chore      = driver?.GetCurrentChore();
-                var physCell   = Grid.PosToCell(brain.transform.position);
-                var navCell    = nav?.cachedCell ?? -1;
-                var idleCell   = idleSensor?.GetCell() ?? -1;
-                // ChoreDriver.GetCurrentChore() is public: delegates to smi.sm.currentChore.Get(smi)
-                Debug.LogWarning($"[Tick100] {brain.name}: " +
-                    $"chore={chore?.GetType().FullName ?? "null"} " +
-                    $"choreType.id={chore?.choreType?.Id ?? "null"} " +
-                    $"isRunning={brain.IsRunning()} " +
-                    $"physicalCell={physCell} nav.cachedCell={navCell} cellMatch={physCell == navCell} " +
-                    $"idleCell={idleCell} idleIsPhys={idleCell == physCell} " +
-                    $"nav.IsMoving={nav?.IsMoving()} " +
-                    $"choreDriverSmi={(driver?.GetSMI() != null ? "ok" : "null")}");
-            } catch (Exception e) {
-                Debug.LogWarning($"[Tick100] {brain.name} EXCEPTION: {e.GetBaseException().Message}");
-            }
+            var driver     = brain.GetComponent<ChoreDriver>();
+            var nav        = brain.GetComponent<Navigator>();
+            var sensors    = brain.GetComponent<Sensors>();
+            var idleSensor = sensors?.GetSensor<IdleCellSensor>();
+            var chore      = driver?.GetCurrentChore();
+            var physCell   = Grid.PosToCell(brain.transform.position);
+            var navCell    = nav?.cachedCell ?? -1;
+            var idleCell   = idleSensor?.GetCell() ?? -1;
+            Debug.LogWarning($"[Tick100] {brain.name}: " +
+                $"chore={chore?.GetType().FullName ?? "null"} " +
+                $"choreType.id={chore?.choreType?.Id ?? "null"} " +
+                $"isRunning={brain.IsRunning()} " +
+                $"physicalCell={physCell} nav.cachedCell={navCell} cellMatch={physCell == navCell} " +
+                $"idleCell={idleCell} idleIsPhys={idleCell == physCell} " +
+                $"nav.IsMoving={nav?.IsMoving()} " +
+                $"choreDriverSmi={(driver?.GetSMI() != null ? "ok" : "null")}");
         }
     }
 
@@ -357,65 +314,57 @@ public class GameTickLoop {
             var go = brain.gameObject;
             if (go == null) continue;
 
-            try {
-                if (!brain.IsRunning()) {
-                    Debug.LogWarning($"[Animals] {brain.name}: SKIP running=false");
-                    skipped++;
-                    continue;
+            if (!brain.IsRunning()) {
+                Debug.LogWarning($"[Animals] {brain.name}: SKIP running=false");
+                skipped++;
+                continue;
+            }
+
+            var consumer = brain.GetComponent<ChoreConsumer>();
+            if (consumer == null) {
+                Debug.LogWarning($"[Animals] {brain.name}: SKIP no ChoreConsumer");
+                skipped++;
+                continue;
+            }
+
+            // Reset SM error flags — same pattern as ForceUpdateBrains for dupes.
+            StateMachine.Instance.error = false;
+
+            var driver = brain.GetComponent<ChoreDriver>();
+            if (driver != null) {
+                // Mirror dupe path: reset isCrashed, ensure nochore state, then FindNextChore.
+                if (driver.smi != null)
+                    driver.smi.isCrashed = false;
+
+                if (driver.smi != null && driver.smi.GetCurrentState() != driver.smi.sm.nochore) {
+                    Debug.LogWarning($"[Animals] {brain.name}: SM not in nochore " +
+                        $"(was '{driver.smi.GetCurrentState()?.name ?? "null"}') — forcing nochore");
+                    driver.smi.GoTo(driver.smi.sm.nochore);
                 }
 
-                var consumer = brain.GetComponent<ChoreConsumer>();
-                if (consumer == null) {
-                    Debug.LogWarning($"[Animals] {brain.name}: SKIP no ChoreConsumer");
-                    skipped++;
-                    continue;
-                }
+                var context = default(Chore.Precondition.Context);
+                var found = consumer.FindNextChore(ref context);
 
-                // Reset SM error flags — same pattern as ForceUpdateBrains for dupes.
-                StateMachine.Instance.error = false;
-
-                var driver = brain.GetComponent<ChoreDriver>();
-                if (driver != null) {
-                    // Mirror dupe path: reset isCrashed, ensure nochore state, then FindNextChore.
+                var choreBefore = driver.GetCurrentChore()?.GetType().Name ?? "null";
+                if (found) {
+                    // Pre-clear nextChore to force the equality guard to fire (same fix as dupes).
                     if (driver.smi != null)
-                        driver.smi.isCrashed = false;
-
-                    if (driver.smi != null && driver.smi.GetCurrentState() != driver.smi.sm.nochore) {
-                        Debug.LogWarning($"[Animals] {brain.name}: SM not in nochore " +
-                            $"(was '{driver.smi.GetCurrentState()?.name ?? "null"}') — forcing nochore");
-                        driver.smi.GoTo(driver.smi.sm.nochore);
-                    }
-
-                    var context = default(Chore.Precondition.Context);
-                    var found = consumer.FindNextChore(ref context);
-
-                    var choreBefore = driver.GetCurrentChore()?.GetType().Name ?? "null";
-                    if (found) {
-                        // Pre-clear nextChore to force the equality guard to fire (same fix as dupes).
-                        if (driver.smi != null)
-                            driver.smi.sm.nextChore.Set(null, driver.smi);
-                        driver.SetChore(context);
-                        updated++;
-                    }
-
-                    var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "null";
-                    var cell = Grid.PosToCell(go);
-                    Debug.LogWarning($"[Animals] {brain.name}: cell={cell} " +
-                        $"found={found} choreBefore={choreBefore} choreAfter={choreAfter} " +
-                        $"smiState={driver.smi?.GetCurrentState()?.name ?? "null"}");
-                } else {
-                    // No ChoreDriver component: creature is purely SM-driven (rare).
-                    // UpdateBrain() fires onPreUpdate (Navigator.UpdateProbe) which is all
-                    // we can do — the SM itself will trigger chore assignment on next tick.
-                    brain.UpdateBrain();
-                    var cell = Grid.PosToCell(go);
-                    Debug.LogWarning($"[Animals] {brain.name}: cell={cell} no ChoreDriver — UpdateBrain() called");
+                        driver.smi.sm.nextChore.Set(null, driver.smi);
+                    driver.SetChore(context);
                     updated++;
                 }
 
-            } catch (Exception ex) {
-                Debug.LogWarning($"[Animals] {brain.name}: ForceUpdateCreatureBrains EXCEPTION: " +
-                    $"{ex.GetBaseException().Message}");
+                var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "null";
+                var cell = Grid.PosToCell(go);
+                Debug.LogWarning($"[Animals] {brain.name}: cell={cell} " +
+                    $"found={found} choreBefore={choreBefore} choreAfter={choreAfter} " +
+                    $"smiState={driver.smi?.GetCurrentState()?.name ?? "null"}");
+            } else {
+                // No ChoreDriver component: creature is purely SM-driven (rare).
+                brain.UpdateBrain();
+                var cell = Grid.PosToCell(go);
+                Debug.LogWarning($"[Animals] {brain.name}: cell={cell} no ChoreDriver — UpdateBrain() called");
+                updated++;
             }
         }
 
@@ -428,12 +377,8 @@ public class GameTickLoop {
             if (brain == null) continue;
             var sensors = brain.GetComponent<Sensors>();
             if (sensors == null) continue;
-            try {
-                sensors.UpdateSensors();
-                updated++;
-            } catch (Exception e) {
-                Debug.LogWarning($"[DS-005] ForceUpdateSensors: {brain.name} error: {e.GetBaseException().Message}");
-            }
+            sensors.UpdateSensors();
+            updated++;
         }
         Debug.LogWarning($"[DS-005] ForceUpdateSensors at tick={SensorWarmupTick}: updated {updated} brain(s)");
     }
