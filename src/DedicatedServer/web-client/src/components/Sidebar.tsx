@@ -61,10 +61,10 @@ export function Sidebar({
           <input
             type="number"
             value={refreshInterval}
-            min={100}
+            min={33}
             max={10000}
-            step={100}
-            onChange={e => onRefreshIntervalChange(parseInt(e.target.value) || 1000)}
+            step={1}
+            onChange={e => onRefreshIntervalChange(Math.max(33, parseInt(e.target.value) || 33))}
           />
         </label>
         <button onClick={onRefreshNow}>Refresh Now</button>

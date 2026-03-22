@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { WorldData, EntitiesResponse, GameState, OverlayMode } from './api/types';
-import { fetchAll, fetchElements, fetchGameState } from './api/client';
+import { fetchAll, fetchElements, fetchEntities, fetchGameState, fetchWorld } from './api/client';
 import { loadElements, areElementsLoaded } from './renderer/constants';
 import type { CellInfo } from './renderer/WorldRenderer';
 import { Header } from './components/Header';
@@ -14,29 +14,16 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [connected, setConnected] = useState(false);
   const [cellInfo, setCellInfo] = useState<CellInfo | null>(null);
-  const [serverUps, setServerUps] = useState<number | undefined>(undefined);
 
   const [overlay, setOverlay] = useState<OverlayMode>('element');
   const [showEntities, setShowEntities] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(1000);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(33);
 
-  const timerRef    = useRef<number | null>(null);
-  const fetchingRef = useRef(false);
-
-  // Dedicated 1s poll for serverUps — independent of main refresh rate
-  useEffect(() => {
-    const id = window.setInterval(async () => {
-      const state = await fetchGameState();
-      setServerUps(state.serverUps);
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
+  // Initial full load (world + entities + state + elements)
   const refresh = useCallback(async () => {
     try {
-      // Load element definitions on first fetch
       if (!areElementsLoaded()) {
         const elemData = await fetchElements();
         loadElements(elemData.elements);
@@ -53,34 +40,35 @@ export default function App() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Fast poll: entities + state at refreshInterval (default 33ms → ~30 UPS).
+  // Skips cycles if a fetch is still in-flight to avoid pile-up.
   useEffect(() => {
-    if (!autoRefresh) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = null;
-      return;
-    }
-
+    if (!autoRefresh) return;
     let active = true;
-
-    // Sequential poll: next request only starts after the previous one completes.
-    // Prevents request pile-up when server is slow.
-    async function poll() {
+    let fetching = false;
+    function tick() {
       if (!active) return;
-      if (!fetchingRef.current) {
-        fetchingRef.current = true;
-        try { await refresh(); }
-        finally { fetchingRef.current = false; }
+      if (!fetching) {
+        fetching = true;
+        Promise.all([fetchEntities(), fetchGameState()])
+          .then(([ent, st]) => { setEntities(ent); setGameState(st); setConnected(true); })
+          .catch(() => setConnected(false))
+          .finally(() => { fetching = false; });
       }
-      if (active) timerRef.current = window.setTimeout(poll, refreshInterval);
+      if (active) window.setTimeout(tick, refreshInterval);
     }
+    tick();
+    return () => { active = false; };
+  }, [autoRefresh, refreshInterval]);
 
-    poll();
-
-    return () => {
-      active = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [autoRefresh, refreshInterval, refresh]);
+  // Slow poll: world grid at 1 s — large payload, changes infrequently.
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = window.setInterval(() => {
+      fetchWorld().then(setWorld).catch(() => {});
+    }, 1000);
+    return () => clearInterval(id);
+  }, [autoRefresh]);
 
   return (
     <div className="app">
@@ -93,7 +81,7 @@ export default function App() {
             overlay={overlay}
             showEntities={showEntities}
             showGrid={showGrid}
-            serverUps={serverUps}
+            serverUps={gameState?.serverUps}
             onCellHover={setCellInfo}
           />
         </div>
