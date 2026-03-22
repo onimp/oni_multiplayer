@@ -30,10 +30,12 @@ public class GameTickLoop {
     // → ChoreDriver transitions nochore→haschore → BeginChore → chore running.
     private const int ChoreKickTick = 61;
 
-    // Reflection accessor for ChoreConsumer.providers (private List<ChoreProvider>).
-    // Used in diagnostic logging — providers list tells us what chore sources the consumer sees.
+    // Reflection accessor for ChoreConsumer.providers (List<ChoreProvider>).
+    // IL field: "providers". Server runs the exposed DLL where it is Public — must include
+    // BindingFlags.Public so the lookup succeeds against both the exposed and original DLL.
     private static readonly FieldInfo _providersField =
-        typeof(ChoreConsumer).GetField("providers", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(ChoreConsumer).GetField("providers",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     private float _accumulatedTime;
     private int _simSubTick;

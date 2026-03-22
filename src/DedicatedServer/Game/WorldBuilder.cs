@@ -88,10 +88,15 @@ public class WorldBuilder {
 
     private static readonly Dictionary<string, BuildingDef> _buildingDefCache = new Dictionary<string, BuildingDef>();
 
-    // Reflection accessor for ChoreConsumer.providers (private List<ChoreProvider>).
-    // Needed to check for existing entries before calling AddProvider() (no Contains API).
+    // Reflection accessor for ChoreConsumer.providers (List<ChoreProvider>).
+    // IL field name confirmed via Cecil: "providers" (private in original game DLL).
+    // DedicatedServer ships the AssemblyExposer-patched DLL (Private="true" in csproj)
+    // where all private/internal members are rewritten to Public for compile-time access.
+    // At runtime that exposed DLL is loaded → field is Public → BindingFlags.NonPublic alone
+    // returns null.  Use Public|NonPublic to cover both the exposed and the original DLL.
     private static readonly FieldInfo _ccProvidersField =
-        typeof(ChoreConsumer).GetField("providers", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(ChoreConsumer).GetField("providers",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     public BuildingDef GetBuildingDef(string id) {
         if (_buildingDefCache.TryGetValue(id, out var def)) return def;
