@@ -569,6 +569,22 @@ public class WorldBuilder {
         }
         Console.WriteLine($"[WorldBuilder] GridRestrictionSerializer.Instance={GridRestrictionSerializer.Instance != null}");
 
+        // AssignmentManager — needed by MinionAssignablesProxy.OnSpawn() which calls
+        // Game.Instance.assignmentManager.AddToAssignmentGroup("public", this).
+        // Without it, proxy OnSpawn NPEs → proxy in incomplete state →
+        // AssignableReachabilitySensor.ctor NPE → baseOnSpawnOk=False → no chore sensors.
+        // Must be initialized BEFORE SpawnEntities() / EnsureAssignableProxy().
+        if (global::Game.Instance.assignmentManager == null) {
+            var amGo = new GameObject("AssignmentManager");
+            var am = amGo.AddComponent<AssignmentManager>();
+            try { am.InitializeComponent(); }
+            catch (Exception ex) {
+                Console.WriteLine($"[WorldBuilder] AssignmentManager.InitializeComponent partial: {ex.GetBaseException().Message}");
+            }
+            global::Game.Instance.assignmentManager = am;
+            Console.WriteLine($"[WorldBuilder] AssignmentManager initialized: groups={am.assignment_groups?.Count}");
+        }
+
         // BrainScheduler manages Dupe + Creature AI brain groups.
         // Must be initialized here — BEFORE SpawnEntities() — so that Brain.OnSpawn()
         // callbacks (Components.Brains.Add) find a registered handler and end up in
