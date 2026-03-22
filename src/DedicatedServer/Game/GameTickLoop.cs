@@ -31,6 +31,11 @@ public class GameTickLoop {
     // UpdateBrain → UpdateChores → FindBetterChore → choreConsumer.choreDriver.SetChore
     // → ChoreDriver transitions nochore→haschore → BeginChore → chore running.
     private const int ChoreKickTick = 61;
+    // One tick after dupe brain kick: force-kick creature brains.
+    // CreatureBrain uses the same Brain.UpdateChores() path as MinionBrain, but
+    // ForceUpdateBrains() skips them when ChoreDriver is missing (init may fail in headless).
+    // We kick them separately here so they get chores and begin moving.
+    private const int CreatureChoreKickTick = ChoreKickTick + 1;
 
     // Reflection accessor for ChoreConsumer.providers (List<ChoreProvider>).
     // IL field: "providers". Server runs the exposed DLL where it is Public — must include
@@ -113,6 +118,12 @@ public class GameTickLoop {
         // → ChoreDriver nochore→haschore → BeginChore → chore starts.
         if (_tickCount == ChoreKickTick) {
             ForceUpdateBrains();
+        }
+        // tick=62: kick creature brains one tick after dupe brains.
+        // ForceUpdateBrains() skips creatures (they may lack ChoreDriver component
+        // when ChoreConsumer.InitializeComponent() failed in headless). Handled here.
+        if (_tickCount == CreatureChoreKickTick) {
+            ForceUpdateCreatureBrains();
         }
         // Delayed chore check: SM transition nochore→haschore may not complete in same frame
         // as brain.UpdateBrain(). Check at tick=100 (39 ticks / ~650ms after ForceUpdateBrains).
@@ -318,6 +329,97 @@ public class GameTickLoop {
                 Debug.LogWarning($"[Tick100] {brain.name} EXCEPTION: {e.GetBaseException().Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Force-kicks creature brains at tick=62, one frame after dupe brains are kicked.
+    ///
+    /// ForceUpdateBrains() skips all brains where ChoreDriver is missing via GetComponent
+    /// (creatures whose ChoreConsumer.InitializeComponent() failed in headless, leaving
+    /// choreConsumer.choreDriver=null). This method handles them separately:
+    ///
+    ///   1. Resets StateMachine.Instance.error (same guard as ForceUpdateBrains).
+    ///   2. Resets ChoreDriver.smi.isCrashed if driver SM is present.
+    ///   3. Calls consumer.FindNextChore() + driver.SetChore() to assign the first chore.
+    ///   4. Falls back to brain.UpdateBrain() when consumer/driver component is absent
+    ///      (pure SM-driven creatures with no ChoreDriver component on the GO).
+    ///
+    /// After this kick the creature's ChoreDriver SM transitions nochore→haschore →
+    /// BeginChore → Navigator starts pathing → creature moves.
+    /// </summary>
+    internal static void ForceUpdateCreatureBrains() {
+        Debug.LogWarning("[Animals] ForceUpdateCreatureBrains ENTERING");
+        var updated = 0;
+        var skipped = 0;
+
+        foreach (var brain in Components.Brains.Items) {
+            if (brain is not CreatureBrain) continue;
+            var go = brain.gameObject;
+            if (go == null) continue;
+
+            try {
+                if (!brain.IsRunning()) {
+                    Debug.LogWarning($"[Animals] {brain.name}: SKIP running=false");
+                    skipped++;
+                    continue;
+                }
+
+                var consumer = brain.GetComponent<ChoreConsumer>();
+                if (consumer == null) {
+                    Debug.LogWarning($"[Animals] {brain.name}: SKIP no ChoreConsumer");
+                    skipped++;
+                    continue;
+                }
+
+                // Reset SM error flags — same pattern as ForceUpdateBrains for dupes.
+                StateMachine.Instance.error = false;
+
+                var driver = brain.GetComponent<ChoreDriver>();
+                if (driver != null) {
+                    // Mirror dupe path: reset isCrashed, ensure nochore state, then FindNextChore.
+                    if (driver.smi != null)
+                        driver.smi.isCrashed = false;
+
+                    if (driver.smi != null && driver.smi.GetCurrentState() != driver.smi.sm.nochore) {
+                        Debug.LogWarning($"[Animals] {brain.name}: SM not in nochore " +
+                            $"(was '{driver.smi.GetCurrentState()?.name ?? "null"}') — forcing nochore");
+                        driver.smi.GoTo(driver.smi.sm.nochore);
+                    }
+
+                    var context = default(Chore.Precondition.Context);
+                    var found = consumer.FindNextChore(ref context);
+
+                    var choreBefore = driver.GetCurrentChore()?.GetType().Name ?? "null";
+                    if (found) {
+                        // Pre-clear nextChore to force the equality guard to fire (same fix as dupes).
+                        if (driver.smi != null)
+                            driver.smi.sm.nextChore.Set(null, driver.smi);
+                        driver.SetChore(context);
+                        updated++;
+                    }
+
+                    var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "null";
+                    var cell = Grid.PosToCell(go);
+                    Debug.LogWarning($"[Animals] {brain.name}: cell={cell} " +
+                        $"found={found} choreBefore={choreBefore} choreAfter={choreAfter} " +
+                        $"smiState={driver.smi?.GetCurrentState()?.name ?? "null"}");
+                } else {
+                    // No ChoreDriver component: creature is purely SM-driven (rare).
+                    // UpdateBrain() fires onPreUpdate (Navigator.UpdateProbe) which is all
+                    // we can do — the SM itself will trigger chore assignment on next tick.
+                    brain.UpdateBrain();
+                    var cell = Grid.PosToCell(go);
+                    Debug.LogWarning($"[Animals] {brain.name}: cell={cell} no ChoreDriver — UpdateBrain() called");
+                    updated++;
+                }
+
+            } catch (Exception ex) {
+                Debug.LogWarning($"[Animals] {brain.name}: ForceUpdateCreatureBrains EXCEPTION: " +
+                    $"{ex.GetBaseException().Message}");
+            }
+        }
+
+        Debug.LogWarning($"[Animals] ForceUpdateCreatureBrains DONE: kicked={updated} skipped={skipped}");
     }
 
     private static void ForceUpdateSensors() {
