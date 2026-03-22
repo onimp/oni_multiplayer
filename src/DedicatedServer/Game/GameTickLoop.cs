@@ -249,6 +249,15 @@ public class GameTickLoop {
                         $"choreType={choreContext.chore?.GetType().Name} " +
                         $"choreType.id={choreContext.chore?.choreType?.Id} " +
                         $"isValid={choreContext.chore?.IsValid()}");
+                    // DS-005 fix: Parameter<T>.Context.Set() has an equality guard —
+                    //   if (!EqualityComparer<T>.Default.Equals(value, this.value)) { onDirty(smi) }
+                    // If a previous blocked GoTo attempt already set nextChore to the same chore
+                    // object, the subsequent Set(same chore) is a no-op → ParamTransition never fires
+                    // → SM stays in nochore → BeginChore never runs → currentChore stays null.
+                    // Fix: pre-clear nextChore to null to force a null→chore value change that
+                    // always fires onDirty regardless of what nextChore held before.
+                    if (driver.smi != null)
+                        driver.smi.sm.nextChore.Set(null, driver.smi);
                     driver.SetChore(choreContext);
                     updated++;
                 } else {

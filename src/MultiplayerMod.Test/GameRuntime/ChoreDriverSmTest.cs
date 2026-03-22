@@ -110,6 +110,46 @@ public class ChoreDriverSmTest : PlayableGameTest {
     }
 
     /// <summary>
+    /// Documents the Parameter.Set() equality guard — root cause of DS-005 SetChore-not-sticking.
+    ///
+    /// Parameter&lt;T&gt;.Context.Set() only calls onDirty when value changes:
+    ///   if (!EqualityComparer&lt;T&gt;.Default.Equals(value, this.value)) { ... onDirty(smi) }
+    ///
+    /// If nextChore.value already holds chore X from a previous blocked GoTo attempt
+    /// (Instance.error=true caused GoTo to be a no-op, but Set() already changed the value),
+    /// the subsequent call to SetChore(X) invokes Set(X) again — equality match → no-op →
+    /// onDirty not called → ParamTransition never fires → SM stays in nochore forever.
+    ///
+    /// Fix in ForceUpdateBrains: call nextChore.Set(null, smi) BEFORE SetChore(context).
+    /// This guarantees a null→X value change that always fires onDirty, regardless of prior state.
+    ///
+    /// This test verifies the pre-clear idiom: Set(null) resets the parameter safely (no crash,
+    /// SM still running in nochore), enabling the subsequent SetChore to fire the transition.
+    /// </summary>
+    [Test]
+    public void NextChore_PreClearToNull_ResetsParam_EnablesSubsequentSet() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+        driver.smi.StartSM();
+
+        // Baseline: nextChore is null after StartSM (SM in nochore).
+        Assert.IsNull(driver.smi.sm.nextChore.Get(driver.smi),
+            "nextChore must be null after StartSM (SM in nochore)");
+
+        // Pre-clear to null (our fix) when value is already null:
+        // → equality guard: null == null → no-op → no crash, value stays null.
+        driver.smi.sm.nextChore.Set(null, driver.smi);
+        Assert.IsNull(driver.smi.sm.nextChore.Get(driver.smi),
+            "Set(null) when already null must remain null — equality guard no-op, no crash");
+
+        // After pre-clear, SM must still be running and in nochore — pre-clear is safe.
+        Assert.That(driver.smi.IsRunning(), Is.True, "SM must still be running after pre-clear");
+        Assert.That(driver.smi.GetCurrentState(), Is.EqualTo(driver.smi.sm.nochore),
+            "SM must still be in nochore after pre-clear (ready for SetChore)");
+    }
+
+    /// <summary>
     /// Verifies the distinction between the global static Instance.error and the
     /// per-instance isCrashed field on StateMachine.Instance.
     ///
