@@ -169,7 +169,23 @@ public static class MinionPrefab {
 
             // IdleMonitor first so IdleChore exists in ChoreProvider before other monitors.
             var idleMonitorSmi = new IdleMonitor.Instance(smc);
-            idleMonitorSmi.StartSM();
+            // Wrap StartSM in try-catch to surface any silent exception that would leave
+            // IdleChore uncreated (team-lead hypothesis: StartSM throws → no IdleChore).
+            try {
+                idleMonitorSmi.StartSM();
+            } catch (Exception startEx) {
+                Console.WriteLine($"[IDLE_DIAG] go={go.GetInstanceID()}: StartSM THREW: {startEx.GetType().Name}: {startEx.GetBaseException().Message}");
+            }
+            // Post-StartSM state: verify GetSMI finds the instance and it is running.
+            var idleMon = smc.GetSMI<IdleMonitor.Instance>();
+            var cp2 = go.GetComponent<ChoreProvider>();
+            int choreMapTotal = 0;
+            if (cp2?.choreWorldMap != null)
+                foreach (var v in cp2.choreWorldMap.Values) choreMapTotal += v?.Count ?? 0;
+            Console.WriteLine($"[IDLE_DIAG] go={go.GetInstanceID()} smc={smc.GetHashCode()} " +
+                $"created={idleMonitorSmi.GetHashCode()} getSMI={idleMon?.GetHashCode().ToString() ?? "NULL"} " +
+                $"isRunning={idleMon?.IsRunning().ToString() ?? "N/A"} " +
+                $"choreMapTotal={choreMapTotal}");
 
             // Own ChoreProvider in providers (AddProvider mirrors OnPrefabInit behaviour).
             var consumerFallback = go.GetComponent<ChoreConsumer>();
