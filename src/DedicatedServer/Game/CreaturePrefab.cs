@@ -141,6 +141,20 @@ public static class CreaturePrefab {
             }
         }
 
+        // ── Step 3.5: ensure creature's own ChoreProvider is in consumer.providers ──
+        // ChoreConsumer.providers (private List<ChoreProvider>) is the list FindNextChore()
+        // iterates to collect available chores. For dupes, MinionModifiers.OnSpawn() calls
+        // AddProvider(GlobalChoreProvider.Instance) — regular creatures NEVER get AddProvider()
+        // called → providers stays empty → FindNextChore() always returns false → no chore
+        // assigned → ForceUpdateCreatureBrains() at tick=62 can't find a chore → nochore forever.
+        //
+        // The creature's own ChoreProvider holds the SM chores created by choreTableInstance
+        // (IdleStates, MoveToSafetyChore, etc.) — it just needs to be registered in providers.
+        var choreProvider = go.GetComponent<ChoreProvider>();
+        if (cc != null && choreProvider != null) {
+            cc.AddProvider(choreProvider);
+        }
+
         // ── Step 4: Sensors (Rovers/FetchDrones only — standard critters lack them) ──
         var sensors = go.GetComponent<Sensors>();
         if (sensors != null && !sensors.isSpawned) {
