@@ -987,15 +987,19 @@ public class WorldBuilder {
     /// </summary>
     private void CaptureEntitySize(string id, GameObject go) {
         try {
-            // Primary for buildings: read directly from Building.Def (set in BuildingLoader.CreateBuilding).
+            // Primary for buildings: read directly from Building.Def (set by BuildingConfigManager.RegisterBuilding).
             // This is the most reliable source — OccupyArea._UnrotatedOccupiedCellsOffsets is often
             // null in headless mode, and KBoxCollider2D may be uninitialized.
             var building = go.GetComponent<Building>();
-            if (building?.Def != null) {
-                var w = building.Def.WidthInCells;
-                var h = building.Def.HeightInCells;
-                _prefabSizeMap[id] = (w, h);
-                Console.WriteLine($"[EntitySize] id={id} → {w}×{h} (Building.Def)");
+            // Diagnostic: log component state for known large buildings to help diagnose size issues.
+            if (id == "Headquarters" || id == "Telepad" || id == "GeneShuffler") {
+                Console.WriteLine($"[SizeDebug] {id}: building={building != null} def={building?.Def?.PrefabID ?? "null"} " +
+                    $"w={building?.Def?.WidthInCells.ToString() ?? "?"} h={building?.Def?.HeightInCells.ToString() ?? "?"}");
+            }
+            var defSize = ReadBuildingDefSize(building?.Def);
+            if (defSize.HasValue) {
+                _prefabSizeMap[id] = defSize.Value;
+                Console.WriteLine($"[EntitySize] id={id} → {defSize.Value.w}×{defSize.Value.h} (Building.Def)");
                 return;
             }
 
@@ -1032,6 +1036,19 @@ public class WorldBuilder {
             Console.WriteLine($"[EntitySize] id={id} FAILED: {ex.GetBaseException().Message}");
             _prefabSizeMap[id] = (1, 1);
         }
+    }
+
+    /// <summary>
+    /// Reads building dimensions from a <see cref="BuildingDef"/>.
+    /// Returns null if def is null or dimensions are degenerate (≤0).
+    /// Extracted as a public static method so it can be unit-tested without a live GameObject.
+    /// </summary>
+    public static (int w, int h)? ReadBuildingDefSize(BuildingDef def) {
+        if (def == null) return null;
+        var w = def.WidthInCells;
+        var h = def.HeightInCells;
+        if (w <= 0 || h <= 0) return null;
+        return (w, h);
     }
 
     private static unsafe void AllocateGrid(int w, int h) {
@@ -1437,6 +1454,21 @@ public class WorldBuilder {
                         Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM() called, smi={nav3.GetSMI() != null}");
                     } catch (Exception ex) {
                         Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM partial: {ex.GetBaseException().Message}");
+                    }
+                }
+
+                // ChoreDriver SM: mirrors ChoreDriver.OnSpawn() which calls base.smi.StartSM().
+                // In the fallback path OnSpawn() never ran → GetSMI()==null → SetChore() NPEs
+                // (smi.sm.nextChore.Set() on null smi) → chore never assigned even though
+                // ChoreTableChore`2 is found by CollectChores.
+                // Guarded with GetSMI()==null so we don't double-start when BaseOnSpawn succeeded.
+                var choreDriver = go.GetComponent<ChoreDriver>();
+                if (choreDriver != null && choreDriver.GetSMI() == null) {
+                    try {
+                        choreDriver.smi.StartSM(); // lazy-creates StatesInstance, enters nochore
+                        Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM started (smi={choreDriver.GetSMI() != null})");
+                    } catch (Exception ex) {
+                        Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM start failed: {ex.GetBaseException().Message}");
                     }
                 }
 
