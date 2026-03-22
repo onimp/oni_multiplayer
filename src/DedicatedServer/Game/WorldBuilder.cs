@@ -433,11 +433,14 @@ public class WorldBuilder {
         StateMachineDebuggerSettings._Instance = new StateMachineDebuggerSettings();
         StateMachineDebuggerSettings._Instance.Initialize();
         // Initialize ALL GameComps static fields (InfraredVisualizers, StructureTemperatures,
-        // DiseaseContainers, Gravities, etc.) via reflection, exactly as KComponentsInitializer
-        // would do in a real Unity session. Without this, PrimaryElement.OnPrefabInit() NPEs:
+        // DiseaseContainers, Gravities, etc.) exactly as KComponentsInitializer would do.
+        // Without this, PrimaryElement.OnPrefabInit() NPEs:
         //   InfraredVisualizerData(go): GameComps.StructureTemperatures.GetHandle(go) → null
         //   PrimaryElement.OnPrefabInit: GameComps.DiseaseContainers.Add(...) → null
-        new GameComps();
+        // Use DeclaredOnly+Static to avoid inherited non-static KComponents fields that
+        // AssemblyExposer promotes to Public — SetValue(null, ...) on instance fields → TargetException.
+        foreach (var f in typeof(GameComps).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            f.SetValue(null, Activator.CreateInstance(f.FieldType));
         GameScreenManager.Instance = new GameScreenManager();
         GameScreenManager.Instance.worldSpaceCanvas = new GameObject();
         TuningData<CPUBudget.Tuning>._TuningData = new CPUBudget.Tuning();
