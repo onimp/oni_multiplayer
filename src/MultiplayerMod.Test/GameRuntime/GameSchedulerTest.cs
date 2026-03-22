@@ -27,8 +27,12 @@ namespace MultiplayerMod.Test.GameRuntime;
 /// </summary>
 public class GameSchedulerTest : PlayableGameTest {
 
+    // BindingFlags.Public is required: AssemblyExposer rewrites private→public in the
+    // exposed DLL used at runtime. NonPublic alone → GetField returns null → NPE.
+    // See WorldBuilder line ~96: same pattern used for all other reflection field access.
     private static readonly FieldInfo SchedulerField =
-        typeof(GameScheduler).GetField("scheduler", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        typeof(GameScheduler).GetField("scheduler",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!;
 
     // ──────────────────────────────────────────────────────────────────────────────
     // NPE #1: IdleMove never fires (GameTickLoop fix)
@@ -83,6 +87,24 @@ public class GameSchedulerTest : PlayableGameTest {
     // ──────────────────────────────────────────────────────────────────────────────
     // NPE #2: StateMachineManager.Clear() destroys shared Scheduler (WorldBuilder fix)
     // ──────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Regression guard for [0x00908] NPE: BindingFlags.NonPublic alone misses the
+    /// 'scheduler' field when AssemblyExposer has rewritten it to public. The fix adds
+    /// BindingFlags.Public so the field is found regardless of visibility.
+    /// This test would fail (SchedulerField == null) with the broken NonPublic-only flags.
+    /// </summary>
+    [Test]
+    public void GameScheduler_SchedulerFieldReflection_ReturnsNonNull() {
+        Assert.IsNotNull(SchedulerField,
+            "GetField('scheduler', Public|NonPublic|Instance) must return non-null. " +
+            "If null → SetValue NPEs at runtime (regression from 8641d9b): " +
+            "BindingFlags.NonPublic alone misses the field when AssemblyExposer made it public.");
+
+        var schedulerValue = SchedulerField.GetValue(GameScheduler.Instance);
+        Assert.IsNotNull(schedulerValue,
+            "GameScheduler.scheduler field value must not be null — field initializer must have run");
+    }
 
     /// <summary>
     /// Verifies that FreeResources() on the Scheduler makes Update() throw — this is the

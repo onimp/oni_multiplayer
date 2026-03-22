@@ -499,8 +499,11 @@ public class WorldBuilder {
         // StateMachineManager so both share one clean instance going forward.
         if (GameScheduler.Instance != null) {
             var freshScheduler = new Scheduler(new GameScheduler.GameSchedulerClock());
+            // BindingFlags.Public is required: AssemblyExposer rewrites private→public at
+            // compile time, so the field is Public in the loaded exposed DLL at runtime.
+            // NonPublic alone → GetField returns null → SetValue NPEs ([0x00908] regression).
             typeof(GameScheduler)
-                .GetField("scheduler", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .GetField("scheduler", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!
                 .SetValue(GameScheduler.Instance, freshScheduler);
             Singleton<StateMachineManager>.Instance.RegisterScheduler(freshScheduler);
             Console.WriteLine("[WorldBuilder] GameScheduler.scheduler refreshed after StateMachineManager.Clear()");
