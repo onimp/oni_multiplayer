@@ -206,7 +206,7 @@ public class AllStateMachinesInitTest : PlayableGameTest {
     ///   • MinionIdentity.Awake/Start run so assignableProxy is valid before
     ///     AssignableReachabilitySensor.ctor runs inside BaseOnSpawn.
     /// </summary>
-    private static GameObject CreateFullDupeGO() {
+    internal static GameObject CreateFullDupeGO() {
         var go = createGameObject();
 
         // ── StateMachineController MUST come first ─────────────────────────────

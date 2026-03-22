@@ -28,6 +28,16 @@ public static class UnityRuntime {
     private static readonly Dictionary<IntPtr, string> ObjectNames = new();
     private static readonly Dictionary<IntPtr, Vector3> ObjectPositions = new();
     private static readonly HashSet<IntPtr> ActiveObjects = new();
+
+    // Reflection cache: StateMachineController.stateMachines (private List<StateMachine.Instance>).
+    // CloneSingle uses MemberwiseClone — a shallow copy — so all cloned SMCs share the
+    // prefab's stateMachines list reference. Only one set of SMIs ever runs (the first
+    // dupe's), all others get the same instances from GetSMI() → only 1 IdleChore created
+    // → dupes 1+N locked out (IsPreemptable fails: chore.driver != null already set by dupe 0).
+    // Fix: assign a fresh empty list to each cloned SMC so StartSMIS creates independent SMIs.
+    private static readonly FieldInfo _smcStateMachinesField =
+        typeof(StateMachineController).GetField(
+            "stateMachines", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly HashSet<IntPtr> SpawnedObjects = new();
 
     // --- Stats ---
@@ -208,6 +218,12 @@ public static class UnityRuntime {
                         .GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
                         .Invoke(srcComp, null);
                     cloneComp.m_CachedPtr = new IntPtr(NextId());
+                    // Break shared-list reference on StateMachineController clones.
+                    // MemberwiseClone copies the stateMachines List<> reference — all clones
+                    // from the same prefab would share one list → only the first dupe's SMIs
+                    // ever run → 1 IdleChore for all dupes → movement broken for dupes 1+N.
+                    if (cloneComp is StateMachineController)
+                        _smcStateMachinesField?.SetValue(cloneComp, new List<StateMachine.Instance>());
                     ComponentToGameObject[cloneComp.m_CachedPtr] = clone;
                     cloneComponents.Add(cloneComp);
                 }
