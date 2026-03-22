@@ -220,6 +220,17 @@ public static class MinionPrefab {
             // No post-hoc retrofit needed here.
         }
 
+        // DS-007: ensure the dupe's own ChoreProvider is in ChoreConsumer.providers.
+        // MinionModifiers.OnSpawn() normally calls AddProvider(GlobalChoreProvider.Instance)
+        // AND AddProvider(choreProvider) via OnPrefabInit's providers.Add(choreProvider).
+        // For clones whose providers list was reset to empty by CloneSingle (fdb3d2c),
+        // MinionModifiers.OnSpawn() may not re-run → list stays empty → FindNextChore
+        // iterates 0 providers → always returns false → no chore assigned → no movement.
+        // Same single-line fix as CreaturePrefab.Setup().
+        var consumer = go.GetComponent<ChoreConsumer>();
+        if (consumer != null)
+            consumer.AddProvider(go.GetComponent<ChoreProvider>());
+
         // Spawn Brain — sets running=true + choreConsumer + registers with BrainScheduler.
         // Without this: Brain.IsRunning()=false → BrainGroup.RenderEveryTick skips brain
         // → UpdateBrain() never called → chore never picked even though IdleChore exists.

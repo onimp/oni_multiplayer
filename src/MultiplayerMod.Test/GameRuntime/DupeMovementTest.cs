@@ -384,6 +384,43 @@ public class DupeMovementTest : PlayableGameTest {
             "After reindex: the same chore object must be under the new key.");
     }
 
+    // ── MinionPrefab.Setup() AddProvider fix ─────────────────────────────────
+
+    /// <summary>
+    /// Verifies that after MinionPrefab.Setup() the dupe's ChoreConsumer.providers
+    /// contains its own ChoreProvider.
+    ///
+    /// ROOT CAUSE: CloneSingle (fdb3d2c) resets providers to a new empty List.
+    /// MinionModifiers.OnSpawn() may not re-run for clones → providers stays empty
+    /// → FindNextChore iterates 0 entries → always returns false → no chore assigned.
+    ///
+    /// FIX (MinionPrefab.Setup): consumer.AddProvider(go.GetComponent&lt;ChoreProvider&gt;())
+    /// mirrors the same one-liner in CreaturePrefab.Setup() that fixed critter movement.
+    /// </summary>
+    [Test]
+    public void DupeChoreConsumer_AfterSetup_HasOwnChoreProvider() {
+        var go = createGameObject();
+        var choreProvider = go.AddComponent<ChoreProvider>();
+        go.AddComponent<ChoreDriver>();
+        var consumer = go.AddComponent<ChoreConsumer>();
+        consumer.consumerState = new ChoreConsumerState(consumer);
+
+        // Simulate post-CloneSingle state: providers reset to empty.
+        _choreConsumerProvidersField.SetValue(consumer, new List<ChoreProvider>());
+
+        // Apply the fix: same call as MinionPrefab.Setup() DS-007 block.
+        consumer.AddProvider(go.GetComponent<ChoreProvider>());
+
+        var providers = (List<ChoreProvider>) _choreConsumerProvidersField.GetValue(consumer)!;
+
+        Assert.AreEqual(1, providers.Count,
+            "After AddProvider fix: providers must contain exactly 1 entry. " +
+            "FindNextChore iterates this list — 0 entries means no chore ever found.");
+        Assert.AreSame(choreProvider, providers[0],
+            "The single entry must be the dupe's own ChoreProvider " +
+            "(holds the IdleChore created by IdleMonitor during OnSpawn).");
+    }
+
     // ── 1000-tick stability: 3 dupes, no crash ────────────────────────────────
 
     /// <summary>
