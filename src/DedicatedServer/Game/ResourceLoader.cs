@@ -106,13 +106,27 @@ public class ResourceLoader {
                     anim = new KAnimFile { IsBuildLoaded = true }
                 }
             };
+            // Mirror ElementLoader.CopyEntryToElement (line 283-287):
+            // Gas element YAMLs have no maxMass field → entry.maxMass=0.
+            // Real game hardcodes 1.8f for all gas elements, and forces defaultValues.mass=1f.
+            // Without this, SimDLL rejects ALL ModifyCell(gas) calls with "max mass = 0"
+            // → template O2 placement rejected → starting cave stays Vacuum.
+            if (element.IsGas) {
+                element.maxMass = 1.8f;
+                element.defaultValues = new Sim.PhysicsData {
+                    temperature = element.defaultValues.temperature,
+                    mass = 1f
+                };
+            }
             ElementLoader.elements.Add(element);
             ElementLoader.elementTable[hash] = element;
         }
 
         FinalizeElements();
         WorldGen.SetupDefaultElements();
-        Console.WriteLine($"[Resources] Registered {ElementLoader.elements.Count} elements");
+        var o2 = ElementLoader.FindElementByHash(SimHashes.Oxygen);
+        var co2 = ElementLoader.FindElementByHash(SimHashes.CarbonDioxide);
+        Console.WriteLine($"[Resources] Registered {ElementLoader.elements.Count} elements. O2.maxMass={o2?.maxMass ?? -1f} CO2.maxMass={co2?.maxMass ?? -1f} (must be 1.8 for template placement)"  );
     }
 
     private static void FinalizeElements() {
