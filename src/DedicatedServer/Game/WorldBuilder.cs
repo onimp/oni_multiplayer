@@ -378,6 +378,7 @@ public class WorldBuilder {
             InitDbField(ref db.RoomTypes, () => new RoomTypes(root), "RoomTypes");
             InitDbField(ref db.Diseases, () => new Diseases(root, statsOnly: true), "Diseases");
             InitDbField(ref db.Sicknesses, () => new Database.Sicknesses(root), "Sicknesses");
+            InitDbField(ref db.AssignableSlots, () => new AssignableSlots(), "AssignableSlots");
             InitDbField(ref db.SkillPerks, () => new SkillPerks(root), "SkillPerks");
             InitDbField(ref db.SkillGroups, () => new SkillGroups(root), "SkillGroups");
             InitDbField(ref db.Skills, () => new Skills(root), "Skills");
@@ -397,7 +398,7 @@ public class WorldBuilder {
             InitDbField(ref db.Spices, () => new Spices(root), "Spices");
             Console.WriteLine("[WorldBuilder] Db.Initialize: AccessorySlots skipped, remaining fields initialized");
         }
-        Console.WriteLine($"[WorldBuilder] Db: Diseases={Db._Instance.Diseases != null}, MiscStatusItems={Db._Instance.MiscStatusItems != null}, ChoreTypes={Db._Instance.ChoreTypes != null}");
+        Console.WriteLine($"[WorldBuilder] Db: Diseases={Db._Instance.Diseases != null}, MiscStatusItems={Db._Instance.MiscStatusItems != null}, ChoreTypes={Db._Instance.ChoreTypes != null}, AssignableSlots={Db._Instance.AssignableSlots != null}");
 
         // CustomGameSettings must exist before Game.OnPrefabInit and Cluster constructor
         // .Awake() calls KMonoBehaviour.InitializeComponent() which calls OnPrefabInit()
