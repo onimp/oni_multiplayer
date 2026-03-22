@@ -186,6 +186,13 @@ public class GameTickLoop {
             DelayedChoreCheck();
         }
 
+        // Runtime diagnostic at tick=200: catch runtime state well past tick=0 transients.
+        // Logs per-dupe: brain running, IdleMonitor state/error, providers count,
+        // choreWorldMap count, and SM.error for all state machines.
+        if (_tickCount == 200) {
+            RuntimeDiagAt200();
+        }
+
     }
 
     private static void ForceUpdateBrains() {
@@ -634,4 +641,37 @@ public class GameTickLoop {
             name.Contains("ToggleAnims") ||   // AddAnimOverrides / RemoveAnimOverrides
             name == "ClearWalk"               // smi.animController.Play("idle_default")
         );
+
+    /// <summary>
+    /// Runtime diagnostic at tick=200: logs per-dupe brain/IdleMonitor/providers state,
+    /// then logs SM.error for every state machine on each dupe's StateMachineController.
+    /// Fires once — well past tick=0 transients but early enough to catch runtime failures.
+    /// </summary>
+    private static void RuntimeDiagAt200() {
+        Console.WriteLine("[RT_DIAG] tick=200 — runtime state snapshot");
+        foreach (var go in Components.LiveMinionIdentities.Items.Select(m => m.gameObject)) {
+            var smc      = go.GetComponent<StateMachineController>();
+            var consumer = go.GetComponent<ChoreConsumer>();
+            var idleMon  = smc?.GetSMI<IdleMonitor.Instance>();
+            var brain    = go.GetComponent<MinionBrain>();
+            int provCount     = consumer?.providers?.Count ?? -1;
+            int choreMapCount = consumer?.choreProvider?.choreWorldMap?.Count ?? -1;
+            Console.WriteLine($"[RT_DIAG] go={go.GetInstanceID()} brain.isRunning={brain?.IsRunning()} " +
+                $"idleMon={idleMon?.GetHashCode().ToString() ?? "NULL"} " +
+                $"idleMon.isCrashed={idleMon?.isCrashed} " +
+                $"globalSMError={StateMachine.Instance.error} " +
+                $"idleMon.currentState={idleMon?.GetCurrentState()?.name ?? "NULL"} " +
+                $"providers={provCount} choreMapCount={choreMapCount}");
+        }
+
+        foreach (var go in Components.LiveMinionIdentities.Items.Select(m => m.gameObject)) {
+            var smc = go.GetComponent<StateMachineController>();
+            if (smc?.stateMachines == null) continue;
+            for (var i = 0; i < smc.stateMachines.Count; i++) {
+                var sm = smc.stateMachines[i];
+                if (sm != null && sm.isCrashed)
+                    Console.WriteLine($"[SM_ERROR] go={go.GetInstanceID()} sm[{i}]={sm.GetType().Name} isCrashed=True");
+            }
+        }
+    }
 }
