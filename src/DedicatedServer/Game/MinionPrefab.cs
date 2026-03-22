@@ -36,6 +36,33 @@ public static class MinionPrefab {
             return;
         }
 
+        // ── Ensure all BaseMinionConfig.BaseMinion() functional components are present ──
+        // AddOrGet is a no-op when the component already exists (e.g. loaded from save).
+        // Components must be present before BaseOnSpawn() runs so all subscriptions and
+        // SM starts succeed. Order matches BaseMinionConfig.BaseMinion() lines 315-354;
+        // render-only components (KBatchedAnimController, KBoxCollider2D, SnapOn,
+        // AnimEventHandler, GridVisibility, CharacterOverlay, DecorProvider) are skipped.
+        go.AddOrGet<ChoreProvider>();                                        // line 315
+        go.AddOrGetDef<DebugGoToMonitor.Def>();                             // line 316
+        go.AddOrGet<Schedulable>();                                          // line 322
+        go.AddOrGet<FactionAlignment>().Alignment = FactionManager.FactionID.Duplicant; // line 331
+        go.AddOrGet<Weapon>();                                               // line 332
+        go.AddOrGet<RangedAttackable>();                                     // line 333
+        var occupyArea = go.AddOrGet<OccupyArea>();                         // line 335
+        occupyArea.objectLayers = new ObjectLayer[1];
+        occupyArea.ApplyToCells = false;
+        occupyArea.SetCellOffsets(new CellOffset[] {
+            new CellOffset(0, 0),
+            new CellOffset(0, 1)
+        });
+        go.AddOrGet<Pickupable>();                                           // line 343
+        go.AddOrGet<CreatureSimTemperatureTransfer>();                       // line 344
+        go.AddOrGet<SicknessTrigger>();                                      // line 348
+        go.AddOrGet<ClothingWearer>();                                       // line 349
+        go.AddOrGet<SuitEquipper>();                                         // line 350
+        go.AddOrGet<ConsumableConsumer>();                                   // line 352
+        go.AddOrGet<MinionResume>();                                         // line 354
+
         // ValidateProxy BEFORE BaseOnSpawn: AssignableReachabilitySensor.ctor calls
         // identity.assignableProxy.Get() → NPE if null.
         var identity = go.GetComponent<MinionIdentity>();

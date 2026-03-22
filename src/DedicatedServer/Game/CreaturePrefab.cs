@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Klei.AI;
 using UnityEngine;
 
 namespace DedicatedServer.Game;
@@ -18,6 +19,10 @@ namespace DedicatedServer.Game;
 ///   - Uses CreatureBrainGroup (GameTags.CreatureBrain) not DupeBrainGroup.
 ///
 /// Setup(brain) steps:
+///   0. AddOrGet canonical creature components (Pickupable, Clearable, Traits, Health,
+///      RangedAttackable, FactionAlignment, Prioritizable, Effects) and SM Defs
+///      (CritterEmoteMonitor, CreatureDebugGoToMonitor, DeathMonitor, CreatureThoughtGraph,
+///      AnimInterruptMonitor, CritterTemperatureMonitor). StartSMIS() restarts any crashed.
 ///   1. Ensure brain.running=true — if false, re-register in BrainScheduler via Remove+Add.
 ///   2. Ensure Navigator SM started — if nav.GetSMI()==null, call nav.smi.StartSM().
 ///   3. Ensure consumerState != null (ChoreConsumer.OnSpawn may have failed).
@@ -35,6 +40,31 @@ public static class CreaturePrefab {
     public static void Setup(CreatureBrain brain) {
         var go = brain.gameObject;
         if (go == null) return;
+
+        // ── Canonical creature components (from ExtendEntityToBasicCreature) ──────
+        // AddOrGet is idempotent: returns existing component or adds a new one.
+        // Ensures components are present even if the prefab was partially registered
+        // in headless or the save predates the component being added.
+        // Critical field values match EntityTemplates.ExtendEntityToBasicCreature().
+        go.AddOrGet<Pickupable>();
+        go.AddOrGet<Clearable>().isClearable = false;   // confirmed 890x NPE in server log
+        go.AddOrGet<Traits>();
+        go.AddOrGet<Health>().isCritter = true;
+        go.AddOrGet<RangedAttackable>();
+        go.AddOrGet<FactionAlignment>();
+        go.AddOrGet<Prioritizable>();                   // confirmed 858x NPE in server log
+        go.AddOrGet<Effects>();
+
+        // SM Defs: ensure all creature behaviour defs are registered on the SMC.
+        // AddOrGetDef is idempotent. StartSMIS() then starts any SMI that is present
+        // but not running (e.g. exited because of a crash during TriggerLifecycle).
+        go.AddOrGetDef<CritterEmoteMonitor.Def>();
+        go.AddOrGetDef<CreatureDebugGoToMonitor.Def>();
+        go.AddOrGetDef<DeathMonitor.Def>();
+        go.AddOrGetDef<CreatureThoughtGraph.Def>();
+        go.AddOrGetDef<AnimInterruptMonitor.Def>();
+        go.AddOrGetDef<CritterTemperatureMonitor.Def>();
+        go.GetComponent<StateMachineController>()?.StartSMIS();
 
         // ── Step 1: ensure brain.running = true ──────────────────────────────────
         // Brain.Spawn() is a no-op when isSpawned=true (already set by TriggerLifecycle).
