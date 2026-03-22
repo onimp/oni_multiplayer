@@ -540,17 +540,6 @@ public class WorldBuilder {
             game.roomProber = new RoomProber();
         Console.WriteLine($"[WorldBuilder] roomProber ready: {game.roomProber != null}");
 
-        // assignmentManager: assigned on the Game GO via Unity editor prefab in normal game.
-        // Game.OnPrefabInit() crashes at ~820, so it is never set in headless.
-        // SleepChoreMonitor.UpdateBed() → Assignables.AutoAssignSlot → AssignmentManager.GetEnumerator()
-        // → NPE when assignmentManager==null → globalSMError=True → all dupes frozen.
-        // AssignmentManager has no OnPrefabInit; all fields are field-initialized (List, Dictionary).
-        // OnSpawn only subscribes to a game event — safe to skip (AddComponent calls OnSpawn
-        // through the normal KMonoBehaviour TriggerLifecycle path, which is fine in headless).
-        if (game.assignmentManager == null)
-            game.assignmentManager = go.AddComponent<AssignmentManager>();
-        Console.WriteLine($"[WorldBuilder] assignmentManager ready: {game.assignmentManager != null}");
-
         // MinionBrain.UpdateBrain() checks discoveredSurface / discoveredOilField to fire
         // "first discovery" events. If false, it calls World.Instance.zoneRenderData.GetSubWorldZoneType()
         // which NPEs because SubworldZoneRenderData (rendering component) is null in headless.

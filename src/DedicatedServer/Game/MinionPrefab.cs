@@ -180,14 +180,12 @@ public static class MinionPrefab {
                 var smInst = factory(rationalAiSmi);
                 smType = smInst.GetType().Name;
 
-                // SpeechMonitor: pure mouth-animation + audio SM — useless in headless.
-                // root.Enter(CreateMouth) → SetMouthId() → Db.Get().Personalities.Get(personalityResourceId)
-                // returns null when personalityResourceId=HashedString.Invalid (0x0) in headless.
-                // null.speech_mouth → NullReferenceException → globalSMError=True → all dupes frozen.
-                // Fix: remove from smc.stateMachines (added by ctor) and skip StartSM.
-                if (smInst is SpeechMonitor.Instance) {
+                // SMs that are headless-unsafe: remove from smc.stateMachines and skip StartSM.
+                // These are purely cosmetic or require game objects not available in headless.
+                // The ctor already added the instance to smc.stateMachines — must Remove() before continuing.
+                if (IsHeadlessUnsafeSM(smInst)) {
                     smc.stateMachines.Remove(smInst);
-                    Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType}: SKIPPED (headless-unsafe, mouth anim+audio)");
+                    Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType}: SKIPPED (headless-unsafe)");
                     continue;
                 }
 
@@ -296,6 +294,14 @@ public static class MinionPrefab {
 
         Console.WriteLine($"[SETUP go={id}] ALL STEPS OK");
     }
+
+    /// <summary>
+    /// Returns true for SMs that crash in headless and have no value there.
+    /// These are removed from smc.stateMachines before StartSM is called.
+    /// </summary>
+    private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) =>
+        smi is SpeechMonitor.Instance    // mouth anim + audio; SetMouthId NPEs (personality=0x0)
+     || smi is SleepChoreMonitor.Instance; // UpdateBed → AutoAssignSlot → Game.assignmentManager NPE
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.
