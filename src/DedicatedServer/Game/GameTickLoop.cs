@@ -213,55 +213,38 @@ public class GameTickLoop {
                     }
                 }
 
+                // Root fix for DS-005 SetChore-not-sticking:
+                // StateMachine.Instance.error is a global static bool. Any GoTo() failure during
+                // the dupe spawn sequence (e.g. PlayAnim with null animController in headless)
+                // sets it true, making ALL subsequent GoTo() calls silent no-ops via the guard:
+                //   if (App.IsExiting || Instance.error || ...) return;
+                // This blocks ChoreDriver's nochore→haschore ParamTransition inside SetChore,
+                // so BeginChore() never runs and currentChore stays null.
+                // Fix: reset per-brain before FindNextChore so SetChore's GoTo(haschore) proceeds.
+                StateMachine.Instance.error = false;
+
                 // Direct FindNextChore instead of brain.UpdateBrain():
                 // UpdateBrain() checks IsRunning() first — if false (brain not fully started in
                 // fallback path) it's a no-op and no chore is ever assigned.
                 // FindNextChore bypasses that guard and goes straight to provider.CollectChores →
-                // ChooseChore. We then assign the chore (see below).
+                // ChooseChore → driver.SetChore, which transitions nochore→haschore immediately.
                 var choreContext = default(Chore.Precondition.Context);
                 var found = consumer.FindNextChore(ref choreContext);
                 if (found) {
-                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore FOUND choreType={choreContext.chore?.GetType().Name} choreType.id={choreContext.chore?.choreType?.Id}");
-                } else {
-                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore returned false (no chore available) running={brain.IsRunning()}");
-                }
-
-                if (found && choreContext.chore != null) {
-                    // PRE-SetChore diagnostic.
-                    // SetChore internally calls context.chore.IsValid() which checks:
-                    //   StandardChoreBase: provider != null && gameObject.GetMyWorldId() != -1
-                    // If GetMyWorldId() returns -1 (WorldIdx not set for dupe's cell in headless),
-                    // IsValid() returns false → SetChore silently exits without setting nextChore
-                    // → no SM transition → GetCurrentChore() stays null.
-                    var isValid = choreContext.chore.IsValid();
-                    Debug.LogWarning($"[Brain] {brain.name}: PRE-SetChore: " +
-                        $"chore={choreContext.chore.GetType().Name} " +
-                        $"isNull={choreContext.chore == null} " +
-                        $"isValid={isValid} " +
-                        $"provider={(choreContext.chore as StandardChoreBase)?.provider?.GetType().Name ?? "n/a"} " +
-                        $"worldId={choreContext.chore.gameObject.GetMyWorldId()}");
-
-                    if (isValid) {
-                        // Normal path: SetChore handles the SM transition internally.
-                        driver.SetChore(choreContext);
-                    } else {
-                        // IsValid() returns false — SetChore's internal guard blocks the assignment.
-                        // Bypass by setting driver.context + nextChore directly.
-                        // nextChore.Set() triggers ParamTransition(nextChore, haschore) synchronously →
-                        // haschore.Enter → BeginChore() → currentChore.Set() + chore.Begin().
-                        driver.context = choreContext;
-                        driver.smi.sm.nextChore.Set(choreContext.chore, driver.smi);
-                        Debug.LogWarning($"[Brain] {brain.name}: IsValid=false bypass: set nextChore directly");
-                    }
+                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore FOUND " +
+                        $"choreType={choreContext.chore?.GetType().Name} " +
+                        $"choreType.id={choreContext.chore?.choreType?.Id} " +
+                        $"isValid={choreContext.chore?.IsValid()}");
+                    driver.SetChore(choreContext);
                     updated++;
+                } else {
+                    Debug.LogWarning($"[Brain] {brain.name}: FindNextChore returned false " +
+                        $"(no chore available) running={brain.IsRunning()}");
                 }
 
-                // POST-SetChore: read GetCurrentChore() immediately after assignment.
-                // If normal path: currentChore is set synchronously via SM ParamTransition.
-                // If bypass path: same — nextChore.Set triggers the transition synchronously.
-                var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "null";
+                var choreAfter = driver.GetCurrentChore()?.GetType().Name ?? "NULL";
                 Debug.LogWarning($"[Brain] {brain.name}: POST-SetChore: currentChore={choreAfter} " +
-                    $"(was {choreBefore}) isRunning={brain.IsRunning()}");
+                    $"(was {choreBefore}) smError={StateMachine.Instance.error}");
             } catch (Exception e) {
                 Debug.LogWarning($"[Brain] {brain.name} ForceUpdateBrains EXCEPTION: {e}");
             }

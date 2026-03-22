@@ -67,4 +67,45 @@ public class ChoreDriverSmTest : PlayableGameTest {
         Assert.AreSame(smiAfterFirst, driver.GetSMI(),
             "SMI reference must be identical after a guarded (no-op) second start");
     }
+
+    /// <summary>
+    /// Root cause regression test for DS-005 SetChore-not-sticking.
+    ///
+    /// StateMachine.Instance.error is a global static bool. Any GoTo() failure during
+    /// dupe spawn (e.g. PlayAnim with null animController in headless) sets it true,
+    /// making ALL subsequent GoTo() calls silent no-ops:
+    ///   if (App.IsExiting || Instance.error || ...) return;
+    ///
+    /// Fix in ForceUpdateBrains: reset Instance.error=false per-brain before FindNextChore.
+    /// This allows ChoreDriver's nochore→haschore ParamTransition in SetChore to proceed.
+    ///
+    /// Test: with error=true, GoTo(null) that normally stops SM is a no-op (SM stays running).
+    ///       After resetting error=false, GoTo(null) works normally (SM stops).
+    /// </summary>
+    [Test]
+    public void StateMachineErrorFlag_WhenTrue_BlocksGoTo_ResettingItRestoresBehavior() {
+        var saved = StateMachine.Instance.error;
+        try {
+            var go = createGameObject();
+            go.AddComponent<ChoreConsumer>();
+            var driver = go.AddComponent<ChoreDriver>();
+            driver.smi.StartSM();
+            Assert.That(driver.smi.IsRunning(), Is.True, "SM must be running after StartSM");
+
+            // Simulate Instance.error=true as set by GoTo failures during headless spawn.
+            // StopSM also checks: if (Instance.error) return; — so it becomes a no-op too.
+            StateMachine.Instance.error = true;
+            driver.smi.StopSM("test-error-flag");
+            Assert.That(driver.smi.IsRunning(), Is.True,
+                "StopSM (and GoTo) must be a no-op when Instance.error=true");
+
+            // After resetting the flag (our fix), StopSM works normally and stops the SM.
+            StateMachine.Instance.error = false;
+            driver.smi.StopSM("test-after-reset");
+            Assert.That(driver.smi.IsRunning(), Is.False,
+                "StopSM must work normally when Instance.error=false");
+        } finally {
+            StateMachine.Instance.error = saved;
+        }
+    }
 }
