@@ -176,6 +176,30 @@ public static class CreaturePrefab {
         // (UnityRuntime.TriggerLifecycle adds it before Phase 2 → OnSpawn → StartSM → ctor).
         // No post-hoc retrofit needed here.
 
+        // ── Step 6: ensure CreatureFallMonitor SM is running ─────────────────────
+        // CreatureFallMonitor.grounded evaluates ShouldFall() each tick and toggles the
+        // GameTags.Creatures.Falling behaviour → creates FallStates chore → ToggleGravity().
+        // If TriggerLifecycle's StartSMIS() crashed before reaching CreatureFallMonitor.Def
+        // (e.g. NPE in another SM def), the instance is never created → creature floats.
+        // CreatureFallMonitor.Def is per-creature (added in individual config files, e.g.
+        // BaseHatchConfig, BaseDreckoConfig, BasePacuConfig) — not in ExtendEntityToBasicCreature.
+        // Fix: check GetSMI; if null and def is present, manually start the instance.
+        var smc = go.GetComponent<StateMachineController>();
+        if (smc != null) {
+            var fallSmi = go.GetSMI<CreatureFallMonitor.Instance>();
+            if (fallSmi == null) {
+                var fallDef = smc.GetDef<CreatureFallMonitor.Def>();
+                if (fallDef != null) {
+                    try {
+                        new CreatureFallMonitor.Instance(smc, fallDef).StartSM();
+                        Console.WriteLine($"[Animals] {go.name}: CreatureFallMonitor.Instance started");
+                    } catch (Exception ex) {
+                        Console.WriteLine($"[Animals] {go.name}: CreatureFallMonitor start failed: {ex.GetBaseException().Message}");
+                    }
+                }
+            }
+        }
+
         // ── Diagnostic: one line per creature ────────────────────────────────────
         var cell  = Grid.PosToCell(go);
         var chore = choreDriver?.GetCurrentChore();
