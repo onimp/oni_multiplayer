@@ -74,8 +74,16 @@ public class GameTickLoop {
             _accumulatedTime -= SubTickTime;
         }
 
-        // Drive RENDER_EVERY_TICK bucket — covers BrainScheduler (Dupe/Creature AI)
-        Singleton<StateMachineUpdater>.Instance.RenderEveryTick(clampedDt);
+        // Drive RENDER_EVERY_TICK bucket — covers BrainScheduler (Dupe/Creature AI).
+        // LightSymbolTracker and other rendering components throw NPE in headless mode
+        // → without this catch, any exception here aborts the frame before _tickCount
+        // reaches SensorWarmupTick/ChoreKickTick → sensors/brains never forced.
+        try {
+            Singleton<StateMachineUpdater>.Instance.RenderEveryTick(clampedDt);
+        } catch (Exception ex) {
+            if (_tickCount % 200 == 0)
+                Debug.LogWarning($"[GameTickLoop] RenderEveryTick ex (tick={_tickCount}): {ex.GetBaseException().Message}");
+        }
 
         // Dispatch async path probe work orders to the background thread and apply completed
         // PathGrid results back to navigators. Mirrors Game.LateUpdate() where TickFrame()
