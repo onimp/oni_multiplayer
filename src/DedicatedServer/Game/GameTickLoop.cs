@@ -67,16 +67,6 @@ public class GameTickLoop {
                 }
                 // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets
                 Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
-
-                // Advance GameClock: mirrors SimAndRenderScheduler.sim33ms bucket calling
-                // GameClock.Sim33ms(dt) each subtick. Without this, GameClock.GetTime() stays
-                // frozen at its OnPrefabInit value (timeSinceStartOfCycle=50f) because
-                // SimAndRenderScheduler is never driven in headless.
-                // GameSchedulerClock.GetTime() returns GameClock.Instance.GetTime(), so a
-                // frozen clock means Scheduler.Update() never satisfies (time >= entry.time)
-                // → IdleMove callback (scheduled at GetTime()+Random(5,15)) never fires
-                // → IdleChore runs but dupe never moves.
-                GameClock.Instance?.Sim33ms(SubTickTime);
             } catch (Exception ex) {
                 // BreathMonitor.IsLowBreath() → WorldContainer.AlertManager → NPE fires 563K× per run.
                 // Without this catch the while-loop aborts → _tickCount never reaches SensorWarmupTick
@@ -84,6 +74,13 @@ public class GameTickLoop {
                 // Log at low frequency to avoid console spam while still surfacing the root cause.
                 if (_tickCount % 200 == 0)
                     Debug.LogWarning($"[GameTickLoop] SubTick ex (count={_tickCount}): {ex.GetBaseException().Message}");
+            } finally {
+                // Advance GameClock UNCONDITIONALLY — must run even when AdvanceOneSimSubTick()
+                // throws (BreathMonitor NPEs fire ~600×/frame and skip the rest of the try block).
+                // Mirrors SimAndRenderScheduler.sim33ms bucket calling GameClock.Sim33ms(dt).
+                // Without this, GameClock.GetTime() stays frozen at 50f → GameSchedulerClock
+                // returns 50f → Scheduler.Update() never fires IdleMove (scheduled at 55–65f).
+                GameClock.Instance?.Sim33ms(SubTickTime);
             }
             _accumulatedTime -= SubTickTime;
         }

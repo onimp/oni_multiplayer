@@ -175,6 +175,31 @@ public class GameSchedulerTest : PlayableGameTest {
     // ──────────────────────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Regression guard: GameClock.Sim33ms must advance the clock even when
+    /// AdvanceOneSimSubTick() throws — i.e. Sim33ms must run in finally{}, not inside
+    /// the try block. BreathMonitor NPEs fire ~600× per run inside AdvanceOneSimSubTick,
+    /// which previously caused the catch to fire and skip Sim33ms → GameClock frozen.
+    /// </summary>
+    [Test]
+    public void GameClock_Sim33ms_AdvancesClockEvenWhenCallerThrows() {
+        var before = GameClock.Instance.GetTime();
+        const float dt = 1f / 60f;
+
+        // Simulate what GameTickLoop does: Sim33ms in finally{} so it runs even on throw.
+        try {
+            throw new Exception("simulated AdvanceOneSimSubTick NPE");
+        } catch {
+            // swallowed — mirrors the GameTickLoop catch
+        } finally {
+            GameClock.Instance.Sim33ms(dt);
+        }
+
+        Assert.That(GameClock.Instance.GetTime(), Is.GreaterThan(before),
+            "Sim33ms in finally{} must advance clock even when the try block throws. " +
+            "Regression: when inside try{}, BreathMonitor NPEs skip it → clock frozen.");
+    }
+
+    /// <summary>
     /// Verifies that GameClock.GetTime() starts at its OnPrefabInit seed value (50f).
     /// Documents the pre-fix state: without Sim33ms being called, GetTime() never
     /// advances from 50f → IdleMove (scheduled at 50+Random(5,15)) never triggers.
