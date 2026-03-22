@@ -67,15 +67,21 @@ public static class CreaturePrefab {
         go.AddOrGet<Effects>();
 
         // SM Defs: ensure all creature behaviour defs are registered on the SMC.
-        // AddOrGetDef is idempotent. StartSMIS() then starts any SMI that is present
-        // but not running (e.g. exited because of a crash during TriggerLifecycle).
+        // AddOrGetDef is idempotent — no-op if def already present.
+        // NOTE: StartSMIS() is intentionally NOT called here.
+        //   TriggerLifecycle (KPrefabID.OnSpawn) already called StartSMIS() for every creature
+        //   during world load.  Re-calling it on a headless-loaded creature is unsafe:
+        //   StateMachineController.StartSMIS() iterates smc.stateMachines (private list) and
+        //   calls GetSMI(type) for each registered def.  GetSMI iterates the same list and calls
+        //   instance.GetType() — which NPEs when the list contains a null entry left by a
+        //   partial TriggerLifecycle failure in the headless environment.
+        //   Root cause: option (B) — StartSMIS is redundant and dangerous here.
         go.AddOrGetDef<CritterEmoteMonitor.Def>();
         go.AddOrGetDef<CreatureDebugGoToMonitor.Def>();
         go.AddOrGetDef<DeathMonitor.Def>();
         go.AddOrGetDef<CreatureThoughtGraph.Def>();
         go.AddOrGetDef<AnimInterruptMonitor.Def>();
         go.AddOrGetDef<CritterTemperatureMonitor.Def>();
-        go.GetComponent<StateMachineController>()?.StartSMIS();
 
         // ── Step 1: ensure brain.running = true ──────────────────────────────────
         // Brain.Spawn() is a no-op when isSpawned=true (already set by TriggerLifecycle).
