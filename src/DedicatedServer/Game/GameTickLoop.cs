@@ -514,8 +514,14 @@ public class GameTickLoop {
                 originalDelegate.Target,
                 originalDelegate.Method);
 
+            // Capture name for closure (loop variable would be captured by ref otherwise).
+            var actionName = actions[i].name;
+
             // Null-safe wrapper: skip call when animController is null (headless).
+            // Diagnostic log fires on EVERY invocation so we can confirm the wrapper is reached.
             Action<IdleChore.StatesInstance> wrapper = smi => {
+                Console.WriteLine("[DS] WrapActions wrapper fired: action=" + actionName
+                    + " animController=" + (smi?.animController == null ? "NULL" : "OK"));
                 if (smi?.animController != null)
                     captured(smi);
             };
