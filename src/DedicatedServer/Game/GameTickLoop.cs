@@ -1,4 +1,7 @@
 using System;
+using System.Collections;
+using System.Reflection;
+using System.Text;
 using UnityEngine;
 
 namespace DedicatedServer.Game;
@@ -26,6 +29,11 @@ public class GameTickLoop {
     // UpdateBrain → UpdateChores → FindBetterChore → choreConsumer.choreDriver.SetChore
     // → ChoreDriver transitions nochore→haschore → BeginChore → chore running.
     private const int ChoreKickTick = 61;
+
+    // Reflection accessor for ChoreConsumer.providers (private List<ChoreProvider>).
+    // Used in diagnostic logging — providers list tells us what chore sources the consumer sees.
+    private static readonly FieldInfo _providersField =
+        typeof(ChoreConsumer).GetField("providers", BindingFlags.NonPublic | BindingFlags.Instance);
 
     private float _accumulatedTime;
     private int _simSubTick;
@@ -95,17 +103,46 @@ public class GameTickLoop {
     }
 
     private static void ForceUpdateBrains() {
+        Debug.LogWarning("[DS-005] ForceUpdateBrains ENTERING");
         var updated = 0;
         foreach (var brain in Components.Brains.Items) {
             if (brain == null) continue;
             try {
+                var consumer = brain.GetComponent<ChoreConsumer>();
+                var driver   = brain.GetComponent<ChoreDriver>();
+                if (consumer == null || driver == null) {
+                    Debug.LogWarning($"[Brain] {brain.name}: consumer={consumer != null} driver={driver != null} SKIP");
+                    continue;
+                }
+
+                // Log providers list (private field) — who this consumer collects chores from.
+                // Should have at least: own ChoreProvider + GlobalChoreProvider.
+                var providerList = _providersField?.GetValue(consumer) as IList;
+                var sb = new StringBuilder();
+                if (providerList != null) {
+                    foreach (var p in providerList)
+                        sb.Append(p?.GetType().Name ?? "null").Append(' ');
+                }
+
+                // GetCurrentChore() lives on ChoreDriver.StatesInstance, not ChoreDriver itself.
+                var smi = driver.GetSMI() as ChoreDriver.StatesInstance;
+                var choreBefore = smi?.GetCurrentChore()?.GetType().Name ?? "null";
+
+                Debug.LogWarning($"[Brain] {brain.name}: running={brain.IsRunning()} " +
+                    $"choreBefore={choreBefore} " +
+                    $"providers({providerList?.Count ?? -1})=[{sb.ToString().TrimEnd()}] " +
+                    $"smi={(smi != null ? "ok" : "null")} smiRunning={smi?.IsRunning()}");
+
                 brain.UpdateBrain();
                 updated++;
+
+                var choreAfter = (driver.GetSMI() as ChoreDriver.StatesInstance)?.GetCurrentChore()?.GetType().Name ?? "null";
+                Debug.LogWarning($"[Brain] {brain.name}: choreAfter={choreAfter} (was {choreBefore})");
             } catch (Exception e) {
-                Console.WriteLine($"[DS-005] ForceUpdateBrains: {brain.name} error: {e.GetBaseException().Message}");
+                Debug.LogWarning($"[Brain] {brain.name} ForceUpdateBrains EXCEPTION: {e}");
             }
         }
-        Console.WriteLine($"[DS-005] ForceUpdateBrains at tick={ChoreKickTick}: kicked {updated} brain(s)");
+        Debug.LogWarning($"[DS-005] ForceUpdateBrains DONE: kicked {updated} brain(s)");
     }
 
     private static void ForceUpdateSensors() {
@@ -118,9 +155,9 @@ public class GameTickLoop {
                 sensors.UpdateSensors();
                 updated++;
             } catch (Exception e) {
-                Console.WriteLine($"[DS-005] ForceUpdateSensors: {brain.name} error: {e.GetBaseException().Message}");
+                Debug.LogWarning($"[DS-005] ForceUpdateSensors: {brain.name} error: {e.GetBaseException().Message}");
             }
         }
-        Console.WriteLine($"[DS-005] ForceUpdateSensors at tick={SensorWarmupTick}: updated {updated} brain(s)");
+        Debug.LogWarning($"[DS-005] ForceUpdateSensors at tick={SensorWarmupTick}: updated {updated} brain(s)");
     }
 }
