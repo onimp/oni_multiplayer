@@ -473,6 +473,12 @@ public static class UnityRuntime {
                     Console.WriteLine($"[Lifecycle] Awake failed [{comp.GetType().Name}]: {ex.GetBaseException().Message}");
                 }
             }
+            // Ensure smc.stateMachines is never null after InitializeComponent.
+            // Headless component creation skips constructors → field initializer never runs
+            // → stateMachines=null → GetSMI() NPEs. Fix for ALL entities (dupes + critters).
+            if (comp is StateMachineController smc2 &&
+                _smcStateMachinesField?.GetValue(smc2) == null)
+                _smcStateMachinesField?.SetValue(smc2, new List<StateMachine.Instance>());
         }
 
         // Phase 1.5: Initialize components added via [MyCmpAdd] during Phase 1.

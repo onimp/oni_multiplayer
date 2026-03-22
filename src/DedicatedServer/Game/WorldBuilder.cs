@@ -112,12 +112,6 @@ public class WorldBuilder {
         typeof(ChoreConsumer).GetField("providers",
             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
-    // Reflection cache for StateMachineController.stateMachines (private List<StateMachine.Instance>).
-    // Used in FixCreatureBrains to null-guard critter SMCs before CreaturePrefab.Setup runs.
-    private static readonly FieldInfo _smcStateMachinesField =
-        typeof(StateMachineController)
-            .GetField("stateMachines", BindingFlags.Instance | BindingFlags.NonPublic);
-
     public BuildingDef GetBuildingDef(string id) {
         if (_buildingDefCache.TryGetValue(id, out var def)) return def;
         return Assets.GetBuildingDef(id);
@@ -1546,18 +1540,6 @@ public class WorldBuilder {
         foreach (var brain in Components.Brains.Items) {
             if (brain is not CreatureBrain) continue;
             total++;
-
-            // Guard: ensure smc.stateMachines is at least an empty list before CreaturePrefab.Setup.
-            // Critter SMCs can have a null stateMachines if their component was created without
-            // running the field initializer (headless path skips constructors). GetSMI() iterates
-            // this field and NPEs on null. Does NOT overwrite existing content — only fixes null.
-            var smc = brain.GetComponent<StateMachineController>();
-            if (smc != null) {
-                var existing = _smcStateMachinesField?.GetValue(smc);
-                if (existing == null)
-                    _smcStateMachinesField?.SetValue(smc, new List<StateMachine.Instance>());
-            }
-
             CreaturePrefab.Setup((CreatureBrain)brain);
         }
         Console.WriteLine($"[Animals] FixCreatureBrains: total={total}");
