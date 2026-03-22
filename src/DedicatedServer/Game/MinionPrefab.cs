@@ -68,6 +68,7 @@ public static class MinionPrefab {
         // SM starts succeed. Order matches BaseMinionConfig.BaseMinion() lines 315-354;
         // render-only components (KBatchedAnimController, KBoxCollider2D, SnapOn,
         // AnimEventHandler, GridVisibility, CharacterOverlay, DecorProvider) are skipped.
+        go.AddOrGet<KSelectable>();                                          // selectableEntityTemplate
         go.AddOrGet<ChoreProvider>();                                        // line 315
         go.AddOrGetDef<DebugGoToMonitor.Def>();                             // line 316
         go.AddOrGet<Schedulable>();                                          // line 322
