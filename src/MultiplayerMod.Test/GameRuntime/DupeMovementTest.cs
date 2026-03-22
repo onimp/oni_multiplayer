@@ -492,6 +492,64 @@ public class DupeMovementTest : PlayableGameTest {
         Assert.That(list2, Does.Not.Contain(idle1), "smc2.stateMachines must not contain smc1's IdleMonitor.");
     }
 
+    // ── smc.stateMachines isolation fix (SMOKING GUN from 14b8aa5) ───────────
+
+    /// <summary>
+    /// SMOKING GUN confirmed by 14b8aa5 diagnostic:
+    ///   smc hashes: -985234943, -1314160309, 292462703 — 3 DISTINCT SMC objects ✅
+    ///   getSMI hash: 568807501 for ALL 3 — SAME IdleMonitor returned ❌
+    ///
+    /// Root cause: smc.stateMachines field on all 3 SMCs points to the SAME
+    /// List&lt;StateMachine.Instance&gt; (MemberwiseClone shallow copy on save-load path).
+    /// IdleMonitor.Instance(smc) ctor calls smc.AddStateMachineInstance(this) →
+    /// appends to the shared list. GetSMI iterates from index 0 → always returns
+    /// dupe0's IdleMonitor for all dupes → dupes 1+2 never get their own IdleChore.
+    ///
+    /// Fix: smc.stateMachines = new List&lt;&gt;() before any SM creation in MinionPrefab.Setup().
+    /// Each assignment only changes that SMC's field — other SMCs' fields unchanged.
+    /// </summary>
+    [Test]
+    public void ThreeDupes_SharedList_AfterPerDupeReset_HaveDistinctIdleMonitors() {
+        var go1 = createGameObject(); go1.AddComponent<KPrefabID>();
+        var go2 = createGameObject(); go2.AddComponent<KPrefabID>();
+        var go3 = createGameObject(); go3.AddComponent<KPrefabID>();
+        var smc1 = go1.AddComponent<StateMachineController>();
+        var smc2 = go2.AddComponent<StateMachineController>();
+        var smc3 = go3.AddComponent<StateMachineController>();
+
+        // Simulate MemberwiseClone: all 3 SMCs share the same list.
+        var sharedList = new List<StateMachine.Instance>();
+        SmcStateMachinesField.SetValue(smc1, sharedList);
+        SmcStateMachinesField.SetValue(smc2, sharedList);
+        SmcStateMachinesField.SetValue(smc3, sharedList);
+
+        // Without fix: adding an IdleMonitor via smc1 means smc2.GetSMI returns smc1's instance.
+        var preIdle = new IdleMonitor.Instance(smc1); preIdle.StartSM();
+        Assert.AreSame(smc1.GetSMI<IdleMonitor.Instance>(), smc2.GetSMI<IdleMonitor.Instance>(),
+            "Pre-condition: shared list → GetSMI returns same instance across all SMCs (bug confirmed).");
+
+        // FIX: reset stateMachines per-dupe (mirrors MinionPrefab.Setup() smc.stateMachines = new List<>()).
+        SmcStateMachinesField.SetValue(smc1, new List<StateMachine.Instance>());
+        SmcStateMachinesField.SetValue(smc2, new List<StateMachine.Instance>());
+        SmcStateMachinesField.SetValue(smc3, new List<StateMachine.Instance>());
+
+        // Start IdleMonitor for each dupe after isolation.
+        new IdleMonitor.Instance(smc1).StartSM();
+        new IdleMonitor.Instance(smc2).StartSM();
+        new IdleMonitor.Instance(smc3).StartSM();
+
+        var im1 = smc1.GetSMI<IdleMonitor.Instance>();
+        var im2 = smc2.GetSMI<IdleMonitor.Instance>();
+        var im3 = smc3.GetSMI<IdleMonitor.Instance>();
+
+        Assert.IsNotNull(im1, "smc1 must have its own IdleMonitor.");
+        Assert.IsNotNull(im2, "smc2 must have its own IdleMonitor.");
+        Assert.IsNotNull(im3, "smc3 must have its own IdleMonitor.");
+        Assert.AreNotSame(im1, im2, "After reset: smc1 and smc2 must return distinct IdleMonitor instances.");
+        Assert.AreNotSame(im1, im3, "After reset: smc1 and smc3 must return distinct IdleMonitor instances.");
+        Assert.AreNotSame(im2, im3, "After reset: smc2 and smc3 must return distinct IdleMonitor instances.");
+    }
+
     // ── ResetSharedReferences: all 11 shared fields isolated ─────────────────
 
     /// <summary>

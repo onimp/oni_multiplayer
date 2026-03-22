@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -10,17 +11,24 @@ namespace DedicatedServer.Game;
 ///
 /// The real game runs MinionConfig.OnSpawn() → BaseMinionConfig.BaseOnSpawn() from within
 /// Unity's normal lifecycle (Awake/Start/OnEnable fire in order). In headless the lifecycle
-/// may be partial (no display, no audio, assets incomplete) and several sub-steps throw.
+/// is partial (no display, no audio, assets incomplete) so we replicate the critical path:
 ///
-/// Setup(go) replicates the full pipeline for one dupe GO:
-///   1. EnsureAssignableProxy  — proxy GO required by AssignableReachabilitySensor.ctor
-///   2. BaseMinionConfig.BaseOnSpawn — adds 8 sensors, starts all 52 SMs via RationalAi
-///   3. Fallback (if BaseOnSpawn throws) — minimal sensors + critical monitors
-///   4. Navigator SM start
-///   5. ChoreDriver SM start + StandardWorker guard
-///   6. Brain.Spawn  — sets running=true, registers with BrainScheduler
-///   7. IdleTag pre-add + Sensors.Spawn
-///   8. IdleCellSensor seeding to own cell
+/// Setup(go) pipeline:
+///   1. Remove render-only components (CharacterOverlay, AnimEventHandler)
+///   2. Ensure required functional components exist
+///   3. EnsureAssignableProxy — proxy GO required for identity/slot management
+///   4. Setup sensors — 6 of 8 (excluding AssignableReachabilitySensor which NPEs in headless)
+///   5. Isolate smc.stateMachines — CRITICAL: on save-load path all dupe SMCs share one list
+///      via MemberwiseClone; assign a fresh List so each dupe gets its own SM registry
+///   6. ResetSharedReferences — isolate ChoreConsumer/ChoreProvider fields (also MemberwiseClone)
+///   7. Start all 52 SMs via RationalAi.Instance (mirrors BaseMinionConfig.BaseOnSpawn minus ARS)
+///   8. AddProvider — own ChoreProvider in consumer.providers so FindNextChore finds IdleChore
+///   9. Navigator 7 transition layers
+///  10. Navigator SM init + start
+///  11. StandardWorker + ChoreDriver SM
+///  12. Brain.Spawn + BrainScheduler re-registration
+///  13. Pre-add GameTags.Idle + Sensors.Spawn
+///  14. IdleCellSensor cell seeding
 /// </summary>
 public static class MinionPrefab {
 
@@ -81,151 +89,96 @@ public static class MinionPrefab {
         go.AddOrGet<ConsumableConsumer>();                                   // line 352
         go.AddOrGet<MinionResume>();                                         // line 354
 
-        // ValidateProxy BEFORE BaseOnSpawn: AssignableReachabilitySensor.ctor calls
-        // identity.assignableProxy.Get() → NPE if null.
+        // Ensure assignable proxy exists — needed for RationalAi.alive → slot management.
         var identity = go.GetComponent<MinionIdentity>();
         if (identity != null)
             EnsureAssignableProxy(go, identity);
 
-        // Ensure proxy GO has Ownables + Equipment (both : Assignables).
-        // AssignableReachabilitySensor.ctor calls proxy.GetComponents<Assignables>() — if
-        // the proxy was created from Assets.GetPrefab("MinionAssignablesProxy") (headless
-        // prefab is incomplete) those components may be missing → GetComponents returns empty
-        // → [0x00028] NPE → BaseOnSpawn fails.
-        // Our direct-creation fallback in EnsureAssignableProxy already adds them, but
-        // if ValidateProxy() succeeded and returned the game's prefab-based proxy we still
-        // need to patch it here.
-        var proxyGo = identity?.assignableProxy?.Get()?.gameObject;
-        if (proxyGo != null) {
-            var assignables = proxyGo.GetComponents<Assignables>();
-            if (assignables == null || assignables.Length == 0) {
-                proxyGo.AddOrGet<Ownables>();
-                proxyGo.AddOrGet<Equipment>();
-                Debug.LogWarning($"[FixRationalAi] {go.name}: added Ownables+Equipment to proxy GO");
-            }
+        // ── Step 4: Sensors (excluding AssignableReachabilitySensor) ─────────
+        // BaseOnSpawn adds 8 sensors including ARS; ARS.ctor calls
+        // identity.assignableProxy.Get() which NPEs in headless (proxy is incomplete).
+        // We add the 6 safe ones directly; ARS and BalloonStandCellSensor are excluded.
+        var sensorsComp = go.GetComponent<Sensors>();
+        if (sensorsComp != null) {
+            sensorsComp.Add(new PathProberSensor(sensorsComp));
+            sensorsComp.Add(new SafeCellSensor(sensorsComp));
+            sensorsComp.Add(new IdleCellSensor(sensorsComp));
+            sensorsComp.Add(new PickupableSensor(sensorsComp));
+            sensorsComp.Add(new ClosestEdibleSensor(sensorsComp));
+            sensorsComp.Add(new MingleCellSensor(sensorsComp));
         }
 
-        // Diagnostic: pre-BaseOnSpawn proxy/slot state
-        {
-            var proxy2      = identity?.assignableProxy?.Get();
-            var proxyGo2    = proxy2?.gameObject;
-            var ownables2   = proxyGo2?.GetComponent<Ownables>();
-            var equipment2  = proxyGo2?.GetComponent<Equipment>();
-            var assignables2 = proxyGo2?.GetComponents<Assignables>();
-            var slots2      = Db._Instance?.AssignableSlots;
-            Debug.LogWarning($"[FixRationalAi] {go.name} pre-BaseOnSpawn: " +
-                $"proxy={proxy2 != null} ownables={ownables2 != null} equipment={equipment2 != null} " +
-                $"assignables.Length={assignables2?.Length ?? -1} " +
-                $"slotsConfigured={proxy2?.slotsConfigured} " +
-                $"Db.AssignableSlots={slots2 != null} " +
-                $"Db.AssignableSlots.resources={(slots2?.resources == null ? "null" : slots2.resources.Count.ToString())}");
+        // ── Step 5: Isolate smc.stateMachines ────────────────────────────────
+        // SMOKING GUN (confirmed 14b8aa5): smc hashes are distinct (3 separate objects)
+        // but getSMI returns hash 568807501 for ALL 3 dupes — the SAME IdleMonitor.
+        //
+        // Root cause: on the save-load path Unity uses MemberwiseClone internally
+        // (CloneSingle is bypassed). MemberwiseClone is a shallow copy. The private
+        // field `List<StateMachine.Instance> stateMachines` is the SAME list object
+        // in all 3 SMCs. When dupe1 creates IdleMonitor.Instance(smc1), its ctor calls
+        // smc1.AddStateMachineInstance(this) → appended to the shared list. GetSMI
+        // iterates from index 0 → always returns dupe0's IdleMonitor for everyone.
+        //
+        // Fix: assign a new List to THIS dupe's SMC field. Since smc0/smc1/smc2 are
+        // distinct objects, `smc1.stateMachines = new List<>()` only changes smc1's
+        // field; smc0 and smc2 retain their reference to the old (or own) list.
+        smc.stateMachines = new List<StateMachine.Instance>();
+
+        // ── Step 6: Reset shared ChoreConsumer/ChoreProvider references ──────
+        // Same MemberwiseClone issue: providers, choreProvider, choreWorldMap etc.
+        // are shared. Reset all to fresh instances before RationalAi creates SMs
+        // (IdleMonitor → IdleChore goes to cp.choreWorldMap; must be fresh).
+        ResetSharedReferences(go);
+
+        // ── Step 7: Start all 52 SMs via RationalAi.Instance ─────────────────
+        // Mirrors BaseMinionConfig.BaseOnSpawn minus the sensor setup (done above).
+        // RationalAi.alive.ToggleStateMachineList(GetStateMachinesToRunWhenAlive)
+        // calls each factory function → creates and starts every sub-SM (IdleMonitor,
+        // DeathMonitor, BreathMonitor, etc.) into THIS dupe's fresh stateMachines list.
+        var allSmFactories = BaseMinionConfig.BaseRationalAiStateMachines()
+            .Concat(new Func<RationalAi.Instance, StateMachine.Instance>[] {
+                // Additional 9 SMs from MinionConfig.RATIONAL_AI_STATE_MACHINES
+                (smi) => new BreathMonitor.Instance(smi.master),
+                (smi) => new SteppedInMonitor.Instance(smi.master),
+                (smi) => new Dreamer.Instance(smi.master),
+                (smi) => new StaminaMonitor.Instance(smi.master),
+                (smi) => new RationMonitor.Instance(smi.master),
+                (smi) => new CalorieMonitor.Instance(smi.master),
+                (smi) => new BladderMonitor.Instance(smi.master),
+                (smi) => new HygieneMonitor.Instance(smi.master),
+                (smi) => new TiredMonitor.Instance(smi.master)
+            }).ToArray();
+        var rationalAiSmi = new RationalAi.Instance(smc, new Tag("Minion"));
+        rationalAiSmi.stateMachinesToRunWhenAlive = allSmFactories;
+        rationalAiSmi.StartSM(); // → root.Enter → alive.Enter → ToggleStateMachineList → 52 SMs start
+
+        // ── Step 8: Own ChoreProvider in providers ───────────────────────────
+        // RationalAi.Instance ctor (via AddUrge) may touch consumer.urges (already fresh).
+        // AddProvider wires cp into consumer.providers so FindNextChore iterates it.
+        var consumerPost = go.GetComponent<ChoreConsumer>();
+        if (consumerPost != null)
+            consumerPost.AddProvider(go.GetComponent<ChoreProvider>());
+
+        // ── Step 9: Navigator transition layers (all 7 from BaseOnSpawn) ─────
+        var nav = go.GetComponent<Navigator>();
+        if (nav?.transitionDriver != null) {
+            nav.transitionDriver.overrideLayers.Add(new BipedTransitionLayer(nav, 3.325f, 2.5f));
+            nav.transitionDriver.overrideLayers.Add(new DoorTransitionLayer(nav));
+            nav.transitionDriver.overrideLayers.Add(new TubeTransitionLayer(nav));
+            nav.transitionDriver.overrideLayers.Add(new LadderDiseaseTransitionLayer(nav));
+            nav.transitionDriver.overrideLayers.Add(new ReactableTransitionLayer(nav));
+            nav.transitionDriver.overrideLayers.Add(new NavTeleportTransitionLayer(nav));
+            nav.transitionDriver.overrideLayers.Add(new SplashTransitionLayer(nav));
         }
 
-        // Primary: BaseMinionConfig.BaseOnSpawn — adds all 8 sensors, starts all 52 SMs
-        // via RationalAi.Instance.StartSM(), adds 7 navigator transition layers.
-        // Mirrors exactly what the real game does in MinionConfig.OnSpawn().
-        var baseOnSpawnOk = false;
-        try {
-            BaseMinionConfig.BaseOnSpawn(go, new Tag("Minion"), BaseMinionConfig.BaseRationalAiStateMachines());
-            baseOnSpawnOk = true;
-            Debug.LogWarning($"[FixRationalAi] {go.name}: baseOnSpawnOk=True");
-            // DS-007 (success path): own ChoreProvider in providers.
-            var consumerSuccess = go.GetComponent<ChoreConsumer>();
-            if (consumerSuccess != null) consumerSuccess.AddProvider(go.GetComponent<ChoreProvider>());
-        } catch (Exception ex) {
-            // Full chain: type, message, full stack, inner exception
-            Debug.LogWarning($"[FixRationalAi] {go.name}: BaseOnSpawn EXCEPTION: {ex.GetType().Name}: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}");
-            // Directly probe AssignableReachabilitySensor ctor to isolate exact crash line
-            try {
-                var sensors = go.GetComponent<Sensors>();
-                var ars = new AssignableReachabilitySensor(sensors);
-                Debug.LogWarning($"[FixRationalAi] {go.name}: Direct ARS ctor: OK (unexpected)");
-            } catch (Exception e2) {
-                Debug.LogWarning($"[FixRationalAi] {go.name}: Direct ARS ctor CRASH: {e2.GetType().Name}: {e2.Message}\nStack: {e2.StackTrace}");
-            }
-        }
-
-        if (!baseOnSpawnOk) {
-            // Fallback: minimal sensor set + critical monitors only.
-            // PathProberSensor + SafeCellSensor: needed for SafeFlags / IdleCellQuery allMet.
-            // IdleCellSensor: finds the idle cell Brain picks for IdleChore.
-            // AssignableReachabilitySensor EXCLUDED: ctor NPEs on assignableProxy.Get().
-            var sensorsFb = go.GetComponent<Sensors>();
-            if (sensorsFb != null) {
-                sensorsFb.Add(new PathProberSensor(sensorsFb));
-                sensorsFb.Add(new SafeCellSensor(sensorsFb));
-                sensorsFb.Add(new IdleCellSensor(sensorsFb));
-            }
-
-            // Reset shared mutable references BEFORE IdleMonitor creation.
-            // On the save-load path, CloneSingle is bypassed; Unity uses MemberwiseClone
-            // internally. MemberwiseClone is a shallow copy — all reference-type fields
-            // (List<>, Dictionary<>, class instances) are SHARED across all dupe clones.
-            // Diagnostic confirmed (752c1a4): providersBefore=4,5,6 (shared list),
-            // cpChores=1 for CP0 only (shared choreProvider pointing to dupe0's CP).
-            // Must happen before IdleMonitor.Instance(smc) so the new IdleChore is stored
-            // in THIS dupe's own fresh choreWorldMap under the correct world key.
-            ResetSharedReferences(go);
-
-            // IdleMonitor first so IdleChore exists in ChoreProvider before other monitors.
-            var idleMonitorSmi = new IdleMonitor.Instance(smc);
-            // Wrap StartSM in try-catch to surface any silent exception that would leave
-            // IdleChore uncreated (team-lead hypothesis: StartSM throws → no IdleChore).
-            try {
-                idleMonitorSmi.StartSM();
-            } catch (Exception startEx) {
-                Console.WriteLine($"[IDLE_DIAG] go={go.GetInstanceID()}: StartSM THREW: {startEx.GetType().Name}: {startEx.GetBaseException().Message}");
-            }
-            // Post-StartSM state: verify GetSMI finds the instance and it is running.
-            var idleMon = smc.GetSMI<IdleMonitor.Instance>();
-            var cp2 = go.GetComponent<ChoreProvider>();
-            int choreMapTotal = 0;
-            if (cp2?.choreWorldMap != null)
-                foreach (var v in cp2.choreWorldMap.Values) choreMapTotal += v?.Count ?? 0;
-            Console.WriteLine($"[IDLE_DIAG] go={go.GetInstanceID()} smc={smc.GetHashCode()} " +
-                $"created={idleMonitorSmi.GetHashCode()} getSMI={idleMon?.GetHashCode().ToString() ?? "NULL"} " +
-                $"isRunning={idleMon?.IsRunning().ToString() ?? "N/A"} " +
-                $"choreMapTotal={choreMapTotal}");
-
-            // Own ChoreProvider in providers (AddProvider mirrors OnPrefabInit behaviour).
-            var consumerFallback = go.GetComponent<ChoreConsumer>();
-            if (consumerFallback != null)
-                consumerFallback.AddProvider(go.GetComponent<ChoreProvider>());
-
-            StartMonitor<BreathMonitor>(smc,  "BreathMonitor");
-            StartMonitor<CalorieMonitor>(smc, "CalorieMonitor");
-            StartMonitor<BladderMonitor>(smc, "BladderMonitor");
-            StartMonitor<StaminaMonitor>(smc, "StaminaMonitor");
-
-            // Navigator transition layers (BaseOnSpawn adds them; must add manually in fallback).
-            var navFb = go.GetComponent<Navigator>();
-            if (navFb?.transitionDriver != null) {
-                navFb.transitionDriver.overrideLayers.Add(new BipedTransitionLayer(navFb, 3.325f, 2.5f));
-                navFb.transitionDriver.overrideLayers.Add(new DoorTransitionLayer(navFb));
-                navFb.transitionDriver.overrideLayers.Add(new LadderDiseaseTransitionLayer(navFb));
-                navFb.transitionDriver.overrideLayers.Add(new NavTeleportTransitionLayer(navFb));
-            }
-        }
-
-        // Navigator SM: BaseOnSpawn adds transition layers but does NOT call nav.smi.StartSM().
-        // The SM must be started so normal.moving fires and Navigator.Advance() works.
+        // ── Step 10: Navigator SM init + start ───────────────────────────────
+        // BaseOnSpawn does NOT call nav.smi.StartSM(). Must start explicitly so
+        // normal.moving fires and Navigator.Advance() works.
         var nav3 = go.GetComponent<Navigator>();
-        if (nav3 != null && !nav3.IsInitialized()) {
-            try {
-                nav3.InitializeComponent();
-                Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent OK, NavGrid={nav3.NavGrid?.id ?? "null"}");
-            } catch (Exception ex) {
-                Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.InitializeComponent partial: {ex.GetBaseException().Message}");
-            }
-        }
-        if (nav3 != null && nav3.GetSMI() == null) {
-            try {
-                nav3.smi.StartSM(); // lazy-creates instance, transitions to normal.stopped
-                Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM() called, smi={nav3.GetSMI() != null}");
-            } catch (Exception ex) {
-                Console.WriteLine($"[FixRationalAi] {go.name}: Navigator.smi.StartSM partial: {ex.GetBaseException().Message}");
-            }
-        }
+        if (nav3 != null && !nav3.IsInitialized())
+            nav3.InitializeComponent();
+        if (nav3 != null && nav3.GetSMI() == null)
+            nav3.smi.StartSM(); // lazy-creates instance, transitions to normal.stopped
 
         // DS-006 fix (complete): StandardWorker must exist BEFORE StatesInstance.ctor runs.
         // StatesInstance.ctor sets: worker = GetComponent<WorkerBase>().
@@ -311,7 +264,7 @@ public static class MinionPrefab {
             }
         }
 
-        Console.WriteLine($"[FixRationalAi] {go.name}: OK (baseOnSpawnOk={baseOnSpawnOk})");
+        Console.WriteLine($"[FixRationalAi] {go.name}: OK");
     }
 
     /// <summary>
@@ -323,45 +276,32 @@ public static class MinionPrefab {
     /// The GO must be inactive when components are added so Awake/OnPrefabInit fires only
     /// once, after SetTarget is called — matching the game's KInstantiate flow.
     /// </summary>
+    /// <summary>
+    /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.
+    ///
+    /// In headless, Assets.GetPrefab is unavailable, so ValidateProxy() would NPE.
+    /// We bypass it entirely and create the proxy directly, replicating
+    /// MinionAssignablesProxyConfig.CreatePrefab() + InitAssignableProxy().
+    /// The GO must be inactive when components are added so Awake/OnPrefabInit fires
+    /// only once, after SetTarget is called — matching the real game's KInstantiate flow.
+    /// </summary>
     private static void EnsureAssignableProxy(GameObject go, MinionIdentity identity) {
         if (identity.assignableProxy?.Get() != null) return;
 
-        // Try the standard game path first.
-        try {
-            identity.ValidateProxy();
-            if (identity.assignableProxy?.Get() != null) {
-                Debug.LogWarning($"[FixRationalAi] {go.name}: ValidateProxy OK");
-                return;
-            }
-            Debug.LogWarning($"[FixRationalAi] {go.name}: ValidateProxy returned but proxy still null — using direct creation");
-        } catch (Exception ex) {
-            Debug.LogWarning($"[FixRationalAi] {go.name}: ValidateProxy threw ({ex.GetBaseException().Message}) — using direct proxy creation");
-        }
+        var proxyGO = new GameObject("MinionAssignablesProxy");
+        proxyGO.SetActive(false);          // suppress Awake until fully wired
+        proxyGO.AddOrGet<Ownables>();      // proxy.GetComponents<Assignables>() must be non-empty
+        proxyGO.AddOrGet<Equipment>();     // ConfigureAssignableSlots needs Equipment for EquipmentSlots
+        proxyGO.AddOrGet<KPrefabID>();     // Ref<T>.Set needs KPrefabID.InstanceID to be valid
 
-        // Fallback: create the MinionAssignablesProxy GO directly, bypassing Assets.GetPrefab.
-        // Replicates MinionAssignablesProxyConfig.CreatePrefab() + InitAssignableProxy().
-        // Create INACTIVE so Awake/OnPrefabInit fires only after SetTarget is called.
-        try {
-            var proxyGO = new GameObject("MinionAssignablesProxy");
-            proxyGO.SetActive(false);          // suppress Awake until fully wired
-            proxyGO.AddOrGet<Ownables>();      // AssignableReachabilitySensor.GetComponents<Assignables>()
-            proxyGO.AddOrGet<Equipment>();     // ConfigureAssignableSlots needs Equipment for EquipmentSlots
-            proxyGO.AddOrGet<KPrefabID>();     // Ref<T>.Set(proxy) calls proxy.GetComponent<KPrefabID>().InstanceID
-                                               //   → NPE if KPrefabID absent → proxy obj field never stored
-                                               //   → assignableProxy.Get() returns null in ARS.ctor → NPE
-            var proxy = proxyGO.AddOrGet<MinionAssignablesProxy>();
+        var proxy = proxyGO.AddOrGet<MinionAssignablesProxy>();
 
-            // Wire ref BEFORE SetActive so OnPrefabInit (fired on activation) can use it.
-            if (identity.assignableProxy == null)
-                identity.assignableProxy = new Ref<MinionAssignablesProxy>();
-            identity.assignableProxy.Set(proxy);
-            proxy.SetTarget(identity, go);    // mirrors SetTarget call in InitAssignableProxy
+        if (identity.assignableProxy == null)
+            identity.assignableProxy = new Ref<MinionAssignablesProxy>();
+        identity.assignableProxy.Set(proxy);
+        proxy.SetTarget(identity, go);
 
-            proxyGO.SetActive(true);           // Awake fires → OnPrefabInit → ConfigureAssignableSlots
-            Debug.LogWarning($"[FixRationalAi] {go.name}: direct proxy creation OK, proxy={identity.assignableProxy.Get() != null}");
-        } catch (Exception ex) {
-            Debug.LogWarning($"[FixRationalAi] {go.name}: direct proxy creation FAILED:\n{ex}");
-        }
+        proxyGO.SetActive(true);           // Awake fires → OnPrefabInit → ConfigureAssignableSlots
     }
 
     /// <summary>
@@ -407,25 +347,4 @@ public static class MinionPrefab {
         cp.choreWorldMap = new Dictionary<int, List<Chore>>();
     }
 
-    /// <summary>
-    /// Starts a StateMachine.Instance for the given SM type on the target.
-    /// Mirrors the IdleMonitor pattern: new TSM.Instance(target); instance.StartSM().
-    /// Uses reflection to construct TSM.Instance — avoids complex nested generic constraints.
-    /// Wrapped in try/catch — monitors access Db.Amounts which may be partial in headless.
-    /// </summary>
-    private static void StartMonitor<TSM>(IStateMachineTarget target, string name)
-        where TSM : StateMachine {
-        try {
-            var instanceType = typeof(TSM).GetNestedType("Instance");
-            if (instanceType == null) {
-                Console.WriteLine($"[StartMonitor] {name}: nested Instance type not found");
-                return;
-            }
-            var instance = (StateMachine.Instance)Activator.CreateInstance(instanceType, target);
-            instance.StartSM();
-            Console.WriteLine($"[StartMonitor] {name}: started OK");
-        } catch (Exception ex) {
-            Console.WriteLine($"[StartMonitor] {name}: {ex.GetBaseException().Message}");
-        }
-    }
 }
