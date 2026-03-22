@@ -724,6 +724,10 @@ public class WorldBuilder {
                 var ndsGo = new GameObject("NameDisplayScreen");
                 var nds = ndsGo.AddComponent<NameDisplayScreen>();
                 nds.InitializeComponent(); // OnPrefabInit → Instance = this
+                // Fallback: if InitializeComponent crashed before "Instance = this" ran (line 113),
+                // set Instance directly so OxygenBreather.OnSpawn[142] doesn't NPE.
+                // NameDisplayScreen.Instance is a public static field — direct write, no Harmony.
+                if (NameDisplayScreen.Instance == null) NameDisplayScreen.Instance = nds;
                 Console.WriteLine($"[WorldBuilder] NameDisplayScreen.Instance ready: {NameDisplayScreen.Instance != null}");
             } catch (Exception ex) {
                 Console.WriteLine($"[WorldBuilder] NameDisplayScreen init partial: {ex.GetBaseException().Message}");
@@ -1491,9 +1495,20 @@ public class WorldBuilder {
     }
 
     private void FixRationalAi() {
-        foreach (var go in _spawnedMinions)
-            MinionPrefab.Setup(go);
-        Console.WriteLine($"[WorldBuilder] FixRationalAi done: {_spawnedMinions.Count} minion(s)");
+        // Catch-and-continue per dupe: diagnostic pass must see all 3 dupes' failures,
+        // not just the first. MinionPrefab.Setup() logs+rethrows on each step failure;
+        // the catch here prevents one dupe's failure from masking the others.
+        int ok = 0, failed = 0;
+        foreach (var go in _spawnedMinions) {
+            try {
+                MinionPrefab.Setup(go);
+                ok++;
+            } catch (Exception ex) {
+                Console.WriteLine($"[FixRationalAi] {go.name} Setup FAILED: {ex.GetType().Name}: {ex.Message}");
+                failed++;
+            }
+        }
+        Console.WriteLine($"[WorldBuilder] FixRationalAi done: {ok} OK, {failed} FAILED (of {_spawnedMinions.Count})");
     }
 
     /// <summary>
