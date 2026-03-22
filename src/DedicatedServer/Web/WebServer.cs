@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -96,6 +97,16 @@ public class WebServer {
     }
 
     private void HandleApiRequest(HttpListenerContext context, string path) {
+        // Debug endpoints work without realWorld — they read live game components directly.
+        if (path == "/api/debug/sms") {
+            SendJson(context.Response, 200, BuildSmsDiag());
+            return;
+        }
+        if (path == "/api/debug/dupes") {
+            SendJson(context.Response, 200, BuildDupesDiag());
+            return;
+        }
+
         if (realWorld == null) {
             SendJson(context.Response, 503, new { error = "World not loaded yet" });
             return;
@@ -170,6 +181,79 @@ public class WebServer {
         context.Response.ContentLength64 = content.Length;
         context.Response.OutputStream.Write(content, 0, content.Length);
         context.Response.OutputStream.Close();
+    }
+
+    /// <summary>
+    /// GET /api/debug/sms — for each live minion GO: smCount + list of crashed SM types.
+    /// Accessed from background thread; catches ConcurrentModificationException gracefully.
+    /// </summary>
+    private static object BuildSmsDiag() {
+        try {
+            var result = new List<object>();
+            foreach (var identity in Components.LiveMinionIdentities.Items) {
+                if (identity == null) continue;
+                var go  = identity.gameObject;
+                var smc = go.GetComponent<StateMachineController>();
+                if (smc?.stateMachines == null) {
+                    result.Add(new { go = go.GetInstanceID(), name = go.name, smCount = 0, crashed = new object[0] });
+                    continue;
+                }
+                var crashed = new List<object>();
+                for (var i = 0; i < smc.stateMachines.Count; i++) {
+                    var sm = smc.stateMachines[i];
+                    if (sm == null) continue;
+                    var typeName = sm.GetType().DeclaringType?.FullName ?? sm.GetType().FullName;
+                    if (sm.isCrashed)
+                        crashed.Add(new { index = i, typeName });
+                }
+                result.Add(new {
+                    go       = go.GetInstanceID(),
+                    name     = go.name,
+                    smCount  = smc.stateMachines.Count,
+                    crashed
+                });
+            }
+            return result;
+        } catch (Exception ex) {
+            return new { error = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// GET /api/debug/dupes — per-dupe movement + chore + SM error diagnostics.
+    /// </summary>
+    private static object BuildDupesDiag() {
+        try {
+            var globalError = StateMachine.Instance.error;
+            var result = new List<object>();
+            foreach (var identity in Components.LiveMinionIdentities.Items) {
+                if (identity == null) continue;
+                var go       = identity.gameObject;
+                var smc      = go.GetComponent<StateMachineController>();
+                var consumer = go.GetComponent<ChoreConsumer>();
+                var driver   = go.GetComponent<ChoreDriver>();
+                var nav      = go.GetComponent<Navigator>();
+                var idleMon  = smc?.GetSMI<IdleMonitor.Instance>();
+                var chore    = driver?.GetCurrentChore();
+                var cp       = go.GetComponent<ChoreProvider>();
+
+                result.Add(new {
+                    go             = go.GetInstanceID(),
+                    name           = go.name,
+                    cell           = Grid.PosToCell(go),
+                    currentChore   = chore?.GetType().Name ?? "null",
+                    navIsMoving    = nav?.IsMoving() ?? false,
+                    globalSMError  = globalError,
+                    idleMonState   = idleMon?.GetCurrentState()?.name ?? "null",
+                    idleMonCrashed = idleMon?.isCrashed ?? false,
+                    choreMapCount  = cp?.choreWorldMap?.Values.Sum(v => v?.Count ?? 0) ?? -1,
+                    providers      = consumer?.providers?.Count ?? -1
+                });
+            }
+            return new { globalSMError = globalError, dupes = result };
+        } catch (Exception ex) {
+            return new { error = ex.Message };
+        }
     }
 
     private static void SendJson(HttpListenerResponse response, int statusCode, object data) {
