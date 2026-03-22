@@ -122,6 +122,26 @@ public static class MinionPrefab {
         // ── Step 6: smc.stateMachines isolation ──────────────────────────────
         S(id, "6-smc.stateMachines", () => smc.stateMachines = new List<StateMachine.Instance>());
 
+        // ── Step 6b: unique dupe name ─────────────────────────────────────────
+        // After MemberwiseClone on save-load, all 3 dupes share the same go.name
+        // (e.g. "Alisa" for all three). Each MinionIdentity has its own serialized
+        // nameStringKey and personalityResourceId from the save file — use those.
+        // SetName(name) sets both identity.name (MonoBehaviour.name) and go.name.
+        S(id, "6b-unique-name", () => {
+            var identity = go.GetComponent<MinionIdentity>();
+            if (identity == null) return;
+            // Prefer personality Name (canonical display name); fall back to nameStringKey.
+            string uniqueName = null;
+            if (identity.personalityResourceId != HashedString.Invalid)
+                uniqueName = Db.Get().Personalities.Get(identity.personalityResourceId)?.Name;
+            if (string.IsNullOrEmpty(uniqueName))
+                uniqueName = identity.nameStringKey;
+            if (!string.IsNullOrEmpty(uniqueName) && go.name != uniqueName) {
+                identity.SetName(uniqueName);
+                Console.WriteLine($"[SETUP] renamed dupe → {uniqueName}");
+            }
+        });
+
         // ── Step 7: ResetSharedReferences ────────────────────────────────────
         S(id, "7-ResetSharedRefs", () => ResetSharedReferences(go));
 
