@@ -166,6 +166,26 @@ public class GameTickLoop {
                     $"providers({providerList?.Count ?? -1})=[{sb.ToString().TrimEnd()}] " +
                     $"smi={(smi != null ? "ok" : "null")} smiRunning={smi?.IsRunning()}");
 
+                // Nav + cell diagnostic for Minions at tick=61 (after sensor warmup).
+                // Hypothesis 1: nav.cachedCell != physicalCell → pathfinding uses wrong origin.
+                // Hypothesis 2: idleCell == cachedCell → IdleChore finishes immediately (already there).
+                if (brain.gameObject.HasTag(GameTags.BaseMinion)) {
+                    try {
+                        var nav2       = brain.GetComponent<Navigator>();
+                        var sensors2   = brain.GetComponent<Sensors>();
+                        var idleSensor = sensors2?.GetSensor<IdleCellSensor>();
+                        var idleCell   = idleSensor?.GetCell() ?? -1;
+                        var physCell   = Grid.PosToCell(brain.transform.position);
+                        var navCell    = nav2?.cachedCell ?? -1;
+                        var cdSmi      = driver?.GetSMI() as ChoreDriver.StatesInstance;
+                        Debug.LogWarning($"[NavDiag] {brain.name}: physicalCell={physCell} nav.cachedCell={navCell} " +
+                            $"idleCell={idleCell} sameAsPhys={physCell == navCell} idleIsPhys={idleCell == physCell} " +
+                            $"choreDriverSmi={(cdSmi != null ? "ok" : "null")} choreDriverSmiRunning={cdSmi?.IsRunning()}");
+                    } catch (Exception e) {
+                        Debug.LogWarning($"[NavDiag] {brain.name} EXCEPTION: {e.GetBaseException().Message}");
+                    }
+                }
+
                 // Deep per-provider diagnostic only for Minions (not critters).
                 if (brain.gameObject.HasTag(GameTags.BaseMinion) && consumer.consumerState != null) {
                     try {
@@ -176,10 +196,13 @@ public class GameTickLoop {
                                 var failed    = new List<Chore.Precondition.Context>();
                                 provider.CollectChores(consumer.consumerState, succeeded, failed);
                                 Debug.LogWarning($"[ChoreDebug] {brain.name} provider={provider.GetType().Name} succeeded={succeeded.Count} failed={failed.Count}");
-                                foreach (var ctx in succeeded.Take(3))
-                                    Debug.LogWarning($"  -> chore={ctx.chore?.GetType().Name} priority={ctx.masterPriority}");
+                                foreach (var ctx in succeeded.Take(3)) {
+                                    // Log FullName + choreType.id to identify ChoreTableChore`2 actual type.
+                                    Debug.LogWarning($"  -> chore={ctx.chore?.GetType().FullName} " +
+                                        $"choreType.id={ctx.chore?.choreType?.Id} " +
+                                        $"priority={ctx.masterPriority}");
+                                }
                                 if (succeeded.Count == 0 && failed.Count > 0) {
-                                    // Show why top 3 chores failed (failedPreconditionId is the int id of the failing precondition).
                                     foreach (var ctx in failed.Take(3))
                                         Debug.LogWarning($"  xx failed chore={ctx.chore?.GetType().Name} failedPreconditionId={ctx.failedPreconditionId}");
                                 }
@@ -216,15 +239,23 @@ public class GameTickLoop {
             if (brain == null) continue;
             if (!brain.gameObject.HasTag(GameTags.BaseMinion)) continue;
             try {
-                var driver = brain.GetComponent<ChoreDriver>();
-                var nav    = brain.GetComponent<Navigator>();
+                var driver     = brain.GetComponent<ChoreDriver>();
+                var nav        = brain.GetComponent<Navigator>();
+                var sensors    = brain.GetComponent<Sensors>();
+                var idleSensor = sensors?.GetSensor<IdleCellSensor>();
+                var chore      = driver?.GetCurrentChore();
+                var physCell   = Grid.PosToCell(brain.transform.position);
+                var navCell    = nav?.cachedCell ?? -1;
+                var idleCell   = idleSensor?.GetCell() ?? -1;
                 // ChoreDriver.GetCurrentChore() is public: delegates to smi.sm.currentChore.Get(smi)
-                var chore  = driver?.GetCurrentChore();
                 Debug.LogWarning($"[Tick100] {brain.name}: " +
-                    $"chore={chore?.GetType().Name ?? "null"} " +
+                    $"chore={chore?.GetType().FullName ?? "null"} " +
+                    $"choreType.id={chore?.choreType?.Id ?? "null"} " +
                     $"isRunning={brain.IsRunning()} " +
-                    $"nav.cachedCell={nav?.cachedCell} " +
-                    $"nav.IsMoving={nav?.IsMoving()}");
+                    $"physicalCell={physCell} nav.cachedCell={navCell} cellMatch={physCell == navCell} " +
+                    $"idleCell={idleCell} idleIsPhys={idleCell == physCell} " +
+                    $"nav.IsMoving={nav?.IsMoving()} " +
+                    $"choreDriverSmi={(driver?.GetSMI() != null ? "ok" : "null")}");
             } catch (Exception e) {
                 Debug.LogWarning($"[Tick100] {brain.name} EXCEPTION: {e.GetBaseException().Message}");
             }
