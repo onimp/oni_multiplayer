@@ -205,7 +205,7 @@ public class RealWorldState {
         var navIsMoving = nav?.IsMoving() ?? false;
         var navCell     = nav != null ? Grid.PosToCell(go) : -1;
 
-        var name = go.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Minion";
+        var name = go.GetComponent<MinionIdentity>()?.nameStringKey ?? go.name;
         return BuildMinionDto(name, x, y, w, h, currentChore, smState, navIsMoving, navCell);
     }
 
@@ -217,7 +217,7 @@ public class RealWorldState {
     /// </para>
     /// Fields:
     ///   type         — always "duplicant"
-    ///   name         — prefab tag name (e.g. "Minion")
+    ///   name         — duplicant's personal name (MinionIdentity.nameStringKey, e.g. "Aaron")
     ///   x, y         — world position (rounded to int)
     ///   w, h         — bounding box in cells (typically 1×2 for a dupe)
     ///   currentChore — ChoreType.Name of the active chore, or null when idle/no chore
