@@ -165,29 +165,16 @@ public static class MinionPrefab {
             }
 
             // IdleMonitor first so IdleChore exists in ChoreProvider before other monitors.
-            //
-            // ROOT CAUSE (diagnostic confirmed): if CloneSingle list-reset didn't apply
-            // (e.g. save-load path bypasses CloneSingle), all SMCs share one stateMachines
-            // list. IdleMonitor ctors all add to the same list → GetSMI always returns [0]
-            // (dupe 0's instance) → only 1 IdleChore exists → dupes 1+2 stuck.
-            //
-            // FIX: reset smc.stateMachines to a NEW private list before creating the
-            // IdleMonitor. The ctor calls smc.AddStateMachineInstance(this) which will
-            // add the fresh instance to the now-isolated list. GetSMI on this smc will
-            // then return ONLY this dupe's instance, not another dupe's.
+            // NOTE: do NOT reset smc.stateMachines here — that caused a boot crash (8e0c637)
+            // by wiping the list on critter SMCs too (via CloneSingle's unguarded reset path).
+            // The tick-level diagnostic (6a4d58f) will show exactly WHEN the list gets shared
+            // so we can fix it correctly after. For now: just create and start the IdleMonitor.
             var smcListPre = (List<StateMachine.Instance>?) _smcStateMachinesField?.GetValue(smc);
-            Console.WriteLine($"[FixRationalAi] {go.name}: smc.stateMachines pre-reset listHash={smcListPre?.GetHashCode()} count={smcListPre?.Count}");
-            // Always give this SMC its own fresh list — idempotent if already isolated.
-            var freshList = new List<StateMachine.Instance>();
-            _smcStateMachinesField?.SetValue(smc, freshList);
+            Console.WriteLine($"[FixRationalAi] {go.name}: smc.stateMachines pre-IdleMonitor listHash={smcListPre?.GetHashCode()} count={smcListPre?.Count}");
 
             var idleMonitorSmi = new IdleMonitor.Instance(smc);
-            // Force-add directly to the fresh list (constructor used AddStateMachineInstance
-            // which now targets freshList; belt-and-suspenders in case ctor path differs).
-            if (!freshList.Contains(idleMonitorSmi))
-                freshList.Add(idleMonitorSmi);
             idleMonitorSmi.StartSM();
-            Console.WriteLine($"[FixRationalAi] {go.name}: fallback IdleMonitor started hash={idleMonitorSmi.GetHashCode()} listHash={freshList.GetHashCode()} count={freshList.Count}");
+            Console.WriteLine($"[FixRationalAi] {go.name}: fallback IdleMonitor started hash={idleMonitorSmi.GetHashCode()}");
             // DS-007 (fallback path): own ChoreProvider in providers.
             // BaseOnSpawn crashed at ARS — providers list was never populated.
             // Must be here, immediately after IdleMonitor.StartSM(), so the IdleChore
