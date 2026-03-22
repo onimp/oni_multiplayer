@@ -193,25 +193,39 @@ public static class MinionPrefab {
             }
         }
 
-        // ChoreDriver SM: mirrors ChoreDriver.OnSpawn() which calls base.smi.StartSM().
-        // In the fallback path OnSpawn() never ran → GetSMI()==null → SetChore() NPEs
-        // (smi.sm.nextChore.Set() on null smi) → chore never assigned even though
-        // ChoreTableChore`2 is found by CollectChores.
-        // Guarded with GetSMI()==null so we don't double-start when BaseOnSpawn succeeded.
+        // DS-006 fix (complete): StandardWorker must exist BEFORE StatesInstance.ctor runs.
+        // StatesInstance.ctor sets: worker = GetComponent<WorkerBase>().
+        // If StandardWorker is absent at ctor time (headless prefab bootstrap may fail),
+        // worker=null → haschore.Update b__5_3 [0x0075]: smi.worker.GetWorkable() → NPE
+        // every SIM_EVERY_TICK, propagating to Program.Main catch handler + aborting the subtick.
+        //
+        // Original fix was guarded: only added StandardWorker when GetSMI()==null (SM not
+        // yet started). Bug: for dupes whose TriggerLifecycle ran OnSpawn() successfully,
+        // GetSMI()!=null → guard skipped → StandardWorker never added → worker=null baked in.
+        //
+        // Full fix:
+        //   1. AddOrGet<StandardWorker>() unconditionally (no-op if already present).
+        //   2. Start SM only when not already started (avoids double-start).
+        //   3. If SM is already running but worker==null (ctor ran before StandardWorker was
+        //      added), patch the live SMI directly — worker is a public field.
+        go.AddOrGet<StandardWorker>();
         var choreDriver = go.GetComponent<ChoreDriver>();
-        if (choreDriver != null && choreDriver.GetSMI() == null) {
-            // StatesInstance.ctor sets worker = GetComponent<WorkerBase>().
-            // BaseMinionConfig.BaseMinion() adds StandardWorker (which : WorkerBase) at line 89,
-            // but in headless the prefab bootstrap may not complete → StandardWorker absent →
-            // worker=null → haschore.Update lambda (b__5_3) at IL[0x75] NPEs on
-            // smi.worker.GetWorkable() every tick, firing 522K+ errors/5min and freezing GameClock.
-            // AddOrGet is a no-op if StandardWorker is already present (BaseOnSpawn path).
-            go.AddOrGet<StandardWorker>();
-            try {
-                choreDriver.smi.StartSM(); // lazy-creates StatesInstance, enters nochore
-                Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM started (smi={choreDriver.GetSMI() != null})");
-            } catch (Exception ex) {
-                Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM start failed: {ex.GetBaseException().Message}");
+        if (choreDriver != null) {
+            if (choreDriver.GetSMI() == null) {
+                try {
+                    choreDriver.smi.StartSM(); // lazy-creates StatesInstance, enters nochore
+                    Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM started (smi={choreDriver.GetSMI() != null})");
+                } catch (Exception ex) {
+                    Debug.LogWarning($"[FixRationalAi] {go.name}: ChoreDriver SM start failed: {ex.GetBaseException().Message}");
+                }
+            }
+            // Retrofit: SM was started by TriggerLifecycle before StandardWorker was added.
+            // Patch the live SMI's worker field so haschore.Update no longer NPEs.
+            var smiInst = choreDriver.GetSMI<ChoreDriver.StatesInstance>();
+            if (smiInst != null && smiInst.worker == null) {
+                smiInst.worker = go.GetComponent<WorkerBase>();
+                if (smiInst.worker != null)
+                    Console.WriteLine($"[FixRationalAi] {go.name}: patched smi.worker → {smiInst.worker.GetType().Name}");
             }
         }
 

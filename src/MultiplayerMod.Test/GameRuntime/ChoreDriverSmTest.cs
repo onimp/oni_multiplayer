@@ -95,6 +95,67 @@ public class ChoreDriverSmTest : PlayableGameTest {
             "before driver.Spawn() so StatesInstance.ctor finds WorkerBase → no NPE at b__5_3 IL[0x0075].");
     }
 
+    // ─── DS-006b: retrofit patch — SM started before StandardWorker ─────────
+    // Scenario: TriggerLifecycle ran ChoreDriver.OnSpawn() (→ StartSM → ctor → worker=null)
+    // BEFORE FixRationalAi/MinionPrefab.Setup() had a chance to add StandardWorker.
+    // The old guard (if GetSMI()==null) skipped AddOrGet<StandardWorker>() for these dupes.
+    // Fix: unconditional AddOrGet + direct field patch on the live SMI.
+
+    /// <summary>
+    /// Regression: when SM is started BEFORE StandardWorker is on the GO (simulates
+    /// TriggerLifecycle path), smi.worker is null even after AddOrGet&lt;StandardWorker&gt;()
+    /// — because ctor already ran and captured GetComponent&lt;WorkerBase&gt;()=null.
+    /// Adding StandardWorker later does NOT automatically update the live SMI field.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_WorkerRetrofit_SmStartedBeforeStandardWorker_WorkerIsNull() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+
+        // Simulate TriggerLifecycle: SM started BEFORE StandardWorker added.
+        driver.smi.StartSM();
+
+        // Now add StandardWorker (as FixChoreConsumers/MinionPrefab.Setup would do later).
+        go.AddOrGet<StandardWorker>();
+
+        var smi = driver.GetSMI<ChoreDriver.StatesInstance>();
+        Assert.IsNull(smi.worker,
+            "worker is still null after AddOrGet<StandardWorker>() when SM was started first. " +
+            "StatesInstance.ctor already ran and captured GetComponent<WorkerBase>()=null. " +
+            "Adding StandardWorker after the fact does not retroactively update smi.worker — " +
+            "this is the root cause of DS-006 resurfacing for 2 of 3 dupes at tick=991.");
+    }
+
+    /// <summary>
+    /// Fix for DS-006 retrofit: after adding StandardWorker, directly assign
+    /// smiInst.worker = go.GetComponent&lt;WorkerBase&gt;() to patch the live SMI.
+    /// This is what MinionPrefab.Setup() now does unconditionally after StartSM.
+    /// </summary>
+    [Test]
+    public void ChoreDriver_WorkerRetrofit_PatchLiveSmi_WorkerIsNotNull() {
+        var go = createGameObject();
+        go.AddComponent<ChoreConsumer>();
+        var driver = go.AddComponent<ChoreDriver>();
+
+        // Simulate TriggerLifecycle: SM started BEFORE StandardWorker added.
+        driver.smi.StartSM();
+
+        // Simulate MinionPrefab.Setup() full fix:
+        //   Step 1 — unconditional AddOrGet<StandardWorker>()
+        go.AddOrGet<StandardWorker>();
+        //   Step 2 — retrofit: patch the live SMI's worker field directly
+        var smiInst = driver.GetSMI<ChoreDriver.StatesInstance>();
+        if (smiInst != null && smiInst.worker == null)
+            smiInst.worker = go.GetComponent<WorkerBase>();
+
+        Assert.IsNotNull(smiInst?.worker,
+            "worker must be non-null after retrofit patch. " +
+            "MinionPrefab.Setup() unconditionally adds StandardWorker then assigns " +
+            "smiInst.worker = go.GetComponent<WorkerBase>() so haschore.Update " +
+            "b__5_3 [0x0075] no longer NPEs on smi.worker.GetWorkable().");
+    }
+
     // ─── DS-005 tests (pre-existing) ────────────────────────────────────────
 
     /// <summary>
