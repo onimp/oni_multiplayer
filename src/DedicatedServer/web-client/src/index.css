@@ -942,6 +942,151 @@ header h1 {
   font-style: italic;
 }
 
+/* ── Dupe detail panel (sidebar section) ─────────────────────────────────── */
+.dupe-detail-panel {
+  background: rgba(10, 18, 40, 0.85);
+  border: 1px solid #0f3460;
+  border-radius: 5px;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.dupe-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 5px;
+  border-bottom: 1px solid #0f3460;
+  background: rgba(233, 69, 96, 0.08);
+}
+
+.dupe-detail-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4ecca3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dupe-detail-close {
+  background: none !important;
+  border: 1px solid #0f3460 !important;
+  color: #888 !important;
+  border-radius: 3px !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: unset !important;
+  cursor: pointer !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+}
+.dupe-detail-close:hover {
+  background: #e94560 !important;
+  color: #fff !important;
+  border-color: #e94560 !important;
+}
+
+.dupe-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 8px;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.4);
+}
+
+.dupe-detail-key {
+  color: #666;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.dupe-detail-val {
+  color: #c8c8c8;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dupe-detail-sm {
+  color: #a0c4e8;
+  font-size: 11px;
+}
+
+.dupe-detail-moving {
+  color: #4ecca3;
+  font-size: 11px;
+}
+
+/* Stamina / calories bars */
+.dupe-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.4);
+}
+
+.dupe-stat-label {
+  font-size: 11px;
+  color: #888;
+  width: 68px;
+  flex-shrink: 0;
+}
+
+.dupe-stat-bar-track {
+  flex: 1;
+  height: 7px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dupe-stat-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.dupe-stat-pct {
+  font-size: 11px;
+  color: #888;
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.dupe-detail-muted {
+  padding: 4px 8px 5px;
+  font-size: 10px;
+  color: #444;
+  font-style: italic;
+}
+
+/* Entity list row: detail panel open indicator */
+.entity-row--detail {
+  background: rgba(78, 204, 163, 0.1);
+  border-bottom-color: rgba(78, 204, 163, 0.25);
+}
+
+.entity-row--detail:hover {
+  background: rgba(78, 204, 163, 0.18);
+}
+
+.entity-row--detail .entity-row-name {
+  color: #4ecca3;
+}
+
 .timeline-scrub-badge {
   flex-shrink: 0;
   padding: 1px 6px;

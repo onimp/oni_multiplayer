@@ -50,13 +50,19 @@ export default function App() {
   // Backoff state: current delay ms (0 = normal poll rate). Reset to 0 on success.
   const backoffRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track current connection state in a ref to avoid calling setConnected(true)
+  // on every successful poll when already connected — prevents React from
+  // scheduling 60 fiber reconciliations/sec for a no-op state update.
+  const connectedRef = useRef(false);
 
   const [overlay, setOverlay] = useState<OverlayMode>('element');
   const [showEntities, setShowEntities] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [showMinimap, setShowMinimap] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(16);
+  // 200 ms default (5 Hz) — game ticks at 3–20/s so 5 Hz captures every tick at
+  // 1× speed and every other at 3× speed, while cutting HTTP overhead 12× vs 16 ms.
+  const [refreshInterval, setRefreshInterval] = useState(200);
 
   // ── Tick history ──────────────────────────────────────────────────────────
   // Circular buffer of the last 200 unique-tick poll results.
@@ -133,6 +139,12 @@ export default function App() {
   // Keep the full EntityData so WorldCanvas can render the tooltip without a separate lookup.
   const [pinnedEntity, setPinnedEntity] = useState<EntityData | null>(null);
 
+  // ── Dupe detail panel ────────────────────────────────────────────────────
+  // selectedDupeName holds the name of the dupe whose detail panel is open.
+  // The full EntityData is re-derived from live displayEntities each render so
+  // the panel always shows current stamina/chore rather than stale snapshot.
+  const [selectedDupeName, setSelectedDupeName] = useState<string | null>(null);
+
   const handlePinEntity = useCallback((entity: EntityData | null) => {
     setPinnedEntityName(entity?.name ?? null);
     setPinnedEntity(entity);
@@ -157,6 +169,11 @@ export default function App() {
     setPinnedEntity(null);
   }, []);
 
+  const handleSelectDupe = useCallback((entity: EntityData) => {
+    // Toggle: clicking the same dupe again closes the panel.
+    setSelectedDupeName(prev => prev === entity.name ? null : entity.name);
+  }, []);
+
   // Initial full load (world + entities + state + elements)
   const refresh = useCallback(async () => {
     try {
@@ -177,7 +194,7 @@ export default function App() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Fast poll: entities + state at refreshInterval (default 16ms → ~60 UPS).
+  // Fast poll: entities + state at refreshInterval (default 200ms → ~5 UPS).
   // On error: exponential backoff 1s→2s→4s→8s→10s (max). Resets on success.
   // Skips cycles if a fetch is still in-flight to avoid pile-up.
   useEffect(() => {
@@ -206,14 +223,15 @@ export default function App() {
         fetching = true;
         Promise.all([fetchEntities(), fetchGameState()])
           .then(([ent, st]) => {
-            // setConnected is idempotent — React bails out when already true (no re-render).
-            setConnected(true);
+            // Only flip connected state on transition (false→true) to avoid
+            // scheduling a React fiber reconcile on every poll when already connected.
+            if (!connectedRef.current) { connectedRef.current = true; setConnected(true); }
             backoffRef.current = 0;
             clearCountdown();
             // Only update React state when the game tick advances.
-            // Fast polls at 16ms may return the same tick many times (e.g. the game
-            // runs at 3–20 ticks/sec but we poll at 60Hz).  Calling setEntities on
-            // every poll triggers full React reconciliation 60×/sec for no benefit.
+            // Even at 200ms intervals the game may return the same tick (e.g. paused
+            // or at 1×).  Calling setEntities on every poll triggers full React
+            // reconciliation for no benefit — skip when tick is unchanged.
             if (ent.tick !== getLatestTick(tickBufferRef.current)?.tick) {
               setEntities(ent);
               setGameState(st);
@@ -222,6 +240,7 @@ export default function App() {
             }
           })
           .catch(() => {
+            connectedRef.current = false;
             setConnected(false);
             setGameState(null);  // clear stale stats so StatsBar shows — not old values
             const next = backoffRef.current === 0 ? 1000 : Math.min(backoffRef.current * 2, 10000);
@@ -255,6 +274,12 @@ export default function App() {
   const displayGameState = pastedGameState ?? scrubbedSnap?.gameState ?? gameState;
   // Keep ref in sync so the keydown handler (deps=[]) always reads current value.
   displayGameStateRef.current = displayGameState;
+
+  // Re-derive the selected dupe entity from live displayEntities each render so
+  // the detail panel always shows current stamina/chore/state (not stale snapshot).
+  const selectedDupe = selectedDupeName
+    ? (displayEntities?.entities.find(e => e.name === selectedDupeName && e.type === 'duplicant') ?? null)
+    : null;
 
   const connStatus = deriveConnectionStatus({
     connected,
@@ -295,6 +320,7 @@ export default function App() {
             actionsRef={canvasActionsRef}
             showMinimap={showMinimap}
             onCellInspect={setInspectedCell}
+            onDupeSelect={handleSelectDupe}
           />
           <TimelineScrubber
             ticks={bufferTicks}
@@ -325,6 +351,9 @@ export default function App() {
           onPasteStateJson={() => setShowPasteModal(true)}
           onClearPasted={() => setPastedGameState(null)}
           onPinEntity={handlePinEntity}
+          selectedDupe={selectedDupe}
+          onSelectDupe={handleSelectDupe}
+          onCloseDupe={() => setSelectedDupeName(null)}
         />
       </div>
     </div>

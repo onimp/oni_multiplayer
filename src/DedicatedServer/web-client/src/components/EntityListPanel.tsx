@@ -8,9 +8,13 @@ interface Props {
   entities: EntityData[];
   pinnedEntityName: string | null;
   onPinEntity: (entity: EntityData | null) => void;
+  /** Called when a duplicant row is clicked — opens the dupe detail panel. */
+  onSelectDupe?: (entity: EntityData) => void;
+  /** Name of the dupe currently shown in the detail panel. */
+  selectedDupeName?: string | null;
 }
 
-export function EntityListPanel({ entities, pinnedEntityName, onPinEntity }: Props) {
+export function EntityListPanel({ entities, pinnedEntityName, onPinEntity, onSelectDupe, selectedDupeName }: Props) {
   const [open,   setOpen]   = useState(false);
   const [filter, setFilter] = useState<EntityFilter>('all');
   const [sort,   setSort]   = useState<EntitySort>('name');
@@ -71,15 +75,20 @@ export function EntityListPanel({ entities, pinnedEntityName, onPinEntity }: Pro
               <div className="muted" style={{ padding: '6px 4px' }}>No entities</div>
             )}
             {list.map((e, i) => {
-              const pinned = pinnedEntityName === e.name;
-              const chore  = getEntityChore(e);
+              const pinned      = pinnedEntityName === e.name;
+              const detailOpen  = selectedDupeName === e.name;
+              const chore       = getEntityChore(e);
+              const isDupe      = e.type === 'duplicant';
               return (
                 <div
                   key={i}
                   role="listitem"
-                  className={`entity-row${pinned ? ' entity-row--pinned' : ''}`}
-                  onClick={() => onPinEntity(pinned ? null : e)}
-                  title={pinned ? 'Click to unpin' : 'Click to pin tooltip'}
+                  className={`entity-row${pinned ? ' entity-row--pinned' : ''}${detailOpen ? ' entity-row--detail' : ''}`}
+                  onClick={() => {
+                    onPinEntity(pinned ? null : e);
+                    if (isDupe && onSelectDupe) onSelectDupe(e);
+                  }}
+                  title={isDupe ? 'Click to view dupe details' : pinned ? 'Click to unpin' : 'Click to pin tooltip'}
                 >
                   <span className="entity-row-icon" aria-hidden="true">
                     {TYPE_LABELS[e.type] ?? '?'}

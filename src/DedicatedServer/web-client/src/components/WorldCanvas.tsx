@@ -84,12 +84,14 @@ interface Props {
   showMinimap?: boolean;
   /** Called on right-click or Shift+click with full cell info for the inspector panel. */
   onCellInspect?: (cell: import('../renderer/WorldRenderer').CellInfo | null) => void;
+  /** Called when a left-click hits a duplicant entity — opens the dupe detail panel. */
+  onDupeSelect?: (entity: EntityData) => void;
 }
 
 export function WorldCanvas({
   world, entities, overlay, showEntities, showGrid, serverUps,
   onCellHover, pinnedEntity, onEntityUnpinned, actionsRef, showMinimap = true,
-  onCellInspect,
+  onCellInspect, onDupeSelect,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -113,6 +115,7 @@ export function WorldCanvas({
   // the tooltip follows the entity as it moves (or hides it if it disappears).
   const sidebarPinnedEntityRef = useRef<EntityData | null>(null);
   const onEntityUnpinnedRef    = useRef<(() => void) | undefined>(undefined);
+  const onDupeSelectRef        = useRef<((entity: EntityData) => void) | undefined>(undefined);
 
   // Refs holding latest data so the rAF loop always reads fresh values
   // without needing to restart the loop when props change.
@@ -139,6 +142,7 @@ export function WorldCanvas({
   showMinimapRef.current = showMinimap;
   sidebarPinnedEntityRef.current = pinnedEntity ?? null;
   onEntityUnpinnedRef.current    = onEntityUnpinned;
+  onDupeSelectRef.current        = onDupeSelect;
 
   // Client UPS tracking: count rAF renders per second.
   const renderCountRef = useRef(0);
@@ -441,6 +445,10 @@ export function WorldCanvas({
       const hits = getEntitiesAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
       const tt = tooltipRef.current;
       if (hits.length > 0) {
+        // Open dupe detail panel for duplicant entities.
+        const dupeHit = hits.find(h => h.type === 'duplicant');
+        if (dupeHit) onDupeSelectRef.current?.(dupeHit);
+
         // Pin tooltip at click position; clear any sidebar pin (mutually exclusive).
         if (sidebarPinnedEntityRef.current) {
           sidebarPinnedEntityRef.current = null;

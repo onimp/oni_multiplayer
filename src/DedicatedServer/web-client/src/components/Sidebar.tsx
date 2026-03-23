@@ -1,6 +1,7 @@
 import type { EntitiesResponse, EntityData, GameState, OverlayMode } from '../api/types';
 import type { CellInfo } from '../renderer/WorldRenderer';
 import { EntityListPanel } from './EntityListPanel';
+import { DupeDetailPanel } from './DupeDetailPanel';
 
 interface Props {
   gameState: GameState | null;
@@ -25,6 +26,10 @@ interface Props {
   onPasteStateJson: () => void;
   onClearPasted: () => void;
   onPinEntity: (entity: EntityData | null) => void;
+  /** Currently selected dupe for the detail panel (null = closed). */
+  selectedDupe?: EntityData | null;
+  onSelectDupe?: (entity: EntityData) => void;
+  onCloseDupe?: () => void;
 }
 
 export function Sidebar({
@@ -34,7 +39,7 @@ export function Sidebar({
   onOverlayChange, onShowEntitiesChange, onShowGridChange,
   onAutoRefreshChange, onRefreshIntervalChange, onRefreshNow, onScreenshot,
   onCopyStateJson, onPasteStateJson, onClearPasted,
-  onPinEntity,
+  onPinEntity, selectedDupe, onSelectDupe, onCloseDupe,
 }: Props) {
   return (
     <aside className="sidebar">
@@ -129,10 +134,16 @@ export function Sidebar({
         )}
       </section>
 
+      {selectedDupe && onCloseDupe && (
+        <DupeDetailPanel entity={selectedDupe} onClose={onCloseDupe} />
+      )}
+
       <EntityListPanel
         entities={entities?.entities ?? []}
         pinnedEntityName={pinnedEntityName}
         onPinEntity={onPinEntity}
+        onSelectDupe={onSelectDupe}
+        selectedDupeName={selectedDupe?.name}
       />
 
       {gameState && (
