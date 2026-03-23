@@ -930,6 +930,23 @@ public class WorldBuilder {
             drGo.AddComponent<DiscoveredResources>().InitializeComponent();
             Console.WriteLine($"[WorldBuilder] DiscoveredResources.Instance ready: {DiscoveredResources.Instance != null}");
         }
+
+        // ScheduleManager.Spawn() creates the default 24-block schedule (Sleep/Work/Leisure)
+        // and registers the OnAddDupe handler for future minion spawns.
+        // Must run after Game.Instance is set (AddDefaultSchedule → FastWorkersModeActive).
+        // Dupes are not yet spawned at this point (SpawnStarterMinions runs in Create()).
+        // When each dupe spawns and MinionIdentity is added to Components.LiveMinionIdentities,
+        // the OnAddDupe handler assigns them to schedules[0] automatically.
+        //
+        // Without this: schedules list stays empty → ScheduleManager.IsAllowed() returns false
+        // for ALL block types → ShouldExitSleep() never returns true from schedule check →
+        // dupes stuck sleeping until stamina reaches max (which also never happens because
+        // AmountInstance.BatchUpdate is not registered — separate issue for Sol).
+        ScheduleManager.Instance.Spawn();
+        var schedList = ScheduleManager.Instance.GetSchedules();
+        Console.WriteLine($"[Schedule] Spawn done: count={schedList.Count} blocks={schedList.FirstOrDefault()?.GetBlocks()?.Count}");
+        if (schedList.Count == 0)
+            throw new InvalidOperationException("[WorldBuilder] ScheduleManager.Spawn() produced no schedules — check Db.ScheduleGroups.");
     }
 
     // TODO: replace with game's own asset loading
