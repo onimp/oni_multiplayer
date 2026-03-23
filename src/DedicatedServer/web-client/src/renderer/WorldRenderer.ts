@@ -234,7 +234,7 @@ export class WorldRenderer {
       } else if (entity.type === 'building') {
         // Buildings: per-name color via buildingRenderer (distinct per building type).
         // Rendered before dupes/critters so they form a background layer.
-        buildings.push(buildingToRect(entity, world.height, this.offsetX, this.offsetY, cellSize));
+        buildings.push(buildingToRect({ name: entity.name, x: entity.x, y: entity.y, w: ew, h: eh }, world.height, this.offsetX, this.offsetY, cellSize));
       } else {
         // Ores, pickupables, generic entities → flat type color rect
         const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
