@@ -5,6 +5,20 @@ import { WorldRenderer } from '../renderer/WorldRenderer';
 import { miniBar } from '../utils/miniBar';
 import { shouldRefreshHover } from '../utils/hoverRefresh';
 
+/** Pan step in canvas pixels per keypress. */
+const PAN_STEP = 40;
+
+/** Imperative API exposed to App.tsx so keyboard shortcuts can drive canvas actions. */
+export interface CanvasActions {
+  zoomIn():    void;
+  zoomOut():   void;
+  zoomReset(): void;
+  panLeft():   void;
+  panRight():  void;
+  panUp():     void;
+  panDown():   void;
+}
+
 
 /** Returns ALL entities whose cell footprint covers (mouseX, mouseY) in canvas pixels. */
 function getEntitiesAt(
@@ -59,11 +73,13 @@ interface Props {
   pinnedEntity?: EntityData | null;
   /** Called when a sidebar-pinned entity disappears from the entity list. */
   onEntityUnpinned?: () => void;
+  /** Populated by WorldCanvas so App.tsx can drive zoom/pan via keyboard shortcuts. */
+  actionsRef?: React.MutableRefObject<CanvasActions | null>;
 }
 
 export function WorldCanvas({
   world, entities, overlay, showEntities, showGrid, serverUps,
-  onCellHover, pinnedEntity, onEntityUnpinned,
+  onCellHover, pinnedEntity, onEntityUnpinned, actionsRef,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -150,6 +166,20 @@ export function WorldCanvas({
   useEffect(() => {
     if (!canvasRef.current) return;
     rendererRef.current = new WorldRenderer(canvasRef.current);
+
+    // Expose imperative zoom/pan API so the global keydown handler in App.tsx
+    // can drive the canvas without prop-drilling through React state.
+    if (actionsRef) {
+      actionsRef.current = {
+        zoomIn:    () => { const c = canvasRef.current, r = rendererRef.current; if (c && r) r.zoom( 1, c.width / 2, c.height / 2); },
+        zoomOut:   () => { const c = canvasRef.current, r = rendererRef.current; if (c && r) r.zoom(-1, c.width / 2, c.height / 2); },
+        zoomReset: () => rendererRef.current?.reset(),
+        panLeft:   () => rendererRef.current?.pan(-PAN_STEP, 0),
+        panRight:  () => rendererRef.current?.pan( PAN_STEP, 0),
+        panUp:     () => rendererRef.current?.pan(0, -PAN_STEP),
+        panDown:   () => rendererRef.current?.pan(0,  PAN_STEP),
+      };
+    }
 
     const TARGET_MS = 1000 / 60; // 16.666ms — cap render rate to 60fps
     let lastFrameTime = 0;

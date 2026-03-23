@@ -57,6 +57,14 @@ export class WorldRenderer {
     this.offsetY += dy;
   }
 
+  /** Resets zoom and offset so the next render() call re-centers the world. */
+  reset() {
+    this.cellSize = 10;
+    this.offsetX  = 0;
+    this.offsetY  = 0;
+    this.centered = false;  // triggers re-center on next render()
+  }
+
   setOffset(x: number, y: number) {
     this.offsetX = x;
     this.offsetY = y;

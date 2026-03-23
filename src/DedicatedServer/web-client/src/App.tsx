@@ -3,12 +3,15 @@ import type { WorldData, EntitiesResponse, EntityData, GameState, OverlayMode } 
 import { fetchAll, fetchElements, fetchEntities, fetchGameState, fetchWorld } from './api/client';
 import { loadElements, areElementsLoaded } from './renderer/constants';
 import type { CellInfo } from './renderer/WorldRenderer';
+import type { CanvasActions } from './components/WorldCanvas';
 import { Header } from './components/Header';
 import { WorldCanvas } from './components/WorldCanvas';
 import { Sidebar } from './components/Sidebar';
 import { ConnectionOverlay } from './components/ConnectionOverlay';
 import { StatsBar } from './components/StatsBar';
+import { HelpOverlay } from './components/HelpOverlay';
 import { deriveConnectionStatus } from './utils/connectionState';
+import { resolveKeyAction, isInputTarget } from './utils/keybindings';
 import './index.css';
 
 export default function App() {
@@ -28,6 +31,38 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(16);
+
+  // Imperative canvas API (zoom/pan) — populated by WorldCanvas on mount.
+  const canvasActionsRef = useRef<CanvasActions | null>(null);
+
+  // Help overlay visibility
+  const [showHelp, setShowHelp] = useState(false);
+
+  // Global keyboard shortcut handler. Skips when focus is on a form input so
+  // typing in the refresh-interval field or overlay search doesn't trigger panning.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isInputTarget(e.target)) return;
+      const action = resolveKeyAction(e.key);
+      if (!action) return;
+      // Prevent arrow-key page scroll and +/- browser zoom
+      e.preventDefault();
+      switch (action) {
+        case 'zoom-in':     canvasActionsRef.current?.zoomIn();    break;
+        case 'zoom-out':    canvasActionsRef.current?.zoomOut();   break;
+        case 'zoom-reset':  canvasActionsRef.current?.zoomReset(); break;
+        case 'pan-left':    canvasActionsRef.current?.panLeft();   break;
+        case 'pan-right':   canvasActionsRef.current?.panRight();  break;
+        case 'pan-up':      canvasActionsRef.current?.panUp();     break;
+        case 'pan-down':    canvasActionsRef.current?.panDown();   break;
+        case 'toggle-grid': setShowGrid(g => !g);                  break;
+        case 'show-help':   setShowHelp(true);                     break;
+        case 'close-help':  setShowHelp(false);                    break;
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Sidebar entity pin: name of the entity selected in EntityListPanel.
   // Passed down to WorldCanvas so the tooltip tracks the entity on the canvas.
@@ -131,6 +166,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
       <Header connected={connected} retryIn={retryIn} gameState={gameState} />
       <StatsBar gameState={gameState} />
       <div className="main">
@@ -146,6 +182,7 @@ export default function App() {
             onCellHover={setCellInfo}
             pinnedEntity={pinnedEntity}
             onEntityUnpinned={handleEntityUnpinned}
+            actionsRef={canvasActionsRef}
           />
         </div>
         <Sidebar

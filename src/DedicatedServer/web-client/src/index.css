@@ -387,6 +387,114 @@ header h1 {
   min-width: 0;
 }
 
+/* ── Help overlay (keyboard shortcuts) ───────────────────────────────────── */
+
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-panel {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  padding: 20px 24px;
+  min-width: 320px;
+  max-width: 480px;
+  width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.help-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e94560;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.help-close {
+  background: none;
+  border: 1px solid #0f3460;
+  color: #888;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* override sidebar button styles */
+  margin-top: 0;
+  padding: 0;
+  width: 26px;
+}
+.help-close:hover {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
+}
+
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.help-table tr + tr td {
+  border-top: 1px solid rgba(15, 52, 96, 0.5);
+}
+
+.help-table td {
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+
+.help-table td:first-child {
+  width: 90px;
+  white-space: nowrap;
+}
+
+.help-kbd {
+  display: inline-block;
+  background: #0f1e3a;
+  border: 1px solid #0f3460;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 11px;
+  color: #c8c8c8;
+  white-space: nowrap;
+}
+
+.help-desc {
+  color: #a0a0a0;
+}
+
+.help-footer {
+  margin-top: 14px;
+  font-size: 11px;
+  color: #555;
+  text-align: center;
+}
+
 /* ── Connection overlay ───────────────────────────────────────────────────── */
 @keyframes conn-spin {
   to { transform: rotate(360deg); }
