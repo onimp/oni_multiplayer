@@ -1,6 +1,8 @@
 import type { EntityData, OverlayMode, WorldData, EntitiesResponse } from '../api/types';
 import { getElementColor, getElementName, ENTITY_COLORS } from './constants';
 import { temperatureToColor } from '../utils/tempColor';
+import { buildingToRect, BUILDING_LABEL_MIN_CELL_SIZE } from '../utils/buildingRenderer';
+import type { BuildingRect } from '../utils/buildingRenderer';
 
 export interface CellInfo {
   x: number;
@@ -188,6 +190,7 @@ export class WorldRenderer {
 
     const dupes:    PillInfo[] = [];
     const critters: PillInfo[] = [];
+    const buildings: BuildingRect[] = [];                                // per-name colored rects
     const rects: Array<[number, number, number, number, string]> = [];  // [sx, sy, pw, ph, color]
     const stateLabels: StateLabel[] = [];
 
@@ -228,14 +231,50 @@ export class WorldRenderer {
         critters.push({ cx, cy, rx, ry });
         // Show critter name when zoomed in enough (too noisy at small zoom)
         if (cellSize >= 10) stateLabels.push({ cx, topY: cy + ry + 2, text: entity.name });
+      } else if (entity.type === 'building') {
+        // Buildings: per-name color via buildingRenderer (distinct per building type).
+        // Rendered before dupes/critters so they form a background layer.
+        buildings.push(buildingToRect(entity, world.height, this.offsetX, this.offsetY, cellSize));
       } else {
-        // All other entities (buildings, pickupables, geysers, …) → filled rect sized to w×h cells
+        // Ores, pickupables, generic entities → flat type color rect
         const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
         rects.push([sx, sy, ew * cellSize, eh * cellSize, color]);
       }
     }
 
-    // --- Rects (buildings + all non-dupe/critter entities) ---
+    // --- Buildings (layer behind dupes/critters) — per-name color + border + label ---
+    for (const b of buildings) {
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.sx, b.sy, b.pw, b.ph);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(b.sx + 0.5, b.sy + 0.5, b.pw - 1, b.ph - 1);
+    }
+    // Building name labels (only when cellSize >= BUILDING_LABEL_MIN_CELL_SIZE)
+    if (cellSize >= BUILDING_LABEL_MIN_CELL_SIZE && buildings.length > 0) {
+      const fontSize = Math.max(7, Math.round(cellSize * 0.45));
+      ctx.font = `${fontSize}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const b of buildings) {
+        if (!b.label) continue;
+        const cx = b.sx + b.pw / 2;
+        const cy = b.sy + b.ph / 2;
+        // Truncate name to fit within the building's pixel width
+        let text = b.label;
+        while (text.length > 1 && ctx.measureText(text).width > b.pw - 4) {
+          text = text.slice(0, text.length - 4) + '…';
+        }
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillText(text, cx + 1, cy + 1);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(text, cx, cy);
+      }
+    }
+
+    // --- Rects (ores, pickupables, generic entities) ---
     for (const [x, y, w, h, color] of rects) {
       ctx.fillStyle = color;
       ctx.globalAlpha = 0.4;
