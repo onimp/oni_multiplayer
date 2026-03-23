@@ -198,9 +198,17 @@ public class RealWorldState {
         if (choreDriver?.GetSMI() != null)
             currentChore = choreDriver.GetCurrentChore()?.choreType?.Name;
 
-        // ChoreDriver SM state: "nochore" or "haschore"
-        string? smState = choreDriver?.GetSMI<ChoreDriver.StatesInstance>()
-                                     ?.GetCurrentState()?.name;
+        // SM state: prefer ChoreDriver state ("nochore"/"haschore") via direct _smi access.
+        // GetSMI<T>() goes through StateMachineController list lookup which can miss in headless;
+        // GetSMI() (non-generic) returns the stored _smi field directly — always correct.
+        // Fallback: IdleMonitor state name ("idle"/"stopped") — more descriptive for Lina's UI.
+        string? smState = (choreDriver?.GetSMI() as ChoreDriver.StatesInstance)
+                              ?.GetCurrentState()?.name;
+        if (string.IsNullOrEmpty(smState)) {
+            var smc = go.GetComponent<StateMachineController>();
+            smState = smc?.GetSMI<IdleMonitor.Instance>()?.GetCurrentState()?.name;
+        }
+        smState ??= "none";
 
         // Navigator: IsMoving + current cell
         var nav         = go.GetComponent<Navigator>();
