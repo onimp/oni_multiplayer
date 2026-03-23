@@ -288,6 +288,21 @@ public static class MinionPrefab {
             Console.WriteLine($"[SETUP go={id}] Brain running={finalBrain?.IsRunning()}, isSpawned={finalBrain?.isSpawned}");
         });
 
+        // ── Step 16c: Null OxygenBreather on brain ───────────────────────────
+        // SafeCellQuery.GetFlags() IsBreathable check:
+        //   flag5 = brain.OxygenBreather == null || GasBreatherFromWorldProvider...IsBreathable
+        // In headless, adjacent cells have no gas data (vacuum) → IsBreathable=False for all
+        // neighbours → IdleCellQuery BFS can only accept the current cell (cost=0) →
+        // idleCell==physCell → zero-distance path → dupe never moves.
+        // Nulling brain.OxygenBreather makes SafeCellQuery skip the breathability check entirely
+        // so all walkable cells pass → IdleCellQuery returns a distant cell → movement begins.
+        // MinionBrain.OxygenBreather is [MyCmpGet] — cached once at init, not re-fetched per tick.
+        S(id, "16c-null-OxygenBreather", () => {
+            var brain = go.GetComponent<MinionBrain>();
+            if (brain != null) brain.OxygenBreather = null;
+            Console.WriteLine($"[SETUP go={id}] 16c: OxygenBreather nulled on brain (headless: skip breathability in SafeCellQuery)");
+        });
+
         // ── Step 17: GameTags.Idle + Sensors.Spawn ───────────────────────────
         S(id, "17-Idle-tag", () => go.GetComponent<KPrefabID>()?.AddTag(GameTags.Idle));
         S(id, "17-Sensors.Spawn", () => {
