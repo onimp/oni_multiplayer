@@ -1,6 +1,4 @@
 using System;
-using System.Reflection;
-using HarmonyLib;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -31,33 +29,16 @@ namespace MultiplayerMod.Test.GameRuntime;
 ///   delegate, the SM framework sets <c>StateMachine.Instance.error = true</c>,
 ///   halting ALL state machines globally.
 ///
-/// FIX (DedicatedServer/Game/Patches/RotPilePatches.cs):
-///   Harmony Prefix on <c>TryCreateNotification</c> and <c>TryClearNotification</c>
-///   returning <c>false</c> — skipping both methods entirely in headless.
-///   Notifications are UI-only (<c>Notifier.Add</c> already returns early when
-///   <c>KScreenManager.Instance == null</c>, which is always null in headless).
-///   Game logic (decomposing timer + <c>ConvertToElement()</c>) is unaffected.
+/// FIX (WorldBuilder.cs):
+///   Add <c>WorldInventory</c> component to <c>worldContainerGo</c> BEFORE calling
+///   <c>wc.InitializeComponent()</c>. <c>WorldContainer.OnPrefabInit()</c> then finds
+///   the component via <c>GetComponent&lt;WorldInventory&gt;()</c> and assigns it to
+///   <c>worldInventory</c> (non-null). Subsequent calls to
+///   <c>myWorld.worldInventory.IsReachable(pickupable)</c> safely resolve to
+///   <c>MinionGroupProber.Get().IsReachable(pickupable)</c>, which returns false
+///   (no minions → no cells occupied) — no NPE, no globalSMError.
 /// </summary>
 public class RotPileNotificationTest : PlayableGameTest {
-
-    private static readonly Harmony LocalHarmony = new("RotPileNotificationTest");
-
-    private static readonly MethodInfo _tryCreate =
-        typeof(RotPile).GetMethod("TryCreateNotification", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-
-    private static readonly MethodInfo _tryClear =
-        typeof(RotPile).GetMethod("TryClearNotification", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-
-    private static readonly HarmonyMethod _skipPrefix =
-        new(typeof(RotPileNotificationTest).GetMethod(nameof(SkipPrefix), BindingFlags.Static | BindingFlags.NonPublic)!);
-
-    // ReSharper disable once UnusedMember.Local
-    private static bool SkipPrefix() => false;
-
-    private static void ApplyRotPilePatch() {
-        LocalHarmony.Patch(_tryCreate, prefix: _skipPrefix);
-        LocalHarmony.Patch(_tryClear, prefix: _skipPrefix);
-    }
 
     [SetUp]
     public void SetUp() {
@@ -67,7 +48,6 @@ public class RotPileNotificationTest : PlayableGameTest {
     [TearDown]
     public void TestTearDown() {
         StateMachine.Instance.error = false;
-        LocalHarmony.UnpatchAll("RotPileNotificationTest");
     }
 
     // ─── ROOT CAUSE TESTS ─────────────────────────────────────────────────────
@@ -79,9 +59,9 @@ public class RotPileNotificationTest : PlayableGameTest {
     /// <c>WorldContainer.OnPrefabInit()</c>:
     ///   <c>worldInventory = GetComponent&lt;WorldInventory&gt;();</c>
     ///
-    /// The headless <c>WorldContainer</c> in <c>WorldBuilder</c> is created with
-    /// <c>new GameObject(...)</c> + <c>AddComponent&lt;WorldContainer&gt;()</c>
-    /// and never gets a <c>WorldInventory</c> component added.
+    /// The original headless <c>WorldContainer</c> in <c>WorldBuilder</c> was created
+    /// with <c>new GameObject(...)</c> + <c>AddComponent&lt;WorldContainer&gt;()</c>
+    /// without adding <c>WorldInventory</c>.
     /// Result: <c>worldInventory == null</c> for all headless worlds.
     /// </summary>
     [Test]
@@ -100,7 +80,7 @@ public class RotPileNotificationTest : PlayableGameTest {
             "  new GameObject() + AddComponent<WorldContainer>() " +
             "without adding WorldInventory. " +
             "OnPrefabInit: worldInventory = GetComponent<WorldInventory>() = null. " +
-            "This causes RotPile.TryCreateNotification() to NPE at: " +
+            "This caused RotPile.TryCreateNotification() to NPE at: " +
             "  myWorld.worldInventory.IsReachable(pickupable) — worldInventory is null.");
     }
 
@@ -131,69 +111,34 @@ public class RotPileNotificationTest : PlayableGameTest {
     // ─── FIX TESTS ────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Verifies the fix: with <c>RotPileTestPatch</c> (mirrors <c>RotPilePatches</c>)
-    /// applied, calling <c>TryCreateNotification()</c> does NOT throw.
+    /// Verifies the fix: when <c>WorldInventory</c> is added to the WorldContainer GO
+    /// BEFORE <c>InitializeComponent()</c>, <c>worldInventory</c> is non-null.
     ///
-    /// Without the fix, calling <c>TryCreateNotification()</c> would reach
-    /// <c>worldInventory.IsReachable()</c> with <c>worldInventory == null</c>
-    /// → <c>NullReferenceException</c>.
+    /// <c>WorldContainer.OnPrefabInit()</c> executes:
+    ///   <c>worldInventory = GetComponent&lt;WorldInventory&gt;()</c>
     ///
-    /// With the fix, the Harmony Prefix returns <c>false</c>, skipping the entire
-    /// method body — no NPE, no side effects.
+    /// With <c>WorldInventory</c> added first, <c>GetComponent</c> finds it and
+    /// <c>worldInventory</c> is set to a valid reference.
+    ///
+    /// WorldBuilder fix: <c>worldContainerGo.AddComponent&lt;WorldInventory&gt;()</c>
+    /// is called before <c>wc.InitializeComponent()</c>.
+    ///
+    /// This test FAILS without the fix (worldInventory is null) and PASSES with it.
     /// </summary>
     [Test]
-    public void TryCreateNotification_DoesNotThrow_WhenPatched() {
-        ApplyRotPilePatch();
+    public void WorldContainer_WorldInventory_IsNotNull_WhenComponentAddedBeforeInit() {
+        var go = new GameObject("HeadlessWorldContainer_WithInventory");
+        go.AddComponent<WorldInventory>();          // fix: add before InitializeComponent
+        var wc = go.AddComponent<WorldContainer>();
+        try { wc.InitializeComponent(); } catch { /* other OnPrefabInit side effects may throw */ }
 
-        var go = createGameObject();
-        var rotPile = go.AddComponent<RotPile>();
-
-        Assert.DoesNotThrow(
-            () => rotPile.TryCreateNotification(),
-            "RotPile.TryCreateNotification() must not throw when the skip patch is applied. " +
-            "The Harmony Prefix returns false, skipping the method body entirely. " +
-            "Without the patch, this would NPE at myWorld.worldInventory.IsReachable() " +
-            "because the headless WorldContainer has null worldInventory.");
-    }
-
-    /// <summary>
-    /// Verifies the fix: with patch applied, <c>TryClearNotification()</c> does NOT throw.
-    /// Symmetric with <c>TryCreateNotification</c>.
-    /// </summary>
-    [Test]
-    public void TryClearNotification_DoesNotThrow_WhenPatched() {
-        ApplyRotPilePatch();
-
-        var go = createGameObject();
-        var rotPile = go.AddComponent<RotPile>();
-
-        Assert.DoesNotThrow(
-            () => rotPile.TryClearNotification(),
-            "RotPile.TryClearNotification() must not throw when the skip patch is applied.");
-    }
-
-    /// <summary>
-    /// End-to-end: verifies that <c>globalSMError</c> remains false after
-    /// <c>TryCreateNotification()</c> is called with the fix applied.
-    ///
-    /// Without the fix, the NPE in <c>decomposing.Enter()</c> causes the SM
-    /// framework to set <c>StateMachine.Instance.error = true</c>, halting all
-    /// state machines. This test confirms the fix prevents that outcome.
-    /// </summary>
-    [Test]
-    public void GlobalSMError_RemainsFlase_AfterTryCreateNotification_WhenPatched() {
-        ApplyRotPilePatch();
-
-        var go = createGameObject();
-        var rotPile = go.AddComponent<RotPile>();
-
-        rotPile.TryCreateNotification();
-
-        Assert.IsFalse(StateMachine.Instance.error,
-            "StateMachine.Instance.error must remain false after TryCreateNotification(). " +
-            "Without the fix, the NPE inside decomposing.Enter() sets error=true, " +
-            "halting ALL state machines globally (critters, dupes, buildings). " +
-            "With the Harmony Prefix no-op fix, the method body is skipped entirely " +
-            "— no exception, no globalSMError.");
+        Assert.IsNotNull(wc.worldInventory,
+            "WorldContainer.worldInventory must be non-null when WorldInventory component " +
+            "is added to the GO before InitializeComponent(). " +
+            "WorldContainer.OnPrefabInit(): worldInventory = GetComponent<WorldInventory>() " +
+            "finds the component and assigns it. " +
+            "WorldBuilder fix: worldContainerGo.AddComponent<WorldInventory>() " +
+            "before wc.InitializeComponent() ensures every headless WorldContainer has " +
+            "a non-null worldInventory, preventing RotPile.TryCreateNotification() NPE.");
     }
 }

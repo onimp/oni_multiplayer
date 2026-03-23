@@ -876,6 +876,20 @@ public class WorldBuilder {
         // WorldContainer.AlertManager populates m_alertManager correctly.
         worldContainerGo.AddOrGetDef<AlertStateManager.Def>();
         wc.SetID(0);  // set id=0 BEFORE InitializeComponent so OnPrefabInit registers with correct id
+        // WorldInventory MUST be added BEFORE wc.InitializeComponent() so that
+        // WorldContainer.OnPrefabInit() finds it via GetComponent<WorldInventory>():
+        //   worldInventory = GetComponent<WorldInventory>()  ← must be non-null
+        //
+        // Without it, worldInventory == null and RotPile.TryCreateNotification() NPEs at:
+        //   myWorld.worldInventory.IsReachable(pickupable)
+        // which propagates through decomposing.Enter() and sets globalSMError=true
+        // for every RotPile entity, halting all state machines.
+        //
+        // We do NOT call wi.InitializeComponent() here: WorldInventory.OnPrefabInit()
+        // subscribes to Game events for inventory tracking — not needed in headless.
+        // IsReachable() only calls MinionGroupProber.Get().IsReachable() which is
+        // safe (returns false with no minions).
+        worldContainerGo.AddComponent<WorldInventory>();
         // Ensure KMonoBehaviour.obj is initialized BEFORE CreateSMIS.
         // In headless, AddComponent<WorldContainer>() does NOT trigger Awake() → obj stays null on
         // the WorldContainer's KMonoBehaviour. When CreateSMIS() runs, GenericInstance.ctor calls
@@ -887,6 +901,7 @@ public class WorldBuilder {
         //   1. RegisterWorldContainer(this) — ClusterManager.Instance is already set above ✓
         //   2. Game.Instance.Subscribe(880851192, ...) — Game.Instance is set at line 433 ✓
         //   3. ClusterManager.Instance.Subscribe(-1078710002, ...) — ClusterManager.Instance ✓
+        //   4. worldInventory = GetComponent<WorldInventory>() — non-null (added above) ✓
         // The guard below is now a safety no-op (OnPrefabInit already registered wc with id=0).
         wc.InitializeComponent();
         if (!ClusterManager.Instance.WorldContainers.Contains(wc))
