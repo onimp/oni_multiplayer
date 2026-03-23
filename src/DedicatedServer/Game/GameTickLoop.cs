@@ -71,6 +71,12 @@ public class GameTickLoop {
     /// <summary>Real updates-per-second measured over a rolling 1-second window.</summary>
     public int Ups { get; private set; }
 
+    /// <summary>
+    /// Simulation speed multiplier: 1 = normal, 2 = fast, 3 = ultra.
+    /// Mirrors SpeedControlScreen speed levels 0/1/2 mapped to Time.timeScale 1x/2x/3x.
+    /// </summary>
+    public int SpeedLevel { get; set; } = 1;
+
     /// <param name="tickSimDll">Called every 200ms to advance SimDLL (pass WorldBuilder.TickSimulation)</param>
     public GameTickLoop(System.Action tickSimDll) {
         _tickSimDll = tickSimDll;
@@ -78,10 +84,14 @@ public class GameTickLoop {
 
     /// <summary>Advance simulation by dt seconds. Call from main loop at ~60fps or any rate.</summary>
     public void Update(float dt) {
+        // Apply speed multiplier — mirrors Time.timeScale in the real game.
+        // At speed 3 and 60fps: 3 × 16.7ms = 50ms scaled dt, well under the 0.2s spiral-of-death cap.
+        var scaledDt = dt * SpeedLevel;
+
         // Advance headless clock FIRST — before any game code reads Time.time / Time.deltaTime.
         // Timers that use Time.time (sleep wake conditions, ThoughtGraph cooldowns, etc.) need a
         // real advancing clock. frameCount must also increment for PathGrid cache invalidation.
-        UnityRuntime.AdvanceTime(dt);
+        UnityRuntime.AdvanceTime(scaledDt);
 
         // Rolling 1s UPS: count calls in the current window; snapshot+reset when window expires.
         _upsTicks++;
@@ -96,7 +106,7 @@ public class GameTickLoop {
         // Must run before AdvanceOneSimSubTick() so the wrapper is in place before the SM fires.
         PatchIdleChoreExitActions();
 
-        var clampedDt = Mathf.Min(dt, 0.2f);
+        var clampedDt = Mathf.Min(scaledDt, 0.2f);
         _accumulatedTime += clampedDt;
         _tickCount++;
 
