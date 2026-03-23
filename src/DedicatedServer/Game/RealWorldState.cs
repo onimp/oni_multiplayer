@@ -198,17 +198,11 @@ public class RealWorldState {
         if (choreDriver?.GetSMI() != null)
             currentChore = choreDriver.GetCurrentChore()?.choreType?.Name;
 
-        // SM state: prefer ChoreDriver state ("nochore"/"haschore") via direct _smi access.
-        // GetSMI<T>() goes through StateMachineController list lookup which can miss in headless;
-        // GetSMI() (non-generic) returns the stored _smi field directly — always correct.
-        // Fallback: IdleMonitor state name ("idle"/"stopped") — more descriptive for Lina's UI.
-        string? smState = (choreDriver?.GetSMI() as ChoreDriver.StatesInstance)
-                              ?.GetCurrentState()?.name;
-        if (string.IsNullOrEmpty(smState)) {
-            var smc = go.GetComponent<StateMachineController>();
-            smState = smc?.GetSMI<IdleMonitor.Instance>()?.GetCurrentState()?.name;
-        }
-        smState ??= "none";
+        // SM state: first non-null SM in the controller — generic, works for any entity type.
+        // smc.stateMachines is ordered by initialization; most relevant SMs come first.
+        // Returns descriptive path-style names like "root.alive.notasleep.idle" or "nochore".
+        var smc     = go.GetComponent<StateMachineController>();
+        var smState = smc?.stateMachines?.FirstOrDefault(s => s != null)?.GetCurrentState()?.name ?? "none";
 
         // Navigator: IsMoving + current cell
         var nav         = go.GetComponent<Navigator>();
@@ -217,6 +211,23 @@ public class RealWorldState {
 
         var name = go.GetComponent<MinionIdentity>()?.nameStringKey ?? go.name;
         return BuildMinionDto(name, x, y, w, h, currentChore, smState, navIsMoving, navCell);
+    }
+
+    /// <summary>
+    /// Builds a critter entity DTO from live GO state. Critters are NOT static-cached:
+    /// they move, change SM state, and die — so they must be recomputed each request.
+    /// smState uses the same smc.stateMachines.FirstOrDefault() pattern as dupes.
+    /// </summary>
+    private object BuildLiveCreatureDto(GameObject go) {
+        _mergedSizeMap ??= BuildMergedSizeMap();
+        var prefabId = go.GetComponent<KPrefabID>()?.PrefabTag.Name ?? go.name;
+        var (w, h)   = ResolveEntitySize(prefabId, _mergedSizeMap);
+        var pos      = go.transform.GetPosition();
+        var x        = (int)pos.x;
+        var y        = (int)pos.y;
+        var smc      = go.GetComponent<StateMachineController>();
+        var smState  = smc?.stateMachines?.FirstOrDefault(s => s != null)?.GetCurrentState()?.name ?? "none";
+        return new { type = "critter", name = prefabId, x, y, w, h, smState };
     }
 
     /// <summary>
@@ -231,7 +242,7 @@ public class RealWorldState {
     ///   x, y         — world position (rounded to int)
     ///   w, h         — bounding box in cells (typically 1×2 for a dupe)
     ///   currentChore — ChoreType.Name of the active chore, or null when idle/no chore
-    ///   smState      — ChoreDriver SM state name: "nochore" or "haschore"
+    ///   smState      — first SM state in StateMachineController (path-style, e.g. "root.alive.idle")
     ///   navIsMoving  — true when Navigator is executing a path
     ///   navCell      — grid cell index at current position (Grid.PosToCell)
     /// </summary>
@@ -304,10 +315,23 @@ public class RealWorldState {
             liveMinions.Add(BuildLiveMinionDto(go));
         }
 
+        // ── Step 2b: live critter DTOs (always fresh — critters move and change state) ──
+        // Critters are NOT in _staticEntities (excluded in BuildStaticEntities).
+        // We iterate Components.Brains for all CreatureBrain instances — this covers
+        // every critter that went through TriggerLifecycle during SpawnEntities().
+        var liveCreatures = new List<object>();
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null || brain is MinionBrain) continue;
+            if (brain.gameObject == null) continue;
+            try { liveCreatures.Add(BuildLiveCreatureDto(brain.gameObject)); }
+            catch { /* skip individual critter DTO build failures */ }
+        }
+
         // ── Step 3: combine and serialize ──────────────────────────────────────
-        var allEntities = new List<object>(_staticEntities!.Count + liveMinions.Count);
+        var allEntities = new List<object>(_staticEntities!.Count + liveMinions.Count + liveCreatures.Count);
         allEntities.AddRange(_staticEntities!);
         allEntities.AddRange(liveMinions);
+        allEntities.AddRange(liveCreatures);
 
         return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new {
             tick     = world.SimTick,
@@ -316,10 +340,10 @@ public class RealWorldState {
     }
 
     /// <summary>
-    /// Builds the list of static (non-dupe) entities from SpawnData and TrackedBuildings.
-    /// Duplicant prefabs (Minion, BionicMinion) are intentionally excluded — they are
-    /// serialized live via <see cref="BuildLiveMinionDto"/> on each request.
-    /// Called once; result is cached permanently in <c>_staticEntities</c>.
+    /// Builds the list of static (non-dupe, non-critter) entities from SpawnData and TrackedBuildings.
+    /// Duplicant prefabs (Minion, BionicMinion) are excluded — serialized live via BuildLiveMinionDto.
+    /// Critters are excluded — serialized live via BuildLiveCreatureDto (they move and change state).
+    /// Buildings, ores, pickupables, geysers are static — cached permanently after first call.
     /// </summary>
     private List<object> BuildStaticEntities() {
         var sw       = Stopwatch.StartNew();
@@ -338,7 +362,8 @@ public class RealWorldState {
 
         if (spawnData != null) {
             foreach (var e in spawnData.otherEntities) {
-                if (DuplicantPrefabs.Contains(e.id)) continue; // handled via SpawnedMinions
+                if (DuplicantPrefabs.Contains(e.id)) continue;   // handled via SpawnedMinions
+                if (ClassifyOtherEntity(e.id) == "critter") continue;  // handled live via Components.Brains
                 var (ew, eh) = ResolveEntitySize(e.id, sizeMap);
                 entities.Add(new { type = ClassifyOtherEntity(e.id), name = e.id, x = e.location_x, y = e.location_y, w = ew, h = eh });
             }
@@ -352,9 +377,10 @@ public class RealWorldState {
             }
         }
 
-        // Directly-spawned non-dupe entities (starter dupes are excluded, handled via SpawnedMinions).
+        // Directly-spawned non-dupe, non-critter entities (geysers, etc.).
         foreach (var (id, x, y) in world.DirectlySpawnedEntities) {
             if (DuplicantPrefabs.Contains(id)) continue;
+            if (ClassifyOtherEntity(id) == "critter") continue;  // handled live via Components.Brains
             var (ew, eh) = ResolveEntitySize(id, sizeMap);
             entities.Add(new { type = ClassifyOtherEntity(id), name = id, x, y, w = ew, h = eh });
         }
