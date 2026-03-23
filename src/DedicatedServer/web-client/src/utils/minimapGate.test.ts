@@ -158,7 +158,6 @@ describe('minimapNeedsRedraw — both entities and viewport change', () => {
 
 describe('minimapNeedsRedraw — integration: simulated render loop', () => {
   it('redraws only when something changes across a sequence of frames', () => {
-    const vp0 = makeVP({ offsetX: 0 });
     let redrawCount = 0;
 
     // Frame 0: first draw (prevViewport null)
