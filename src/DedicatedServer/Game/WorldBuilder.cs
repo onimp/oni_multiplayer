@@ -296,6 +296,16 @@ public class WorldBuilder {
             Console.WriteLine($"[WorldBuilder] MinionGroupProber.Instance={MinionGroupProber.Get() != null}");
         }
 
+        // CellChangeMonitor singleton must exist before SpawnEntities so Pickupable.OnSpawn
+        // (→ OnTagsChanged → UpdateListeners → Singleton<CellChangeMonitor>.Instance.RegisterCellChangedHandler)
+        // does not NPE. CellChangeMonitor is a plain C# class (Singleton<T> pattern, no Unity lifecycle)
+        // so CreateInstance() is all that's needed. SetGridSize sets gridWidth so MarkDirty is not a no-op.
+        if (Singleton<CellChangeMonitor>.Instance == null) {
+            Singleton<CellChangeMonitor>.CreateInstance();
+            Singleton<CellChangeMonitor>.Instance.SetGridSize(Width, Height);
+            Console.WriteLine("[WorldBuilder] CellChangeMonitor initialized");
+        }
+
         // [GEYSER-DLC] Step A: diagnose DlcManager state vs save DLC state.
         // GeyserGenericConfig.prefabInitFn filters by Game.IsCorrectDlcActiveForCurrentSave
         // (save header), but CreatePrefabs used DlcManager.IsCorrectDlcSubscribed (Steam).
