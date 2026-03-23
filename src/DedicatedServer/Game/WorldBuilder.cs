@@ -333,7 +333,21 @@ public class WorldBuilder {
             var smc = saveGameGo.GetComponent<StateMachineController>();
             smc.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
             saveGame.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
-            saveGame.OnPrefabInit(); // sets SaveGame.Instance + creates ColonyRationMonitor
+            // Diag: log obj state of every KMonoBehaviour on saveGameGo before OnPrefabInit
+            foreach (var kmb in saveGameGo.GetComponents<KMonoBehaviour>()) {
+                Console.WriteLine($"[SaveGameDiag PRE] {kmb.GetType().Name} obj={(kmb.obj == null ? "NULL" : "set")}");
+            }
+            try {
+                saveGame.OnPrefabInit(); // sets SaveGame.Instance + creates ColonyRationMonitor
+            } catch (Exception saveGameEx) {
+                Console.Error.WriteLine($"[SaveGameDiag] OnPrefabInit THREW: {saveGameEx.GetBaseException().Message}");
+                Console.Error.WriteLine(saveGameEx.GetBaseException().StackTrace);
+                throw;
+            }
+            // Diag: log obj state after OnPrefabInit (components may have been added inside)
+            foreach (var kmb in saveGameGo.GetComponents<KMonoBehaviour>()) {
+                Console.WriteLine($"[SaveGameDiag POST] {kmb.GetType().Name} obj={(kmb.obj == null ? "NULL" : "set")}");
+            }
             if (SaveGame.Instance == null) SaveGame.Instance = saveGame; // fallback if OnPrefabInit crashed before Instance = this
         }
         SaveGame.Instance.AutoSaveCycleInterval = 0;
