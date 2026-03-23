@@ -105,13 +105,13 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     return () => clearInterval(id);
   }, []);
 
-  // Tooltip wheel: block zoom when scrolling inside tooltip.
-  // Must use {passive: false} — React's onWheel is passive by default in modern browsers.
+  // Tooltip wheel: stop propagation so the canvas zoom handler doesn't fire,
+  // but do NOT preventDefault — we want the browser to naturally scroll the tooltip div.
   useEffect(() => {
     const el = tooltipRef.current;
     if (!el) return;
-    const handler = (e: WheelEvent) => { e.stopPropagation(); e.preventDefault(); };
-    el.addEventListener('wheel', handler, { passive: false });
+    const handler = (e: WheelEvent) => { e.stopPropagation(); };
+    el.addEventListener('wheel', handler, { passive: true });
     return () => el.removeEventListener('wheel', handler);
   }, []);
 
