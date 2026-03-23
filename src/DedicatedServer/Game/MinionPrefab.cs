@@ -156,6 +156,20 @@ public static class MinionPrefab {
         });
         S(id, "9-RationalAi.StartSM", () => rationalAiSmi.StartSM());
 
+        // ── Step 9b: Calorie repair ───────────────────────────────────────────
+        // If the save file has this dupe with calories=0, CalorieMonitor.Instance will
+        // immediately enter the depleted state on StartSM → Kill() → DeathMonitor.Kill(Starvation)
+        // → dying_duplicant → DieChore → die.Enter (b__9_5) → KFMOD/Messenger crash.
+        // Fix: reset to 50% before CalorieMonitor SM is created so it starts in satisfied.
+        // Db.Get().Amounts.Calories.Lookup() finds the existing AmountInstance on this dupe.
+        S(id, "9b-CalorieRepair", () => {
+            var calories = Db.Get().Amounts.Calories.Lookup(go);
+            if (calories != null && calories.value <= 0) {
+                calories.value = calories.GetMax() * 0.5f;
+                Console.WriteLine($"[SETUP go={id}] 9b: calories were 0 — reset to 50% ({calories.value:F0} kcal)");
+            }
+        });
+
         // ── Step 10: All sub-SMs individually (52 total) ─────────────────────
         // Each factory creates a SM instance (ctor → smc.AddStateMachineInstance → list)
         // then StartSM fires it. Log each one by type name + result.
@@ -303,8 +317,7 @@ public static class MinionPrefab {
         smi is SpeechMonitor.Instance         // mouth anim + audio; SetMouthId NPEs (personality=0x0)
      || smi is SleepChoreMonitor.Instance     // UpdateBed → AutoAssignSlot → Game.assignmentManager NPE
      || smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
-     || smi is RationMonitor.Instance         // EventTransitionData.Register NPEs on SaveGame.Instance=null at SM startup
-     || smi is DeathMonitor.Instance;         // die.Enter b__9_5: Messenger.Instance+KFMOD null in headless; death is not meaningful in dedicated server
+     || smi is RationMonitor.Instance;        // EventTransitionData.Register NPEs on SaveGame.Instance=null at SM startup
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.
