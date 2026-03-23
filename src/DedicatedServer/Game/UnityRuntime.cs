@@ -526,7 +526,7 @@ public static class UnityRuntime {
                 if (comp is Modifiers) {
                     try { ((KMonoBehaviour) comp).InitializeComponent(); }
                     catch (Exception ex) {
-                        Console.WriteLine($"[Lifecycle] Modifiers pre-init failed: {ex.GetBaseException().Message}");
+                        Console.WriteLine($"[Lifecycle] Modifiers pre-init failed: go={go.name} hasTraits={go.GetComponent<Traits>() != null} ex={ex.GetBaseException().Message}");
                     }
                 }
             }
@@ -604,7 +604,7 @@ public static class UnityRuntime {
             if (comp is KMonoBehaviour kmb) {
                 try { kmb.InitializeComponent(); }
                 catch (Exception ex) {
-                    Console.WriteLine($"[Lifecycle] Awake failed [{comp.GetType().Name}]: {ex.GetBaseException().Message}");
+                    Console.WriteLine($"[Lifecycle] Awake failed [{comp.GetType().Name}]: go={go.name} hasTraits={go.GetComponent<Traits>() != null} ex={ex.GetBaseException().Message}");
                 }
             }
             // Ensure smc.stateMachines is never null after InitializeComponent.
