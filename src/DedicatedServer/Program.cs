@@ -92,7 +92,7 @@ public static class Program {
                     // so the actual cycle lands on the 16.666ms boundary precisely.
                     const double targetMs = 1000.0 / 60.0;  // 16.666...
                     var remainingMs = targetMs - sw.Elapsed.TotalMilliseconds;
-                    if (remainingMs > 1.5) Thread.Sleep((int)(remainingMs - 1));
+                    if (remainingMs > 2.5) Thread.Sleep((int)(remainingMs - 1.5));
                     while (sw.Elapsed.TotalMilliseconds < targetMs) { /* spin <1ms for precision */ }
                 }
             }
