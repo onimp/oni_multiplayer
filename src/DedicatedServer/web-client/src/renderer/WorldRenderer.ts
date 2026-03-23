@@ -201,7 +201,6 @@ export class WorldRenderer {
     const dotsByColor = new Map<string, Array<[number, number, number]>>();
     const rects: Array<[number, number, number, number, string]> = [];  // [sx, sy, pw, ph, color]
 
-    console.time('entities');
 
     for (const entity of entities) {
       // w/h from server reflect the real cell footprint (duplicant=1×2, Drecko=1×2, etc.)
@@ -289,7 +288,6 @@ export class WorldRenderer {
       for (const c of critters) ctx.fillText('C', c.cx, c.cy);
     }
 
-    console.timeEnd('entities');
   }
 
   /** Draws a small UPS counter overlay in the top-right corner of the canvas. */

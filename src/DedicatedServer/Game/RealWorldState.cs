@@ -187,8 +187,10 @@ public class RealWorldState {
         var (w, h) = ResolveEntitySize("Minion", _mergedSizeMap);
 
         var pos = go.transform.GetPosition();
-        var x   = Mathf.RoundToInt(pos.x);
-        var y   = Mathf.RoundToInt(pos.y);
+        // Use floor (same as Grid.PosToCell) — objects sit at cell+0.5 center, so
+        // RoundToInt(5.5)=6 would be off by one; (int)5.5=5 gives the correct cell column.
+        var x   = (int)pos.x;
+        var y   = (int)pos.y;
 
         // Current chore: ChoreDriver.GetCurrentChore().choreType.Name (null = no chore)
         string? currentChore = null;
