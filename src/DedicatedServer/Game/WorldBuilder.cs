@@ -412,10 +412,14 @@ public class WorldBuilder {
         KObjectManager.Instance?.OnDestroy();
         Awake("KObjectManager", () => go.AddComponent<KObjectManager>().Awake());
 
-        // SaveGame stub: must run after KObjectManager is initialized (KObjectManager.Instance
-        // must be non-null for GetOrCreateObject). Kept here in InitializeWorld() to guarantee
-        // ordering — previously placed in Create() before this method's definition, causing
-        // KObjectManager.Instance == null when the stub ran.
+        DistributionPlatform.sImpl = go.AddComponent<SteamDistributionPlatform>();
+        Global.Instance?.OnDestroy();
+        Awake("Global", () => go.AddComponent<Global>().Awake());
+        Awake("World", () => go.AddComponent<World>().Awake());
+        // SaveGame stub: runs after Global.Awake() (StateMachineManager + StateMachineUpdater)
+        // and KObjectManager.Awake(). Both are needed by ColonyRationMonitor.Instance ctor
+        // via StartSM() -> GenericInstance -> Singleton<StateMachineManager>.Instance.
+        // Must remain before SpawnStarterMinions (called from Create() after InitializeWorld).
         // Must also run before SpawnStarterMinions (in Create()) so RationMonitor can register
         // EventTransitions on SaveGame.Instance at SM startup.
         if (SaveGame.Instance == null) {
@@ -439,10 +443,6 @@ public class WorldBuilder {
         SaveGame.Instance.AutoSaveCycleInterval = 0;
         Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
 
-        DistributionPlatform.sImpl = go.AddComponent<SteamDistributionPlatform>();
-        Global.Instance?.OnDestroy();
-        Awake("Global", () => go.AddComponent<Global>().Awake());
-        Awake("World", () => go.AddComponent<World>().Awake());
         Awake("Pathfinding", () => go.AddComponent<Pathfinding>().Awake());
         Awake("GameScenePartitioner", () => go.AddComponent<GameScenePartitioner>().Awake());
         Awake("GameClock", () => go.AddComponent<GameClock>().Awake());
