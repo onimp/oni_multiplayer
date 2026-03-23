@@ -51,7 +51,7 @@ export interface GameState {
   bootErrorCount?: number;
 }
 
-export type OverlayMode = 'element' | 'temperature' | 'mass' | 'gas';
+export type OverlayMode = 'element' | 'temperature' | 'mass' | 'gas' | 'liquid';
 
 export interface ElementInfo {
   id: number;
