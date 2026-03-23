@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DedicatedServer.Game;
@@ -289,21 +288,25 @@ public static class MinionPrefab {
             Console.WriteLine($"[SETUP go={id}] Brain running={finalBrain?.IsRunning()}, isSpawned={finalBrain?.isSpawned}");
         });
 
-        // ── Step 16c: Force OxygenBreather.hasAir=true ───────────────────────
-        // SafeCellQuery.GetFlags() IsBreathable check:
+        // ── Step 16c: Null OxygenBreather on brain ───────────────────────────
+        // SafeCellQuery.GetFlags() line 60:
         //   flag5 = brain.OxygenBreather == null || GasBreatherFromWorldProvider...IsBreathable
-        // In headless, there is no gas sim → hasAir stays at whatever the sim last wrote (false).
-        // IsBreathable=False for all cells → IdleCellQuery BFS only accepts current cell (cost=0)
-        // → idleCell==physCell → zero-distance path → dupe never moves.
-        // Fix: set private field hasAir=true so OxygenBreather.HasOxygen returns true →
-        // IsBreathable passes → all walkable cells accepted → distant idleCell → movement begins.
-        // (Previous crutch: brain.OxygenBreather = null — same effect but hides the component.)
-        S(id, "16c-OxygenBreather-hasAir", () => {
-            var oxyBreather = go.GetComponent<OxygenBreather>();
-            if (oxyBreather != null) {
-                Traverse.Create(oxyBreather).Field("hasAir").SetValue(true);
-                Console.WriteLine($"[SETUP go={id}] 16c: OxygenBreather.hasAir=true via Traverse (headless: all cells breathable for IdleCellQuery)");
-            }
+        // brain.OxygenBreather==null short-circuits the check: flag5=true for ALL cells,
+        // so no cell is excluded by the breathability test.
+        //
+        // Why NOT hasAir=true: with hasAir=true the CURRENT cell also passes IsBreathable,
+        // but IsClear=false (another dupe occupies the same spawn cell) → current cell
+        // still excluded. Adjacent cells hit GasBreatherFromWorldProvider which reads
+        // Grid.Element → Vacuum in headless → IsBreathable=false again → NO cell passes
+        // → idleCell=-1. brain.OxygenBreather=null bypasses GasBreatherFromWorldProvider
+        // entirely so adjacent cells are valid regardless of gas data.
+        //
+        // OxygenBreather COMPONENT stays on the GO and will not crash — only the brain's
+        // cached field reference is null. SafeCellQueryGetFlagsPatch provides belt-and-suspenders.
+        S(id, "16c-null-OxygenBreather", () => {
+            var brain = go.GetComponent<MinionBrain>();
+            if (brain != null) brain.OxygenBreather = null;
+            Console.WriteLine($"[SETUP go={id}] 16c: brain.OxygenBreather=null (headless: SafeCellQuery skips IsBreathable for all cells)");
         });
 
         // ── Step 17: GameTags.Idle + Sensors.Spawn ───────────────────────────
