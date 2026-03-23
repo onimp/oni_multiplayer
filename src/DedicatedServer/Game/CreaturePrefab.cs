@@ -302,6 +302,74 @@ public static class CreaturePrefab {
             }
         }
 
+        // ── Step 6.5: rebuild ChoreTable.Instance to fix smi=null chores ───────────
+        // ROOT CAUSE (two crashes, same chain):
+        //
+        // CRASH 2 (RanchedStates.Instance ctor NPE [0x001b]):
+        //   CreateSMIS() crashes at CreatureThoughtGraph.Instance ctor (NameDisplayScreen NPE) →
+        //   exits the foreach early → RanchableMonitor.Instance is NEVER created (its Def comes
+        //   after CreatureThoughtGraph in cmpdef.defs for ranchable creatures).
+        //   Phase 2 (ChoreConsumer.OnSpawn): choreTableInstance = new ChoreTable.Instance(table, kpid)
+        //   → RanchedStates.Instance.ctor: Monitor=GetSMI<RanchableMonitor.Instance>()=null →
+        //   Monitor.NavComponent.defaultSpeed NPE at [0x001b].
+        //   ChoreTable.Instance creation aborts; choreTableInstance=null. BUT: all ChoreTableChore
+        //   base ctors already ran → StandardChoreBase.ctor called chore_provider.AddChore(this) →
+        //   stale chores (incl. RanchedStates with smi=null) are in ChoreProvider.
+        //
+        // CRASH 1 (StandardChoreBase.Begin NPE [0x000e7]):
+        //   ChoreDriver.FindNextChore picks the RanchedStates chore (smi=null, but in Provider) →
+        //   Begin(context) → GetSMI() returns null → sMI.OnStop NPE → exception propagates
+        //   through GoTo catch → Error() → Instance.error=true → globalSMError blocks dupe SMs.
+        //
+        // FIX: Step 6c created RanchableMonitor.Instance. Now:
+        //   6.5a: purge ALL stale ChoreTableChore entries from ChoreProvider (will be recreated).
+        //   6.5b: remove any partial RanchedStates.Instance left in smc.stateMachines.
+        //   6.5c: rebuild ChoreTable.Instance — now RanchableMonitor.Instance exists, so
+        //         RanchedStates.Instance.ctor succeeds and all chores get valid smi.
+        var choreProvider65 = go.GetComponent<ChoreProvider>();
+        var cc65            = go.GetComponent<ChoreConsumer>();
+        var kpid65          = go.GetComponent<KPrefabID>();
+        if (choreProvider65 != null && cc65 != null && kpid65 != null && cc65.choreTable != null) {
+            var ctInstanceField = typeof(ChoreConsumer).GetField(
+                "choreTableInstance", BindingFlags.Instance | BindingFlags.NonPublic);
+            var existingCTI = ctInstanceField?.GetValue(cc65);
+            if (existingCTI == null) {
+                // 6.5a: remove stale ChoreTableChore entries (those added by the partial
+                //       ChoreTable.Instance creation before it crashed).
+                var staleChores = new System.Collections.Generic.List<Chore>();
+                foreach (var choreList in choreProvider65.choreWorldMap.Values) {
+                    foreach (var c in choreList) {
+                        if (c != null && c.GetType().IsGenericType &&
+                            c.GetType().GetGenericTypeDefinition().Name == "ChoreTableChore`2") {
+                            staleChores.Add(c);
+                        }
+                    }
+                }
+                foreach (var stale in staleChores) choreProvider65.RemoveChore(stale);
+                Console.WriteLine($"[Animals] {go.name}: 6.5a purged {staleChores.Count} stale ChoreTableChores");
+
+                // 6.5b: remove partial RanchedStates.Instance left in smc by the failed ctor.
+                //       (base ctor ran → added to smc.stateMachines → body threw before completion)
+                if (smc != null) {
+                    int purged = smc.stateMachines.RemoveAll(s => s is RanchedStates.Instance);
+                    if (purged > 0)
+                        Console.WriteLine($"[Animals] {go.name}: 6.5b removed {purged} partial RanchedStates.Instance");
+                }
+
+                // 6.5c: rebuild ChoreTable.Instance.
+                //       RanchableMonitor.Instance is now in smc → RanchedStates.Instance.ctor
+                //       can call Monitor.NavComponent.defaultSpeed without NPE.
+                StateMachine.Instance.error = false; // reset in case of SM error from CRASH 1
+                try {
+                    var newCTI = new ChoreTable.Instance(cc65.choreTable, kpid65);
+                    ctInstanceField?.SetValue(cc65, newCTI);
+                    Console.WriteLine($"[Animals] {go.name}: 6.5c rebuilt ChoreTable.Instance OK");
+                } catch (Exception ex) {
+                    Console.WriteLine($"[Animals] {go.name}: 6.5c ChoreTable.Instance rebuild FAILED: {ex.GetBaseException().Message}");
+                }
+            }
+        }
+
         // ── Step 7: ensure CreatureFallMonitor SM is running ─────────────────────
         // CreatureFallMonitor.grounded evaluates ShouldFall() each tick and toggles the
         // GameTags.Creatures.Falling behaviour → creates FallStates chore → ToggleGravity().
