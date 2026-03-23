@@ -322,24 +322,16 @@ public class WorldBuilder {
             Console.WriteLine("[WorldBuilder] SaveGame.Instance null — creating headless stub");
             var saveGameGo = new GameObject("SaveGame_headless");
             UnityEngine.Object.DontDestroyOnLoad(saveGameGo);
-            // StateMachineController must be on the same GO so ColonyRationMonitor.StartSM()
-            // can register via master.GetComponent<StateMachineController>().AddStateMachineInstance().
+            // StateMachineController must be on the same GO before InitializeComponent() runs so that
+            // SaveGame.OnPrefabInit → new ColonyRationMonitor.Instance(this).StartSM() can call
+            // master.GetComponent<StateMachineController>().AddStateMachineInstance() without NPE.
             saveGameGo.AddComponent<StateMachineController>();
-            SaveGame.Instance = saveGameGo.AddComponent<SaveGame>();
+            var saveGame = saveGameGo.AddComponent<SaveGame>();
+            saveGame.InitializeComponent(); // OnPrefabInit → sets Instance + KObject.obj (for Subscribe) + creates ColonyRationMonitor
+            if (SaveGame.Instance == null) SaveGame.Instance = saveGame; // fallback if OnPrefabInit crashed before Instance = this
         }
         SaveGame.Instance.AutoSaveCycleInterval = 0;
         Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
-
-        // ColonyRationMonitor tracks edible availability colony-wide.
-        // RationMonitor.AreThereAnyEdibles() calls SaveGame.Instance.GetSMI<ColonyRationMonitor.Instance>().
-        // Without this, AreThereAnyEdibles always returns false → dupes stuck in noediblesavailable
-        // → EatChore never created even when food is present.
-        // ColonyRationMonitor iterates Components.Edibles only — no UI, no missing singletons.
-        if (SaveGame.Instance.GetSMI<ColonyRationMonitor.Instance>() == null) {
-            var crmSmi = new ColonyRationMonitor.Instance(SaveGame.Instance);
-            crmSmi.StartSM();
-            Console.WriteLine("[WorldBuilder] ColonyRationMonitor started on SaveGame stub");
-        }
 
         // Spawn starter duplicants at the actual colony location.
         // Must run AFTER SpawnEntities so Telepad/PrintingPod is already in the world
