@@ -210,3 +210,74 @@ header h1 {
   color: #666;
   font-size: 11px;
 }
+
+/* ── Connection overlay ───────────────────────────────────────────────────── */
+@keyframes conn-spin {
+  to { transform: rotate(360deg); }
+}
+
+.conn-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  /* subtle animated gradient so the canvas "breathes" behind it */
+  background: rgba(10, 10, 26, 0.82);
+  backdrop-filter: blur(2px);
+}
+
+.conn-overlay.connecting {
+  /* slightly lighter — less alarming */
+  background: rgba(10, 10, 26, 0.75);
+}
+
+.conn-overlay.disconnected {
+  background: rgba(26, 10, 10, 0.85);
+}
+
+.conn-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #4ecca3;
+  border-radius: 50%;
+  animation: conn-spin 0.9s linear infinite;
+}
+
+.conn-icon {
+  font-size: 32px;
+  color: #e94560;
+  line-height: 1;
+}
+
+.conn-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0e0;
+  letter-spacing: 0.3px;
+}
+
+.conn-subtitle {
+  font-size: 13px;
+  color: #888;
+}
+
+.conn-btn {
+  margin-top: 4px;
+  padding: 7px 20px;
+  background: transparent;
+  border: 1px solid #e94560;
+  color: #e94560;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.conn-btn:hover {
+  background: #e94560;
+  color: #fff;
+}

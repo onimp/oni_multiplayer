@@ -6,6 +6,8 @@ import type { CellInfo } from './renderer/WorldRenderer';
 import { Header } from './components/Header';
 import { WorldCanvas } from './components/WorldCanvas';
 import { Sidebar } from './components/Sidebar';
+import { ConnectionOverlay } from './components/ConnectionOverlay';
+import { deriveConnectionStatus } from './utils/connectionState';
 import './index.css';
 
 export default function App() {
@@ -102,11 +104,18 @@ export default function App() {
     return () => clearInterval(id);
   }, [autoRefresh]);
 
+  const connStatus = deriveConnectionStatus({
+    connected,
+    hasData: world !== null,
+    retryIn,
+  });
+
   return (
     <div className="app">
       <Header connected={connected} retryIn={retryIn} gameState={gameState} />
       <div className="main">
         <div className="canvas-container">
+          <ConnectionOverlay status={connStatus} onReconnect={refresh} />
           <WorldCanvas
             world={world}
             entities={entities}
