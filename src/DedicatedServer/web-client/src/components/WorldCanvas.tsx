@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { WorldData, EntitiesResponse, OverlayMode, EntityData } from '../api/types';
 import type { CellInfo } from '../renderer/WorldRenderer';
 import { WorldRenderer } from '../renderer/WorldRenderer';
+import { miniBar } from '../utils/miniBar';
 
 /** Returns ALL entities whose cell footprint covers (mouseX, mouseY) in canvas pixels. */
 function getEntitiesAt(
@@ -25,17 +26,6 @@ function getEntitiesAt(
   return result;
 }
 
-/** Renders a labelled mini bar: label [████░░░░] pct%. Color green→yellow→red by fill ratio. */
-function miniBar(label: string, value: number, max: number, unit = ''): string {
-  const pct   = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
-  const color = pct > 0.7 ? '#4cff91' : pct > 0.3 ? '#ffe033' : '#e94560';
-  const fill  = `width:${(pct * 80).toFixed(1)}px;height:100%;background:${color};border-radius:3px`;
-  const bar   = `<span style="display:inline-block;width:80px;height:7px;background:rgba(255,255,255,0.12);border-radius:3px;vertical-align:middle;overflow:hidden"><span style="${fill}"></span></span>`;
-  const text  = unit === 'kcal'
-    ? `${(value / 1000).toFixed(0)} / ${(max / 1000).toFixed(0)} kcal`
-    : `${Math.round(pct * 100)}%`;
-  return `${label} ${bar} <span style="color:#aaa;font-size:10px">${text}</span>`;
-}
 
 /** Builds the inner HTML for the hover tooltip — one block per entity, separated by a divider. */
 function tooltipHtml(hits: EntityData[], pinned = false): string {
