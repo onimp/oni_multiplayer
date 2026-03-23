@@ -227,24 +227,41 @@ public static class SystemInfoPatches {
 }
 
 /// <summary>
-/// Guards ChoreProvider.CollectChores against providers whose backing GameObject
-/// has been destroyed (transform == null).
+/// Guards ClusterUtil.GetMyWorld(GameObject) and GetMyParentWorldId(GameObject) against
+/// destroyed GameObjects (transform == null).
 ///
 /// ROOT CAUSE (tick-16 crash):
-///   The global ChoreProvider registry accumulates providers created during world load.
-///   Some of those GOs are transient (e.g. temporary spawn helpers) and get destroyed
-///   before the first Brain tick. Their ChoreProvider entry stays in the registry.
-///   ChoreConsumer.FindNextChore iterates ALL registered providers → calls CollectChores
-///   → ClusterUtil.GetMyParentWorldId(go) → Grid.PosToCell(go) →
-///   TransformExtensions.GetPosition(go.transform) → NPE (transform is null on destroyed GO).
+///   The global ChoreProvider registry retains entries for GOs destroyed after world load.
+///   ChoreConsumer.FindNextChore iterates all registered providers → CollectChores →
+///   ClusterUtil.GetMyParentWorldId(go) → GetMyWorld(go) → Grid.PosToCell(go) →
+///   TransformExtensions.GetPosition(go.transform) → NPE (transform=null on destroyed GO).
 ///
-/// FIX: skip any provider whose GO or transform is null — it is a destroyed object,
-///   safe to ignore. ChoreProvider.CollectChores is NOT a lifecycle method.
+/// FIX: null-guard the two static ClusterUtil extension methods at the source.
+///   ClusterUtil is a static utility class — safe to Harmony-patch (no KMonoBehaviour
+///   virtual dispatch, no lifecycle involvement).
+///   GetMyWorld returns null → GetMyParentWorldId already null-checks myWorld and falls
+///   through to GetMyWorldId. Guarding both is belt-and-suspenders.
 /// </summary>
-[HarmonyPatch(typeof(ChoreProvider), nameof(ChoreProvider.CollectChores))]
-public static class ChoreProviderCollectChoresPatch {
+[HarmonyPatch(typeof(ClusterUtil))]
+public static class ClusterUtilPatches {
 
     [HarmonyPrefix]
-    static bool SkipNullTransformProvider(ChoreProvider __instance) =>
-        __instance != null && __instance.gameObject != null && __instance.transform != null;
+    [HarmonyPatch(nameof(ClusterUtil.GetMyWorld), new[] { typeof(GameObject) })]
+    static bool GetMyWorld_NullGuard(GameObject gameObject, ref WorldContainer __result) {
+        if (gameObject == null || gameObject.transform == null) {
+            __result = null;
+            return false;
+        }
+        return true;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(ClusterUtil.GetMyParentWorldId), new[] { typeof(GameObject) })]
+    static bool GetMyParentWorldId_NullGuard(GameObject go, ref int __result) {
+        if (go == null || go.transform == null) {
+            __result = -1;
+            return false;
+        }
+        return true;
+    }
 }
