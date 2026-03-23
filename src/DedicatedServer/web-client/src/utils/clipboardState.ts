@@ -7,6 +7,7 @@
  */
 
 import type { GameState } from '../api/types';
+export type { GameState };
 
 // ── Serialization ─────────────────────────────────────────────────────────────
 

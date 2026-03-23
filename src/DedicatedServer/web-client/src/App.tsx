@@ -20,7 +20,7 @@ import { inspectCell } from './utils/cellInspector';
 import { CellInspectorPanel } from './components/CellInspectorPanel';
 import { createTickBuffer, pushTick, getLatestTick, getAllTicks } from './utils/tickBuffer';
 import type { TickSnapshot } from './utils/tickBuffer';
-import { gameStateToJson, jsonToGameState, isParseError } from './utils/clipboardState';
+import { gameStateToJson } from './utils/clipboardState';
 import './index.css';
 
 export default function App() {

@@ -12,6 +12,7 @@ import {
 } from '../utils/minimap';
 import { minimapNeedsRedraw } from '../utils/minimapGate';
 import type { MinimapViewport } from '../utils/minimapGate';
+import { getCritterStyle } from '../utils/critterStyle';
 
 export interface CellInfo {
   x: number;
@@ -229,7 +230,7 @@ export class WorldRenderer {
 
     // Collect visible entities by render category.
     // PillInfo covers both duplicants and critters: rx=ry gives a circle, rx≠ry gives a pill.
-    type PillInfo = { cx: number; cy: number; rx: number; ry: number };
+    type PillInfo = { cx: number; cy: number; rx: number; ry: number; color: string; letter: string };
     // StateLabel: small text drawn below the marker (smState/currentChore for dupes, name for critters).
     type StateLabel = { cx: number; topY: number; text: string };
 
@@ -265,17 +266,21 @@ export class WorldRenderer {
         // Pill using actual w/h from server — rx/ry leave ~12% padding inside each cell
         const rx = ew * cellSize * 0.44;
         const ry = eh * cellSize * 0.44;
-        dupes.push({ cx, cy, rx, ry });
+        const dupeColor = ENTITY_COLORS['duplicant'] ?? '#ffe033';
+        dupes.push({ cx, cy, rx, ry, color: dupeColor, letter: 'D' });
         // State label: smState takes priority, fall back to currentChore
         const stateText = entity.smState ?? entity.currentChore;
         if (stateText && cellSize >= 6) stateLabels.push({ cx, topY: cy + ry + 2, text: stateText });
       } else if (entity.type === 'critter') {
-        // Same pill logic: 1×1 → circle (rx=ry), 1×2 Drecko → tall pill (ry > rx)
-        const rx = ew * cellSize * 0.44;
-        const ry = eh * cellSize * 0.44;
-        critters.push({ cx, cy, rx, ry });
-        // Show critter name when zoomed in enough (too noisy at small zoom)
-        if (cellSize >= 10) stateLabels.push({ cx, topY: cy + ry + 2, text: entity.name });
+        // Per-species color and size from critterStyle
+        const style = getCritterStyle(entity.name);
+        const baseRx = ew * cellSize * 0.44;
+        const baseRy = eh * cellSize * 0.44;
+        const rx = baseRx * style.sizeMultiplier;
+        const ry = baseRy * style.sizeMultiplier;
+        critters.push({ cx, cy, rx, ry, color: style.color, letter: style.letter });
+        // Show species label when zoomed in enough (too noisy at small zoom)
+        if (cellSize >= 10) stateLabels.push({ cx, topY: cy + ry + 2, text: style.label });
       } else if (entity.type === 'building') {
         // Buildings: per-name color via buildingRenderer (distinct per building type).
         // Rendered before dupes/critters so they form a background layer.
@@ -330,10 +335,14 @@ export class WorldRenderer {
       ctx.strokeRect(x, y, w, h);
     }
 
-    // Helper: batch-draw pills for one type (shadow + fill in two passes)
-    const drawPills = (pills: PillInfo[], color: string) => {
+    // Helper: batch-draw pills.
+    // Shadows are drawn in a single pass first (all pills regardless of color),
+    // then fills are grouped by color for minimal state changes.
+    const drawPills = (pills: PillInfo[]) => {
       if (pills.length === 0) return;
       const shadow = 1.5;
+
+      // Shadow pass — all pills in one fill call
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.beginPath();
       for (const p of pills)
@@ -341,25 +350,34 @@ export class WorldRenderer {
                       (p.rx + shadow) * 2, (p.ry + shadow) * 2, p.rx + shadow);
       ctx.fill();
 
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      for (const p of pills)
-        ctx.roundRect(p.cx - p.rx, p.cy - p.ry, p.rx * 2, p.ry * 2, p.rx);
-      ctx.fill();
+      // Fill pass — group by color to minimize fillStyle changes
+      const byColor = new Map<string, PillInfo[]>();
+      for (const p of pills) {
+        const g = byColor.get(p.color);
+        if (g) g.push(p); else byColor.set(p.color, [p]);
+      }
+      for (const [color, group] of byColor) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        for (const p of group)
+          ctx.roundRect(p.cx - p.rx, p.cy - p.ry, p.rx * 2, p.ry * 2, p.rx);
+        ctx.fill();
+      }
     };
 
-    drawPills(dupes,    ENTITY_COLORS['duplicant'] ?? '#ffe033');
-    drawPills(critters, ENTITY_COLORS['critter']   ?? '#4cff91');
+    drawPills(dupes);
+    drawPills(critters);
 
-    // --- D/C labels inside markers (only when zoomed in) ---
+    // --- Letter labels inside markers (only when zoomed in) ---
+    // Dupes always show 'D'; critters show a per-species letter (e.g. 'H'=Hatch, 'P'=Puft).
     if (cellSize >= 8 && (dupes.length > 0 || critters.length > 0)) {
       const fontSize = Math.max(6, Math.round(cellSize * 0.65));
       ctx.font = `bold ${fontSize}px monospace`;
       ctx.fillStyle = '#000';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      for (const d of dupes)    ctx.fillText('D', d.cx, d.cy);
-      for (const c of critters) ctx.fillText('C', c.cx, c.cy);
+      for (const d of dupes)    ctx.fillText(d.letter, d.cx, d.cy);
+      for (const c of critters) ctx.fillText(c.letter, c.cx, c.cy);
     }
 
     // --- State / name labels below markers ---
@@ -454,7 +472,7 @@ export class WorldRenderer {
           ctx.fillStyle = 'rgba(180,130,40,0.35)';
           ctx.fillRect(bx, by, bw, bh);
         } else if (e.type === 'critter') {
-          ctx.fillStyle = '#4cff91';
+          ctx.fillStyle = getCritterStyle(e.name).color;
           ctx.fillRect(mx - 1, my - 1, 2, 2);
         } else if (e.type === 'duplicant') {
           ctx.fillStyle = '#ffe033';
