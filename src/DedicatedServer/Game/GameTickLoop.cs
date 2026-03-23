@@ -201,6 +201,12 @@ public class GameTickLoop {
         if (_tickCount == 100) {
             DelayedChoreCheck();
             DiagStamina(100);  // compare with tick=1 — should change if BatchUpdate is working
+            DiagSleepState(100);
+        }
+
+        if (_tickCount == 500) {
+            DiagStamina(500);   // F6 precision check: confirm value == GetMax() exactly
+            DiagSleepState(500);
         }
 
         // Runtime diagnostic at tick=200: catch runtime state well past tick=0 transients.
@@ -362,9 +368,55 @@ public class GameTickLoop {
             var go = identity.gameObject;
             var stamina = Db.Get().Amounts.Stamina.Lookup(go);
             var calories = Db.Get().Amounts.Calories.Lookup(go);
+            // F3/F1 for quick reading; F6 to catch floating-point gaps that block ShouldExitSleep.
+            // ShouldExitSleep returns false if stamina.value < stamina.GetMax() — even by epsilon.
             Console.WriteLine($"[StaminaDiag tick={tick}] dupe={go.name} " +
                 $"stamina={stamina?.value:F3}/{stamina?.GetMax():F1} delta={stamina?.GetDelta():F4} " +
+                $"stamina_F6={stamina?.value.ToString("F6")}/{stamina?.GetMax().ToString("F6")} " +
                 $"calories={calories?.value:F0}/{calories?.GetMax():F0}");
+        }
+    }
+
+    /// <summary>
+    /// Logs SleepChoreMonitor and SleepChore sub-state per dupe.
+    /// Used to determine whether dupe is in approach (nav to locator) or sleep.normal (working).
+    /// OnWorkTick (which calls ShouldExitSleep) is only fired in sleep.normal, NOT in approach.
+    /// SleepChoreMonitor states: satisfied / checkforbed / passingout / sleeponfloor / bedassigned.
+    /// SleepChore states: approach / sleep.normal / sleep.uninterruptable / interrupt_* / success.
+    /// </summary>
+    private static void DiagSleepState(int tick) {
+        foreach (var identity in Components.LiveMinionIdentities.Items) {
+            if (identity == null) continue;
+            var go = identity.gameObject;
+            var smc = go.GetComponent<StateMachineController>();
+
+            // SleepChoreMonitor sub-state (managed by StaminaMonitor root via ToggleStateMachine).
+            var sleepMonSmi = smc?.GetSMI<SleepChoreMonitor.Instance>();
+            var sleepMonState = sleepMonSmi?.GetCurrentState()?.name ?? "null";
+
+            // Active SleepChore SM sub-state (approach vs sleep.normal etc).
+            var driver = go.GetComponent<ChoreDriver>();
+            var currentChore = driver?.GetCurrentChore();
+            string sleepChoreState = "n/a";
+            if (currentChore is SleepChore sc) {
+                sleepChoreState = sc.smi?.GetCurrentState()?.name ?? "null";
+            }
+
+            // StaminaMonitor sub-state (satisfied vs sleepy.needssleep vs sleepy.sleeping).
+            var staminaMonSmi = smc?.GetSMI<StaminaMonitor.Instance>();
+            var staminaMonState = staminaMonSmi?.GetCurrentState()?.name ?? "null";
+
+            // Schedulable current block (via ScheduleManager — Schedulable itself has no GetCurrentScheduleBlock).
+            var schedulable = go.GetComponent<Schedulable>();
+            var schedule = schedulable != null ? ScheduleManager.Instance?.GetSchedule(schedulable) : null;
+            var currentBlock = schedule?.GetCurrentScheduleBlock()?.name ?? "null";
+            var allowsSleep = schedulable != null && (ScheduleManager.Instance?.IsAllowed(schedulable, Db.Get().ScheduleBlockTypes.Sleep) ?? false);
+
+            Console.WriteLine($"[SleepDiag tick={tick}] dupe={go.name} " +
+                $"staminaMon={staminaMonState} " +
+                $"sleepMon={sleepMonState} " +
+                $"sleepChore={currentChore?.GetType().Name ?? "null"}({sleepChoreState}) " +
+                $"block={currentBlock} allowsSleep={allowsSleep}");
         }
     }
 
