@@ -285,6 +285,17 @@ public class WorldBuilder {
         // → ChoreConsumerState ctor NPEs at schedulable.GetSchedule().GetCurrentScheduleBlock().
         InitializeSchedules();
 
+        // MinionGroupProber singleton must exist before SpawnEntities so Pickupable.OnSpawn
+        // (→ ReachabilityMonitor.Instance ctor → UpdateReachability → MinionGroupProber.Get().IsAllReachable)
+        // does not NPE. OnPrefabInit is invoked via reflection to bypass KObject setup requirement.
+        // All cells default to 0 → IsAllReachable returns false (correct: no dupe has probed yet).
+        {
+            var minionProberGo = new GameObject("MinionGroupProber");
+            var prober = minionProberGo.AddComponent<MinionGroupProber>();
+            typeof(MinionGroupProber).GetMethod("OnPrefabInit", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(prober, null);
+            Console.WriteLine($"[WorldBuilder] MinionGroupProber.Instance={MinionGroupProber.Get() != null}");
+        }
+
         Console.WriteLine("[WorldBuilder] Spawning entities...");
         SpawnEntities(cluster);
 
