@@ -198,6 +198,15 @@ public class GameTickLoop {
             RuntimeDiagAt200();
         }
 
+        // Movement diagnostic at ticks 300/500/800: logs per-dupe idle tag, oxygen, path,
+        // adjacent cell reachability.  Identifies why IdleCellSensor returns -1 despite
+        // neighbours being walkable.  Two candidates gated before the path query:
+        //   (a) prefabid.HasTag(GameTags.Idle) == false → sensor returns -1 immediately
+        //   (b) SafeCellQuery.IsBreathable == false (OxygenBreather.HasOxygen=false) → no valid cell
+        if (_tickCount == 300 || _tickCount == 500 || _tickCount == 800) {
+            NavMoveDiag(_tickCount);
+        }
+
     }
 
     private static void ForceUpdateBrains() {
@@ -646,6 +655,68 @@ public class GameTickLoop {
             name.Contains("ToggleAnims") ||   // AddAnimOverrides / RemoveAnimOverrides
             name == "ClearWalk"               // smi.animController.Play("idle_default")
         );
+
+    /// <summary>
+    /// Movement diagnostic: fires at ticks 300/500/800 to pinpoint why dupes aren't moving.
+    ///
+    /// Checks both gates inside IdleCellSensor.Update() that return cell=-1 before the path query:
+    ///   (a) prefabid.HasTag(GameTags.Idle) — set by IdleChore.States.idle.ToggleTag on enter.
+    ///       If false → sensor skips the RunQuery call entirely → idleCell stays -1.
+    ///   (b) IsBreathable in SafeCellQuery.GetFlags → OxygenBreather.HasOxygen check.
+    ///       If HasOxygen=false → no cell passes the safe-cell filter → idleCell=-1.
+    /// Also logs CanReach() for the 4 orthogonal neighbours to confirm PathGrid is warm.
+    /// </summary>
+    private static void NavMoveDiag(int tick) {
+        Console.WriteLine($"[NAVMOVE tick={tick}] per-dupe movement diagnostic");
+        foreach (var identity in Components.LiveMinionIdentities.Items) {
+            if (identity == null) continue;
+            var go = identity.gameObject;
+
+            var smc           = go.GetComponent<StateMachineController>();
+            var nav           = go.GetComponent<Navigator>();
+            var sensors       = go.GetComponent<Sensors>();
+            var driver        = go.GetComponent<ChoreDriver>();
+            var prefabId      = go.GetComponent<KPrefabID>();
+            var oxyBreather   = go.GetComponent<OxygenBreather>();
+
+            var idleMon       = smc?.GetSMI<IdleMonitor.Instance>();
+            var idleSensor    = sensors?.GetSensor<IdleCellSensor>();
+            var idleCell      = idleSensor?.GetCell() ?? -1;
+            var hasIdleTag    = prefabId?.HasTag(GameTags.Idle) ?? false;
+            var hasOxygen     = oxyBreather?.HasOxygen ?? false;
+            var physCell      = Grid.PosToCell(go);
+            var navCell       = nav?.cachedCell ?? -1;
+            var isMoving      = nav?.IsMoving() ?? false;
+            var chore         = driver?.GetCurrentChore();
+
+            // Navigator.path is a private field (PathFinder.Path struct).
+            bool pathValid = false;
+            try {
+                var pathField = typeof(Navigator).GetField("path",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                if (pathField?.GetValue(nav) is PathFinder.Path p)
+                    pathValid = p.IsValid();
+            } catch { /* reflection may fail; leave pathValid=false */ }
+
+            // CanReach() on the 4 orthogonal neighbours: confirms PathGrid is warm.
+            var adjCells = new[] {
+                Grid.CellLeft(physCell), Grid.CellRight(physCell),
+                Grid.CellAbove(physCell), Grid.CellBelow(physCell)
+            };
+            var reachable = adjCells.Select(c =>
+                Grid.IsValidCell(c) && (nav?.CanReach(c) ?? false)).ToArray();
+
+            Console.WriteLine($"[NAVMOVE tick={tick}] {go.name}: " +
+                $"physCell={physCell} navCell={navCell} isMoving={isMoving} " +
+                $"idleMonState={idleMon?.GetCurrentState()?.name ?? "NULL"} " +
+                $"idleCell={idleCell} hasIdleTag={hasIdleTag} hasOxygen={hasOxygen} " +
+                $"pathValid={pathValid} globalSMError={StateMachine.Instance.error} " +
+                $"chore={chore?.GetType().Name ?? "null"}");
+            Console.WriteLine($"[NAVMOVE tick={tick}] {go.name}: adj: " +
+                $"L={reachable[0]}({adjCells[0]}) R={reachable[1]}({adjCells[1]}) " +
+                $"U={reachable[2]}({adjCells[2]}) D={reachable[3]}({adjCells[3]})");
+        }
+    }
 
     /// <summary>
     /// Removes ChoreProviders backed by destroyed GameObjects from every live consumer's

@@ -207,10 +207,11 @@ public static class MinionPrefab {
                 Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType}: OK");
             } catch (Exception ex) {
                 Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType} FAIL: {ex.GetType().Name}: {ex.Message}");
-                // Reset error flag so remaining SMs still attempt to start.
-                // This preserves the "full cascade" intent: see ALL SM failures, not just the first.
+                Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType} STACK: {ex.StackTrace}");
+                // Reset error flag and CONTINUE so remaining SMs (including IdleMonitor) still start.
+                // throw would exit the loop at the first failure → dupes 1+2 miss IdleMonitor.
                 StateMachine.Instance.error = false;
-                throw;
+                continue;
             }
         }
 
