@@ -345,7 +345,7 @@ public class RealWorldState {
             if (brain == null || brain is MinionBrain) continue;
             if (brain.gameObject == null) continue;
             try { liveCreatures.Add(BuildLiveCreatureDto(brain.gameObject)); }
-            catch { /* skip individual critter DTO build failures */ }
+            catch (Exception ex) { Console.WriteLine($"[CreatureDTO] {brain.gameObject?.name}: {ex.GetBaseException().Message}"); }
         }
 
         // ── Step 3: combine and serialize ──────────────────────────────────────
