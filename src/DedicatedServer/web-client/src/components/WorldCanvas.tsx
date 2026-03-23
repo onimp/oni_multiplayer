@@ -190,12 +190,19 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     return () => resizeObserver.disconnect();
   }, []);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    if (!rendererRef.current || !worldRef.current) return;
-    const rect = canvasRef.current!.getBoundingClientRect();
-    rendererRef.current.zoom(e.deltaY > 0 ? -1 : 1, e.clientX - rect.left, e.clientY - rect.top);
-    // rAF loop will redraw on next frame — no manual render() call needed.
+  // Canvas zoom: must be non-passive so preventDefault() actually suppresses page scroll.
+  // Registered in the same useEffect as the resize observer to share the canvas ref check.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      if (!rendererRef.current || !worldRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      rendererRef.current.zoom(e.deltaY > 0 ? -1 : 1, e.clientX - rect.left, e.clientY - rect.top);
+    };
+    canvas.addEventListener('wheel', handler, { passive: false });
+    return () => canvas.removeEventListener('wheel', handler);
   }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -296,7 +303,6 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <canvas
         ref={canvasRef}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
