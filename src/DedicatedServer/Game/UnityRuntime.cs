@@ -508,6 +508,20 @@ public static class UnityRuntime {
 
         if (!GameObjectComponents.TryGetValue(go.m_CachedPtr, out var components)) return;
 
+        // Phase 0: Ensure Traits component exists on any GO whose Modifiers.initialTraits is non-empty.
+        // Modifiers.OnPrefabInit() tail: component = GetComponent<Traits>(); ... component.Add(trait)
+        // → NPE at IL offset 0x153 when Traits is null but initialTraits has entries.
+        // Root cause: EntityTemplates only adds Traits conditionally (when trait.SelfModifiers.Count > 0),
+        // but other EntityTemplates code paths populate initialTraits WITHOUT adding the Traits component
+        // (e.g. ExtendedCreature, base creature templates where the base trait has no self-modifiers).
+        // Fix: proactively add Traits before Modifiers.OnPrefabInit() fires for any GO that needs it.
+        foreach (var comp in components) {
+            if (comp is Modifiers mods && mods.initialTraits?.Count > 0 && go.GetComponent<Traits>() == null) {
+                go.AddOrGet<Traits>();
+                break;
+            }
+        }
+
         // Phase 0.5: Initialize Modifiers BEFORE KPrefabID — critter GOs ONLY.
         // KPrefabID is first in component order and fires prefabInitFn delegates during OnPrefabInit.
         // Many critter prefabInitFn lambdas call inst.GetAttributes().Add(...) which reads
@@ -524,10 +538,7 @@ public static class UnityRuntime {
         if (isCreatureGo) {
             foreach (var comp in components) {
                 if (comp is Modifiers) {
-                    try { ((KMonoBehaviour) comp).InitializeComponent(); }
-                    catch (Exception ex) {
-                        Console.WriteLine($"[Lifecycle] Modifiers pre-init failed: go={go.name} hasTraits={go.GetComponent<Traits>() != null} ex={ex.GetBaseException().Message}");
-                    }
+                    ((KMonoBehaviour) comp).InitializeComponent();
                 }
             }
         }
