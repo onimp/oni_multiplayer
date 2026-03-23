@@ -395,14 +395,18 @@ public static class MinionPrefab {
     /// </summary>
     private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) =>
         smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
-     || smi is CreatureThoughtGraph.Instance  // creature thought-bubble UI — same crash pattern as ThoughtGraph
-     || smi is RadiationMonitor.Instance;     // DLC radiation monitor — silently sets GameTags.Dying in headless
-                                              // → IdleMonitor.StartSM() enters stopped → no IdleChore for Bionic dupes
+     || smi is CreatureThoughtGraph.Instance;  // creature thought-bubble UI — same crash pattern as ThoughtGraph
     // Removed from skip list (now safe):
     // SpeechMonitor.Instance   — SetMouthId NPE fixed: step 9c ensures personalityResourceId is valid
     // ThoughtGraph.Instance    — safe: NameDisplayScreen stubbed, SpeechMonitor live (BeginTalking no longer NPEs)
     // CalorieMonitor.Instance  — safe: ThoughtGraph running → GetSMI<ThoughtGraph.Instance>() returns live instance
     // RationMonitor.Instance   — safe: SaveGame+ColonyRationMonitor initialized before SpawnStarterMinions
+    // RadiationMonitor.Instance — safe: per-SM error reset (commit 2db37e0) prevents error propagation to
+    //   IdleMonitor. Original skip was added before the error reset existed. With the reset in place,
+    //   any NPE in RadiationMonitor.StartSM() sets error=true, is immediately reset, and does NOT
+    //   prevent subsequent SMs (IdleMonitor) from starting normally. RadiationBalance=0 for fresh dupes
+    //   → no sick/deadly transitions → no spurious Dying tag. Bionic dupes with genuine high radiation
+    //   stay incapacitated (correct game behavior).
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.
