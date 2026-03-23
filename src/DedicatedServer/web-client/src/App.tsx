@@ -56,6 +56,11 @@ export default function App() {
   // Imperative canvas API (zoom/pan) — populated by WorldCanvas on mount.
   const canvasActionsRef = useRef<CanvasActions | null>(null);
 
+  // Always-current gameState ref — lets the keydown handler (registered once
+  // with deps=[]) read the latest tick without capturing a stale closure.
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+
   // Help overlay visibility
   const [showHelp, setShowHelp] = useState(false);
 
@@ -82,7 +87,7 @@ export default function App() {
         case 'close-help':  setShowHelp(false); setInspectedCell(null); break;
         case 'export-screenshot': {
           const dataUrl = canvasActionsRef.current?.screenshot();
-          if (dataUrl) triggerDownload(dataUrl, screenshotFilename(gameState?.tick));
+          if (dataUrl) triggerDownload(dataUrl, screenshotFilename(gameStateRef.current?.tick));
           break;
         }
       }
