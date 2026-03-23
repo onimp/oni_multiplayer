@@ -252,7 +252,11 @@ public class RealWorldState {
         var x        = (int)pos.x;
         var y        = (int)pos.y;
         var smc      = go.GetComponent<StateMachineController>();
-        var smState  = smc?.stateMachines?.FirstOrDefault(s => s != null)?.GetCurrentState()?.name ?? "none";
+        var smState  = smc?.stateMachines
+            ?.Where(s => s != null)
+            .Select(s => s.GetCurrentState()?.name)
+            .FirstOrDefault(n => n != null && n != "root.closed" && n != "root")
+            ?? "none";
         return new { type = "critter", name = prefabId, x, y, w, h, smState };
     }
 
