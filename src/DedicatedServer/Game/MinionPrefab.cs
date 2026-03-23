@@ -87,6 +87,13 @@ public static class MinionPrefab {
         });
 
         // ── Step 3: Ensure required functional components ────────────────────
+        // HeadlessAnimController: no-op KAnimControllerBase stub so that
+        // StandardWorker.StartWork / Work / InternalStopWork calls like
+        //   GetComponent<KAnimControllerBase>().Offset += ...
+        //   GetComponent<KAnimControllerBase>().Play(...)
+        //   GetComponent<KAnimControllerBase>().IsStopped()
+        // return a non-null object instead of NPE-ing.
+        S(id, "3-HeadlessAnimController",     () => go.AddOrGet<HeadlessAnimController>());
         S(id, "3-KSelectable",                () => go.AddOrGet<KSelectable>());
         S(id, "3-ChoreProvider",              () => go.AddOrGet<ChoreProvider>());
         S(id, "3-DebugGoToMonitor",           () => go.AddOrGetDef<DebugGoToMonitor.Def>());
