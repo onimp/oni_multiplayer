@@ -201,7 +201,13 @@ if (runtimeMethods.TryGetValue("InstantiateSingleWithParent", out var instantiat
     }
 }
 
-module.Write(outputPath);
+// Write to a temp file first to avoid Cecil lazy-load conflict.
+// Cecil uses deferred token reads; if inputPath == outputPath, truncating the file
+// for writing corrupts in-flight lazy reads -> BadImageFormatException at MetadataBuilder.
+// Writing to a separate path avoids the conflict; File.Move is atomic on the same FS.
+var tempOutputPath = outputPath + ".tmp";
+module.Write(tempOutputPath);
+File.Move(tempOutputPath, outputPath, overwrite: true);
 Console.WriteLine($"Patched {patched} methods ({delegated} delegated to UnityRuntime) -> {outputPath}");
 
 // Optional: patch Assembly-CSharp.dll (Assets.GetAnim null fallback to stub, render no-ops)
