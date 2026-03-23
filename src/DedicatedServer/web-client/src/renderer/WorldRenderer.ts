@@ -1,6 +1,6 @@
 import type { EntityData, OverlayMode, WorldData, EntitiesResponse } from '../api/types';
 import { getElementColor, getElementName, getElementState, ENTITY_COLORS } from './constants';
-import { temperatureToColor } from '../utils/tempColor';
+import { tempOverlayColor } from '../utils/tempOverlay';
 import { gasOverlayColor, GAS_BACKGROUND } from '../utils/gasOverlay';
 import { liquidOverlayColor, LIQUID_BACKGROUND } from '../utils/liquidOverlay';
 import { buildingToRect, BUILDING_LABEL_MIN_CELL_SIZE } from '../utils/buildingRenderer';
@@ -163,8 +163,8 @@ export class WorldRenderer {
         return getElementColor(elementId);
 
       case 'temperature':
-        // Delegate to ONI-accurate HSV formula (SimDebugView.TemperatureToColor).
-        return temperatureToColor(temperature);
+        // Delegate to ONI-accurate HSV formula via tempOverlay adapter.
+        return tempOverlayColor(temperature);
 
       case 'mass': {
         if (mass <= 0) return '#0a0a0a';
