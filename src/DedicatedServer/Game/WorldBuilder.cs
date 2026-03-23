@@ -1858,8 +1858,8 @@ public class WorldBuilder {
     /// StateMachine.Instance.error=true → all SM transitions blocked → fish permanently stuck.
     ///
     /// Fix: one-time positional correction at startup. No Harmony, no runtime overhead.
-    /// Uses Grid.IsLiquid(cell) = ElementLoader.elements[ElementIdx[cell]].IsLiquid —
-    /// pure element-type check, no mass threshold, reliable from world gen data.
+    /// Uses Grid.IsSubstantialLiquid (mass >= defaultMass*0.35) for both body and head cell —
+    /// same check as CreatureFallMonitor.CanSwimAtCurrentLocation(), ensuring consistent safety.
     /// </summary>
     private static void ValidateSwimmerPositions() {
         var moved = 0;
@@ -1869,7 +1869,7 @@ public class WorldBuilder {
             var nav = brain.gameObject.GetComponent<Navigator>();
             if (nav?.NavGrid == null || nav.NavGrid.id != "SwimmerNavGrid") continue;
             var cell = Grid.PosToCell(brain.gameObject);
-            if (!Grid.IsValidCell(cell) || Grid.IsLiquid(cell)) continue;
+            if (!Grid.IsValidCell(cell) || (Grid.IsSubstantialLiquid(cell) && Grid.IsSubstantialLiquid(cell + Grid.WidthInCells))) continue;
             var fixCell = FindNearestLiquidCell(cell, 20);
             if (fixCell < 0) {
                 Console.WriteLine($"[WorldBuilder] Swimmer {brain.gameObject.name} at cell={cell}: no liquid cell within radius 20, leaving in place");
@@ -1896,7 +1896,7 @@ public class WorldBuilder {
                     var cx = origin.x + dx;
                     var cy = origin.y + dy;
                     var c  = Grid.XYToCell(cx, cy);
-                    if (Grid.IsValidCell(c) && Grid.IsLiquid(c)) return c;
+                    if (Grid.IsValidCell(c) && Grid.IsSubstantialLiquid(c) && Grid.IsSubstantialLiquid(c + Grid.WidthInCells)) return c;
                 }
             }
         }
