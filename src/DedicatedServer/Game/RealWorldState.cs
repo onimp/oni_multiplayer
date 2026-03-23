@@ -417,7 +417,10 @@ public class RealWorldState {
                           (world.SpawnData?.elementalOres?.Count ?? 0) +
                           (world.SpawnData?.pickupables?.Count ?? 0),
             source = world.SimRunning ? "simdll" : "fallback",
-            serverUps = world.TickLoop?.Ups ?? 0
+            serverUps = world.TickLoop?.Ups ?? 0,
+            // Day/night: 0-600s within current cycle; night starts at 87.5% (525s)
+            cycleTime = (float)(gameClock?.GetTimeSinceStartOfCycle() ?? 0f),
+            isNight   = gameClock?.IsNighttime() ?? false
         };
         var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(obj));
         Console.WriteLine($"[WorldState] Cache MISS: rebuilt state {bytes.Length}B");
@@ -443,7 +446,9 @@ public class RealWorldState {
             entityCount = (world.SpawnData?.otherEntities?.Count ?? 0) +
                           (world.SpawnData?.elementalOres?.Count ?? 0) +
                           (world.SpawnData?.pickupables?.Count ?? 0),
-            source = world.SimRunning ? "simdll" : "fallback"
+            source = world.SimRunning ? "simdll" : "fallback",
+            cycleTime = (float)(gameClock?.GetTimeSinceStartOfCycle() ?? 0f),
+            isNight   = gameClock?.IsNighttime() ?? false
         };
     }
 }

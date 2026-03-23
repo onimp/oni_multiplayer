@@ -3,35 +3,38 @@ import type { WorldData, EntitiesResponse, OverlayMode, EntityData } from '../ap
 import type { CellInfo } from '../renderer/WorldRenderer';
 import { WorldRenderer } from '../renderer/WorldRenderer';
 
-/** Returns the topmost entity whose cell footprint covers (mouseX, mouseY) in canvas pixels. */
-function getEntityAt(
+/** Returns ALL entities whose cell footprint covers (mouseX, mouseY) in canvas pixels. */
+function getEntitiesAt(
   mouseX: number, mouseY: number,
   world: WorldData, entities: EntitiesResponse | null,
   renderer: WorldRenderer,
-): EntityData | null {
-  if (!entities) return null;
+): EntityData[] {
+  if (!entities) return [];
   const cs = renderer.currentCellSize;
   const ox = renderer.currentOffsetX;
   const oy = renderer.currentOffsetY;
+  const result: EntityData[] = [];
   for (const e of entities.entities) {
     const ew = e.w ?? 1;
     const eh = e.h ?? 1;
     const sx = ox + e.x * cs;
     const sy = oy + (world.height - e.y - eh) * cs;
-    if (mouseX >= sx && mouseX < sx + ew * cs && mouseY >= sy && mouseY < sy + eh * cs) return e;
+    if (mouseX >= sx && mouseX < sx + ew * cs && mouseY >= sy && mouseY < sy + eh * cs) result.push(e);
   }
-  return null;
+  return result;
 }
 
-/** Builds the inner HTML for the hover tooltip. */
-function tooltipHtml(e: EntityData): string {
-  const rows: string[] = [`<b>${e.name}</b> [${e.type}]`];
-  if (e.smState   !== undefined) rows.push(`SM: ${e.smState ?? 'null'}`);
-  if (e.currentChore)            rows.push(`Chore: ${e.currentChore}`);
-  if (e.navIsMoving !== undefined) rows.push(`Moving: ${e.navIsMoving}`);
-  if (e.navCell !== undefined)   rows.push(`NavCell: ${e.navCell}`);
-  rows.push(`(${e.x}, ${e.y})&nbsp;${e.w ?? 1}×${e.h ?? 1}`);
-  return rows.join('<br>');
+/** Builds the inner HTML for the hover tooltip — one block per entity, separated by a divider. */
+function tooltipHtml(hits: EntityData[]): string {
+  return hits.map(e => {
+    const rows: string[] = [`<b>${e.name}</b> <span style="color:#aaa">[${e.type}]</span>`];
+    if (e.smState   !== undefined) rows.push(`SM: ${e.smState ?? 'null'}`);
+    if (e.currentChore)            rows.push(`Chore: ${e.currentChore}`);
+    if (e.navIsMoving !== undefined) rows.push(`Moving: ${e.navIsMoving}`);
+    if (e.navCell !== undefined)   rows.push(`NavCell: ${e.navCell}`);
+    rows.push(`<span style="color:#888">(${e.x}, ${e.y})&nbsp;${e.w ?? 1}×${e.h ?? 1}</span>`);
+    return rows.join('<br>');
+  }).join('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.2);margin:4px 0">');
 }
 
 interface Props {
@@ -154,9 +157,9 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       // Entity tooltip — direct DOM update, no React re-render.
       const tt = tooltipRef.current;
       if (tt) {
-        const entity = getEntityAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
-        if (entity) {
-          tt.innerHTML = tooltipHtml(entity);
+        const hits = getEntitiesAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
+        if (hits.length > 0) {
+          tt.innerHTML = tooltipHtml(hits);
           tt.style.left = `${mouseX + 14}px`;
           tt.style.top  = `${mouseY + 14}px`;
           tt.style.display = 'block';
@@ -200,6 +203,8 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
           padding: '4px 8px',
           borderRadius: '4px',
           whiteSpace: 'nowrap',
+          maxHeight: '220px',
+          overflowY: 'auto',
           zIndex: 10,
         }}
       />

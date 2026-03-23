@@ -64,6 +64,38 @@ header h1 {
   color: #888;
 }
 
+/* Cycle day/night indicator in header */
+.cycle-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.cycle-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+.cycle-bar {
+  width: 56px;
+  height: 7px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cycle-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+.cycle-bar-fill.day  { background: linear-gradient(90deg, #f5a623, #ffe066); }
+.cycle-bar-fill.night { background: linear-gradient(90deg, #1e3a5f, #4a90d9); }
+.cycle-pct {
+  font-size: 11px;
+  color: #aaa;
+  min-width: 30px;
+}
+
 /* Main layout */
 .main {
   display: flex;

@@ -39,6 +39,10 @@ export interface GameState {
   buildingCount: number;
   entityCount: number;
   serverUps?: number;
+  /** Seconds elapsed within the current cycle (0–600). Added in backend v2. */
+  cycleTime?: number;
+  /** True when cycle progress ≥ 87.5% (night lasts ~75s out of 600s). */
+  isNight?: boolean;
 }
 
 export type OverlayMode = 'element' | 'temperature' | 'mass';

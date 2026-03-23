@@ -6,6 +6,8 @@ interface Props {
 }
 
 export function Header({ connected, gameState }: Props) {
+  const cycleProgress = gameState?.cycleTime != null ? gameState.cycleTime / 600 : null;
+
   return (
     <header>
       <h1>ONI World Visualizer</h1>
@@ -15,7 +17,20 @@ export function Header({ connected, gameState }: Props) {
         </span>
         {gameState && (
           <span className="game-info">
-            Cycle {gameState.cycle} | Tick {gameState.tick} |{' '}
+            Cycle {gameState.cycle}
+            {cycleProgress !== null && (
+              <span className="cycle-indicator" title={`${gameState.cycleTime?.toFixed(0)}s / 600s`}>
+                <span className="cycle-icon">{gameState.isNight ? '🌙' : '☀️'}</span>
+                <span className="cycle-bar">
+                  <span
+                    className={`cycle-bar-fill ${gameState.isNight ? 'night' : 'day'}`}
+                    style={{ width: `${(cycleProgress * 100).toFixed(1)}%` }}
+                  />
+                </span>
+                <span className="cycle-pct">{Math.round(cycleProgress * 100)}%</span>
+              </span>
+            )}
+            {' '}| Tick {gameState.tick} |{' '}
             {gameState.duplicantCount} dupes | {gameState.buildingCount} buildings | {gameState.entityCount} entities
           </span>
         )}
