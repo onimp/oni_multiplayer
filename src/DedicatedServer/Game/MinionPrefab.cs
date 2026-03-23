@@ -393,17 +393,18 @@ public static class MinionPrefab {
     /// Returns true for SMs that crash in headless and have no value there.
     /// These are removed from smc.stateMachines before StartSM is called.
     /// </summary>
-    private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) =>
-        smi is CreatureThoughtGraph.Instance;  // creature thought-bubble UI — NameDisplayScreen NPE in ctor/StartSM
+    // All dupe SMs are now safe in headless. IsHeadlessUnsafeSM always returns false.
+    // Keeping method as an extension point in case future SMs need to be excluded.
     // Removed from skip list (now safe):
-    // SpeechMonitor.Instance        — SetMouthId NPE fixed: step 9c ensures personalityResourceId is valid
-    // ThoughtGraph.Instance         — safe: NameDisplayScreen stubbed, SpeechMonitor live (BeginTalking no longer NPEs)
-    // CalorieMonitor.Instance       — safe: ThoughtGraph running → GetSMI<ThoughtGraph.Instance>() returns live instance
-    // RationMonitor.Instance        — safe: SaveGame+ColonyRationMonitor initialized before SpawnStarterMinions
-    // RadiationMonitor.Instance     — safe: per-SM error reset (commit 2db37e0) isolates errors; removed commit dfb607d
-    // CreatureCalorieMonitor.Instance — safe: DietManager.Instance initialized in WorldBuilder (commit this) before
-    //   SpawnEntities. Stomach ctor calls DietManager.Instance.GetPrefabDiet(owner) → non-null dict lookup.
-    //   Previously skipped because DietManager was never initialized in headless → Instance null → NPE.
+    // SpeechMonitor.Instance          — SetMouthId NPE fixed: step 9c ensures personalityResourceId is valid
+    // ThoughtGraph.Instance           — safe: NameDisplayScreen stubbed, SpeechMonitor live (BeginTalking no longer NPEs)
+    // CalorieMonitor.Instance         — safe: ThoughtGraph running → GetSMI<ThoughtGraph.Instance>() returns live instance
+    // RationMonitor.Instance          — safe: SaveGame+ColonyRationMonitor initialized before SpawnStarterMinions
+    // RadiationMonitor.Instance       — safe: per-SM error reset (commit 2db37e0) isolates errors; removed commit dfb607d
+    // CreatureCalorieMonitor.Instance — safe: DietManager.Instance initialized in WorldBuilder before SpawnEntities
+    // CreatureThoughtGraph.Instance   — was a creature SM (not dupe); safe since NameDisplayScreen moved before
+    //   SpawnEntities — RegisterComponent returns early for critter GOs (no CharacterOverlay)
+    private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) => false;
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.

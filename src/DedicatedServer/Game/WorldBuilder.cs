@@ -306,6 +306,32 @@ public class WorldBuilder {
             Console.WriteLine("[WorldBuilder] CellChangeMonitor initialized");
         }
 
+        // NameDisplayScreen: MUST be initialized BEFORE SpawnEntities() so that all three callers
+        // that fire during entity spawning find a non-null Instance:
+        //   • OxygenBreather.OnSpawn() [dupe]: Instance.RegisterComponent(go, this)
+        //   • CreatureThoughtGraph.Instance ctor [critter]: Instance.RegisterComponent(go, this)
+        //   • CritterEmoteMonitor.cooldown.Enter [critter]: Instance.SetThoughtBubbleDisplay(go, ...)
+        // All three calls are safe with an initialized-but-empty NameDisplayScreen: RegisterComponent
+        // and SetThoughtBubble* both guard on GetEntry(go) returning non-null before doing any work.
+        // Creature GOs have CharacterOverlay removed by FixCreaturePrefabsPreSpawn() → GetEntry
+        // returns null → all calls return early with no rendering side effects.
+        // Previously this block was placed AFTER SpawnEntities (line ~968) — too late for any
+        // creature SM ctor / OxygenBreather.OnSpawn to find it. Moving it here fixes the NPE.
+        // OnPrefabInit just sets Instance=this. OnSpawn (not called) registers UI overlay events.
+        if (NameDisplayScreen.Instance == null) {
+            try {
+                var ndsGo = new GameObject("NameDisplayScreen");
+                var nds = ndsGo.AddComponent<NameDisplayScreen>();
+                nds.InitializeComponent(); // OnPrefabInit → Instance = this
+                // Fallback: if InitializeComponent crashed before "Instance = this" ran,
+                // set Instance directly.
+                if (NameDisplayScreen.Instance == null) NameDisplayScreen.Instance = nds;
+                Console.WriteLine($"[WorldBuilder] NameDisplayScreen.Instance ready: {NameDisplayScreen.Instance != null}");
+            } catch (Exception ex) {
+                Console.WriteLine($"[WorldBuilder] NameDisplayScreen init partial: {ex.GetBaseException().Message}");
+            }
+        }
+
         // DietManager: KMonoBehaviour singleton that maps creature prefab tag → Diet.
         // DietManager.OnPrefabInit calls CollectSaveDiets(null) which iterates Assets.Prefabs
         // (already populated by RegisterEntities() above) and stores Tag → Diet entries.
@@ -959,26 +985,9 @@ public class WorldBuilder {
         global::Game.BrainScheduler = brainScheduler;
         Console.WriteLine("[WorldBuilder] BrainScheduler ready");
 
-        // NameDisplayScreen: needed by OxygenBreather.OnSpawn() line 142:
-        //   NameDisplayScreen.Instance.RegisterComponent(base.gameObject, this)
-        // Without Instance, this NPEs and logs an error for EVERY dupe spawned.
-        // Only InitializeComponent() (→ OnPrefabInit → Instance = this) is called.
-        // OnSpawn() is intentionally NOT called: it registers with Components.Health/Equipment
-        // and binds overlay events — all render-only, not needed in headless.
-        if (NameDisplayScreen.Instance == null) {
-            try {
-                var ndsGo = new GameObject("NameDisplayScreen");
-                var nds = ndsGo.AddComponent<NameDisplayScreen>();
-                nds.InitializeComponent(); // OnPrefabInit → Instance = this
-                // Fallback: if InitializeComponent crashed before "Instance = this" ran (line 113),
-                // set Instance directly so OxygenBreather.OnSpawn[142] doesn't NPE.
-                // NameDisplayScreen.Instance is a public static field — direct write, no Harmony.
-                if (NameDisplayScreen.Instance == null) NameDisplayScreen.Instance = nds;
-                Console.WriteLine($"[WorldBuilder] NameDisplayScreen.Instance ready: {NameDisplayScreen.Instance != null}");
-            } catch (Exception ex) {
-                Console.WriteLine($"[WorldBuilder] NameDisplayScreen init partial: {ex.GetBaseException().Message}");
-            }
-        }
+        // NameDisplayScreen was here — moved to before SpawnEntities (see block above, near DietManager).
+        // Must be initialized before SpawnEntities so creature SM ctors and OxygenBreather.OnSpawn
+        // find a non-null Instance. Keeping this comment as a breadcrumb for future debugging.
 
         // SaveLoader: needed by Traits.OnSpawn() line 41:
         //   SaveLoader.Instance.GameInfo.IsVersionOlderThan(7, 15)

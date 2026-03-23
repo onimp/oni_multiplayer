@@ -256,27 +256,26 @@ public static class CreaturePrefab {
             // 6a: purge null entries (left by partial constructor failures)
             smc.stateMachines.RemoveAll(s => s == null);
 
-            // 6b: remove headless-unsafe instances
-            var emoteSmi = smc.GetSMI<CritterEmoteMonitor.Instance>();
-            if (emoteSmi != null) {
-                smc.stateMachines.Remove(emoteSmi);
-                Console.WriteLine($"[Animals] {go.name}: 6b removed CritterEmoteMonitor (cooldown.Enter → NameDisplayScreen NPE)");
-            }
-            var thoughtSmi = smc.GetSMI<CreatureThoughtGraph.Instance>();
-            if (thoughtSmi != null) {
-                smc.stateMachines.Remove(thoughtSmi);
-                Console.WriteLine($"[Animals] {go.name}: 6b removed CreatureThoughtGraph (ctor → NameDisplayScreen NPE)");
-            }
+            // 6b: no headless-unsafe instances remain.
+            // CritterEmoteMonitor and CreatureThoughtGraph were previously removed here because
+            // NameDisplayScreen.Instance was null during SpawnEntities. The NameDisplayScreen init
+            // block was placed after SpawnEntities in WorldBuilder — too late for creature SM ctors
+            // and OnSpawn callbacks. Moving it to BEFORE SpawnEntities (see WorldBuilder, near
+            // DietManager) fixes all three call sites:
+            //   • CreatureThoughtGraph.Instance ctor: RegisterComponent(go, this) → GetEntry returns
+            //     null for critter GOs (no CharacterOverlay after FixCreaturePrefabsPreSpawn) → no-op
+            //   • CritterEmoteMonitor.cooldown.Enter: SetThoughtBubbleDisplay(go, ...) → same guard
+            //   • OxygenBreather.OnSpawn: RegisterComponent(go, this) → same guard
+            // All NameDisplayScreen methods are safe: they guard on GetEntry(go) != null before
+            // any UI work. Critter GOs never have entries → all calls return early, no rendering.
 
             // 6c+6d: for each monitor def, ensure SMI exists then start it
             StateMachine.Instance.error = false;  // must reset BEFORE any StartSM call
             foreach (var def in smc.cmpdef.defs) {
-                if (def is CritterEmoteMonitor.Def || def is CreatureThoughtGraph.Def)
-                    continue;  // headless-unsafe — NameDisplayScreen NPE in ctor/StartSM
-                // CreatureCalorieMonitor and SolidConsumerMonitor: DietManager.Instance is now
-                // initialized in WorldBuilder before SpawnEntities (see DietManager block, commit
-                // that removed this skip). Both Instance ctors call GetPrefabDiet(gameObject) →
-                // DietManager.Instance != null → safe. No skip needed.
+                // All defs are now safe in headless:
+                //   • CritterEmoteMonitor + CreatureThoughtGraph: NameDisplayScreen moved before SpawnEntities
+                //   • CreatureCalorieMonitor + SolidConsumerMonitor: DietManager initialized before SpawnEntities
+                // No skips needed.
                 // smiType must be declared outside try so the catch block can use it to
                 // purge any partial instance the base ctor inserted before the body threw.
                 Type smiType = null;
