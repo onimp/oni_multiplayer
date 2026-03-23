@@ -120,21 +120,20 @@ public class GameTickLoop {
             _accumulatedTime -= SubTickTime;
         }
 
+        // Deliver AsyncPathProber results to Navigators and queue new work orders.
+        // TickFrame() calls navigator.TakeResult() for all completed async path probes,
+        // writing results into each Navigator's PathGrid (used by CanReach / GetNavigationCost).
+        // Without TickFrame(), PathGrid stays cold → CanReach always returns false →
+        // IdleCellSensor finds no reachable non-current cell → idleCell == physCell →
+        // IdleChore targets current cell → 0-distance path → dupe never moves.
+        // Workers were restarted in WorldBuilder AFTER UpdateNavGrids() so PotentialScratchPad
+        // is sized with the correct post-initialization MaxLinksPerCell — no OOB risk.
+        AsyncPathProber.Instance?.TickFrame();
+
         // Drive RENDER_EVERY_TICK bucket — covers BrainScheduler (Dupe/Creature AI).
         // Render-only components (LightSymbolTracker etc.) are removed from this scheduler
         // in WorldBuilder.DisableRenderingOnlyComponents() — no try/catch needed here.
         Singleton<StateMachineUpdater>.Instance.RenderEveryTick(clampedDt);
-
-        // AsyncPathProber.TickFrame() is intentionally NOT called here.
-        // Root cause of crash: PotentialScratchPad is sized from Pathfinding.MaxLinksPerCell()
-        // at background worker thread start time (NavGrids minimal). After WorldBuilder loads the
-        // save and calls UpdateNavGrids(), maxLinksPerCell grows → AddPotentials accesses
-        // scratch.linksInCellRange[k] beyond original array size → ArgumentOutOfRangeException
-        // stored in agentException → rethrown here via TickFrame() → server crash.
-        // Without TickFrame(): background worker stays idle (NextTask always false → Sleep(1)).
-        // TryBuildPathFromCache always misses → Navigator falls back to synchronous
-        // PathFinder.UpdatePath() BFS on every navigation step. Fully supported: BrainScheduler
-        // already sets executePathProbeTaskAsync=false for some navigators (same sync-only path).
 
         // GameScheduler ticks: mirrors GameScheduler.Update() (private Unity callback).
         // IdleChore.Begin() → StateMachine.States root.idle.onfloor.AddScheduledCallback →
@@ -684,16 +683,25 @@ public class GameTickLoop {
                 continue;
             }
 
-            // Re-point stale consumerState.gameObject → live GO so CollectChores →
-            // GetMyParentWorldId doesn't NPE on a destroyed-GO reference.
-            // NOTE: do NOT touch providers list — RemoveAll causes chore self-cancel which
-            // modifies choreWorldMap mid-CollectChores foreach → InvalidOperationException.
             var consumer = brain.GetComponent<ChoreConsumer>();
             if (consumer == null) continue;
+
+            // Re-point stale consumerState.gameObject → live GO so CollectChores →
+            // GetMyParentWorldId doesn't NPE on a destroyed-GO reference.
             var consumerState = Traverse.Create(consumer).Field("consumerState")
                 .GetValue<ChoreConsumerState>();
             if (consumerState != null && consumerState.gameObject != consumer.gameObject)
                 consumerState.gameObject = consumer.gameObject;
+
+            // Remove dead providers (null GO or null transform) from this consumer's list.
+            // Without this, CollectChores iterates providers → GetMyParentWorldId(provider.go)
+            // → Grid.PosToCell(null transform) → NPE at tick ~200.
+            // NOTE: BrainGroup.RemoveBrain was removed from this path (it triggered OnCleanUp
+            // → RemoveProvider → choreWorldMap modification mid-CollectChores → InvalidOperationException).
+            // RemoveAll is safe here because it runs BEFORE AdvanceOneSimSubTick.
+            var providers = Traverse.Create(consumer).Field("providers")
+                .GetValue<List<ChoreProvider>>();
+            providers?.RemoveAll(p => p == null || p.gameObject == null || p.transform == null);
         }
     }
 

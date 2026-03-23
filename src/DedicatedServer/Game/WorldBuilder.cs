@@ -363,6 +363,27 @@ public class WorldBuilder {
         // After Setup we know which SMs are running; a stale error flag must not poison tick 1+.
         StateMachine.Instance.error = false;
 
+        // Restart AsyncPathProber worker threads AFTER the world is fully loaded and
+        // UpdateNavGrids() has been run at least once.
+        //
+        // ROOT CAUSE of original TickFrame() crash:
+        //   AsyncPathProbeWorker.main() allocates PotentialScratchPad sized from
+        //   Pathfinding.MaxLinksPerCell() AT THREAD START TIME. If any NavGrid's
+        //   maxLinksPerCell is larger at this point than it appeared when the thread
+        //   started (e.g. because not all grids were fully registered/initialized yet),
+        //   AddPotentials will index linksWithCorrectNavType beyond its allocated size
+        //   → ArgumentOutOfRangeException → agentException → rethrown in TickFrame()
+        //   → server crash.
+        // FIX: run UpdateNavGrids() once to fully populate all NavGrid links, then
+        //   shut down and restart the worker threads. The new threads read
+        //   MaxLinksPerCell() AFTER all grids are initialized → correct scratch pad size.
+        Pathfinding.Instance?.UpdateNavGrids();
+        if (AsyncPathProber.Instance != null) {
+            AsyncPathProber.Instance.Shutdown();
+            AsyncPathProber.Instance.Start(1);
+            Console.WriteLine($"[WorldBuilder] AsyncPathProber workers restarted (MaxLinksPerCell={Pathfinding.Instance?.MaxLinksPerCell()})");
+        }
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         WorldState = new RealWorldState(Width, Height, this);
