@@ -64,6 +64,11 @@ public static class UnityRuntime {
 
     private static readonly HashSet<IntPtr> SpawnedObjects = new();
 
+    // Counter for assigning distinct personalities to fresh-spawn dupe GOs in TriggerLifecycle
+    // Phase 0.5b, before Phase 2 OnSpawn fires MinionIdentity.OnSpawn() which reads personalityResourceId.
+    // Step 6a in MinionPrefab.Setup() acts only as a no-op guard (id already valid by this point).
+    private static int _minionCounter = -1;
+
     // --- Time simulation ---
     // Time.time is a static InternalCall that returns 0f in headless (no Unity player loop).
     // GameTickLoop.Update() calls AdvanceTime(dt) at the top of every tick so all game code
@@ -537,12 +542,29 @@ public static class UnityRuntime {
         // Dupe GOs are identified by MinionBrain (vs CreatureBrain for critters).
         var isDupeGo = components.Any(c => c is MinionBrain);
         if (isDupeGo) {
-            // Diagnostic: check if providers list is shared across dupe clones.
-            // Same hash for all 3 dupes = CloneSingle shallow-copied the reference (reset not working).
-            // Different hashes = each dupe has own list.
+            // Fix A: reset ChoreConsumer.providers before MinionModifiers.OnPrefabInit() fires.
+            // CloneSingle (MemberwiseClone) shallow-copies the providers list reference — all 3 dupe
+            // clones share the same List<ChoreProvider>. When dupe 0's MinionModifiers.OnPrefabInit()
+            // calls AddProvider(GlobalChoreProvider.Instance) on the shared list, dupes 1+2 already
+            // have a non-empty providers list before their own OnPrefabInit runs. This causes
+            // AddProvider to NPE (duplicate subscription) → isInitialized=true already set inside
+            // InitializeComponent() → Phase 1 skips MinionModifiers → amounts/attributes stay null.
             var consumer = go.GetComponent<ChoreConsumer>();
-            if (consumer != null)
-                Console.WriteLine($"[Phase0.5b] dupe={go.name} providers.Count={consumer.providers?.Count} hash={consumer.providers?.GetHashCode()}");
+            if (consumer != null) consumer.providers = new List<ChoreProvider>();
+
+            // Fix B: assign personality before Phase 2 (OnSpawn) fires.
+            // MinionIdentity.OnSpawn() reads personalityResourceId. TriggerLifecycle Phase 2
+            // fires here, before MinionPrefab.Setup() step 6a runs. Fresh-spawn dupes carry
+            // HashedString.Invalid — assign a distinct personality per dupe now.
+            var identity = go.GetComponent<MinionIdentity>();
+            if (identity != null && identity.personalityResourceId == HashedString.Invalid) {
+                var personalities = Db.Get().Personalities;
+                int idx = Interlocked.Increment(ref _minionCounter);
+                var personality = personalities.resources[idx % personalities.Count];
+                identity.personalityResourceId = personality.Id;
+                Console.WriteLine($"[Lifecycle] dupe={go.name} assigned personality idx={idx} id={personality.Id} name={personality.Name}");
+            }
+
             foreach (var comp in components) {
                 if (comp is MinionModifiers) {
                     try { ((KMonoBehaviour) comp).InitializeComponent(); }
