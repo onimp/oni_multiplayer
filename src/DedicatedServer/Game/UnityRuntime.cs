@@ -457,11 +457,64 @@ public static class UnityRuntime {
 
     // ==================== Resources ====================
 
-    public static Object[] FindObjectsOfTypeAll(Type type) => Array.Empty<Object>();
-
+    /// <summary>
+    /// Returns all registered components (and GameObjects) of the given type from the
+    /// headless object registry (<see cref="GameObjectComponents"/>).
+    ///
+    /// In a real Unity player, <c>FindObjectsOfType</c> walks the scene graph.
+    /// In headless there is no scene graph — instead, every <c>GameObject</c> and every
+    /// <c>AddComponent&lt;T&gt;()</c> call populates <see cref="GameObjectComponents"/>
+    /// (GO ptr → component list) and <see cref="ComponentToGameObject"/>
+    /// (component ptr → owning GO).  Searching those dicts is the headless equivalent.
+    ///
+    /// Notes:
+    /// <list type="bullet">
+    ///   <item><c>includeInactive</c> is ignored — all registered objects are returned.
+    ///   Headless does not model active/inactive the same way Unity does.</item>
+    ///   <item>Individually-destroyed components are excluded by checking
+    ///   <see cref="ComponentToGameObject"/>: <c>DestroyImmediate</c> removes a component's
+    ///   entry from <see cref="ComponentToGameObject"/> but not from the owning GO's list in
+    ///   <see cref="GameObjectComponents"/>.</item>
+    ///   <item>When <paramref name="type"/> is or extends <c>GameObject</c>, all registered
+    ///   GOs are returned.</item>
+    /// </list>
+    /// </summary>
     public static Object[] FindObjectsOfType(Type type, bool includeInactive) {
-        return Array.Empty<Object>();
+        // Fast path: caller wants GameObjects themselves.
+        if (typeof(GameObject).IsAssignableFrom(type)) {
+            var goList = new List<Object>(GameObjectComponents.Count);
+            foreach (var ptr in GameObjectComponents.Keys) {
+                if (ComponentToGameObject.TryGetValue(ptr, out var go))
+                    goList.Add(go);
+            }
+            return goList.ToArray();
+        }
+
+        // General path: search every component registered on every GO.
+        var results = new List<Object>();
+        // Snapshot the GO list to avoid modification-during-iteration if a callback
+        // destroys a GO while we are iterating (e.g. during template loading).
+        var snapshots = GameObjectComponents.Values.ToList();
+        foreach (var components in snapshots) {
+            // Snapshot the component list too — AddComponent can modify it during TriggerLifecycle.
+            foreach (var comp in components.ToList()) {
+                if (comp == null) continue;
+                // Skip components that have been individually destroyed via DestroyImmediate:
+                // DestroyInternal removes them from ComponentToGameObject but not from this list.
+                if (!ComponentToGameObject.ContainsKey(comp.m_CachedPtr)) continue;
+                if (type.IsInstanceOfType(comp))
+                    results.Add(comp);
+            }
+        }
+        return results.ToArray();
     }
+
+    /// <summary>
+    /// Returns all registered objects of the given type from the headless registry.
+    /// Equivalent to <see cref="FindObjectsOfType"/> with <c>includeInactive = true</c>.
+    /// Mapped from <c>Resources.FindObjectsOfTypeAll</c> via PatchInternalCalls.
+    /// </summary>
+    public static Object[] FindObjectsOfTypeAll(Type type) => FindObjectsOfType(type, true);
 
     public static Object LoadResource(string path, Type type) {
         if (typeof(ScriptableObject).IsAssignableFrom(type))
