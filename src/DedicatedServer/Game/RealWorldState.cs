@@ -13,7 +13,7 @@ namespace DedicatedServer.Game;
 /// Reads real world state from the loaded game's Grid.
 /// Works with both SimDLL-owned memory and pinned managed arrays.
 /// </summary>
-public class RealWorldState {
+public partial class RealWorldState {
 
     private readonly int width;
     private readonly int height;
@@ -434,6 +434,7 @@ public class RealWorldState {
 
     /// <summary>
     /// Returns pre-serialized JSON bytes for game state. Cached with 200ms TTL.
+    /// BuildGameStateDto() lives in RealWorldState.GameStateDto.cs (partial class).
     /// </summary>
     public byte[] GetGameStateBytes() {
         var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -446,24 +447,24 @@ public class RealWorldState {
 
         var gameClock = GameClock.Instance;
         var cycle = gameClock != null ? gameClock.GetCycle() + 1 : 1;
-        var obj = new {
-            tick = world.SimTick,
-            cycle,
-            speed = world.TickLoop?.SpeedLevel ?? 1,
-            paused = !world.SimRunning,
-            worldWidth = width,
-            worldHeight = height,
-            duplicantCount = 3,
-            buildingCount = world.SpawnData?.buildings?.Count ?? 0,
-            entityCount = (world.SpawnData?.otherEntities?.Count ?? 0) +
-                          (world.SpawnData?.elementalOres?.Count ?? 0) +
-                          (world.SpawnData?.pickupables?.Count ?? 0),
-            source = world.SimRunning ? "simdll" : "fallback",
-            serverUps = world.TickLoop?.Ups ?? 0,
+        var obj = BuildGameStateDto(
+            tick:           world.SimTick,
+            cycle:          cycle,
+            speed:          world.TickLoop?.SpeedLevel ?? 1,
+            paused:         !world.SimRunning,
+            worldWidth:     width,
+            worldHeight:    height,
+            duplicantCount: 3,
+            buildingCount:  world.SpawnData?.buildings?.Count ?? 0,
+            entityCount:    (world.SpawnData?.otherEntities?.Count ?? 0) +
+                            (world.SpawnData?.elementalOres?.Count ?? 0) +
+                            (world.SpawnData?.pickupables?.Count ?? 0),
+            source:         world.SimRunning ? "simdll" : "fallback",
+            serverUps:      world.TickLoop?.Ups ?? 0,
             // Day/night: 0-600s within current cycle; night starts at 87.5% (525s)
-            cycleTime = (float)(gameClock?.GetTimeSinceStartOfCycle() ?? 0f),
-            isNight   = gameClock?.IsNighttime() ?? false
-        };
+            cycleTime:      (float)(gameClock?.GetTimeSinceStartOfCycle() ?? 0f),
+            isNight:        gameClock?.IsNighttime() ?? false,
+            bootErrorCount: BootDiagnostics.ErrorCount);
         var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(obj));
         Console.WriteLine($"[WorldState] Cache MISS: rebuilt state {bytes.Length}B");
         lock (_stateCacheLock) {
@@ -476,21 +477,22 @@ public class RealWorldState {
     public object GetGameState() {
         var gameClock = GameClock.Instance;
         var cycle = gameClock != null ? gameClock.GetCycle() + 1 : 1;
-        return new {
-            tick = world.SimTick,
-            cycle,
-            speed = world.TickLoop?.SpeedLevel ?? 1,
-            paused = !world.SimRunning,
-            worldWidth = width,
-            worldHeight = height,
-            duplicantCount = 3,
-            buildingCount = world.SpawnData?.buildings?.Count ?? 0,
-            entityCount = (world.SpawnData?.otherEntities?.Count ?? 0) +
-                          (world.SpawnData?.elementalOres?.Count ?? 0) +
-                          (world.SpawnData?.pickupables?.Count ?? 0),
-            source = world.SimRunning ? "simdll" : "fallback",
-            cycleTime = (float)(gameClock?.GetTimeSinceStartOfCycle() ?? 0f),
-            isNight   = gameClock?.IsNighttime() ?? false
-        };
+        return BuildGameStateDto(
+            tick:           world.SimTick,
+            cycle:          cycle,
+            speed:          world.TickLoop?.SpeedLevel ?? 1,
+            paused:         !world.SimRunning,
+            worldWidth:     width,
+            worldHeight:    height,
+            duplicantCount: 3,
+            buildingCount:  world.SpawnData?.buildings?.Count ?? 0,
+            entityCount:    (world.SpawnData?.otherEntities?.Count ?? 0) +
+                            (world.SpawnData?.elementalOres?.Count ?? 0) +
+                            (world.SpawnData?.pickupables?.Count ?? 0),
+            source:         world.SimRunning ? "simdll" : "fallback",
+            serverUps:      world.TickLoop?.Ups ?? 0,
+            cycleTime:      (float)(gameClock?.GetTimeSinceStartOfCycle() ?? 0f),
+            isNight:        gameClock?.IsNighttime() ?? false,
+            bootErrorCount: BootDiagnostics.ErrorCount);
     }
 }

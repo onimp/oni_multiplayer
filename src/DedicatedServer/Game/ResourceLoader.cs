@@ -56,6 +56,7 @@ public class ResourceLoader {
                 if (collection?.elements != null) entries.AddRange(collection.elements);
             } catch (Exception ex) {
                 Console.WriteLine($"[Resources] Failed to load {Path.GetFileName(yamlFile)}: {ex.Message}");
+                BootDiagnostics.Record();
             }
         }
 
@@ -177,6 +178,7 @@ public class ResourceLoader {
             return System.Text.Encoding.UTF8.GetString(data, idx, end - idx);
         } catch (Exception ex) {
             Console.WriteLine($"[Resources] Failed to extract from {assetFileName}: {ex.Message}");
+            BootDiagnostics.Record();
             return "";
         }
     }
