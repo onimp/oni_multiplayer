@@ -1481,17 +1481,20 @@ public class WorldBuilder {
                 }
             }
 
-            if (ew == 1 && eh == 1)
-                Console.WriteLine($"[EntitySize] {id} → 1×1 (default — no size source found)");
+            if (ew == 1 && eh == 1) {
+                Console.Error.WriteLine($"[EntitySize] {id}: no size source found — storing (0,0), entity will be omitted from DTO");
+                _prefabSizeMap[id] = (0, 0);
+                return;
+            }
 
             _prefabSizeMap[id] = (ew, eh);
         } catch (Exception ex) {
-            Console.WriteLine($"[EntitySize] {id} FAILED: {ex.GetBaseException().Message}");
-            _prefabSizeMap[id] = (1, 1);
+            Console.Error.WriteLine($"[EntitySize] {id} FAILED: {ex.GetBaseException().Message} — storing (0,0)");
+            _prefabSizeMap[id] = (0, 0);
         }
     }
 
-    private static (int w, int h) ComputeSizeFromOffsets(CellOffset[] offsets) {
+    internal static (int w, int h) ComputeSizeFromOffsets(CellOffset[] offsets) {
         int minX = 0, maxX = 0, minY = 0, maxY = 0;
         foreach (var o in offsets) {
             if (o.x < minX) minX = o.x;
