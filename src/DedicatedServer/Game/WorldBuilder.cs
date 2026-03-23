@@ -384,6 +384,21 @@ public class WorldBuilder {
             Console.WriteLine($"[WorldBuilder] AsyncPathProber workers restarted (MaxLinksPerCell={Pathfinding.Instance?.MaxLinksPerCell()})");
         }
 
+        // Prevent GameClock.AddTime NPE at cycle boundary (~tick 2714).
+        // GameClock.AddTime line 102: SaveGame.Instance.AutoSaveCycleInterval > 0 → autosave fires.
+        // In headless, SaveGame may not be initialized → Instance is null → fatal NPE.
+        // Even when Instance exists, AutoSaveCycleInterval defaults to 1 → DoAutoSave() →
+        // OniMetrics.LogEvent / SaveLoader.GetActiveSaveFilePath → more NPEs.
+        // FIX: ensure Instance exists (create a stub if missing), then force interval = 0.
+        if (SaveGame.Instance == null) {
+            Console.WriteLine("[WorldBuilder] SaveGame.Instance null — creating headless stub");
+            var saveGameGo = new GameObject("SaveGame_headless");
+            UnityEngine.Object.DontDestroyOnLoad(saveGameGo);
+            SaveGame.Instance = saveGameGo.AddComponent<SaveGame>();
+        }
+        SaveGame.Instance.AutoSaveCycleInterval = 0;
+        Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
+
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
         WorldState = new RealWorldState(Width, Height, this);
