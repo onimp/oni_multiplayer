@@ -688,14 +688,22 @@ public class WorldBuilder {
         //   SlicedUpdaterSim1000ms<TemperatureVulnerable>.instance.RegisterUpdate1000ms(this)
         // instance is set in SlicedUpdaterSim1000ms.OnPrefabInit → instance = this.
         // TemperatureVulnerable is on ALL plants (EntityTemplates.CreatePlant). Without this: NPE on every plant spawn.
-        if (SlicedUpdaterSim1000ms<TemperatureVulnerable>.instance == null)
-            Awake("TemperatureVulnerableUpdater", () => go.AddComponent<TemperatureVulnerableUpdater>().Awake());
+        // Dedicated GO avoids KObject conflicts with the shared bootstrap GO.
+        if (SlicedUpdaterSim1000ms<TemperatureVulnerable>.instance == null) {
+            var tvUpdGo = new GameObject("TemperatureVulnerableUpdater");
+            tvUpdGo.AddComponent<TemperatureVulnerableUpdater>().Awake();
+            Console.WriteLine("[WorldBuilder] TemperatureVulnerableUpdater initialized");
+        }
 
         // PressureVulnerableUpdater: needed by PressureVulnerable.OnSpawn line 231:
         //   SlicedUpdaterSim1000ms<PressureVulnerable>.instance.RegisterUpdate1000ms(this)
         // PressureVulnerable is on ALL plants. Without this: NPE on every plant spawn.
-        if (SlicedUpdaterSim1000ms<PressureVulnerable>.instance == null)
-            Awake("PressureVulnerableUpdater", () => go.AddComponent<PressureVulnerableUpdater>().Awake());
+        // Dedicated GO avoids KObject conflicts with the shared bootstrap GO.
+        if (SlicedUpdaterSim1000ms<PressureVulnerable>.instance == null) {
+            var pvUpdGo = new GameObject("PressureVulnerableUpdater");
+            pvUpdGo.AddComponent<PressureVulnerableUpdater>().Awake();
+            Console.WriteLine("[WorldBuilder] PressureVulnerableUpdater initialized");
+        }
 
         // DrowningMonitorUpdater: needed by DrowningMonitor.OnSpawn[IL_0x6] on critters/plants.
         // DrowningMonitor.OnSpawn: SlicedUpdaterSim1000ms<DrowningMonitor>.instance.RegisterUpdate1000ms(this)
