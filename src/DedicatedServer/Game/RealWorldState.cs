@@ -209,8 +209,15 @@ public class RealWorldState {
         var navIsMoving = nav?.IsMoving() ?? false;
         var navCell     = nav != null ? Grid.PosToCell(go) : -1;
 
+        // Amounts: stamina (0-100) and calories (0-caloriesMax, typically ~4 000 000).
+        // Lookup() returns null if the component is absent (shouldn't happen for live dupes).
+        var staminaAmt  = Db.Get().Amounts.Stamina.Lookup(go);
+        var caloriesAmt = Db.Get().Amounts.Calories.Lookup(go);
+
         var name = go.GetComponent<MinionIdentity>()?.nameStringKey ?? go.name;
-        return BuildMinionDto(name, x, y, w, h, currentChore, smState, navIsMoving, navCell);
+        return BuildMinionDto(name, x, y, w, h, currentChore, smState, navIsMoving, navCell,
+            staminaAmt?.value ?? 0f, staminaAmt?.GetMax() ?? 100f,
+            caloriesAmt?.value ?? 0f, caloriesAmt?.GetMax() ?? 4_000_000f);
     }
 
     /// <summary>
@@ -231,7 +238,7 @@ public class RealWorldState {
     }
 
     /// <summary>
-    /// Constructs the duplicant entity DTO with live chore/SM/nav fields.
+    /// Constructs the duplicant entity DTO with live chore/SM/nav/amount fields.
     /// <para>
     /// Exposed as <c>internal static</c> so unit tests can verify the JSON shape
     /// without requiring a running game instance.
@@ -245,6 +252,10 @@ public class RealWorldState {
     ///   smState      — first SM state in StateMachineController (path-style, e.g. "root.alive.idle")
     ///   navIsMoving  — true when Navigator is executing a path
     ///   navCell      — grid cell index at current position (Grid.PosToCell)
+    ///   stamina      — current stamina value (0–100)
+    ///   staminaMax   — max stamina (typically 100, accounts for traits via GetMax())
+    ///   calories     — current calories
+    ///   caloriesMax  — max calories (typically ~4 000 000, accounts for traits)
     /// </summary>
     internal static object BuildMinionDto(
         string  name,
@@ -255,7 +266,11 @@ public class RealWorldState {
         string? currentChore,
         string? smState,
         bool    navIsMoving,
-        int     navCell)
+        int     navCell,
+        float   stamina     = 0f,
+        float   staminaMax  = 100f,
+        float   calories    = 0f,
+        float   caloriesMax = 4_000_000f)
     {
         return new {
             type         = "duplicant",
@@ -264,7 +279,11 @@ public class RealWorldState {
             currentChore,
             smState,
             navIsMoving,
-            navCell
+            navCell,
+            stamina,
+            staminaMax,
+            calories,
+            caloriesMax
         };
     }
 
