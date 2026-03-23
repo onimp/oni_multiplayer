@@ -779,6 +779,169 @@ header h1 {
   white-space: nowrap;
 }
 
+/* ── Modal overlay ───────────────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+
+.modal-box {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  width: 480px;
+  max-width: 96vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 9px;
+  border-bottom: 1px solid #0f3460;
+}
+
+.modal-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e94560;
+  letter-spacing: 0.3px;
+}
+
+.modal-close {
+  background: none;
+  border: 1px solid #0f3460;
+  color: #888;
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.modal-close:hover {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
+}
+
+.modal-textarea {
+  margin: 10px 14px 0;
+  width: calc(100% - 28px);
+  background: #0a0e1a;
+  border: 1px solid #0f3460;
+  color: #c8c8c8;
+  font-family: 'Consolas', 'Fira Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px;
+  border-radius: 4px;
+  resize: vertical;
+  outline: none;
+}
+.modal-textarea:focus {
+  border-color: rgba(78, 204, 163, 0.5);
+}
+
+.modal-error {
+  margin: 6px 14px 0;
+  padding: 6px 8px;
+  background: rgba(233, 69, 96, 0.12);
+  border: 1px solid rgba(233, 69, 96, 0.35);
+  border-radius: 3px;
+  color: #e94560;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.modal-preview {
+  margin: 6px 14px 0;
+  padding: 6px 8px;
+  background: rgba(78, 204, 163, 0.1);
+  border: 1px solid rgba(78, 204, 163, 0.3);
+  border-radius: 3px;
+  color: #4ecca3;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 5px 14px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #c8c8c8;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.12s, border-color 0.12s;
+}
+.modal-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.modal-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.modal-btn-primary {
+  background: rgba(78, 204, 163, 0.15);
+  border-color: rgba(78, 204, 163, 0.4);
+  color: #4ecca3;
+}
+.modal-btn-primary:hover:not(:disabled) {
+  background: rgba(78, 204, 163, 0.25);
+  border-color: #4ecca3;
+}
+
+/* ── Sidebar pasted-state indicator ─────────────────────────────────────── */
+
+.btn-clear-pasted {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.35);
+  color: #e94560;
+  cursor: pointer;
+  border-radius: 3px;
+  text-align: left;
+}
+.btn-clear-pasted:hover {
+  background: rgba(233, 69, 96, 0.2);
+  border-color: #e94560;
+}
+
+.pasted-indicator {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #e94560;
+  font-style: italic;
+}
+
 .timeline-scrub-badge {
   flex-shrink: 0;
   padding: 1px 6px;

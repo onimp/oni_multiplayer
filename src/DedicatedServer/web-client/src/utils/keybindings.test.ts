@@ -132,19 +132,23 @@ describe('KEYBINDINGS table — structural validity', () => {
     const valid: KeyAction[] = [
       'zoom-in', 'zoom-out', 'zoom-reset',
       'pan-left', 'pan-right', 'pan-up', 'pan-down',
-      'toggle-grid', 'toggle-minimap', 'export-screenshot', 'show-help', 'close-help',
+      'toggle-grid', 'toggle-minimap', 'export-screenshot',
+      'copy-state-json', 'paste-state-json',
+      'show-help', 'close-help',
     ];
     for (const b of KEYBINDINGS) {
       expect(valid).toContain(b.action);
     }
   });
 
-  it('all 12 KeyAction values are covered by at least one binding', () => {
+  it('all 14 KeyAction values are covered by at least one binding', () => {
     const covered = new Set(KEYBINDINGS.map(b => b.action));
     const required: KeyAction[] = [
       'zoom-in', 'zoom-out', 'zoom-reset',
       'pan-left', 'pan-right', 'pan-up', 'pan-down',
-      'toggle-grid', 'toggle-minimap', 'export-screenshot', 'show-help', 'close-help',
+      'toggle-grid', 'toggle-minimap', 'export-screenshot',
+      'copy-state-json', 'paste-state-json',
+      'show-help', 'close-help',
     ];
     for (const action of required) {
       expect(covered.has(action), `${action} must be covered`).toBe(true);

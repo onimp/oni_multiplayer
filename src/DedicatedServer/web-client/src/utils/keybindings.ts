@@ -17,6 +17,8 @@ export type KeyAction =
   | 'toggle-grid'
   | 'toggle-minimap'
   | 'export-screenshot'
+  | 'copy-state-json'
+  | 'paste-state-json'
   | 'show-help'
   | 'close-help';
 
@@ -49,8 +51,11 @@ export const KEYBINDINGS: readonly KeyBinding[] = [
   // ── View ─────────────────────────────────────────────────────────────────
   { keys: ['g'],                   action: 'toggle-grid',       label: 'G',        description: 'Toggle grid lines' },
   { keys: ['m'],                   action: 'toggle-minimap',    label: 'M',        description: 'Toggle minimap' },
-  // ── Export ───────────────────────────────────────────────────────────────
-  { keys: ['s'], ctrl: true,       action: 'export-screenshot', label: 'Ctrl+S',   description: 'Export canvas as PNG' },
+  // ── Export / Clipboard ───────────────────────────────────────────────────
+  { keys: ['s'], ctrl: true,       action: 'export-screenshot', label: 'Ctrl+S',       description: 'Export canvas as PNG' },
+  // Ctrl+Shift+C/V: e.key is uppercase when Shift is held with Ctrl.
+  { keys: ['C'], ctrl: true,       action: 'copy-state-json',   label: 'Ctrl+Shift+C', description: 'Copy game state as JSON' },
+  { keys: ['V'], ctrl: true,       action: 'paste-state-json',  label: 'Ctrl+Shift+V', description: 'Paste game state from JSON' },
   // ── Help ─────────────────────────────────────────────────────────────────
   { keys: ['h', '?'],              action: 'show-help',         label: 'H / ?',    description: 'Show keyboard shortcuts' },
   { keys: ['Escape'],              action: 'close-help',        label: 'Esc',      description: 'Close help / Unpin tooltip' },

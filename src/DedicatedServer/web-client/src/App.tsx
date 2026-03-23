@@ -11,6 +11,7 @@ import { ConnectionOverlay } from './components/ConnectionOverlay';
 import { StatsBar } from './components/StatsBar';
 import { HelpOverlay } from './components/HelpOverlay';
 import { TimelineScrubber } from './components/TimelineScrubber';
+import { PasteStateModal } from './components/PasteStateModal';
 import { deriveConnectionStatus } from './utils/connectionState';
 import { resolveKeyAction, isInputTarget } from './utils/keybindings';
 import { screenshotFilename, triggerDownload } from './utils/screenshot';
@@ -19,6 +20,7 @@ import { inspectCell } from './utils/cellInspector';
 import { CellInspectorPanel } from './components/CellInspectorPanel';
 import { createTickBuffer, pushTick, getLatestTick, getAllTicks } from './utils/tickBuffer';
 import type { TickSnapshot } from './utils/tickBuffer';
+import { gameStateToJson, jsonToGameState, isParseError } from './utils/clipboardState';
 import './index.css';
 
 export default function App() {
@@ -64,13 +66,20 @@ export default function App() {
   // selectedTick: null = live mode, number = showing this historical tick.
   const [selectedTick, setSelectedTick] = useState<number | null>(null);
 
+  // ── Paste-state modal ────────────────────────────────────────────────────
+  const [showPasteModal,  setShowPasteModal]  = useState(false);
+  /** When non-null, overrides live + scrubbed gameState with user-pasted data. */
+  const [pastedGameState, setPastedGameState] = useState<GameState | null>(null);
+
   // Imperative canvas API (zoom/pan) — populated by WorldCanvas on mount.
   const canvasActionsRef = useRef<CanvasActions | null>(null);
 
-  // Always-current gameState ref — lets the keydown handler (registered once
-  // with deps=[]) read the latest tick without capturing a stale closure.
-  const gameStateRef = useRef(gameState);
-  gameStateRef.current = gameState;
+  // Always-current refs — let the keydown handler (registered once with
+  // deps=[]) read the latest values without capturing stale closures.
+  const gameStateRef        = useRef(gameState);
+  gameStateRef.current      = gameState;
+  // displayGameStateRef is set after displayGameState is derived (see below).
+  const displayGameStateRef = useRef<GameState | null>(null);
 
   // Help overlay visibility
   const [showHelp, setShowHelp] = useState(false);
@@ -95,12 +104,23 @@ export default function App() {
         case 'toggle-grid':    setShowGrid(g => !g);               break;
         case 'toggle-minimap': setShowMinimap(m => !m);           break;
         case 'show-help':   setShowHelp(true);                            break;
-        case 'close-help':  setShowHelp(false); setInspectedCell(null); setSelectedTick(null); break;
+        case 'close-help':
+          setShowHelp(false); setInspectedCell(null); setSelectedTick(null);
+          setShowPasteModal(false); setPastedGameState(null);
+          break;
         case 'export-screenshot': {
           const dataUrl = canvasActionsRef.current?.screenshot();
           if (dataUrl) triggerDownload(dataUrl, screenshotFilename(gameStateRef.current?.tick));
           break;
         }
+        case 'copy-state-json': {
+          const state = displayGameStateRef.current;
+          if (state) navigator.clipboard.writeText(gameStateToJson(state)).catch(() => {});
+          break;
+        }
+        case 'paste-state-json':
+          setShowPasteModal(true);
+          break;
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -116,6 +136,15 @@ export default function App() {
   const handlePinEntity = useCallback((entity: EntityData | null) => {
     setPinnedEntityName(entity?.name ?? null);
     setPinnedEntity(entity);
+  }, []);
+
+  const handleCopyStateJson = useCallback(() => {
+    const state = displayGameStateRef.current;
+    if (state) navigator.clipboard.writeText(gameStateToJson(state)).catch(() => {});
+  }, []);
+
+  const handleApplyPastedState = useCallback((state: GameState) => {
+    setPastedGameState(state);
   }, []);
 
   const handleScreenshot = useCallback(() => {
@@ -216,7 +245,10 @@ export default function App() {
     ? bufferTicks.find(s => s.tick === selectedTick)
     : undefined;
   const displayEntities  = scrubbedSnap?.entities  ?? entities;
-  const displayGameState = scrubbedSnap?.gameState ?? gameState;
+  // Priority: pastedGameState > scrubbed snapshot > live
+  const displayGameState = pastedGameState ?? scrubbedSnap?.gameState ?? gameState;
+  // Keep ref in sync so the keydown handler (deps=[]) always reads current value.
+  displayGameStateRef.current = displayGameState;
 
   const connStatus = deriveConnectionStatus({
     connected,
@@ -227,6 +259,12 @@ export default function App() {
   return (
     <div className="app">
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
+      {showPasteModal && (
+        <PasteStateModal
+          onApply={handleApplyPastedState}
+          onClose={() => setShowPasteModal(false)}
+        />
+      )}
       <Header connected={connected} retryIn={retryIn} gameState={displayGameState} />
       <StatsBar gameState={displayGameState} />
       <div className="main">
@@ -260,7 +298,7 @@ export default function App() {
           />
         </div>
         <Sidebar
-          gameState={gameState}
+          gameState={displayGameState}
           entities={displayEntities}
           cellInfo={cellInfo}
           overlay={overlay}
@@ -269,6 +307,7 @@ export default function App() {
           autoRefresh={autoRefresh}
           refreshInterval={refreshInterval}
           pinnedEntityName={pinnedEntityName}
+          isPasted={pastedGameState !== null}
           onOverlayChange={setOverlay}
           onShowEntitiesChange={setShowEntities}
           onShowGridChange={setShowGrid}
@@ -276,6 +315,9 @@ export default function App() {
           onRefreshIntervalChange={setRefreshInterval}
           onRefreshNow={refresh}
           onScreenshot={handleScreenshot}
+          onCopyStateJson={handleCopyStateJson}
+          onPasteStateJson={() => setShowPasteModal(true)}
+          onClearPasted={() => setPastedGameState(null)}
           onPinEntity={handlePinEntity}
         />
       </div>

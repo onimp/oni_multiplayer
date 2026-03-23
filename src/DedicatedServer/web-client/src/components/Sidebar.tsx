@@ -12,6 +12,8 @@ interface Props {
   autoRefresh: boolean;
   refreshInterval: number;
   pinnedEntityName: string | null;
+  /** True when a pasted state is currently active (dims live indicators). */
+  isPasted?: boolean;
   onOverlayChange: (mode: OverlayMode) => void;
   onShowEntitiesChange: (show: boolean) => void;
   onShowGridChange: (show: boolean) => void;
@@ -19,15 +21,19 @@ interface Props {
   onRefreshIntervalChange: (ms: number) => void;
   onRefreshNow: () => void;
   onScreenshot: () => void;
+  onCopyStateJson: () => void;
+  onPasteStateJson: () => void;
+  onClearPasted: () => void;
   onPinEntity: (entity: EntityData | null) => void;
 }
 
 export function Sidebar({
   gameState, entities, cellInfo,
   overlay, showEntities, showGrid, autoRefresh, refreshInterval,
-  pinnedEntityName,
+  pinnedEntityName, isPasted,
   onOverlayChange, onShowEntitiesChange, onShowGridChange,
   onAutoRefreshChange, onRefreshIntervalChange, onRefreshNow, onScreenshot,
+  onCopyStateJson, onPasteStateJson, onClearPasted,
   onPinEntity,
 }: Props) {
   return (
@@ -75,6 +81,35 @@ export function Sidebar({
         </label>
         <button onClick={onRefreshNow}>Refresh Now</button>
         <button onClick={onScreenshot} title="Export canvas as PNG (Ctrl+S)">📷 Export PNG</button>
+      </section>
+
+      <section>
+        <h3>State JSON</h3>
+        <button
+          onClick={onCopyStateJson}
+          title="Copy current game state as JSON (Ctrl+Shift+C)"
+          disabled={!gameState}
+        >
+          📋 Copy State JSON
+        </button>
+        <button
+          onClick={onPasteStateJson}
+          title="Paste game state JSON to preview (Ctrl+Shift+V)"
+        >
+          📥 Paste State JSON
+        </button>
+        {isPasted && (
+          <button
+            className="btn-clear-pasted"
+            onClick={onClearPasted}
+            title="Return to live game state"
+          >
+            ✕ Clear pasted state
+          </button>
+        )}
+        {isPasted && (
+          <div className="pasted-indicator">Viewing pasted state</div>
+        )}
       </section>
 
       <section>
