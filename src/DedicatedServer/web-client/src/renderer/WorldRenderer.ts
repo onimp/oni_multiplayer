@@ -10,6 +10,8 @@ import {
   minimapOrigin, worldToMinimapX, worldToMinimapY,
   viewportRectInMinimap,
 } from '../utils/minimap';
+import { minimapNeedsRedraw } from '../utils/minimapGate';
+import type { MinimapViewport } from '../utils/minimapGate';
 
 export interface CellInfo {
   x: number;
@@ -36,11 +38,27 @@ export class WorldRenderer {
   private offsetY = 0;
   private centered = false;
 
+  // ── Minimap offscreen cache ──────────────────────────────────────────────
+  // The minimap is rendered to an offscreen canvas when its inputs change,
+  // then blitted to the main canvas each frame.  This avoids re-iterating
+  // the entity list on every frame where only the world overlay changed.
+  private minimapOffscreen: HTMLCanvasElement;
+  private minimapOffCtx: CanvasRenderingContext2D;
+  private minimapLastEntities: EntitiesResponse | null | undefined = undefined;
+  private minimapLastViewport: MinimapViewport | null = null;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Failed to get 2D context');
     this.ctx = ctx;
+
+    this.minimapOffscreen = document.createElement('canvas');
+    this.minimapOffscreen.width  = MINIMAP_W;
+    this.minimapOffscreen.height = MINIMAP_H;
+    const offCtx = this.minimapOffscreen.getContext('2d');
+    if (!offCtx) throw new Error('Failed to get minimap offscreen 2D context');
+    this.minimapOffCtx = offCtx;
   }
 
   get currentCellSize() { return this.cellSize; }
@@ -364,39 +382,75 @@ export class WorldRenderer {
   /**
    * Draws the minimap overlay in the bottom-right corner of the canvas.
    *
-   * Shows buildings (dim amber rects), critters (2×2 green), dupes (3×3 yellow),
-   * and a semi-transparent viewport rectangle indicating the visible region.
+   * An offscreen canvas caches the minimap content.  minimapNeedsRedraw()
+   * gates whether the offscreen canvas is redrawn this frame — skipping
+   * the entity iteration when neither entity data nor the viewport changed.
+   * The cached offscreen canvas is blitted to the main canvas every frame,
+   * ensuring the minimap remains visible even after a full canvas clear.
    */
   renderMinimap(world: WorldData, entities: EntitiesResponse | null) {
     const { ctx, canvas } = this;
     const cw = canvas.width;
     const ch = canvas.height;
 
+    const currentViewport: MinimapViewport = {
+      offsetX:  this.offsetX,
+      offsetY:  this.offsetY,
+      cellSize: this.cellSize,
+      canvasW:  cw,
+      canvasH:  ch,
+      worldW:   world.width,
+      worldH:   world.height,
+    };
+
+    // Only re-render the offscreen canvas when entities or viewport changed.
+    const prevEntities = this.minimapLastEntities ?? null;
+    if (minimapNeedsRedraw(prevEntities, entities, this.minimapLastViewport, currentViewport)) {
+      this._drawMinimapToOffscreen(world, entities, currentViewport);
+      this.minimapLastEntities = entities;
+      this.minimapLastViewport = { ...currentViewport };
+    }
+
+    // Blit cached minimap to the main canvas (always — main canvas was just cleared).
     const { x: ox, y: oy } = minimapOrigin(cw, ch);
+    ctx.drawImage(this.minimapOffscreen, ox, oy);
+  }
+
+  /**
+   * Renders the full minimap content (background, entity dots, viewport rect,
+   * label) into the offscreen canvas.  Coordinates are in offscreen-local
+   * space (origin at 0,0; size MINIMAP_W × MINIMAP_H).
+   */
+  private _drawMinimapToOffscreen(
+    world: WorldData,
+    entities: EntitiesResponse | null,
+    vp: MinimapViewport,
+  ): void {
+    const ctx = this.minimapOffCtx;
     const mmW = MINIMAP_W;
     const mmH = MINIMAP_H;
 
     // ── Background + border ────────────────────────────────────────────────
     ctx.fillStyle = 'rgba(10,14,26,0.88)';
-    ctx.fillRect(ox - 1, oy - 1, mmW + 2, mmH + 2);
+    ctx.fillRect(0, 0, mmW + 2, mmH + 2);
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(ox - 0.5, oy - 0.5, mmW + 1, mmH + 1);
+    ctx.strokeRect(0.5, 0.5, mmW - 1, mmH - 1);
 
     // ── Entity dots ─────────────────────────────────────────────────────────
     if (entities) {
       for (const e of entities.entities) {
         const ew = e.w ?? 1;
         const eh = e.h ?? 1;
-        const mx = ox + worldToMinimapX(e.x + ew / 2, world.width, mmW);
-        const my = oy + worldToMinimapY(e.y + eh / 2, world.height, mmH);
+        const mx = worldToMinimapX(e.x + ew / 2, world.width, mmW);
+        const my = worldToMinimapY(e.y + eh / 2, world.height, mmH);
 
         if (e.type === 'building') {
           // Buildings: dim amber filled rect proportional to footprint
           const bw = Math.max(1, (ew / world.width)  * mmW);
           const bh = Math.max(1, (eh / world.height) * mmH);
-          const bx = ox + worldToMinimapX(e.x, world.width, mmW);
-          const by = oy + worldToMinimapY(e.y + eh - 1, world.height, mmH);
+          const bx = worldToMinimapX(e.x, world.width, mmW);
+          const by = worldToMinimapY(e.y + eh - 1, world.height, mmH);
           ctx.fillStyle = 'rgba(180,130,40,0.35)';
           ctx.fillRect(bx, by, bw, bh);
         } else if (e.type === 'critter') {
@@ -410,28 +464,27 @@ export class WorldRenderer {
     }
 
     // ── Viewport rect ──────────────────────────────────────────────────────
-    const vp = viewportRectInMinimap(
-      this.offsetX, this.offsetY, this.cellSize,
-      cw, ch, world.width, world.height, mmW, mmH,
+    const vpRect = viewportRectInMinimap(
+      vp.offsetX, vp.offsetY, vp.cellSize,
+      vp.canvasW, vp.canvasH, vp.worldW, vp.worldH, mmW, mmH,
     );
-    // Clamp to minimap bounds for display (when zoomed/panned out of world)
-    const vpx = Math.max(0, vp.x);
-    const vpy = Math.max(0, vp.y);
-    const vpw = Math.min(mmW - vpx, vp.w - (vpx - vp.x));
-    const vph = Math.min(mmH - vpy, vp.h - (vpy - vp.y));
+    const vpx = Math.max(0, vpRect.x);
+    const vpy = Math.max(0, vpRect.y);
+    const vpw = Math.min(mmW - vpx, vpRect.w - (vpx - vpRect.x));
+    const vph = Math.min(mmH - vpy, vpRect.h - (vpy - vpRect.y));
 
     ctx.strokeStyle = 'rgba(255,255,255,0.65)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(ox + vpx, oy + vpy, Math.max(2, vpw), Math.max(2, vph));
+    ctx.strokeRect(vpx, vpy, Math.max(2, vpw), Math.max(2, vph));
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    ctx.fillRect(ox + vpx, oy + vpy, Math.max(2, vpw), Math.max(2, vph));
+    ctx.fillRect(vpx, vpy, Math.max(2, vpw), Math.max(2, vph));
 
     // ── "M" label ──────────────────────────────────────────────────────────
     ctx.font = 'bold 9px monospace';
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
-    ctx.fillText('M', ox + mmW - 2, oy + mmH - 1);
+    ctx.fillText('M', mmW - 2, mmH - 1);
   }
 
   /** Draws a small UPS counter overlay in the top-right corner of the canvas. */
