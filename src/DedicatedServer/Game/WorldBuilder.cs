@@ -330,6 +330,8 @@ public class WorldBuilder {
             // Set obj directly — same pattern as game.obj at line ~549.
             // InitializeComponent() gates the lastObj update on Application.isPlaying && lastGameObject != go,
             // which is fragile and left saveGame.obj null => ColonyRationMonitor.Subscribe() NPE.
+            var smc = saveGameGo.GetComponent<StateMachineController>();
+            smc.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
             saveGame.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
             saveGame.OnPrefabInit(); // sets SaveGame.Instance + creates ColonyRationMonitor
             if (SaveGame.Instance == null) SaveGame.Instance = saveGame; // fallback if OnPrefabInit crashed before Instance = this
