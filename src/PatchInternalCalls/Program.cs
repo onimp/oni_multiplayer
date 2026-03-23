@@ -99,6 +99,15 @@ var callMap = new Dictionary<string, string> {
     ["UnityEngine.Transform::set_position_Injected"] = "SetPositionFromTransform",
     ["UnityEngine.Transform::get_localPosition_Injected"] = "GetPosition",
     ["UnityEngine.Transform::set_localPosition_Injected"] = "SetPositionFromTransform",
+    // Time — static 0f in headless without this; breaks all timers (sleep, ThoughtGraph, etc.)
+    // timeScale always returns 1f; frameCount increments every Update() for PathGrid caching.
+    ["UnityEngine.Time::get_time"]               = "GetTime",
+    ["UnityEngine.Time::get_deltaTime"]          = "GetDeltaTime",
+    ["UnityEngine.Time::get_fixedDeltaTime"]     = "GetFixedDeltaTime",
+    ["UnityEngine.Time::get_unscaledTime"]       = "GetUnscaledTime",
+    ["UnityEngine.Time::get_unscaledDeltaTime"]  = "GetUnscaledDeltaTime",
+    ["UnityEngine.Time::get_timeScale"]          = "GetTimeScale",
+    ["UnityEngine.Time::get_frameCount"]         = "GetFrameCount",
 };
 
 // Patch all InternalCall methods

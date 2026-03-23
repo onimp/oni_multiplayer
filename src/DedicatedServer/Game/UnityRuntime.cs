@@ -64,6 +64,35 @@ public static class UnityRuntime {
 
     private static readonly HashSet<IntPtr> SpawnedObjects = new();
 
+    // --- Time simulation ---
+    // Time.time is a static InternalCall that returns 0f in headless (no Unity player loop).
+    // GameTickLoop.Update() calls AdvanceTime(dt) at the top of every tick so all game code
+    // that reads Time.time / Time.deltaTime sees a properly advancing clock.
+    // PatchInternalCalls wires Time.get_time/deltaTime/etc. to these methods via Cecil.
+    private static float _elapsedTime = 0f;
+    private static float _deltaTime = 1f / 60f;
+    private static int _frameCount = 0;
+
+    public static float GetTime()             => _elapsedTime;
+    public static float GetDeltaTime()        => _deltaTime;
+    public static float GetFixedDeltaTime()   => _deltaTime;
+    public static float GetUnscaledTime()     => _elapsedTime;
+    public static float GetUnscaledDeltaTime() => _deltaTime;
+    public static float GetTimeScale()        => 1f;
+    public static int   GetFrameCount()       => _frameCount;
+
+    /// <summary>
+    /// Advances the headless clock by <paramref name="dt"/> seconds.
+    /// Must be called at the top of every <see cref="GameTickLoop.Update"/> tick.
+    /// frameCount increments every call — required by PathGrid caching logic.
+    /// timeScale is always 1f (no pause/speed controls in headless).
+    /// </summary>
+    public static void AdvanceTime(float dt) {
+        _deltaTime    = dt;
+        _elapsedTime += dt;
+        _frameCount++;
+    }
+
     // --- Stats ---
     public static int TotalGameObjects => GameObjectComponents.Count;
     public static int TotalComponents => ComponentToGameObject.Count;
