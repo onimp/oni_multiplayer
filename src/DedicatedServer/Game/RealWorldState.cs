@@ -214,7 +214,7 @@ public class RealWorldState {
         var staminaAmt  = Db.Get().Amounts.Stamina.Lookup(go);
         var caloriesAmt = Db.Get().Amounts.Calories.Lookup(go);
 
-        var name = go.GetComponent<MinionIdentity>()?.nameStringKey ?? go.name;
+        var name = go.GetComponent<MinionIdentity>()?.Name ?? go.name;
         return BuildMinionDto(name, x, y, w, h, currentChore, smState, navIsMoving, navCell,
             staminaAmt?.value ?? 0f, staminaAmt?.GetMax() ?? 100f,
             caloriesAmt?.value ?? 0f, caloriesAmt?.GetMax() ?? 4_000_000f);
