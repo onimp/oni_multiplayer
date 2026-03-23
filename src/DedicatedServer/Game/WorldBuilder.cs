@@ -312,47 +312,6 @@ public class WorldBuilder {
         global::Game.Instance.accumulators ??= new Accumulators();
         global::Game.Instance.plantElementAbsorbers ??= new PlantElementAbsorbers();
 
-        // SaveGame stub must exist BEFORE SpawnStarterMinions so that:
-        //   1. RationMonitor.InitializeStates registers EventTransitions on SaveGame.Instance
-        //      via GetSaveGame() — null at SM startup causes EventTransitionData NPE.
-        //   2. ColonyRationMonitor.Instance can be started so AreThereAnyEdibles() works.
-        //   3. GameClock.AddTime NPE at cycle boundary (~tick 2714) is prevented
-        //      (AutoSaveCycleInterval=0 disables autosave).
-        if (SaveGame.Instance == null) {
-            Console.WriteLine("[WorldBuilder] SaveGame.Instance null — creating headless stub");
-            var saveGameGo = new GameObject("SaveGame_headless");
-            UnityEngine.Object.DontDestroyOnLoad(saveGameGo);
-            // StateMachineController must be on the same GO before OnPrefabInit() runs so that
-            // SaveGame.OnPrefabInit → new ColonyRationMonitor.Instance(this).StartSM() can call
-            // master.GetComponent<StateMachineController>().AddStateMachineInstance() without NPE.
-            saveGameGo.AddComponent<StateMachineController>();
-            var saveGame = saveGameGo.AddComponent<SaveGame>();
-            // Set obj directly — same pattern as game.obj at line ~549.
-            // InitializeComponent() gates the lastObj update on Application.isPlaying && lastGameObject != go,
-            // which is fragile and left saveGame.obj null => ColonyRationMonitor.Subscribe() NPE.
-            var smc = saveGameGo.GetComponent<StateMachineController>();
-            smc.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
-            saveGame.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
-            // Diag: log obj state of every KMonoBehaviour on saveGameGo before OnPrefabInit
-            foreach (var kmb in saveGameGo.GetComponents<KMonoBehaviour>()) {
-                Console.WriteLine($"[SaveGameDiag PRE] {kmb.GetType().Name} obj={(kmb.obj == null ? "NULL" : "set")}");
-            }
-            try {
-                saveGame.OnPrefabInit(); // sets SaveGame.Instance + creates ColonyRationMonitor
-            } catch (Exception saveGameEx) {
-                Console.Error.WriteLine($"[SaveGameDiag] OnPrefabInit THREW: {saveGameEx.GetBaseException().Message}");
-                Console.Error.WriteLine(saveGameEx.GetBaseException().StackTrace);
-                throw;
-            }
-            // Diag: log obj state after OnPrefabInit (components may have been added inside)
-            foreach (var kmb in saveGameGo.GetComponents<KMonoBehaviour>()) {
-                Console.WriteLine($"[SaveGameDiag POST] {kmb.GetType().Name} obj={(kmb.obj == null ? "NULL" : "set")}");
-            }
-            if (SaveGame.Instance == null) SaveGame.Instance = saveGame; // fallback if OnPrefabInit crashed before Instance = this
-        }
-        SaveGame.Instance.AutoSaveCycleInterval = 0;
-        Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
-
         // Spawn starter duplicants at the actual colony location.
         // Must run AFTER SpawnEntities so Telepad/PrintingPod is already in the world
         // (FindColonySpawnCell can then locate it via FindObjectsOfType).
@@ -452,6 +411,34 @@ public class WorldBuilder {
 
         KObjectManager.Instance?.OnDestroy();
         Awake("KObjectManager", () => go.AddComponent<KObjectManager>().Awake());
+
+        // SaveGame stub: must run after KObjectManager is initialized (KObjectManager.Instance
+        // must be non-null for GetOrCreateObject). Kept here in InitializeWorld() to guarantee
+        // ordering — previously placed in Create() before this method's definition, causing
+        // KObjectManager.Instance == null when the stub ran.
+        // Must also run before SpawnStarterMinions (in Create()) so RationMonitor can register
+        // EventTransitions on SaveGame.Instance at SM startup.
+        if (SaveGame.Instance == null) {
+            Console.WriteLine("[WorldBuilder] SaveGame.Instance null — creating headless stub");
+            var saveGameGo = new GameObject("SaveGame_headless");
+            UnityEngine.Object.DontDestroyOnLoad(saveGameGo);
+            // StateMachineController must be on the same GO before OnPrefabInit() runs so that
+            // SaveGame.OnPrefabInit → new ColonyRationMonitor.Instance(this).StartSM() can call
+            // master.GetComponent<StateMachineController>().AddStateMachineInstance() without NPE.
+            saveGameGo.AddComponent<StateMachineController>();
+            var saveGame = saveGameGo.AddComponent<SaveGame>();
+            // Set obj directly — same pattern as game.obj below.
+            // InitializeComponent() gates lastObj update on Application.isPlaying && lastGameObject != go,
+            // which is fragile and left saveGame.obj null => ColonyRationMonitor.Subscribe() NPE.
+            var saveGameSmc = saveGameGo.GetComponent<StateMachineController>();
+            saveGameSmc.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
+            saveGame.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
+            saveGame.OnPrefabInit(); // sets SaveGame.Instance + creates ColonyRationMonitor
+            if (SaveGame.Instance == null) SaveGame.Instance = saveGame; // fallback if OnPrefabInit crashed before Instance = this
+        }
+        SaveGame.Instance.AutoSaveCycleInterval = 0;
+        Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
+
         DistributionPlatform.sImpl = go.AddComponent<SteamDistributionPlatform>();
         Global.Instance?.OnDestroy();
         Awake("Global", () => go.AddComponent<Global>().Awake());
