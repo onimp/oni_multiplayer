@@ -12,6 +12,9 @@ import { StatsBar } from './components/StatsBar';
 import { HelpOverlay } from './components/HelpOverlay';
 import { deriveConnectionStatus } from './utils/connectionState';
 import { resolveKeyAction, isInputTarget } from './utils/keybindings';
+import { getElementState } from './renderer/constants';
+import { inspectCell } from './utils/cellInspector';
+import { CellInspectorPanel } from './components/CellInspectorPanel';
 import './index.css';
 
 export default function App() {
@@ -22,6 +25,20 @@ export default function App() {
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [cellInfo, setCellInfo] = useState<CellInfo | null>(null);
 
+  // Derived inspector data: formatted for display. Re-computed on inspectedCell change.
+  const inspectorData = inspectedCell
+    ? inspectCell({
+        x: inspectedCell.x,
+        y: inspectedCell.y,
+        element: inspectedCell.element,
+        elementState: getElementState(inspectedCell.elementId),
+        temperature: inspectedCell.temperature,
+        temperatureC: inspectedCell.temperatureC,
+        mass: inspectedCell.mass,
+        entities: inspectedCell.entities,
+      })
+    : null;
+
   // Backoff state: current delay ms (0 = normal poll rate). Reset to 0 on success.
   const backoffRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -30,6 +47,7 @@ export default function App() {
   const [showEntities, setShowEntities] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [showMinimap, setShowMinimap] = useState(true);
+  const [inspectedCell, setInspectedCell] = useState<CellInfo | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(16);
 
@@ -58,8 +76,8 @@ export default function App() {
         case 'pan-down':    canvasActionsRef.current?.panDown();   break;
         case 'toggle-grid':    setShowGrid(g => !g);               break;
         case 'toggle-minimap': setShowMinimap(m => !m);           break;
-        case 'show-help':   setShowHelp(true);                     break;
-        case 'close-help':  setShowHelp(false);                    break;
+        case 'show-help':   setShowHelp(true);                            break;
+        case 'close-help':  setShowHelp(false); setInspectedCell(null); break;
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -174,6 +192,12 @@ export default function App() {
       <div className="main">
         <div className="canvas-container">
           <ConnectionOverlay status={connStatus} onReconnect={refresh} />
+          {inspectorData && (
+            <CellInspectorPanel
+              data={inspectorData}
+              onClose={() => setInspectedCell(null)}
+            />
+          )}
           <WorldCanvas
             world={world}
             entities={entities}
@@ -186,6 +210,7 @@ export default function App() {
             onEntityUnpinned={handleEntityUnpinned}
             actionsRef={canvasActionsRef}
             showMinimap={showMinimap}
+            onCellInspect={setInspectedCell}
           />
         </div>
         <Sidebar

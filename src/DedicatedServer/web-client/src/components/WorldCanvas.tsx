@@ -78,11 +78,14 @@ interface Props {
   actionsRef?: React.MutableRefObject<CanvasActions | null>;
   /** Show minimap overlay in bottom-right corner. */
   showMinimap?: boolean;
+  /** Called on right-click or Shift+click with full cell info for the inspector panel. */
+  onCellInspect?: (cell: import('../renderer/WorldRenderer').CellInfo | null) => void;
 }
 
 export function WorldCanvas({
   world, entities, overlay, showEntities, showGrid, serverUps,
   onCellHover, pinnedEntity, onEntityUnpinned, actionsRef, showMinimap = true,
+  onCellInspect,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -327,6 +330,17 @@ export function WorldCanvas({
     }
   }, []);
 
+  /** Fires the cell inspector on right-click; prevents the browser context menu. */
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!rendererRef.current || !worldRef.current) return;
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const cell = rendererRef.current.getCellAt(mouseX, mouseY, worldRef.current, entitiesRef.current);
+    onCellInspect?.(cell);
+  }, [onCellInspect]);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!rendererRef.current || !worldRef.current) return;
 
@@ -379,6 +393,14 @@ export function WorldCanvas({
       const rect = canvasRef.current!.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
+
+      // Shift+click → open cell inspector (takes priority over entity pin).
+      if (e.shiftKey) {
+        const cell = rendererRef.current.getCellAt(mouseX, mouseY, worldRef.current, entitiesRef.current);
+        onCellInspect?.(cell);
+        return;
+      }
+
       const hits = getEntitiesAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
       const tt = tooltipRef.current;
       if (hits.length > 0) {
@@ -425,6 +447,7 @@ export function WorldCanvas({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onContextMenu={handleContextMenu}
         style={{ display: 'block', width: '100%', height: '100%', cursor: 'crosshair' }}
       />
       <div

@@ -565,3 +565,126 @@ header h1 {
   background: #e94560;
   color: #fff;
 }
+
+/* ── Cell Inspector Panel ─────────────────────────────────────────────────── */
+
+.cell-inspector {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 15;
+  background: rgba(16, 25, 55, 0.95);
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  min-width: 200px;
+  max-width: 260px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.55);
+  font-size: 12px;
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+.cell-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 5px;
+  border-bottom: 1px solid #0f3460;
+}
+
+.cell-inspector-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e94560;
+  letter-spacing: 0.3px;
+}
+
+.cell-inspector-close {
+  background: none;
+  border: 1px solid #0f3460;
+  color: #888;
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  margin-top: 0;
+  width: 20px;
+}
+.cell-inspector-close:hover {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
+}
+
+.cell-inspector-table {
+  width: 100%;
+  border-collapse: collapse;
+  padding: 4px 0;
+}
+
+.cell-inspector-table td {
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+.ci-label {
+  color: #666;
+  width: 52px;
+  white-space: nowrap;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ci-value {
+  color: #c8c8c8;
+  font-family: 'Segoe UI', system-ui, monospace;
+}
+
+.ci-temp-c {
+  color: #888;
+  font-size: 11px;
+}
+
+.ci-temp-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.ci-entities {
+  border-top: 1px solid #0f3460;
+  padding: 5px 8px;
+}
+
+.ci-entities-heading {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  margin-bottom: 3px;
+}
+
+.ci-entity-row {
+  color: #4ecca3;
+  font-size: 11px;
+  padding: 1px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ci-footer {
+  border-top: 1px solid #0f3460;
+  padding: 4px 8px;
+  font-size: 10px;
+  color: #444;
+  text-align: center;
+}
