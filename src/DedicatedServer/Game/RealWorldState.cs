@@ -169,7 +169,7 @@ public class RealWorldState {
         }
 
         Console.Error.WriteLine($"[EntitySize] Unknown size for: {prefabId}");
-        return (0, 0);
+        return (1, 1);
     }
 
     /// <summary>
@@ -399,7 +399,6 @@ public class RealWorldState {
         // Buildings (TrackedBuildings has world-offsets already applied).
         foreach (var b in world.TrackedBuildings) {
             var (w, h) = ResolveEntitySize(b.id, sizeMap);
-            if (w == 0 || h == 0) { Console.Error.WriteLine($"[EntityDTO] building {b.id} at ({b.x},{b.y}): unknown size — omitted"); continue; }
             entities.Add(new { type = "building", name = b.id, x = b.x, y = b.y, w, h });
         }
 
@@ -408,17 +407,14 @@ public class RealWorldState {
                 if (DuplicantPrefabs.Contains(e.id)) continue;   // handled via SpawnedMinions
                 if (ClassifyOtherEntity(e.id) == "critter") continue;  // handled live via Components.Brains
                 var (ew, eh) = ResolveEntitySize(e.id, sizeMap);
-                if (ew == 0 || eh == 0) { Console.Error.WriteLine($"[EntityDTO] entity {e.id} at ({e.location_x},{e.location_y}): unknown size — omitted"); continue; }
                 entities.Add(new { type = ClassifyOtherEntity(e.id), name = e.id, x = e.location_x, y = e.location_y, w = ew, h = eh });
             }
             foreach (var p in spawnData.pickupables) {
                 var (pw, ph) = ResolveEntitySize(p.id, sizeMap);
-                if (pw == 0 || ph == 0) { Console.Error.WriteLine($"[EntityDTO] pickupable {p.id} at ({p.location_x},{p.location_y}): unknown size — omitted"); continue; }
                 entities.Add(new { type = "pickupable", name = p.id, x = p.location_x, y = p.location_y, w = pw, h = ph });
             }
             foreach (var o in spawnData.elementalOres) {
                 var (ow, oh) = ResolveEntitySize(o.id, sizeMap);
-                if (ow == 0 || oh == 0) { Console.Error.WriteLine($"[EntityDTO] ore {o.id} at ({o.location_x},{o.location_y}): unknown size — omitted"); continue; }
                 entities.Add(new { type = "ore", name = o.id, x = o.location_x, y = o.location_y, w = ow, h = oh });
             }
         }
@@ -428,7 +424,6 @@ public class RealWorldState {
             if (DuplicantPrefabs.Contains(id)) continue;
             if (ClassifyOtherEntity(id) == "critter") continue;  // handled live via Components.Brains
             var (ew, eh) = ResolveEntitySize(id, sizeMap);
-            if (ew == 0 || eh == 0) { Console.Error.WriteLine($"[EntityDTO] entity {id} at ({x},{y}): unknown size — omitted"); continue; }
             entities.Add(new { type = ClassifyOtherEntity(id), name = id, x, y, w = ew, h = eh });
         }
 

@@ -1481,16 +1481,13 @@ public class WorldBuilder {
                 }
             }
 
-            if (ew == 1 && eh == 1) {
-                Console.Error.WriteLine($"[EntitySize] {id}: no size source found — storing (0,0), entity will be omitted from DTO");
-                _prefabSizeMap[id] = (0, 0);
-                return;
-            }
+            if (ew == 1 && eh == 1)
+                Console.Error.WriteLine($"[EntitySize] {id}: no size source found — defaulting to 1×1");
 
             _prefabSizeMap[id] = (ew, eh);
         } catch (Exception ex) {
-            Console.Error.WriteLine($"[EntitySize] {id} FAILED: {ex.GetBaseException().Message} — storing (0,0)");
-            _prefabSizeMap[id] = (0, 0);
+            Console.Error.WriteLine($"[EntitySize] {id} FAILED: {ex.GetBaseException().Message} — defaulting to 1×1");
+            _prefabSizeMap[id] = (1, 1);
         }
     }
 
