@@ -339,25 +339,20 @@ public static class MinionPrefab {
             Console.WriteLine($"[SETUP go={id}] Brain running={finalBrain?.IsRunning()}, isSpawned={finalBrain?.isSpawned}");
         });
 
-        // ── Step 16c: Null OxygenBreather on brain ───────────────────────────
-        // SafeCellQuery.GetFlags() line 60:
-        //   flag5 = brain.OxygenBreather == null || GasBreatherFromWorldProvider...IsBreathable
-        // brain.OxygenBreather==null short-circuits the check: flag5=true for ALL cells,
-        // so no cell is excluded by the breathability test.
-        //
-        // Why NOT hasAir=true: with hasAir=true the CURRENT cell also passes IsBreathable,
-        // but IsClear=false (another dupe occupies the same spawn cell) → current cell
-        // still excluded. Adjacent cells hit GasBreatherFromWorldProvider which reads
-        // Grid.Element → Vacuum in headless → IsBreathable=false again → NO cell passes
-        // → idleCell=-1. brain.OxygenBreather=null bypasses GasBreatherFromWorldProvider
-        // entirely so adjacent cells are valid regardless of gas data.
-        //
-        // OxygenBreather COMPONENT stays on the GO and will not crash — only the brain's
-        // cached field reference is null. SafeCellQueryGetFlagsPatch provides belt-and-suspenders.
-        S(id, "16c-null-OxygenBreather", () => {
-            var brain = go.GetComponent<MinionBrain>();
-            if (brain != null) brain.OxygenBreather = null;
-            Console.WriteLine($"[SETUP go={id}] 16c: brain.OxygenBreather=null (headless: SafeCellQuery skips IsBreathable for all cells)");
+        // ── Step 16c: HeadlessGasProvider — prevents suffocation death ──────────
+        // OxygenBreather.hasAir starts true but flips to false after a 2-second
+        // hysteresis timer when Sim200ms finds no gas provider with HasOxygen()=true
+        // (headless: no O2 simulation, cells are vacuum).
+        // hasAir=false → OxygenBreatherHasAirChanged event → SuffocationMonitor
+        // transitions satisfied→noOxygen → breath drains → Kill(Deaths.Suffocation).
+        // HeadlessGasProvider.HasOxygen()=true keeps hasAir=true permanently.
+        // SafeCellQuery.GetFlags(): current-cell breathability uses brain.OxygenBreather.HasOxygen
+        // (now true); adjacent cells use GasBreatherFromWorldProvider which reads actual
+        // Grid.Element from the loaded save (valid gas data, not vacuum near colony spawn).
+        S(id, "16c-HeadlessGasProvider", () => {
+            var ob = go.GetComponent<OxygenBreather>();
+            ob?.AddGasProvider(new HeadlessGasProvider());
+            Console.WriteLine($"[SETUP go={id}] 16c: HeadlessGasProvider added (HasOxygen=true, prevents suffocation)");
         });
 
         // ── Step 17: GameTags.Idle + Sensors.Spawn ───────────────────────────
