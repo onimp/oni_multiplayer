@@ -357,6 +357,12 @@ public class WorldBuilder {
         // Navigator SM not started → CreatureBrainGroup.RenderEveryTick skips them → no chore picked.
         FixCreatureBrains();
 
+        // Snap any swimming creature (Pacu) that spawned in a non-liquid cell to the nearest
+        // liquid cell. World gen can place fish at biome-boundary cells that happen to be gas/vacuum
+        // → CanSwimAtCurrentLocation()=false → ShouldFall()=true → FallStates.PlayAnim NPE in
+        // headless → StateMachine.Instance.error=true → SM transitions blocked → fish stuck forever.
+        ValidateSwimmerPositions();
+
         // Safety net: clear global SM error flag after all SMs are started.
         // A single SM crash during Setup (e.g. dupe 0's StressMonitor) sets
         // StateMachine.Instance.error=True, which halts ALL GoTo calls on ALL dupes.
@@ -1692,6 +1698,61 @@ public class WorldBuilder {
             CreaturePrefab.Setup((CreatureBrain)brain);
         }
         Console.WriteLine($"[Animals] FixCreatureBrains: total={total}");
+    }
+
+    /// <summary>
+    /// Snaps swimming creatures (Pacu) that spawned in non-liquid cells to the nearest liquid cell.
+    ///
+    /// Root cause: world gen can place fish at biome-boundary cells with a gas element.
+    /// CanSwimAtCurrentLocation() calls Grid.IsSubstantialLiquid() which requires
+    /// mass >= defaultMass * 0.35. Boundary cells have low/zero mass → returns false →
+    /// ShouldFall()=true → FallStates starts → PlayAnim NPE in headless →
+    /// StateMachine.Instance.error=true → all SM transitions blocked → fish permanently stuck.
+    ///
+    /// Fix: one-time positional correction at startup. No Harmony, no runtime overhead.
+    /// Uses Grid.IsLiquid(cell) = ElementLoader.elements[ElementIdx[cell]].IsLiquid —
+    /// pure element-type check, no mass threshold, reliable from world gen data.
+    /// </summary>
+    private static void ValidateSwimmerPositions() {
+        var moved = 0;
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null || brain.gameObject == null) continue;
+            if (brain is MinionBrain) continue;
+            var nav = brain.gameObject.GetComponent<Navigator>();
+            if (nav?.NavGrid == null || nav.NavGrid.id != "SwimmerNavGrid") continue;
+            var cell = Grid.PosToCell(brain.gameObject);
+            if (!Grid.IsValidCell(cell) || Grid.IsLiquid(cell)) continue;
+            var fixCell = FindNearestLiquidCell(cell, 20);
+            if (fixCell < 0) {
+                Console.WriteLine($"[WorldBuilder] Swimmer {brain.gameObject.name} at cell={cell}: no liquid cell within radius 20, leaving in place");
+                continue;
+            }
+            var newPos = Grid.CellToPosCBC(fixCell, Grid.SceneLayer.Creatures);
+            brain.gameObject.transform.SetPosition(newPos);
+            Console.WriteLine($"[WorldBuilder] Moved swimmer {brain.gameObject.name} from gas cell {cell} to liquid cell {fixCell}");
+            moved++;
+        }
+        Console.WriteLine($"[WorldBuilder] ValidateSwimmerPositions: moved {moved} swimmer(s) to liquid cells");
+    }
+
+    /// <summary>
+    /// Spiral search (expanding rings) for the nearest valid liquid cell within <paramref name="radius"/>.
+    /// Returns the cell index, or -1 if none found.
+    /// </summary>
+    private static int FindNearestLiquidCell(int originCell, int radius) {
+        var origin = Grid.CellToXY(originCell);
+        for (var r = 1; r <= radius; r++) {
+            for (var dx = -r; dx <= r; dx++) {
+                for (var dy = -r; dy <= r; dy++) {
+                    if (System.Math.Abs(dx) != r && System.Math.Abs(dy) != r) continue; // shell only
+                    var cx = origin.x + dx;
+                    var cy = origin.y + dy;
+                    var c  = Grid.XYToCell(cx, cy);
+                    if (Grid.IsValidCell(c) && Grid.IsLiquid(c)) return c;
+                }
+            }
+        }
+        return -1;
     }
 
     /// <summary>
