@@ -21,6 +21,10 @@ export interface EntityData {
   smState?: string | null;
   navIsMoving?: boolean;
   navCell?: number;
+  stamina?: number;
+  staminaMax?: number;
+  calories?: number;
+  caloriesMax?: number;
 }
 
 export interface EntitiesResponse {
