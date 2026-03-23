@@ -15,8 +15,9 @@ function getEntitiesAt(
   const oy = renderer.currentOffsetY;
   const result: EntityData[] = [];
   for (const e of entities.entities) {
-    const ew = e.w ?? 1;
-    const eh = e.h ?? 1;
+    const ew = e.w;
+    const eh = e.h;
+    if (!ew || !eh) continue; // skip entities with missing size
     const sx = ox + e.x * cs;
     const sy = oy + (world.height - e.y - eh) * cs;
     if (mouseX >= sx && mouseX < sx + ew * cs && mouseY >= sy && mouseY < sy + eh * cs) result.push(e);
@@ -37,8 +38,9 @@ function miniBar(label: string, value: number, max: number, unit = ''): string {
 }
 
 /** Builds the inner HTML for the hover tooltip — one block per entity, separated by a divider. */
-function tooltipHtml(hits: EntityData[]): string {
-  return hits.map(e => {
+function tooltipHtml(hits: EntityData[], pinned = false): string {
+  const pin = pinned ? '<div style="color:#aaa;font-size:9px;margin-bottom:3px">📌 pinned — click empty area or ESC to unpin</div>' : '';
+  return pin + hits.map(e => {
     const rows: string[] = [`<b>${e.name}</b> <span style="color:#aaa">[${e.type}]</span>`];
     if (e.smState   !== undefined) rows.push(`SM: ${e.smState ?? 'null'}`);
     if (e.currentChore)            rows.push(`Chore: ${e.currentChore}`);
@@ -68,7 +70,12 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   const tooltipRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<WorldRenderer | null>(null);
   const isDragging = useRef(false);
+  const hasDragged = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
+
+  // Pinned tooltip state: isPinnedRef true = tooltip locked at pinnedPosRef coords.
+  const isPinnedRef = useRef(false);
+  const pinnedPosRef = useRef<{ mouseX: number; mouseY: number } | null>(null);
 
   // Refs holding latest data so the rAF loop always reads fresh values
   // without needing to restart the loop when props change.
@@ -98,6 +105,20 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     return () => clearInterval(id);
   }, []);
 
+  // ESC key: unpin tooltip.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isPinnedRef.current) {
+        isPinnedRef.current = false;
+        pinnedPosRef.current = null;
+        const tt = tooltipRef.current;
+        if (tt) { tt.style.display = 'none'; tt.style.outline = ''; }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   // Initialize renderer + start rAF loop.
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -120,6 +141,25 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
         });
         renderCountRef.current++;
         r.renderUpsOverlay(serverUpsRef.current, clientUpsRef.current);
+
+        // Refresh pinned tooltip with latest entity data from entitiesRef (kept live by App fast poll).
+        // Runs at 60fps — cost is O(n entities) hit-test, negligible for <1K entities.
+        if (isPinnedRef.current && pinnedPosRef.current) {
+          const tt = tooltipRef.current;
+          if (tt) {
+            const { mouseX, mouseY } = pinnedPosRef.current;
+            const hits = getEntitiesAt(mouseX, mouseY, w, entitiesRef.current, r);
+            if (hits.length > 0) {
+              tt.innerHTML = tooltipHtml(hits, true);
+            } else {
+              // All entities left the pinned cell — auto-unpin.
+              isPinnedRef.current = false;
+              pinnedPosRef.current = null;
+              tt.style.display = 'none';
+              tt.style.outline = '';
+            }
+          }
+        }
       }
     }
     rafId = requestAnimationFrame(loop);
@@ -151,6 +191,7 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 0) {
       isDragging.current = true;
+      hasDragged.current = false;
       lastMouse.current = { x: e.clientX, y: e.clientY };
     }
   }, []);
@@ -162,20 +203,33 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       const dx = e.clientX - lastMouse.current.x;
       const dy = e.clientY - lastMouse.current.y;
       lastMouse.current = { x: e.clientX, y: e.clientY };
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        hasDragged.current = true;
+        // Unpin on drag — viewport has shifted, pin position no longer meaningful.
+        if (isPinnedRef.current) {
+          isPinnedRef.current = false;
+          pinnedPosRef.current = null;
+          const tt = tooltipRef.current;
+          if (tt) { tt.style.display = 'none'; tt.style.outline = ''; }
+        }
+      }
       rendererRef.current.pan(dx, dy);
     } else {
       const rect = canvasRef.current!.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
+      // Cell hover for sidebar always updates.
       onCellHover(rendererRef.current.getCellAt(mouseX, mouseY, worldRef.current, entitiesRef.current));
 
-      // Entity tooltip — direct DOM update, no React re-render.
+      // Tooltip: skip hover update when pinned — rAF loop handles refresh.
+      if (isPinnedRef.current) return;
+
       const tt = tooltipRef.current;
       if (tt) {
         const hits = getEntitiesAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
         if (hits.length > 0) {
-          tt.innerHTML = tooltipHtml(hits);
+          tt.innerHTML = tooltipHtml(hits, false);
           tt.style.left = `${mouseX + 14}px`;
           tt.style.top  = `${mouseY + 14}px`;
           tt.style.display = 'block';
@@ -186,14 +240,46 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     }
   }, [onCellHover]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const wasClick = !hasDragged.current;
     isDragging.current = false;
+    hasDragged.current = false;
+
+    if (wasClick && rendererRef.current && worldRef.current) {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const hits = getEntitiesAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
+      const tt = tooltipRef.current;
+      if (hits.length > 0) {
+        // Pin tooltip at click position.
+        isPinnedRef.current = true;
+        pinnedPosRef.current = { mouseX, mouseY };
+        if (tt) {
+          tt.innerHTML = tooltipHtml(hits, true);
+          tt.style.left = `${mouseX + 14}px`;
+          tt.style.top  = `${mouseY + 14}px`;
+          tt.style.display = 'block';
+          tt.style.outline = '1px solid rgba(255,255,255,0.4)';
+        }
+      } else {
+        // Click on empty area — unpin.
+        isPinnedRef.current = false;
+        pinnedPosRef.current = null;
+        if (tt) { tt.style.display = 'none'; tt.style.outline = ''; }
+      }
+    }
   }, []);
 
   const handleMouseLeave = useCallback(() => {
     isDragging.current = false;
+    hasDragged.current = false;
     onCellHover(null);
-    if (tooltipRef.current) tooltipRef.current.style.display = 'none';
+    // Don't hide tooltip when pinned — it stays visible after cursor leaves canvas.
+    if (!isPinnedRef.current && tooltipRef.current) {
+      tooltipRef.current.style.display = 'none';
+    }
   }, [onCellHover]);
 
   return (
@@ -209,10 +295,11 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       />
       <div
         ref={tooltipRef}
+        onWheel={(e) => { e.stopPropagation(); e.preventDefault(); }}
         style={{
           display: 'none',
           position: 'absolute',
-          pointerEvents: 'none',
+          pointerEvents: 'auto',
           background: 'rgba(0,0,0,0.82)',
           color: '#e8e8e8',
           font: '11px/1.5 monospace',

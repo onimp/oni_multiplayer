@@ -201,15 +201,19 @@ export class WorldRenderer {
 
     const dupes:    PillInfo[] = [];
     const critters: PillInfo[] = [];
-    const dotsByColor = new Map<string, Array<[number, number, number]>>();
     const rects: Array<[number, number, number, number, string]> = [];  // [sx, sy, pw, ph, color]
     const stateLabels: StateLabel[] = [];
 
 
     for (const entity of entities) {
       // w/h from server reflect the real cell footprint (duplicant=1×2, Drecko=1×2, etc.)
-      const ew = entity.w ?? 1;
-      const eh = entity.h ?? 1;
+      // Skip entities with missing or zero size — server must always send valid dimensions.
+      const ew = entity.w;
+      const eh = entity.h;
+      if (!ew || !eh) {
+        console.error('Entity missing size:', entity.name, entity);
+        continue;
+      }
 
       // Canvas top-left of bounding box (Y-axis inverted: ONI y=0 is world bottom)
       const sx = this.offsetX + entity.x * cellSize;
@@ -237,20 +241,14 @@ export class WorldRenderer {
         critters.push({ cx, cy, rx, ry });
         // Show critter name when zoomed in enough (too noisy at small zoom)
         if (cellSize >= 10) stateLabels.push({ cx, topY: cy + ry + 2, text: entity.name });
-      } else if (ew > 1 || eh > 1) {
-        // Any multi-cell entity (building, pickupable, ore, …) → filled rect
+      } else {
+        // All other entities (buildings, pickupables, geysers, …) → filled rect sized to w×h cells
         const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
         rects.push([sx, sy, ew * cellSize, eh * cellSize, color]);
-      } else {
-        // 1×1 dot
-        const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
-        const size = Math.max(2, cellSize * 0.3);
-        if (!dotsByColor.has(color)) dotsByColor.set(color, []);
-        dotsByColor.get(color)!.push([cx, cy, size]);
       }
     }
 
-    // --- Multi-cell rects (buildings + any oversized entity) ---
+    // --- Rects (buildings + all non-dupe/critter entities) ---
     for (const [x, y, w, h, color] of rects) {
       ctx.fillStyle = color;
       ctx.globalAlpha = 0.4;
@@ -259,14 +257,6 @@ export class WorldRenderer {
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.strokeRect(x, y, w, h);
-    }
-
-    // --- Dots grouped by color (one fillStyle per color group) ---
-    for (const [color, pts] of dotsByColor) {
-      ctx.fillStyle = color;
-      for (const [cx, cy, size] of pts) {
-        ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
-      }
     }
 
     // Helper: batch-draw pills for one type (shadow + fill in two passes)
