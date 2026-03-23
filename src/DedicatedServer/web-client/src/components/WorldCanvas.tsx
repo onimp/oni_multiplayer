@@ -20,6 +20,8 @@ export interface CanvasActions {
   panRight():  void;
   panUp():     void;
   panDown():   void;
+  /** Captures the current canvas frame as a PNG data URL. */
+  screenshot(): string;
 }
 
 
@@ -196,7 +198,8 @@ export function WorldCanvas({
         panLeft:   () => { rendererRef.current?.pan(-PAN_STEP, 0); markDirty(renderGateRef.current); },
         panRight:  () => { rendererRef.current?.pan( PAN_STEP, 0); markDirty(renderGateRef.current); },
         panUp:     () => { rendererRef.current?.pan(0, -PAN_STEP); markDirty(renderGateRef.current); },
-        panDown:   () => { rendererRef.current?.pan(0,  PAN_STEP); markDirty(renderGateRef.current); },
+        panDown:    () => { rendererRef.current?.pan(0,  PAN_STEP); markDirty(renderGateRef.current); },
+        screenshot: () => canvasRef.current?.toDataURL('image/png') ?? '',
       };
     }
 

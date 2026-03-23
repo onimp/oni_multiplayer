@@ -132,33 +132,67 @@ describe('KEYBINDINGS table — structural validity', () => {
     const valid: KeyAction[] = [
       'zoom-in', 'zoom-out', 'zoom-reset',
       'pan-left', 'pan-right', 'pan-up', 'pan-down',
-      'toggle-grid', 'toggle-minimap', 'show-help', 'close-help',
+      'toggle-grid', 'toggle-minimap', 'export-screenshot', 'show-help', 'close-help',
     ];
     for (const b of KEYBINDINGS) {
       expect(valid).toContain(b.action);
     }
   });
 
-  it('all 11 KeyAction values are covered by at least one binding', () => {
+  it('all 12 KeyAction values are covered by at least one binding', () => {
     const covered = new Set(KEYBINDINGS.map(b => b.action));
     const required: KeyAction[] = [
       'zoom-in', 'zoom-out', 'zoom-reset',
       'pan-left', 'pan-right', 'pan-up', 'pan-down',
-      'toggle-grid', 'toggle-minimap', 'show-help', 'close-help',
+      'toggle-grid', 'toggle-minimap', 'export-screenshot', 'show-help', 'close-help',
     ];
     for (const action of required) {
       expect(covered.has(action), `${action} must be covered`).toBe(true);
     }
   });
 
-  it('no key string appears in more than one binding', () => {
+  it('no key+modifier combo appears in more than one binding', () => {
+    // Key uniqueness is scoped by ctrl modifier — same key can appear
+    // in a plain binding AND a ctrl binding (e.g. 's' + 'Ctrl+S').
     const seen = new Map<string, KeyAction>();
     for (const b of KEYBINDINGS) {
+      const ctrl = b.ctrl ?? false;
       for (const k of b.keys) {
-        expect(seen.has(k), `key "${k}" bound twice`).toBe(false);
-        seen.set(k, b.action);
+        const combo = `${ctrl ? 'ctrl+' : ''}${k}`;
+        expect(seen.has(combo), `combo "${combo}" bound twice`).toBe(false);
+        seen.set(combo, b.action);
       }
     }
+  });
+});
+
+
+// ── resolveKeyAction — ctrl modifier ─────────────────────────────────────────
+
+describe('resolveKeyAction — ctrl modifier', () => {
+  it('Ctrl+S maps to export-screenshot', () => {
+    expect(resolveKeyAction('s', true)).toBe('export-screenshot');
+  });
+
+  it('plain s (no ctrl) still maps to pan-down', () => {
+    expect(resolveKeyAction('s', false)).toBe('pan-down');
+    expect(resolveKeyAction('s')).toBe('pan-down'); // default ctrl=false
+  });
+
+  it('Ctrl+A does not match pan-left (no ctrl binding for a)', () => {
+    expect(resolveKeyAction('a', true)).toBeNull();
+  });
+
+  it('Ctrl+G does not match toggle-grid (no ctrl binding for g)', () => {
+    expect(resolveKeyAction('g', true)).toBeNull();
+  });
+
+  it('plain + still works with explicit ctrl=false', () => {
+    expect(resolveKeyAction('+', false)).toBe('zoom-in');
+  });
+
+  it('Ctrl++ does not match any binding', () => {
+    expect(resolveKeyAction('+', true)).toBeNull();
   });
 });
 

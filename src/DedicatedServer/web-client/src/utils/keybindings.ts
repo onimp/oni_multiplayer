@@ -16,6 +16,7 @@ export type KeyAction =
   | 'pan-down'
   | 'toggle-grid'
   | 'toggle-minimap'
+  | 'export-screenshot'
   | 'show-help'
   | 'close-help';
 
@@ -27,34 +28,48 @@ export interface KeyBinding {
   label: string;
   /** One-sentence description for the help table. */
   description: string;
+  /**
+   * When true, this binding only fires when Ctrl (or ⌘ on Mac) is held.
+   * When false/absent, it fires only when Ctrl is NOT held — preventing
+   * plain-letter bindings from intercepting Ctrl+letter browser shortcuts.
+   */
+  ctrl?: boolean;
 }
 
 export const KEYBINDINGS: readonly KeyBinding[] = [
   // ── Zoom ─────────────────────────────────────────────────────────────────
-  { keys: ['+', '='],              action: 'zoom-in',     label: '+ / =',  description: 'Zoom in' },
-  { keys: ['-'],                   action: 'zoom-out',    label: '–',      description: 'Zoom out' },
-  { keys: ['0'],                   action: 'zoom-reset',  label: '0',      description: 'Reset zoom & re-center' },
+  { keys: ['+', '='],              action: 'zoom-in',           label: '+ / =',    description: 'Zoom in' },
+  { keys: ['-'],                   action: 'zoom-out',          label: '–',        description: 'Zoom out' },
+  { keys: ['0'],                   action: 'zoom-reset',        label: '0',        description: 'Reset zoom & re-center' },
   // ── Pan ──────────────────────────────────────────────────────────────────
-  { keys: ['ArrowLeft',  'a'],     action: 'pan-left',    label: '← / A',  description: 'Pan left' },
-  { keys: ['ArrowRight', 'd'],     action: 'pan-right',   label: '→ / D',  description: 'Pan right' },
-  { keys: ['ArrowUp',    'w'],     action: 'pan-up',      label: '↑ / W',  description: 'Pan up' },
-  { keys: ['ArrowDown',  's'],     action: 'pan-down',    label: '↓ / S',  description: 'Pan down' },
+  { keys: ['ArrowLeft',  'a'],     action: 'pan-left',          label: '← / A',    description: 'Pan left' },
+  { keys: ['ArrowRight', 'd'],     action: 'pan-right',         label: '→ / D',    description: 'Pan right' },
+  { keys: ['ArrowUp',    'w'],     action: 'pan-up',            label: '↑ / W',    description: 'Pan up' },
+  { keys: ['ArrowDown',  's'],     action: 'pan-down',          label: '↓ / S',    description: 'Pan down' },
   // ── View ─────────────────────────────────────────────────────────────────
-  { keys: ['g'],                   action: 'toggle-grid',    label: 'G',      description: 'Toggle grid lines' },
-  { keys: ['m'],                   action: 'toggle-minimap', label: 'M',      description: 'Toggle minimap' },
+  { keys: ['g'],                   action: 'toggle-grid',       label: 'G',        description: 'Toggle grid lines' },
+  { keys: ['m'],                   action: 'toggle-minimap',    label: 'M',        description: 'Toggle minimap' },
+  // ── Export ───────────────────────────────────────────────────────────────
+  { keys: ['s'], ctrl: true,       action: 'export-screenshot', label: 'Ctrl+S',   description: 'Export canvas as PNG' },
   // ── Help ─────────────────────────────────────────────────────────────────
-  { keys: ['h', '?'],              action: 'show-help',   label: 'H / ?',  description: 'Show keyboard shortcuts' },
-  { keys: ['Escape'],              action: 'close-help',  label: 'Esc',    description: 'Close help / Unpin tooltip' },
+  { keys: ['h', '?'],              action: 'show-help',         label: 'H / ?',    description: 'Show keyboard shortcuts' },
+  { keys: ['Escape'],              action: 'close-help',        label: 'Esc',      description: 'Close help / Unpin tooltip' },
 ];
 
 /**
- * Returns the action for a given key value, or null if the key is unbound.
+ * Returns the action for a given key + modifier combination, or null.
  *
- * Matching is case-sensitive ('g' and 'G' are distinct) — callers that want
- * case-insensitive matching should normalise before calling.
+ * @param key   - e.key value from the keyboard event (case-sensitive)
+ * @param ctrl  - true when Ctrl or ⌘ (Meta) was held during the event
+ *
+ * Matching rules:
+ *  - A binding with ctrl:true  only fires when ctrl=true
+ *  - A binding with ctrl:false/absent only fires when ctrl=false
+ *  This prevents plain WASD pan from firing when Ctrl+W closes a browser tab.
  */
-export function resolveKeyAction(key: string): KeyAction | null {
+export function resolveKeyAction(key: string, ctrl = false): KeyAction | null {
   for (const binding of KEYBINDINGS) {
+    if ((binding.ctrl ?? false) !== ctrl) continue;
     if ((binding.keys as readonly string[]).includes(key)) return binding.action;
   }
   return null;

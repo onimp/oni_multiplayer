@@ -18,6 +18,7 @@ interface Props {
   onAutoRefreshChange: (auto: boolean) => void;
   onRefreshIntervalChange: (ms: number) => void;
   onRefreshNow: () => void;
+  onScreenshot: () => void;
   onPinEntity: (entity: EntityData | null) => void;
 }
 
@@ -26,7 +27,7 @@ export function Sidebar({
   overlay, showEntities, showGrid, autoRefresh, refreshInterval,
   pinnedEntityName,
   onOverlayChange, onShowEntitiesChange, onShowGridChange,
-  onAutoRefreshChange, onRefreshIntervalChange, onRefreshNow,
+  onAutoRefreshChange, onRefreshIntervalChange, onRefreshNow, onScreenshot,
   onPinEntity,
 }: Props) {
   return (
@@ -73,6 +74,7 @@ export function Sidebar({
           />
         </label>
         <button onClick={onRefreshNow}>Refresh Now</button>
+        <button onClick={onScreenshot} title="Export canvas as PNG (Ctrl+S)">📷 Export PNG</button>
       </section>
 
       <section>

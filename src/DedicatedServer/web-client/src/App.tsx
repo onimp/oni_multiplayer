@@ -12,6 +12,7 @@ import { StatsBar } from './components/StatsBar';
 import { HelpOverlay } from './components/HelpOverlay';
 import { deriveConnectionStatus } from './utils/connectionState';
 import { resolveKeyAction, isInputTarget } from './utils/keybindings';
+import { screenshotFilename, triggerDownload } from './utils/screenshot';
 import { getElementState } from './renderer/constants';
 import { inspectCell } from './utils/cellInspector';
 import { CellInspectorPanel } from './components/CellInspectorPanel';
@@ -63,9 +64,9 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (isInputTarget(e.target)) return;
-      const action = resolveKeyAction(e.key);
+      const action = resolveKeyAction(e.key, e.ctrlKey || e.metaKey);
       if (!action) return;
-      // Prevent arrow-key page scroll and +/- browser zoom
+      // Prevent browser defaults: arrow-key scroll, +/- zoom, Ctrl+S save-page
       e.preventDefault();
       switch (action) {
         case 'zoom-in':     canvasActionsRef.current?.zoomIn();    break;
@@ -79,6 +80,11 @@ export default function App() {
         case 'toggle-minimap': setShowMinimap(m => !m);           break;
         case 'show-help':   setShowHelp(true);                            break;
         case 'close-help':  setShowHelp(false); setInspectedCell(null); break;
+        case 'export-screenshot': {
+          const dataUrl = canvasActionsRef.current?.screenshot();
+          if (dataUrl) triggerDownload(dataUrl, screenshotFilename(gameState?.tick));
+          break;
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -95,6 +101,11 @@ export default function App() {
     setPinnedEntityName(entity?.name ?? null);
     setPinnedEntity(entity);
   }, []);
+
+  const handleScreenshot = useCallback(() => {
+    const dataUrl = canvasActionsRef.current?.screenshot();
+    if (dataUrl) triggerDownload(dataUrl, screenshotFilename(gameState?.tick));
+  }, [gameState?.tick]);
 
   const handleEntityUnpinned = useCallback(() => {
     setPinnedEntityName(null);
@@ -230,6 +241,7 @@ export default function App() {
           onAutoRefreshChange={setAutoRefresh}
           onRefreshIntervalChange={setRefreshInterval}
           onRefreshNow={refresh}
+          onScreenshot={handleScreenshot}
           onPinEntity={handlePinEntity}
         />
       </div>
