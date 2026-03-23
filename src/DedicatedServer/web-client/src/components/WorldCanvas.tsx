@@ -5,6 +5,8 @@ import { WorldRenderer } from '../renderer/WorldRenderer';
 import { miniBar } from '../utils/miniBar';
 import { MINIMAP_W, MINIMAP_H, minimapOrigin, isInsideMinimap, minimapClickToWorld, worldCenterToOffset } from '../utils/minimap';
 import { shouldRefreshHover } from '../utils/hoverRefresh';
+import { createRenderGate, needsRender, recordRender, markDirty } from '../utils/renderGate';
+import type { RenderSnapshot } from '../utils/renderGate';
 
 /** Pan step in canvas pixels per keypress. */
 const PAN_STEP = 40;
@@ -120,6 +122,11 @@ export function WorldCanvas({
   const serverUpsRef = useRef<number | undefined>(serverUps);
   const showMinimapRef = useRef(showMinimap);
 
+  // Render gate: only redraws the canvas when data or viewport actually changed.
+  const renderGateRef  = useRef(createRenderGate());
+  // Counts frames where the canvas draw was skipped (for measurement/logging).
+  const skippedFramesRef = useRef(0);
+
   // Keep refs in sync with latest props every render.
   worldRef.current = world;
   entitiesRef.current = entities;
@@ -137,7 +144,11 @@ export function WorldCanvas({
   useEffect(() => {
     const id = window.setInterval(() => {
       clientUpsRef.current = renderCountRef.current;
-      renderCountRef.current = 0;
+      // Log render vs skipped rate — helps measure dirty-flag effectiveness.
+      if (import.meta.env.DEV)
+        console.debug(`[canvas] renders: ${renderCountRef.current}/s  skipped: ${skippedFramesRef.current}/s`);
+      renderCountRef.current  = 0;
+      skippedFramesRef.current = 0;
     }, 1000);
     return () => clearInterval(id);
   }, []);
@@ -179,13 +190,13 @@ export function WorldCanvas({
     // can drive the canvas without prop-drilling through React state.
     if (actionsRef) {
       actionsRef.current = {
-        zoomIn:    () => { const c = canvasRef.current, r = rendererRef.current; if (c && r) r.zoom( 1, c.width / 2, c.height / 2); },
-        zoomOut:   () => { const c = canvasRef.current, r = rendererRef.current; if (c && r) r.zoom(-1, c.width / 2, c.height / 2); },
-        zoomReset: () => rendererRef.current?.reset(),
-        panLeft:   () => rendererRef.current?.pan(-PAN_STEP, 0),
-        panRight:  () => rendererRef.current?.pan( PAN_STEP, 0),
-        panUp:     () => rendererRef.current?.pan(0, -PAN_STEP),
-        panDown:   () => rendererRef.current?.pan(0,  PAN_STEP),
+        zoomIn:    () => { const c = canvasRef.current, r = rendererRef.current; if (c && r) { r.zoom( 1, c.width / 2, c.height / 2); markDirty(renderGateRef.current); } },
+        zoomOut:   () => { const c = canvasRef.current, r = rendererRef.current; if (c && r) { r.zoom(-1, c.width / 2, c.height / 2); markDirty(renderGateRef.current); } },
+        zoomReset: () => { rendererRef.current?.reset();            markDirty(renderGateRef.current); },
+        panLeft:   () => { rendererRef.current?.pan(-PAN_STEP, 0); markDirty(renderGateRef.current); },
+        panRight:  () => { rendererRef.current?.pan( PAN_STEP, 0); markDirty(renderGateRef.current); },
+        panUp:     () => { rendererRef.current?.pan(0, -PAN_STEP); markDirty(renderGateRef.current); },
+        panDown:   () => { rendererRef.current?.pan(0,  PAN_STEP); markDirty(renderGateRef.current); },
       };
     }
 
@@ -199,15 +210,34 @@ export function WorldCanvas({
       const r = rendererRef.current;
       const w = worldRef.current;
       if (r && w) {
-        r.render(w, entitiesRef.current, {
-          overlay: overlayRef.current,
+        // ── Dirty-flag canvas redraw ──────────────────────────────────────
+        // Build a snapshot of every input that affects the canvas output.
+        // needsRender() returns false when nothing has changed since the
+        // last draw, so we skip the expensive world-cell loop entirely.
+        const snap: RenderSnapshot = {
+          entities:     entitiesRef.current,
+          world:        worldRef.current,
+          overlay:      overlayRef.current,
           showEntities: showEntitiesRef.current,
-          showGrid: showGridRef.current,
-        });
-        renderCountRef.current++;
-        r.renderUpsOverlay(serverUpsRef.current, clientUpsRef.current);
-        if (showMinimapRef.current) r.renderMinimap(w, entitiesRef.current);
+          showGrid:     showGridRef.current,
+          showMinimap:  showMinimapRef.current,
+          serverUps:    serverUpsRef.current,
+        };
+        if (needsRender(renderGateRef.current, snap)) {
+          r.render(w, entitiesRef.current, {
+            overlay:      snap.overlay as import('../api/types').OverlayMode,
+            showEntities: snap.showEntities,
+            showGrid:     snap.showGrid,
+          });
+          r.renderUpsOverlay(snap.serverUps, clientUpsRef.current);
+          if (snap.showMinimap) r.renderMinimap(w, entitiesRef.current);
+          renderCountRef.current++;
+          recordRender(renderGateRef.current, snap);
+        } else {
+          skippedFramesRef.current++;
+        }
 
+        // ── Tooltip updates (cheap DOM ops — run every frame) ────────────
         // Refresh pinned tooltip with latest entity data from entitiesRef (kept live by App fast poll).
         // Runs at 60fps — cost is O(n entities) hit-test, negligible for <1K entities.
         if (isPinnedRef.current && pinnedPosRef.current) {
@@ -284,6 +314,7 @@ export function WorldCanvas({
       if (!parent) return;
       canvas.width = parent.clientWidth;
       canvas.height = parent.clientHeight;
+      markDirty(renderGateRef.current);
     });
     resizeObserver.observe(canvas.parentElement!);
     return () => resizeObserver.disconnect();
@@ -299,6 +330,7 @@ export function WorldCanvas({
       if (!rendererRef.current || !worldRef.current) return;
       const rect = canvas.getBoundingClientRect();
       rendererRef.current.zoom(e.deltaY > 0 ? -1 : 1, e.clientX - rect.left, e.clientY - rect.top);
+      markDirty(renderGateRef.current);
     };
     canvas.addEventListener('wheel', handler, { passive: false });
     return () => canvas.removeEventListener('wheel', handler);
@@ -321,6 +353,7 @@ export function WorldCanvas({
           const { worldX, worldY } = minimapClickToWorld(mmX, mmY, w.width, w.height, MINIMAP_W, MINIMAP_H);
           const { offsetX, offsetY } = worldCenterToOffset(worldX, worldY, canvas.width, canvas.height, w.height, r.currentCellSize);
           r.setOffset(offsetX, offsetY);
+          markDirty(renderGateRef.current);
           return; // intercept — don't start a drag
         }
       }
@@ -359,6 +392,7 @@ export function WorldCanvas({
         }
       }
       rendererRef.current.pan(dx, dy);
+        markDirty(renderGateRef.current);
     } else {
       const rect = canvasRef.current!.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
