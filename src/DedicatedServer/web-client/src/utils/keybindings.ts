@@ -15,6 +15,7 @@ export type KeyAction =
   | 'pan-up'
   | 'pan-down'
   | 'toggle-grid'
+  | 'toggle-minimap'
   | 'show-help'
   | 'close-help';
 

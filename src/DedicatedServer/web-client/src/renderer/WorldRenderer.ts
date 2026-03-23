@@ -6,7 +6,7 @@ import { liquidOverlayColor, LIQUID_BACKGROUND } from '../utils/liquidOverlay';
 import { buildingToRect, BUILDING_LABEL_MIN_CELL_SIZE } from '../utils/buildingRenderer';
 import type { BuildingRect } from '../utils/buildingRenderer';
 import {
-  MINIMAP_W, MINIMAP_H, MINIMAP_MARGIN,
+  MINIMAP_W, MINIMAP_H,
   minimapOrigin, worldToMinimapX, worldToMinimapY,
   viewportRectInMinimap,
 } from '../utils/minimap';

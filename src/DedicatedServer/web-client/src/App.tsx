@@ -25,6 +25,8 @@ export default function App() {
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [cellInfo, setCellInfo] = useState<CellInfo | null>(null);
 
+  const [inspectedCell, setInspectedCell] = useState<CellInfo | null>(null);
+
   // Derived inspector data: formatted for display. Re-computed on inspectedCell change.
   const inspectorData = inspectedCell
     ? inspectCell({
@@ -47,7 +49,6 @@ export default function App() {
   const [showEntities, setShowEntities] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [showMinimap, setShowMinimap] = useState(true);
-  const [inspectedCell, setInspectedCell] = useState<CellInfo | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(16);
 
