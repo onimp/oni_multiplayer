@@ -691,6 +691,13 @@ public class WorldBuilder {
             // brain tick — NPEs 1,380×/min if null. Just add the component; FetchManager has no
             // custom OnPrefabInit so AddComponent is sufficient.
             game.fetchManager ??= go.AddComponent<FetchManager>();
+            // spaceScannerNetworkManager: OnPrefabInit line 834 (never reached).
+            // OnSpawn line 967: SimAndRenderScheduler.instance.Add(spaceScannerNetworkManager).
+            game.spaceScannerNetworkManager ??= new SpaceScannerNetworkManager();
+            // screenMgr (private): OnPrefabInit line 832 (never reached).
+            // SpawnPlayer line 1029: component.ScreenManager = screenMgr.
+            typeof(global::Game).GetField("screenMgr", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(game, GameScreenManager.Instance);
         }
 
         // mingleCellTracker: assigned in Game.OnSpawn() line 977 via AddComponent<MingleCellTracker>().
@@ -724,6 +731,29 @@ public class WorldBuilder {
         global::Game.Instance.savedInfo.discoveredOilField = true;
         Console.WriteLine("[WorldBuilder] savedInfo.discovered* = true (skips zoneRenderData NPE in MinionBrain)");
 
+        // Call game.Spawn() — triggers Game.OnSpawn() which registers batch updaters, creates
+        // mingleCellTracker/spaceScannerNetworkManager, and runs SpawnPlayer().
+        // isInitialized must be set true because WorldBuilder calls OnPrefabInit() directly
+        // (not via InitializeComponent()), so KMonoBehaviour.isInitialized stays false.
+        // KMonoBehaviour.Spawn() guards on isInitialized — without this it is a no-op.
+        // Stubs for UI dependencies (playerPrefab, WaterCubes, SpeedControlScreen, etc.)
+        // are added iteratively below as each crash is resolved.
+
+        // STUB: playerPrefab — Game.SpawnPlayer() calls KInstantiate(playerPrefab, ...) which
+        // NPEs at original.GetComponent<RectTransform>() when playerPrefab is null.
+        // The cloned GO needs Player and PlayerController so GetComponent<Player>() returns non-null.
+        if (game.playerPrefab == null) {
+            var playerGo = new GameObject("Player_headless");
+            playerGo.AddComponent<Player>();
+            playerGo.AddComponent<PlayerController>();
+            game.playerPrefab = playerGo;
+            Console.WriteLine("[WorldBuilder] playerPrefab stub created");
+        }
+
+        game.isInitialized = true;
+        Console.WriteLine("[WorldBuilder] Calling game.Spawn()...");
+        game.Spawn();
+        Console.WriteLine("[WorldBuilder] game.Spawn() completed");
 
         // GlobalChoreProvider.OnPrefabInit → ChoreProvider.OnPrefabInit calls Game.Instance.Subscribe().
         // Must be initialized AFTER Game.Instance is set.
@@ -919,6 +949,13 @@ public class WorldBuilder {
                 "Check that StateMachineManager.scheduler was refreshed before this call.");
         Console.WriteLine($"[WorldBuilder] AlertStateManager ready: IsRedAlert={alertManagerCheck.IsRedAlert()}");
         Console.WriteLine($"[WorldBuilder] ClusterManager ready: Instance={ClusterManager.Instance != null}, worlds={ClusterManager.Instance?.WorldContainers?.Count}, GetWorld(0)={ClusterManager.Instance?.GetWorld(0)?.id}");
+
+        // Call ClusterManager.Spawn() — triggers ClusterManager.OnSpawn() which initialises
+        // m_grid (ClusterGrid) and calls UpdateWorldReverbSnapshot (needs AudioMixer stub).
+        ClusterManager.Instance.isInitialized = true;
+        Console.WriteLine("[WorldBuilder] Calling ClusterManager.Instance.Spawn()...");
+        ClusterManager.Instance.Spawn();
+        Console.WriteLine("[WorldBuilder] ClusterManager.Instance.Spawn() completed");
 
         // GridRestrictionSerializer is a KMonoBehaviour singleton needed by
         // MinionPathFinderAbilities.Refresh() → GetTagId(). Without it, every
