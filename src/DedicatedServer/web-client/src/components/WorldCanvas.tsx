@@ -1,7 +1,38 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type { WorldData, EntitiesResponse, OverlayMode } from '../api/types';
+import type { WorldData, EntitiesResponse, OverlayMode, EntityData } from '../api/types';
 import type { CellInfo } from '../renderer/WorldRenderer';
 import { WorldRenderer } from '../renderer/WorldRenderer';
+
+/** Returns the topmost entity whose cell footprint covers (mouseX, mouseY) in canvas pixels. */
+function getEntityAt(
+  mouseX: number, mouseY: number,
+  world: WorldData, entities: EntitiesResponse | null,
+  renderer: WorldRenderer,
+): EntityData | null {
+  if (!entities) return null;
+  const cs = renderer.currentCellSize;
+  const ox = renderer.currentOffsetX;
+  const oy = renderer.currentOffsetY;
+  for (const e of entities.entities) {
+    const ew = e.w ?? 1;
+    const eh = e.h ?? 1;
+    const sx = ox + e.x * cs;
+    const sy = oy + (world.height - e.y - eh) * cs;
+    if (mouseX >= sx && mouseX < sx + ew * cs && mouseY >= sy && mouseY < sy + eh * cs) return e;
+  }
+  return null;
+}
+
+/** Builds the inner HTML for the hover tooltip. */
+function tooltipHtml(e: EntityData): string {
+  const rows: string[] = [`<b>${e.name}</b> [${e.type}]`];
+  if (e.smState   !== undefined) rows.push(`SM: ${e.smState ?? 'null'}`);
+  if (e.currentChore)            rows.push(`Chore: ${e.currentChore}`);
+  if (e.navIsMoving !== undefined) rows.push(`Moving: ${e.navIsMoving}`);
+  if (e.navCell !== undefined)   rows.push(`NavCell: ${e.navCell}`);
+  rows.push(`(${e.x}, ${e.y})&nbsp;${e.w ?? 1}×${e.h ?? 1}`);
+  return rows.join('<br>');
+}
 
 interface Props {
   world: WorldData | null;
@@ -15,6 +46,7 @@ interface Props {
 
 export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, serverUps, onCellHover }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<WorldRenderer | null>(null);
   const isDragging = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
@@ -108,14 +140,26 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       const dy = e.clientY - lastMouse.current.y;
       lastMouse.current = { x: e.clientX, y: e.clientY };
       rendererRef.current.pan(dx, dy);
-      // rAF loop redraws on next frame.
     } else {
       const rect = canvasRef.current!.getBoundingClientRect();
-      const info = rendererRef.current.getCellAt(
-        e.clientX - rect.left, e.clientY - rect.top,
-        worldRef.current, entitiesRef.current
-      );
-      onCellHover(info);
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      onCellHover(rendererRef.current.getCellAt(mouseX, mouseY, worldRef.current, entitiesRef.current));
+
+      // Entity tooltip — direct DOM update, no React re-render.
+      const tt = tooltipRef.current;
+      if (tt) {
+        const entity = getEntityAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
+        if (entity) {
+          tt.innerHTML = tooltipHtml(entity);
+          tt.style.left = `${mouseX + 14}px`;
+          tt.style.top  = `${mouseY + 14}px`;
+          tt.style.display = 'block';
+        } else {
+          tt.style.display = 'none';
+        }
+      }
     }
   }, [onCellHover]);
 
@@ -126,17 +170,35 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   const handleMouseLeave = useCallback(() => {
     isDragging.current = false;
     onCellHover(null);
+    if (tooltipRef.current) tooltipRef.current.style.display = 'none';
   }, [onCellHover]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
-      style={{ display: 'block', cursor: 'crosshair' }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <canvas
+        ref={canvasRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        style={{ display: 'block', width: '100%', height: '100%', cursor: 'crosshair' }}
+      />
+      <div
+        ref={tooltipRef}
+        style={{
+          display: 'none',
+          position: 'absolute',
+          pointerEvents: 'none',
+          background: 'rgba(0,0,0,0.82)',
+          color: '#e8e8e8',
+          font: '11px/1.5 monospace',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          whiteSpace: 'nowrap',
+          zIndex: 10,
+        }}
+      />
+    </div>
   );
 }

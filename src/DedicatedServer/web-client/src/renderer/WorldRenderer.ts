@@ -195,11 +195,14 @@ export class WorldRenderer {
     // Collect visible entities by render category.
     // PillInfo covers both duplicants and critters: rx=ry gives a circle, rx≠ry gives a pill.
     type PillInfo = { cx: number; cy: number; rx: number; ry: number };
+    // StateLabel: small text drawn below the marker (smState/currentChore for dupes, name for critters).
+    type StateLabel = { cx: number; topY: number; text: string };
 
     const dupes:    PillInfo[] = [];
     const critters: PillInfo[] = [];
     const dotsByColor = new Map<string, Array<[number, number, number]>>();
     const rects: Array<[number, number, number, number, string]> = [];  // [sx, sy, pw, ph, color]
+    const stateLabels: StateLabel[] = [];
 
 
     for (const entity of entities) {
@@ -220,10 +223,19 @@ export class WorldRenderer {
 
       if (entity.type === 'duplicant') {
         // Pill using actual w/h from server — rx/ry leave ~12% padding inside each cell
-        dupes.push({ cx, cy, rx: ew * cellSize * 0.44, ry: eh * cellSize * 0.44 });
+        const rx = ew * cellSize * 0.44;
+        const ry = eh * cellSize * 0.44;
+        dupes.push({ cx, cy, rx, ry });
+        // State label: smState takes priority, fall back to currentChore
+        const stateText = entity.smState ?? entity.currentChore;
+        if (stateText && cellSize >= 6) stateLabels.push({ cx, topY: cy + ry + 2, text: stateText });
       } else if (entity.type === 'critter') {
         // Same pill logic: 1×1 → circle (rx=ry), 1×2 Drecko → tall pill (ry > rx)
-        critters.push({ cx, cy, rx: ew * cellSize * 0.44, ry: eh * cellSize * 0.44 });
+        const rx = ew * cellSize * 0.44;
+        const ry = eh * cellSize * 0.44;
+        critters.push({ cx, cy, rx, ry });
+        // Show critter name when zoomed in enough (too noisy at small zoom)
+        if (cellSize >= 10) stateLabels.push({ cx, topY: cy + ry + 2, text: entity.name });
       } else if (ew > 1 || eh > 1) {
         // Any multi-cell entity (building, pickupable, ore, …) → filled rect
         const color = ENTITY_COLORS[entity.type] ?? '#ffffff';
@@ -277,7 +289,7 @@ export class WorldRenderer {
     drawPills(dupes,    ENTITY_COLORS['duplicant'] ?? '#ffe033');
     drawPills(critters, ENTITY_COLORS['critter']   ?? '#4cff91');
 
-    // --- Labels (one font set, all fillText calls, only when zoomed in) ---
+    // --- D/C labels inside markers (only when zoomed in) ---
     if (cellSize >= 8 && (dupes.length > 0 || critters.length > 0)) {
       const fontSize = Math.max(6, Math.round(cellSize * 0.65));
       ctx.font = `bold ${fontSize}px monospace`;
@@ -286,6 +298,20 @@ export class WorldRenderer {
       ctx.textBaseline = 'middle';
       for (const d of dupes)    ctx.fillText('D', d.cx, d.cy);
       for (const c of critters) ctx.fillText('C', c.cx, c.cy);
+    }
+
+    // --- State / name labels below markers ---
+    if (stateLabels.length > 0) {
+      const fontSize = Math.max(7, Math.round(cellSize * 0.5));
+      ctx.font = `${fontSize}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      // Shadow pass (1px offset, dark) for readability on any background
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      for (const { cx, topY, text } of stateLabels) ctx.fillText(text, cx + 1, topY + 1);
+      // Text pass (white)
+      ctx.fillStyle = '#ffffff';
+      for (const { cx, topY, text } of stateLabels) ctx.fillText(text, cx, topY);
     }
 
   }

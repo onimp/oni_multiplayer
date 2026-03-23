@@ -16,6 +16,11 @@ export interface EntityData {
   w?: number;
   h?: number;
   state?: string;
+  // Duplicant-specific fields (server adds these; may be absent for other types)
+  currentChore?: string;
+  smState?: string | null;
+  navIsMoving?: boolean;
+  navCell?: number;
 }
 
 export interface EntitiesResponse {
