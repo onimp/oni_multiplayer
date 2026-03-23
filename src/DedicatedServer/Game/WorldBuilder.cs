@@ -1305,6 +1305,7 @@ public class WorldBuilder {
     /// for each entity type: PlaceBuilding / PlaceElementalOres / PlaceOtherEntities / PlacePickupables.
     /// </summary>
     private void SpawnEntities(Cluster cluster) {
+        Console.WriteLine($"[SpawnEntities] NDS={NameDisplayScreen.Instance != null}");
         var spawned = 0;
         var skipped = 0;
         _spawnedMinions.Clear();
