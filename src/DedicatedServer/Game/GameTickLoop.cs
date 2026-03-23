@@ -166,6 +166,13 @@ public class GameTickLoop {
             DiagGridElements();
             DiagStamina(1);  // verify AmountInstance.BatchUpdate is registered
             DiagDeltaAttribute(1);  // check deltaAttribute modifier count per dupe
+            var brain = Components.Brains.Items.FirstOrDefault(b => b is CreatureBrain);
+            if (brain != null) {
+                var smc = brain.gameObject.GetComponent<StateMachineController>();
+                if (smc?.stateMachines != null)
+                    for (int i = 0; i < Math.Min(8, smc.stateMachines.Count); i++)
+                        Console.WriteLine($"[CreatureSM] {brain.gameObject.name} sm[{i}]={smc.stateMachines[i].GetType().Name} state={smc.stateMachines[i].GetCurrentState()?.name} error={StateMachine.Instance.error}");
+            }
         }
 
         // Tick-level SMC list diagnostic: log listHash+count+item0 for each dupe at ticks
