@@ -204,6 +204,22 @@ public static class CreaturePrefab {
         // (UnityRuntime.TriggerLifecycle adds it before Phase 2 → OnSpawn → StartSM → ctor).
         // No post-hoc retrofit needed here.
 
+        // ── Pre-step 6: health guard + death param clear ─────────────────────
+        // Creatures loaded from save may have hitPoints=0 (died between save and server load)
+        // OR DeathMonitor death param may be set non-null → dying_creature state active →
+        // ToggleBehaviour(Die) chore created immediately when SMs start in step 6.
+        // Reset both BEFORE any SM start so no SM fires a kill path on first GoTo.
+        var health = go.GetComponent<Health>();
+        if (health != null && health.hitPoints <= 0f) {
+            health.hitPoints = health.maxHitPoints * 0.5f;
+            Console.WriteLine($"[Animals] {go.name}: health=0 reset to 50%");
+        }
+        var deathSmi = go.GetSMI<DeathMonitor.Instance>();
+        if (deathSmi?.sm?.death?.Get(deathSmi) != null) {
+            deathSmi.sm.death.Set(null, deathSmi);
+            Console.WriteLine($"[Animals] {go.name}: DeathMonitor death param cleared");
+        }
+
         // Declare smc here so both Step 6 and Step 7 can use it.
         var smc = go.GetComponent<StateMachineController>();
 
