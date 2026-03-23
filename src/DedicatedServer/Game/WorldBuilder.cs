@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using Database;
 using Klei;
+using Klei.AI;
 using ProcGen;
 using ProcGenGame;
 using TemplateClasses;
@@ -356,6 +357,15 @@ public class WorldBuilder {
         // TriggerLifecycle calls Spawn() on components but fails may leave brain not running or
         // Navigator SM not started → CreatureBrainGroup.RenderEveryTick skips them → no chore picked.
         FixCreatureBrains();
+
+        // Register AmountInstance batch updater for the SIM_200ms bucket.
+        // AmountInstance.Sim200ms() is intentionally empty — actual updates happen via BatchUpdate,
+        // which must be registered explicitly (Game.OnSpawn() line 969 normally does this but
+        // OnSpawn is never called in headless). Without this: all Amounts (Stamina, Calories,
+        // Stress, Bladder, Breath) are frozen at their initial save-file values — dupes never
+        // get hungry, never tire, never wake from sleep (ShouldExitSleep needs stamina >= max).
+        SimAndRenderScheduler.instance.RegisterBatchUpdate<ISim200ms, AmountInstance>(AmountInstance.BatchUpdate);
+        Console.WriteLine("[WorldBuilder] AmountInstance.BatchUpdate registered for SIM_200ms");
 
         // Snap any swimming creature (Pacu) that spawned in a non-liquid cell to the nearest
         // liquid cell. World gen can place fish at biome-boundary cells that happen to be gas/vacuum

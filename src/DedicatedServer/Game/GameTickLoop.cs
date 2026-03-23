@@ -78,6 +78,11 @@ public class GameTickLoop {
 
     /// <summary>Advance simulation by dt seconds. Call from main loop at ~60fps or any rate.</summary>
     public void Update(float dt) {
+        // Advance headless clock FIRST — before any game code reads Time.time / Time.deltaTime.
+        // Timers that use Time.time (sleep wake conditions, ThoughtGraph cooldowns, etc.) need a
+        // real advancing clock. frameCount must also increment for PathGrid cache invalidation.
+        UnityRuntime.AdvanceTime(dt);
+
         // Rolling 1s UPS: count calls in the current window; snapshot+reset when window expires.
         _upsTicks++;
         if (_upsStopwatch.ElapsedMilliseconds >= 1000) {
@@ -149,6 +154,7 @@ public class GameTickLoop {
         // Confirms whether OxygenBreather.hasAir=true fix is needed (vacuum → no gas sim data).
         if (_tickCount == 1) {
             DiagGridElements();
+            DiagStamina(1);  // verify AmountInstance.BatchUpdate is registered
         }
 
         // Tick-level SMC list diagnostic: log listHash+count+item0 for each dupe at ticks
@@ -194,6 +200,7 @@ public class GameTickLoop {
         // as brain.UpdateBrain(). Check at tick=100 (39 ticks / ~650ms after ForceUpdateBrains).
         if (_tickCount == 100) {
             DelayedChoreCheck();
+            DiagStamina(100);  // compare with tick=1 — should change if BatchUpdate is working
         }
 
         // Runtime diagnostic at tick=200: catch runtime state well past tick=0 transients.
@@ -343,6 +350,24 @@ public class GameTickLoop {
     ///          if item0 hash changes, a different SM is now at position 0 (prepended or swapped).
     ///          if all dupes share the same listHash at tick N, the lists were re-merged at tick N.
     /// </summary>
+    /// <summary>
+    /// Logs Stamina amount value per dupe. Call at tick=1 and tick=100.
+    /// If AmountInstance.BatchUpdate is registered, values should change between ticks
+    /// (delta per dupe = Stamina.deltaAttribute.GetTotalValue() per 200ms subtick).
+    /// If frozen (same value at tick=1 and tick=100), BatchUpdate is not firing.
+    /// </summary>
+    private static void DiagStamina(int tick) {
+        foreach (var identity in Components.LiveMinionIdentities.Items) {
+            if (identity == null) continue;
+            var go = identity.gameObject;
+            var stamina = Db.Get().Amounts.Stamina.Lookup(go);
+            var calories = Db.Get().Amounts.Calories.Lookup(go);
+            Console.WriteLine($"[StaminaDiag tick={tick}] dupe={go.name} " +
+                $"stamina={stamina?.value:F3}/{stamina?.GetMax():F1} delta={stamina?.GetDelta():F4} " +
+                $"calories={calories?.value:F0}/{calories?.GetMax():F0}");
+        }
+    }
+
     /// <summary>
     /// Logs Grid.Element tag for each dupe's cell at tick=1.
     /// Confirms vacuum headless (tag=Void/Vacuum) — explains why OxygenBreather.hasAir=true
