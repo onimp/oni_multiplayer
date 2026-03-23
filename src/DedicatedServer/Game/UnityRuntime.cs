@@ -565,13 +565,28 @@ public static class UnityRuntime {
                 Console.WriteLine($"[Lifecycle] dupe={go.name} assigned personality idx={idx} id={personality.Id} name={personality.Name}");
             }
 
-            foreach (var comp in components) {
-                if (comp is MinionModifiers) {
-                    try { ((KMonoBehaviour) comp).InitializeComponent(); }
-                    catch (Exception ex) {
-                        Console.WriteLine($"[Lifecycle] MinionModifiers pre-init failed: {ex.GetBaseException().Message}");
-                    }
+            var mods = go.GetComponent<MinionModifiers>();
+            if (mods != null) {
+                // PRE-STATE: check if amounts/attributes are already set (shared clone from prefab)
+                Console.WriteLine($"[Phase0.5b] {go.name} before-init: " +
+                    $"isInitialized={mods.isInitialized} " +
+                    $"attributes={((Modifiers)mods).attributes != null} " +
+                    $"amounts={mods.amounts?.Count} " +
+                    $"amounts.hash={mods.amounts?.GetHashCode()}");
+                try {
+                    ((KMonoBehaviour)mods).InitializeComponent();
+                } catch (Exception ex) {
+                    // InitializeComponent() swallows exceptions internally via DebugUtil — this
+                    // outer catch only fires if InitializeComponent() itself throws before that.
+                    Console.WriteLine($"[Phase0.5b] {go.name} InitializeComponent THREW (outer): {ex}");
                 }
+                // POST-STATE: if amounts still null, InitializeComponent's OnPrefabInit failed
+                // internally (isInitialized=true already set, exception swallowed by DebugUtil).
+                Console.WriteLine($"[Phase0.5b] {go.name} after-init: " +
+                    $"isInitialized={mods.isInitialized} " +
+                    $"attributes={((Modifiers)mods).attributes != null} " +
+                    $"amounts={mods.amounts?.Count} " +
+                    $"amounts.hash={mods.amounts?.GetHashCode()}");
             }
         }
 
