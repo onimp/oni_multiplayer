@@ -858,5 +858,9 @@ public static class UnityRuntime {
             }
         }
         Console.WriteLine($"[UnityRuntime] Installed {applied} patch classes ({skipped} skipped — pre-patched by PatchInternalCalls)");
+
+        // AudioMixer Start/Stop overloads use FMOD.Studio types as parameters — patch
+        // them manually via MethodInfo to avoid compile-time dependency on FMOD.dll.
+        Patches.AudioMixerManualPatches.Apply(harmony);
     }
 }

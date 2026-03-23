@@ -226,3 +226,50 @@ public static class SystemInfoPatches {
     }
 }
 
+/// <summary>
+/// AudioMixer patches — FMOD native library (fmodstudio.bundle) is unavailable in headless.
+/// AudioMixer is a plain C# class (not KMonoBehaviour) — safe for Harmony on Mono/Rosetta.
+/// ClusterManager.OnSpawn → UpdateWorldReverbSnapshot → AudioMixer.instance.Stop/Start/
+/// PauseSpaceVisibleSnapshot → FMOD EventInstance methods → DllNotFoundException.
+/// Patch all public instance methods to no-op, avoiding FMOD type references in patch code.
+/// </summary>
+[HarmonyPatch(typeof(AudioMixer))]
+public static class AudioMixerPatches {
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(AudioMixer.PauseSpaceVisibleSnapshot))]
+    static bool PauseSpaceVisibleSnapshot() => false;
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(AudioMixer.StartPersistentSnapshots))]
+    static bool StartPersistentSnapshots() => false;
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(AudioMixer.StopPersistentSnapshots))]
+    static bool StopPersistentSnapshots() => false;
+}
+
+/// <summary>
+/// Patch AudioMixer.Start/Stop overloads using MethodInfo targeting to avoid
+/// referencing FMOD.Studio types (not available as a separate DLL in ONI).
+/// </summary>
+public static class AudioMixerManualPatches {
+    public static void Apply(HarmonyLib.Harmony harmony) {
+        var prefix = new HarmonyMethod(typeof(AudioMixerManualPatches), nameof(NoOp));
+        // Patch all overloads of Start and Stop on AudioMixer.
+        foreach (var method in typeof(AudioMixer).GetMethods(
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)) {
+            if (method.Name is "Start" or "Stop" or "StopAll") {
+                try {
+                    harmony.Patch(method, prefix: prefix);
+                } catch (Exception ex) {
+                    Console.WriteLine($"[AudioMixer] Failed to patch {method.Name}: {ex.Message}");
+                }
+            }
+        }
+        Console.WriteLine("[AudioMixer] Manual patches applied (Start/Stop/StopAll → no-op)");
+    }
+
+    static bool NoOp() => false;
+}
+

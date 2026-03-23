@@ -432,14 +432,8 @@ public class WorldBuilder {
         // Navigator SM not started → CreatureBrainGroup.RenderEveryTick skips them → no chore picked.
         FixCreatureBrains();
 
-        // Register AmountInstance batch updater for the SIM_200ms bucket.
-        // AmountInstance.Sim200ms() is intentionally empty — actual updates happen via BatchUpdate,
-        // which must be registered explicitly (Game.OnSpawn() line 969 normally does this but
-        // OnSpawn is never called in headless). Without this: all Amounts (Stamina, Calories,
-        // Stress, Bladder, Breath) are frozen at their initial save-file values — dupes never
-        // get hungry, never tire, never wake from sleep (ShouldExitSleep needs stamina >= max).
-        SimAndRenderScheduler.instance.RegisterBatchUpdate<ISim200ms, AmountInstance>(AmountInstance.BatchUpdate);
-        Console.WriteLine("[WorldBuilder] AmountInstance.BatchUpdate registered for SIM_200ms");
+        // AmountInstance.BatchUpdate and SolidTransferArm.BatchUpdate are now registered by
+        // game.Spawn() → Game.OnSpawn() lines 969-970. No manual registration needed.
 
         // Snap any swimming creature (Pacu) that spawned in a non-liquid cell to the nearest
         // liquid cell. World gen can place fish at biome-boundary cells that happen to be gas/vacuum
@@ -731,27 +725,92 @@ public class WorldBuilder {
         global::Game.Instance.savedInfo.discoveredOilField = true;
         Console.WriteLine("[WorldBuilder] savedInfo.discovered* = true (skips zoneRenderData NPE in MinionBrain)");
 
-        // Call game.Spawn() — triggers Game.OnSpawn() which registers batch updaters, creates
-        // mingleCellTracker/spaceScannerNetworkManager, and runs SpawnPlayer().
-        // isInitialized must be set true because WorldBuilder calls OnPrefabInit() directly
-        // (not via InitializeComponent()), so KMonoBehaviour.isInitialized stays false.
-        // KMonoBehaviour.Spawn() guards on isInitialized — without this it is a no-op.
-        // Stubs for UI dependencies (playerPrefab, WaterCubes, SpeedControlScreen, etc.)
-        // are added iteratively below as each crash is resolved.
+        // === UI stubs for game.Spawn() ===
+        // Game.OnSpawn() mixes game logic (conduit init, scheduler registrations) with UI
+        // (SpawnPlayer, WaterCubes.Init, SpeedControlScreen.Pause). We stub the UI deps so
+        // OnSpawn() runs through completely — no cherry-picking game logic lines.
 
-        // STUB: playerPrefab — Game.SpawnPlayer() calls KInstantiate(playerPrefab, ...) which
-        // NPEs at original.GetComponent<RectTransform>() when playerPrefab is null.
-        // The cloned GO needs Player and PlayerController so GetComponent<Player>() returns non-null.
+        // KScreenManager — KScreen.Activate() (called from SpawnPlayer→StartScreen) calls
+        // KScreenManager.Instance.PushScreen(this). NPE if Instance is null.
+        if (KScreenManager.Instance == null)
+            KScreenManager.Instance = new GameObject("KScreenManager_headless").AddComponent<KScreenManager>();
+
+        // GameScreenManager canvas fields — StartScreen → GetParent(UIRenderTarget) returns these.
+        GameScreenManager.Instance.ssOverlayCanvas ??= new GameObject("ssOverlay_headless");
+        GameScreenManager.Instance.ssHoverTextCanvas ??= new GameObject("ssHoverText_headless");
+        GameScreenManager.Instance.ssCameraCanvas ??= new GameObject("ssCameraCanvas_headless");
+
+        // ScreenPrefabs — SpawnPlayer calls screenMgr.StartScreen(ScreenPrefabs.Instance.HudScreen.gameObject).
+        if (ScreenPrefabs.Instance == null) {
+            var spGo = new GameObject("ScreenPrefabs_headless");
+            var sp = spGo.AddComponent<ScreenPrefabs>();
+            ScreenPrefabs.Instance = sp;
+            sp.HudScreen = new GameObject("Hud_headless").AddComponent<Hud>();
+            sp.HoverTextScreen = new GameObject("HoverText_headless").AddComponent<HoverTextScreen>();
+            sp.ToolTipScreen = new GameObject("ToolTip_headless").AddComponent<ToolTipScreen>();
+        }
+
+        // playerPrefab — SpawnPlayer line 1028: Util.KInstantiate(playerPrefab, ...).GetComponent<Player>().
         if (game.playerPrefab == null) {
             var playerGo = new GameObject("Player_headless");
             playerGo.AddComponent<Player>();
             playerGo.AddComponent<PlayerController>();
             game.playerPrefab = playerGo;
-            Console.WriteLine("[WorldBuilder] playerPrefab stub created");
         }
 
+        // cameraControllerPrefab — SpawnPlayer line 1033: KInstantiate → GetComponent<CameraController>().
+        if (game.cameraControllerPrefab == null)
+            game.cameraControllerPrefab = new GameObject("CamPrefab_headless");
+        // CameraController.Instance — Game.OnSpawn line 951: CameraController.Instance.OrthographicSize = 20f.
+        // OrthographicSize setter iterates cameras list (empty on stub → no-op).
+        if (CameraController.Instance == null) {
+            var camGo = new GameObject("CameraController_headless");
+            CameraController.Instance = camGo.AddComponent<CameraController>();
+        }
+
+        // KInputManager.currentController — SpawnPlayer uses it for KInputHandler.Add.
+        // If null, falls to else → Global.GetInputManager().GetDefaultController() → can crash.
+        KInputManager.currentController ??= new KInputController(is_gamepad: false);
+
+        // WaterCubes — Game.OnSpawn line 931: WaterCubes.Instance.Init().
+        // Init() creates mesh objects (rendering-only). material field is null in headless but
+        // Material property setters are InternalCall → patched to no-op by PatchInternalCalls.
+        if (WaterCubes.Instance == null) {
+            var waterCubesGo = new GameObject("WaterCubes_headless");
+            var waterCubes = waterCubesGo.AddComponent<WaterCubes>();
+            WaterCubes.Instance = waterCubes;
+            waterCubes.material = new Material((Shader)null);
+        }
+
+        // SpeedControlScreen — Game.OnSpawn line 932: SpeedControlScreen.Instance.Pause(false).
+        // Pause() increments pauseCount; if !=1 returns early. Pre-set to 1 → increments to 2 → returns.
+        if (SpeedControlScreen.Instance == null) {
+            var scsGo = new GameObject("SpeedControlScreen_headless");
+            SpeedControlScreen.Instance = scsGo.AddComponent<SpeedControlScreen>();
+            typeof(SpeedControlScreen).GetField("pauseCount", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(SpeedControlScreen.Instance, 1);
+        }
+
+        // PerformanceMonitor — Game.OnSpawn line 980: Global.Instance.GetComponent<PerformanceMonitor>().Reset().
+        if (Global.Instance != null && Global.Instance.GetComponent<PerformanceMonitor>() == null)
+            Global.Instance.gameObject.AddComponent<PerformanceMonitor>();
+
+        // AudioMixer — ClusterManager.OnSpawn → UpdateWorldReverbSnapshot calls AudioMixer.instance methods.
+        // FMOD native lib unavailable in headless → DllNotFoundException. Harmony patches (AudioMixerPatches)
+        // make Start/Stop/PauseSpaceVisibleSnapshot no-ops. Instance must be non-null.
+        if (AudioMixer.instance == null)
+            typeof(AudioMixer).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+                ?.SetValue(null, new AudioMixer());
+
+        // KComponentSpawn — Game.OnSpawn line 968: SimAndRenderScheduler.instance.Add(KComponentSpawn.instance).
+        KComponentSpawn.instance ??= new KComponentSpawn();
+
+        Console.WriteLine("[WorldBuilder] UI stubs for game.Spawn() ready");
+
+        // isInitialized must be true — WorldBuilder calls OnPrefabInit() directly (not via
+        // InitializeComponent()), so KMonoBehaviour.isInitialized stays false.
+        // KMonoBehaviour.Spawn() guards on isInitialized — without this it is a no-op.
         game.isInitialized = true;
-        Console.WriteLine("[WorldBuilder] Calling game.Spawn()...");
         game.Spawn();
         Console.WriteLine("[WorldBuilder] game.Spawn() completed");
 
