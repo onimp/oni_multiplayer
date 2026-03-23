@@ -145,6 +145,12 @@ public class GameTickLoop {
         // (its Update() is public).
         GameScheduler.Instance?.GetScheduler()?.Update();
 
+        // Tick=1: log Grid.Element tag for each dupe's cell to confirm vacuum in headless.
+        // Confirms whether OxygenBreather.hasAir=true fix is needed (vacuum → no gas sim data).
+        if (_tickCount == 1) {
+            DiagGridElements();
+        }
+
         // Tick-level SMC list diagnostic: log listHash+count+item0 for each dupe at ticks
         // 1, 10, 61, 62, 100 to pinpoint WHEN the stateMachines list is replaced or shared.
         // item0 hash shows which IdleMonitor instance is at [0] — if all dupes show the same
@@ -337,6 +343,21 @@ public class GameTickLoop {
     ///          if item0 hash changes, a different SM is now at position 0 (prepended or swapped).
     ///          if all dupes share the same listHash at tick N, the lists were re-merged at tick N.
     /// </summary>
+    /// <summary>
+    /// Logs Grid.Element tag for each dupe's cell at tick=1.
+    /// Confirms vacuum headless (tag=Void/Vacuum) — explains why OxygenBreather.hasAir=true
+    /// is required: gas sim never runs in headless, so IsBreathable returns false for all cells.
+    /// </summary>
+    private static void DiagGridElements() {
+        foreach (var identity in Components.LiveMinionIdentities.Items) {
+            if (identity == null) continue;
+            var go   = identity.gameObject;
+            var cell = Grid.PosToCell(go);
+            var elem = Grid.IsValidCell(cell) ? Grid.Element[cell] : null;
+            Console.WriteLine($"[GridDiag tick=1] dupe={go.name} cell={cell} element={elem?.tag} substance={elem?.substance}");
+        }
+    }
+
     private void DiagSmcStateMachines(int tick) {
         foreach (var brain in Components.Brains.Items) {
             if (brain == null) continue;
