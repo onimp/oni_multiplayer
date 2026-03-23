@@ -43,6 +43,7 @@ export default function App() {
       setConnected(true);
     } catch {
       setConnected(false);
+      setGameState(null);  // clear stale stats on failed initial load
     }
   }, []);
 
@@ -83,6 +84,7 @@ export default function App() {
           })
           .catch(() => {
             setConnected(false);
+            setGameState(null);  // clear stale stats so StatsBar shows — not old values
             const next = backoffRef.current === 0 ? 1000 : Math.min(backoffRef.current * 2, 10000);
             backoffRef.current = next;
             startCountdown(next);

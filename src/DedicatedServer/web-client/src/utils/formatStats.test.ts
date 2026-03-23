@@ -85,6 +85,44 @@ describe('formatStats', () => {
   });
 });
 
+// ── disconnect regression ─────────────────────────────────────────────────────
+//
+// Bug: App.tsx catch block called setConnected(false) but NOT setGameState(null).
+// StatsBar received stale gameState and rendered last-known values (e.g.
+// "Tick: 53 | Entities: 3348") instead of dashes.
+//
+// Fix: App.tsx now calls setGameState(null) in both catch blocks so StatsBar
+// always receives null on disconnect → formatStats(null) → all dashes.
+//
+// The test below fails if formatStats does NOT return dashes for null input —
+// i.e. it is the contract that the App-level fix depends on.
+
+describe('disconnect regression — stale state vs cleared state', () => {
+  it('stale gameState (bug: App did not clear state) renders real values, not dashes', () => {
+    // This documents the WRONG behaviour before the fix.
+    // The fix is in App.tsx: setGameState(null) is now called on disconnect.
+    const stale = makeState({ tick: 53, entityCount: 3348 });
+    const s = formatStats(stale);
+    expect(s.tick).toBe('53');      // stale — not what we want after disconnect
+    expect(s.entities).toBe('3348');
+  });
+
+  it('null gameState (fix: App clears state on disconnect) renders all dashes', () => {
+    // This is the CORRECT post-fix behaviour.
+    // App.tsx setGameState(null) → StatsBar gets null → formatStats(null) → dashes.
+    // This assertion FAILS if formatStats is ever changed to not handle null.
+    const s = formatStats(null);
+    expect(s.tick).toBe('—');
+    expect(s.entities).toBe('—');
+    expect(s.bootErrors).toBe('—');
+  });
+
+  it('formatStatsLine with null produces full dash string after disconnect', () => {
+    expect(formatStatsLine(null))
+      .toBe('Tick: — | Entities: — | Boot errors: —');
+  });
+});
+
 // ── formatStatsLine ───────────────────────────────────────────────────────────
 
 describe('formatStatsLine', () => {
