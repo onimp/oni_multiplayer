@@ -10,12 +10,15 @@ import { Sidebar } from './components/Sidebar';
 import { ConnectionOverlay } from './components/ConnectionOverlay';
 import { StatsBar } from './components/StatsBar';
 import { HelpOverlay } from './components/HelpOverlay';
+import { TimelineScrubber } from './components/TimelineScrubber';
 import { deriveConnectionStatus } from './utils/connectionState';
 import { resolveKeyAction, isInputTarget } from './utils/keybindings';
 import { screenshotFilename, triggerDownload } from './utils/screenshot';
 import { getElementState } from './renderer/constants';
 import { inspectCell } from './utils/cellInspector';
 import { CellInspectorPanel } from './components/CellInspectorPanel';
+import { createTickBuffer, pushTick, getLatestTick, getAllTicks } from './utils/tickBuffer';
+import type { TickSnapshot } from './utils/tickBuffer';
 import './index.css';
 
 export default function App() {
@@ -53,6 +56,14 @@ export default function App() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(16);
 
+  // ── Tick history ──────────────────────────────────────────────────────────
+  // Circular buffer of the last 200 unique-tick poll results.
+  const tickBufferRef = useRef(createTickBuffer(200));
+  // bufferTicks drives the scrubber UI — updated whenever a new unique tick is stored.
+  const [bufferTicks, setBufferTicks] = useState<TickSnapshot[]>([]);
+  // selectedTick: null = live mode, number = showing this historical tick.
+  const [selectedTick, setSelectedTick] = useState<number | null>(null);
+
   // Imperative canvas API (zoom/pan) — populated by WorldCanvas on mount.
   const canvasActionsRef = useRef<CanvasActions | null>(null);
 
@@ -84,7 +95,7 @@ export default function App() {
         case 'toggle-grid':    setShowGrid(g => !g);               break;
         case 'toggle-minimap': setShowMinimap(m => !m);           break;
         case 'show-help':   setShowHelp(true);                            break;
-        case 'close-help':  setShowHelp(false); setInspectedCell(null); break;
+        case 'close-help':  setShowHelp(false); setInspectedCell(null); setSelectedTick(null); break;
         case 'export-screenshot': {
           const dataUrl = canvasActionsRef.current?.screenshot();
           if (dataUrl) triggerDownload(dataUrl, screenshotFilename(gameStateRef.current?.tick));
@@ -169,6 +180,11 @@ export default function App() {
             setEntities(ent); setGameState(st); setConnected(true);
             backoffRef.current = 0;
             clearCountdown();
+            // Buffer only unique game ticks (skip duplicate ticks from fast polls).
+            if (ent.tick !== getLatestTick(tickBufferRef.current)?.tick) {
+              pushTick(tickBufferRef.current, { tick: ent.tick, entities: ent, gameState: st });
+              setBufferTicks(getAllTicks(tickBufferRef.current));
+            }
           })
           .catch(() => {
             setConnected(false);
@@ -195,6 +211,13 @@ export default function App() {
     return () => clearInterval(id);
   }, [autoRefresh]);
 
+  // When scrubbing: show the selected historical snapshot; fall back to live on miss.
+  const scrubbedSnap = selectedTick !== null
+    ? bufferTicks.find(s => s.tick === selectedTick)
+    : undefined;
+  const displayEntities  = scrubbedSnap?.entities  ?? entities;
+  const displayGameState = scrubbedSnap?.gameState ?? gameState;
+
   const connStatus = deriveConnectionStatus({
     connected,
     hasData: world !== null,
@@ -204,8 +227,8 @@ export default function App() {
   return (
     <div className="app">
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
-      <Header connected={connected} retryIn={retryIn} gameState={gameState} />
-      <StatsBar gameState={gameState} />
+      <Header connected={connected} retryIn={retryIn} gameState={displayGameState} />
+      <StatsBar gameState={displayGameState} />
       <div className="main">
         <div className="canvas-container">
           <ConnectionOverlay status={connStatus} onReconnect={refresh} />
@@ -217,11 +240,11 @@ export default function App() {
           )}
           <WorldCanvas
             world={world}
-            entities={entities}
+            entities={displayEntities}
             overlay={overlay}
             showEntities={showEntities}
             showGrid={showGrid}
-            serverUps={gameState?.serverUps}
+            serverUps={displayGameState?.serverUps}
             onCellHover={setCellInfo}
             pinnedEntity={pinnedEntity}
             onEntityUnpinned={handleEntityUnpinned}
@@ -229,10 +252,16 @@ export default function App() {
             showMinimap={showMinimap}
             onCellInspect={setInspectedCell}
           />
+          <TimelineScrubber
+            ticks={bufferTicks}
+            selectedTick={selectedTick}
+            onSelect={setSelectedTick}
+            onLive={() => setSelectedTick(null)}
+          />
         </div>
         <Sidebar
           gameState={gameState}
-          entities={entities}
+          entities={displayEntities}
           cellInfo={cellInfo}
           overlay={overlay}
           showEntities={showEntities}

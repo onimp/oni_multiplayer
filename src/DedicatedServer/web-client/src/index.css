@@ -688,3 +688,106 @@ header h1 {
   color: #444;
   text-align: center;
 }
+
+/* ── Timeline Scrubber ───────────────────────────────────────────────────── */
+
+.timeline-scrubber {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: rgba(10, 14, 26, 0.88);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  z-index: 20;
+  backdrop-filter: blur(3px);
+}
+
+.timeline-live-btn {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  height: 20px;
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #666;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.timeline-live-btn:hover {
+  background: rgba(78, 204, 163, 0.1);
+  border-color: rgba(78, 204, 163, 0.4);
+  color: #4ecca3;
+}
+.timeline-live-btn.active {
+  background: rgba(78, 204, 163, 0.15);
+  border-color: #4ecca3;
+  color: #4ecca3;
+}
+
+.timeline-track {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;  /* Firefox */
+  height: 100%;
+  padding: 6px 0;
+  cursor: default;
+}
+.timeline-track::-webkit-scrollbar {
+  display: none;  /* Chrome/Safari */
+}
+
+.timeline-dot {
+  flex-shrink: 0;
+  width: 3px;
+  min-height: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.1s, height 0.1s;
+}
+.timeline-dot:hover {
+  background: rgba(255, 255, 255, 0.75);
+  height: 16px;
+}
+.timeline-dot.selected {
+  background: #e94560;
+  height: 20px;
+  width: 4px;
+}
+
+.timeline-tick-info {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-family: monospace;
+  color: #555;
+  min-width: 80px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.timeline-scrub-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid rgba(233, 69, 96, 0.5);
+  color: #e94560;
+  border-radius: 3px;
+}
