@@ -365,11 +365,9 @@ public static class MinionPrefab {
     /// These are removed from smc.stateMachines before StartSM is called.
     /// </summary>
     private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) =>
-        smi is SleepChoreMonitor.Instance     // UpdateBed → AutoAssignSlot → needs further investigation
-     || smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
-     || smi is CreatureThoughtGraph.Instance  // creature thought-bubble UI — same pattern as ThoughtGraph
-     || smi is BreathMonitor.Instance         // calls AddThought — safe once ThoughtGraph runs, left for later
-     || smi is StaminaMonitor.Instance        // AddThought(Sleepy) — safe once ThoughtGraph runs, left for later
+        smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
+     || smi is CreatureThoughtGraph.Instance  // creature thought-bubble UI — same crash pattern as ThoughtGraph
+     || smi is BreathMonitor.Instance         // calls AddThought (thought-bubble UI) — headless-unsafe
      || smi is RadiationMonitor.Instance;     // DLC radiation monitor — silently sets GameTags.Dying in headless
                                               // → IdleMonitor.StartSM() enters stopped → no IdleChore for Bionic dupes
     // Removed from skip list (now safe):
