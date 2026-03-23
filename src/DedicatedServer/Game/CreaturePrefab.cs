@@ -132,7 +132,7 @@ public static class CreaturePrefab {
         // Fix: remove from Components.Brains, force running=true via reflection, re-add
         // to retrigger BrainScheduler.OnAddBrain → HasTag(CreatureBrain) → AddBrain().
         if (!brain.IsRunning()) {
-            try { Components.Brains.Remove(brain); } catch { /* ignore if not registered */ }
+            try { Components.Brains.Remove(brain); } catch (Exception ex) { Console.WriteLine($"[Brains.Remove] {brain?.gameObject?.name}: {ex.GetBaseException().Message}"); }
             _brainRunningField?.SetValue(brain, true);
             Components.Brains.Add(brain);
             Console.WriteLine($"[Animals] {go.name}: brain was NOT running — re-registered");
