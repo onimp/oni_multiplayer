@@ -143,13 +143,30 @@ public static class MinionPrefab {
         // SpeechMonitor.CreateMouth also needs this (Personalities.Get → speech_mouth).
         S(id, "6a-PersonalityId", () => {
             var identity = go.GetComponent<MinionIdentity>();
-            if (identity != null && identity.personalityResourceId == HashedString.Invalid) {
-                var personalities = Db.Get().Personalities.resources;
+            if (identity == null) {
+                Console.WriteLine($"[SETUP go={id}] 6a: SKIP — no MinionIdentity");
+                return;
+            }
+            var personalities = Db.Get().Personalities.resources;
+            // Diagnostic: always log current state so we can see what each dupe carries
+            Console.WriteLine($"[SETUP go={id}] 6a-DIAG: personalityResourceId={identity.personalityResourceId} " +
+                $"isInvalid={identity.personalityResourceId == HashedString.Invalid} " +
+                $"personalities.Count={personalities?.Count ?? 0} " +
+                $"_counter={_personalityCounter}");
+            if (personalities?.Count > 0) {
+                // Log first 3 personality names so we know what's in Db
+                for (int pi = 0; pi < Math.Min(3, personalities.Count); pi++)
+                    Console.WriteLine($"[SETUP go={id}] 6a-DIAG: personalities[{pi}].Id={personalities[pi].Id} .Name={personalities[pi].Name}");
+            }
+            if (identity.personalityResourceId == HashedString.Invalid) {
                 if (personalities?.Count > 0) {
                     var idx = System.Threading.Interlocked.Increment(ref _personalityCounter) % personalities.Count;
                     identity.personalityResourceId = personalities[idx].Id;
-                    Console.WriteLine($"[SETUP go={id}] 6a: personalityResourceId was invalid — assigned {personalities[idx].Id} (idx={idx})");
+                    Console.WriteLine($"[SETUP go={id}] 6a: was invalid — assigned idx={idx} id={personalities[idx].Id} name={personalities[idx].Name}");
                 }
+            } else {
+                var resolved = Db.Get().Personalities.TryGet(identity.personalityResourceId);
+                Console.WriteLine($"[SETUP go={id}] 6a: already valid — resolved name={resolved?.Name ?? "NULL"} (id={identity.personalityResourceId})");
             }
         });
 
