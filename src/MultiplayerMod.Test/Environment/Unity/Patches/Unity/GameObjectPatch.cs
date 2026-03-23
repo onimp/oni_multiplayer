@@ -51,6 +51,28 @@ public class GameObjectPatch {
         };
     }
 
+    /// <summary>
+    /// Patches <c>TryGetComponent&lt;T&gt;(out T)</c> — same out-ptr protocol as
+    /// <c>GetComponentFastPath</c>.  Without this patch, any call to
+    /// <c>go.TryGetComponent&lt;T&gt;</c> (e.g. <c>BaseMinionConfig.BaseOnSpawn</c>
+    /// line 384) throws <c>MissingMethodException</c> in the test runtime, preventing
+    /// <c>BaseOnSpawn</c> from completing and leaving <c>BreathMonitor</c> un-started.
+    /// </summary>
+    [UsedImplicitly]
+    [HarmonyTranspiler]
+    [HarmonyPatch("TryGetComponentFastPath")]
+    private static IEnumerable<CodeInstruction> GameObject_TryGetComponentFastPath(
+        IEnumerable<CodeInstruction> instructions
+    ) {
+        return new List<CodeInstruction> {
+            new(OpCodes.Ldarg_0), // this
+            new(OpCodes.Ldarg_1), // typeof(T)
+            new(OpCodes.Ldarg_2), // oneFurtherThanResultValue
+            CodeInstruction.Call(typeof(UnityTestRuntime), nameof(UnityTestRuntime.GetComponentFastPath)),
+            new(OpCodes.Ret)
+        };
+    }
+
     [UsedImplicitly]
     [HarmonyTranspiler]
     [HarmonyPatch("GetComponent", new[] { typeof(Type) })]

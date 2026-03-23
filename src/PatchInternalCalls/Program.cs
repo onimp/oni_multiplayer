@@ -90,6 +90,9 @@ var callMap = new Dictionary<string, string> {
     // GetComponentFastPath is called by the managed GetComponent<T>() generic method
     ["UnityEngine.GameObject::GetComponentFastPath"] = "GetComponentFastPath",
     ["UnityEngine.Component::GetComponentFastPath"] = "GetComponentFastPathFromComponent",
+    // TryGetComponent<T>(out T) compiles to TryGetComponentFastPath — same out-ptr protocol.
+    // Missing entry caused MissingMethodException in BaseMinionConfig.BaseOnSpawn line 384.
+    ["UnityEngine.GameObject::TryGetComponentFastPath"] = "TryGetComponentFastPath",
     ["UnityEngine.GameObject::GetComponentInChildren"] = "GetComponentInChildren",
     // Transform position — MUST be patched via Cecil (not Harmony) because Harmony on these
     // _Injected methods causes a deadlock on Mono (same as KMonoBehaviour subclasses).

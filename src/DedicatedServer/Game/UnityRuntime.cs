@@ -194,6 +194,29 @@ public static class UnityRuntime {
             GetComponentFastPath(go, type, oneFurtherThanResultValue);
     }
 
+    /// <summary>
+    /// Implements <c>GameObject.TryGetComponent&lt;T&gt;(out T)</c> for the headless runtime.
+    ///
+    /// The managed <c>TryGetComponent&lt;T&gt;</c> compiles to a call to
+    /// <c>TryGetComponentFastPath(Type, IntPtr)</c> — the same out-ptr protocol as
+    /// <c>GetComponentFastPath</c>.  The managed wrapper then checks whether the
+    /// written pointer is non-zero to produce the bool return value.
+    ///
+    /// Root cause (todo #104): <c>TryGetComponentFastPath</c> was absent from the
+    /// Cecil InternalCall redirect table, so any call to <c>TryGetComponent&lt;T&gt;</c>
+    /// (e.g. <c>BaseMinionConfig.BaseOnSpawn</c> line 384: <c>go.TryGetComponent&lt;Traits&gt;</c>)
+    /// fell through to the Unity native stub → <c>MissingMethodException</c>.
+    /// That crash prevented <c>BaseOnSpawn</c> from completing, so the
+    /// <c>BreathMonitor.Instance</c> ctor never ran and <c>brain.OxygenBreather</c>
+    /// was never exercised through the breathing-logic path.
+    /// </summary>
+    public static unsafe void TryGetComponentFastPath(
+        GameObject self, Type type, IntPtr oneFurtherThanResultValue) {
+        // Identical protocol to GetComponentFastPath: write the component reference
+        // (or leave zeroed if absent) into the managed out-pointer slot.
+        GetComponentFastPath(self, type, oneFurtherThanResultValue);
+    }
+
     public static GameObject Find(string name) {
         foreach (var kvp in GameObjectComponents) {
             if (ObjectNames.TryGetValue(kvp.Key, out var n) && n == name) {
