@@ -950,6 +950,17 @@ public class WorldBuilder {
             }
         }
 
+        // SaveManager: SaveLoadRoot.OnSpawn line 54 calls SaveLoader.Instance.saveManager.Register(this).
+        // SaveLoader.OnPrefabInit sets saveManager = GetComponent<SaveManager>() on its own GO.
+        // If SaveManager.Awake() threw during the SaveLoader init block above, the component may be
+        // destroyed → saveManager stays null → NPE on every entity spawn (all have SaveLoadRoot).
+        if (SaveLoader.Instance != null && SaveLoader.Instance.saveManager == null) {
+            var sm = SaveLoader.Instance.gameObject.AddComponent<SaveManager>();
+            sm.InitializeComponent();
+            SaveLoader.Instance.saveManager = sm;
+            Console.WriteLine("[WorldBuilder] SaveManager initialized");
+        }
+
         // DiscoveredResources: needed by EntityTemplates.CreateAndRegisterBaggedCreature()
         // prefabSpawnFn lambda fired from KPrefabID.OnSpawn():
         //   DiscoveredResources.Instance.Discover(creature_prefab_id.PrefabTag, ...)
