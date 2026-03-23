@@ -137,8 +137,22 @@ public static class UnityRuntime {
         // Guard: only during TriggerLifecycle (SpawnedObjects contains the GO).
         // For prefab creation (before TriggerLifecycle), defer to Phase 1 to preserve
         // the Phase 0.5 Modifiers→KPrefabID initialization order needed for critter GOs.
-        if (comp is KMonoBehaviour kmbNew && SpawnedObjects.Contains(self.m_CachedPtr))
-            kmbNew.InitializeComponent();
+        //
+        // Try/catch: InitializeComponent is designed to be resilient (Storage.OnPrefabInit may
+        // fail on Db references etc., but the component IS registered in GameObjectComponents
+        // before this call). Propagating the exception would abort TriggerLifecycle entirely,
+        // which would prevent Phase 1 from running for all other components on the same GO.
+        // In test environments where components are created via UnityRuntime (bypassing the
+        // Harmony-patched InternalCall), the Unity companion lookup inside InitializeComponent
+        // may also throw — the try/catch keeps the lifecycle intact in both cases.
+        if (comp is KMonoBehaviour kmbNew && SpawnedObjects.Contains(self.m_CachedPtr)) {
+            try { kmbNew.InitializeComponent(); }
+            catch (Exception ex) {
+                Console.Error.WriteLine(
+                    $"[UnityRuntime] AddComponent: InitializeComponent failed for " +
+                    $"{componentType.Name}: {ex.GetBaseException().Message}");
+            }
+        }
 
         return comp;
     }
@@ -595,6 +609,44 @@ public static class UnityRuntime {
             if (comp is Modifiers mods && mods.initialTraits?.Count > 0 && go.GetComponent<Traits>() == null) {
                 go.AddOrGet<Traits>();
                 break;
+            }
+        }
+
+        // Phase 0.2: Ensure Storage is present on PickupableStorage-tagged entities.
+        //
+        // ROOT CAUSE (todo #88 follow-up):
+        //   ExtendEntityToDehydratedFoodPackage() always adds BOTH:
+        //     component.AddTag(GameTags.PickupableStorage)   ← on prefab KPrefabID
+        //     template.AddComponent<Storage>()               ← on prefab GO
+        //   In headless, MemberwiseClone (CloneSingle) shares the KPrefabID.tags HashSet
+        //   between the prefab and all its clones. On spawn, the clone's KPrefabID.HasTag
+        //   correctly returns true for PickupableStorage. However, Storage may be absent
+        //   from the clone's component list (component-tracking edge case in headless).
+        //
+        //   Pickupable.UpdateCachedCell() — called from BOTH OnPrefabInit AND OnSpawn:
+        //     if (KPrefabID.HasTag(GameTags.PickupableStorage))
+        //         GetComponent<Storage>().UpdateStoredItemCachedCells();  // NPE here
+        //   Each affected entity generates 2 errors. Without this guard: 593 entities ×
+        //   2 = 1186 errors, and each NPE sets StateMachine.Instance.error = true
+        //   (exception inside Enter() propagates to SM framework).
+        //
+        // FIX: if a GO has PickupableStorage tag but Storage is absent, add it here,
+        //   BEFORE Phase 1 runs Pickupable.InitializeComponent(). The newly-added Storage
+        //   will have its InitializeComponent() called immediately (AddComponent triggers
+        //   it because the GO is already in SpawnedObjects). Storage.OnPrefabInit may
+        //   partially fail (Db references etc.) but InitializeComponent swallows that via
+        //   its internal try/catch — Storage will still be registered and GetComponent will
+        //   return a non-null instance, preventing the NPE in UpdateCachedCell.
+        {
+            // Use static managed GetComponent/AddComponent (bypasses Unity InternalCall path
+            // which is overridden by UnityTestRuntime in the test environment — using the
+            // static calls directly ensures both production and test environments use the
+            // same GameObjectComponents tracking dictionary).
+            var kpidCheck = (KPrefabID)GetComponent(go, typeof(KPrefabID));
+            if (kpidCheck != null
+                && kpidCheck.HasTag(GameTags.PickupableStorage)
+                && GetComponent(go, typeof(Storage)) == null) {
+                AddComponent(go, typeof(Storage));
             }
         }
 
