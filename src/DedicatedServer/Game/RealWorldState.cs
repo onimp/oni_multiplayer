@@ -428,7 +428,7 @@ public class RealWorldState {
         var obj = new {
             tick = world.SimTick,
             cycle,
-            speed = 1,
+            speed = world.TickLoop?.SpeedLevel ?? 1,
             paused = !world.SimRunning,
             worldWidth = width,
             worldHeight = height,
@@ -458,7 +458,7 @@ public class RealWorldState {
         return new {
             tick = world.SimTick,
             cycle,
-            speed = 1,
+            speed = world.TickLoop?.SpeedLevel ?? 1,
             paused = !world.SimRunning,
             worldWidth = width,
             worldHeight = height,

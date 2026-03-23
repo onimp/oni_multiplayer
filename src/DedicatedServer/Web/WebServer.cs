@@ -23,6 +23,7 @@ public class WebServer {
     private readonly int port;
     private readonly string wwwrootPath;
     private RealWorldState? realWorld;
+    private GameTickLoop? _tickLoop;
 
     private static readonly Dictionary<string, string> MimeTypes = new() {
         { ".html", "text/html; charset=utf-8" },
@@ -55,6 +56,10 @@ public class WebServer {
     public void SetRealWorldState(RealWorldState state) {
         realWorld = state;
         Console.WriteLine("[WebServer] Switched to real game world data.");
+    }
+
+    public void SetTickLoop(GameTickLoop loop) {
+        _tickLoop = loop;
     }
 
     public void Start(CancellationToken ct) {
@@ -105,6 +110,28 @@ public class WebServer {
         if (path == "/api/debug/dupes") {
             SendJson(context.Response, 200, BuildDupesDiag());
             return;
+        }
+
+        // Speed control — works without realWorld; no game state needed.
+        if (path == "/api/speed") {
+            if (context.Request.HttpMethod == "GET") {
+                SendJson(context.Response, 200, new { speed = _tickLoop?.SpeedLevel ?? 1 });
+                return;
+            }
+            if (context.Request.HttpMethod == "POST") {
+                using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
+                var body = reader.ReadToEnd();
+                var parsed = JsonConvert.DeserializeAnonymousType(body, new { speed = 1 });
+                var level = parsed?.speed ?? 1;
+                if (level < 1 || level > 3) {
+                    SendJson(context.Response, 400, new { error = "speed must be 1, 2, or 3" });
+                    return;
+                }
+                if (_tickLoop != null) _tickLoop.SpeedLevel = level;
+                Console.WriteLine($"[WebServer] Speed set to {level}x");
+                SendJson(context.Response, 200, new { speed = level });
+                return;
+            }
         }
 
         if (realWorld == null) {

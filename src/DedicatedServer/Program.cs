@@ -65,6 +65,7 @@ public static class Program {
         var server = new WebServer(port);
         // WorldState is a singleton created once by WorldBuilder.Create() — NOT per-request.
         server.SetRealWorldState(loader.World.WorldState);
+        server.SetTickLoop(loader.World.TickLoop);
         server.Start(cts.Token);
 
         Console.WriteLine($"Web server running at http://localhost:{port}/");
