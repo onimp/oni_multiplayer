@@ -3,6 +3,7 @@ import type { WorldData, EntitiesResponse, OverlayMode, EntityData } from '../ap
 import type { CellInfo } from '../renderer/WorldRenderer';
 import { WorldRenderer } from '../renderer/WorldRenderer';
 import { miniBar } from '../utils/miniBar';
+import { shouldRefreshHover } from '../utils/hoverRefresh';
 
 /** Returns ALL entities whose cell footprint covers (mouseX, mouseY) in canvas pixels. */
 function getEntitiesAt(
@@ -66,6 +67,12 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   // Pinned tooltip state: isPinnedRef true = tooltip locked at pinnedPosRef coords.
   const isPinnedRef = useRef(false);
   const pinnedPosRef = useRef<{ mouseX: number; mouseY: number } | null>(null);
+
+  // Hover tooltip state: tracks last known cursor position inside the canvas.
+  // Updated on every mousemove; read by the rAF loop to auto-refresh tooltip content
+  // without requiring the cursor to move again (fixes stale hover data).
+  const hoverPosRef   = useRef<{ mouseX: number; mouseY: number } | null>(null);
+  const isHoveringRef = useRef(false);
 
   // Refs holding latest data so the rAF loop always reads fresh values
   // without needing to restart the loop when props change.
@@ -160,6 +167,24 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
             }
           }
         }
+
+        // Refresh hover tooltip on every frame — fixes stale data when server pushes new
+        // entity state (e.g. updated stamina/chore) while the cursor is stationary.
+        // Only runs when hovering and not pinned (pinned has its own path above).
+        if (shouldRefreshHover({ isPinned: isPinnedRef.current, isHovering: isHoveringRef.current })
+            && hoverPosRef.current) {
+          const tt = tooltipRef.current;
+          if (tt) {
+            const { mouseX, mouseY } = hoverPosRef.current;
+            const hits = getEntitiesAt(mouseX, mouseY, w, entitiesRef.current, r);
+            if (hits.length > 0) {
+              tt.innerHTML = tooltipHtml(hits, false);
+              tt.style.display = 'block';
+            } else {
+              tt.style.display = 'none';
+            }
+          }
+        }
       }
     }
     rafId = requestAnimationFrame(loop);
@@ -226,23 +251,21 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
+      // Always track hover position — the rAF loop uses this to auto-refresh
+      // tooltip content even when the cursor is stationary.
+      isHoveringRef.current = true;
+      hoverPosRef.current   = { mouseX, mouseY };
+
       // Cell hover for sidebar always updates.
       onCellHover(rendererRef.current.getCellAt(mouseX, mouseY, worldRef.current, entitiesRef.current));
 
-      // Tooltip: skip hover update when pinned — rAF loop handles refresh.
+      // Tooltip position update on move; content refresh happens in rAF loop.
       if (isPinnedRef.current) return;
 
       const tt = tooltipRef.current;
       if (tt) {
-        const hits = getEntitiesAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
-        if (hits.length > 0) {
-          tt.innerHTML = tooltipHtml(hits, false);
-          tt.style.left = `${mouseX + 14}px`;
-          tt.style.top  = `${mouseY + 14}px`;
-          tt.style.display = 'block';
-        } else {
-          tt.style.display = 'none';
-        }
+        tt.style.left = `${mouseX + 14}px`;
+        tt.style.top  = `${mouseY + 14}px`;
       }
     }
   }, [onCellHover]);
@@ -280,8 +303,10 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    isDragging.current = false;
-    hasDragged.current = false;
+    isDragging.current   = false;
+    hasDragged.current   = false;
+    isHoveringRef.current = false;
+    hoverPosRef.current  = null;
     onCellHover(null);
     // Don't hide tooltip when pinned — it stays visible after cursor leaves canvas.
     if (!isPinnedRef.current && tooltipRef.current) {

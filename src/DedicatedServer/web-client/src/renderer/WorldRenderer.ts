@@ -1,5 +1,6 @@
 import type { EntityData, OverlayMode, WorldData, EntitiesResponse } from '../api/types';
 import { getElementColor, getElementName, ENTITY_COLORS } from './constants';
+import { temperatureToColor } from '../utils/tempColor';
 
 export interface CellInfo {
   x: number;
@@ -157,23 +158,9 @@ export class WorldRenderer {
       case 'element':
         return getElementColor(elementId);
 
-      case 'temperature': {
-        // Game range (SimDebugView.cs): minTempExpected=173.15K, maxTempExpected=423.15K, span=250K
-        const ratio = Math.max(0, Math.min(1, (temperature - 173.15) / 250));
-        if (ratio < 0.25) {
-          const f = ratio / 0.25;
-          return `rgb(0,${Math.round(f * 180)},${Math.round(180 + f * 75)})`;
-        } else if (ratio < 0.5) {
-          const f = (ratio - 0.25) / 0.25;
-          return `rgb(0,${Math.round(180 + f * 75)},${Math.round(255 - f * 255)})`;
-        } else if (ratio < 0.75) {
-          const f = (ratio - 0.5) / 0.25;
-          return `rgb(${Math.round(f * 255)},255,0)`;
-        } else {
-          const f = (ratio - 0.75) / 0.25;
-          return `rgb(255,${Math.round(255 - f * 255)},0)`;
-        }
-      }
+      case 'temperature':
+        // Delegate to ONI-accurate HSV formula (SimDebugView.TemperatureToColor).
+        return temperatureToColor(temperature);
 
       case 'mass': {
         if (mass <= 0) return '#0a0a0a';
