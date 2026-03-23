@@ -396,7 +396,6 @@ public static class MinionPrefab {
     private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) =>
         smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
      || smi is CreatureThoughtGraph.Instance  // creature thought-bubble UI — same crash pattern as ThoughtGraph
-     || smi is BreathMonitor.Instance         // calls AddThought (thought-bubble UI) — headless-unsafe
      || smi is RadiationMonitor.Instance;     // DLC radiation monitor — silently sets GameTags.Dying in headless
                                               // → IdleMonitor.StartSM() enters stopped → no IdleChore for Bionic dupes
     // Removed from skip list (now safe):
