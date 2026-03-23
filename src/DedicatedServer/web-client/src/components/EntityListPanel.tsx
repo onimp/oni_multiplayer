@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { EntityData } from '../api/types';
-import { filterAndSort, getEntityChore, TYPE_LABELS } from '../utils/entityList';
+import { getEntityChore, TYPE_LABELS } from '../utils/entityList';
 import type { EntityFilter, EntitySort } from '../utils/entityList';
+import { useMemoEntities } from '../hooks/useMemoEntities';
 
 interface Props {
   entities: EntityData[];
@@ -14,12 +15,17 @@ export function EntityListPanel({ entities, pinnedEntityName, onPinEntity }: Pro
   const [filter, setFilter] = useState<EntityFilter>('all');
   const [sort,   setSort]   = useState<EntitySort>('name');
 
-  const list = filterAndSort(entities, filter, sort);
+  // Stable reference — only recomputes when entities ref, filter, or sort changes.
+  const list = useMemoEntities(entities, filter, sort);
 
-  // Show dupes + critters count in the toggle label for quick reference
-  const dupes    = entities.filter(e => e.type === 'duplicant').length;
-  const critters = entities.filter(e => e.type === 'critter').length;
-  const summary  = dupes > 0 || critters > 0
+  // Counts are derived only from the entities reference — useMemo skips
+  // recompute when the entities array reference is unchanged.
+  const { dupes, critters } = useMemo(() => ({
+    dupes:    entities.filter(e => e.type === 'duplicant').length,
+    critters: entities.filter(e => e.type === 'critter').length,
+  }), [entities]);
+
+  const summary = dupes > 0 || critters > 0
     ? `${dupes}D ${critters}C`
     : `${entities.length}`;
 
