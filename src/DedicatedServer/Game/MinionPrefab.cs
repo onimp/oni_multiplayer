@@ -39,6 +39,11 @@ public static class MinionPrefab {
     private static readonly FieldInfo _idleSensorCellField =
         typeof(IdleCellSensor).GetField("cell", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
+    // Counter used to assign distinct personalities to fresh-spawn dupes whose
+    // personalityResourceId is HashedString.Invalid (no save-file data).
+    // Each Setup() call that needs a fallback personality increments this.
+    private static int _personalityCounter;
+
     // ── Step helper ─────────────────────────────────────────────────────────
     // Logs OK on success, logs FAIL + rethrows on exception.
     // The rethrow is REQUIRED: this is NOT a silent catch — it surfaces which step
@@ -122,10 +127,30 @@ public static class MinionPrefab {
         // ── Step 6: smc.stateMachines isolation ──────────────────────────────
         S(id, "6-smc.stateMachines", () => smc.stateMachines = new List<StateMachine.Instance>());
 
+        // ── Step 6a: ensure personalityResourceId is valid ────────────────────
+        // Must run BEFORE step 6b so the name lookup has a valid ID to work with.
+        // Save-loaded dupes already carry their own unique personalityResourceId;
+        // fresh headless spawns default to HashedString.Invalid for all dupes.
+        // For fresh spawns, cycle through available personalities so each dupe gets
+        // a distinct one rather than all sharing personalities[0].
+        // SpeechMonitor.CreateMouth also needs this (Personalities.Get → speech_mouth).
+        S(id, "6a-PersonalityId", () => {
+            var identity = go.GetComponent<MinionIdentity>();
+            if (identity != null && identity.personalityResourceId == HashedString.Invalid) {
+                var personalities = Db.Get().Personalities.resources;
+                if (personalities?.Count > 0) {
+                    var idx = System.Threading.Interlocked.Increment(ref _personalityCounter) % personalities.Count;
+                    identity.personalityResourceId = personalities[idx].Id;
+                    Console.WriteLine($"[SETUP go={id}] 6a: personalityResourceId was invalid — assigned {personalities[idx].Id} (idx={idx})");
+                }
+            }
+        });
+
         // ── Step 6b: unique dupe name ─────────────────────────────────────────
         // After MemberwiseClone on save-load, all 3 dupes share the same go.name
         // (e.g. "Alisa" for all three). Each MinionIdentity has its own serialized
         // nameStringKey and personalityResourceId from the save file — use those.
+        // personalityResourceId is now guaranteed valid from step 6a above.
         // SetName(name) sets both identity.name (MonoBehaviour.name) and go.name.
         S(id, "6b-unique-name", () => {
             var identity = go.GetComponent<MinionIdentity>();
@@ -170,22 +195,7 @@ public static class MinionPrefab {
             }
         });
 
-        // ── Step 9c: Personality ID ───────────────────────────────────────────
-        // SpeechMonitor.CreateMouth → SetMouthId → Db.Get().Personalities.Get(personalityResourceId)
-        // In a fresh headless world (not loaded from save), personalityResourceId defaults to
-        // HashedString.Invalid → Personalities.Get(Invalid) returns null → null.speech_mouth → NPE.
-        // Fix: assign the first available personality if the field is unset.
-        // This is pure data init — no Harmony, no reimplementation.
-        S(id, "9c-PersonalityId", () => {
-            var identity = go.GetComponent<MinionIdentity>();
-            if (identity != null && identity.personalityResourceId == HashedString.Invalid) {
-                var personalities = Db.Get().Personalities.resources;
-                if (personalities?.Count > 0) {
-                    identity.personalityResourceId = personalities[0].Id;
-                    Console.WriteLine($"[SETUP go={id}] 9c: personalityResourceId was invalid — assigned {personalities[0].Id}");
-                }
-            }
-        });
+        // Step 9c removed: personality assignment moved to step 6a (before name lookup in 6b).
 
         // ── Step 10: All sub-SMs individually (52 total) ─────────────────────
         // Each factory creates a SM instance (ctor → smc.AddStateMachineInstance → list)
