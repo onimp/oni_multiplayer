@@ -158,7 +158,8 @@ export class WorldRenderer {
         return getElementColor(elementId);
 
       case 'temperature': {
-        const ratio = Math.max(0, Math.min(1, (temperature - 200) / 200));
+        // Game range (SimDebugView.cs): minTempExpected=173.15K, maxTempExpected=423.15K, span=250K
+        const ratio = Math.max(0, Math.min(1, (temperature - 173.15) / 250));
         if (ratio < 0.25) {
           const f = ratio / 0.25;
           return `rgb(0,${Math.round(f * 180)},${Math.round(180 + f * 75)})`;

@@ -1081,7 +1081,30 @@ public class WorldBuilder {
                 }
             }
         }
-        Console.WriteLine($"[WorldBuilder] Registered {registered}/{types.Count} entities ({failed} failed), prefabs: {Assets.PrefabsByTag?.Count ?? 0}");
+        // Also register IMultiEntityConfig types (e.g. GeyserGenericConfig) — these are
+        // separate from IEntityConfig and are skipped by the loop above.  Without this,
+        // Assets.GetPrefab("GeyserGeneric_*") returns null and CaptureEntitySize falls back
+        // to 1×1 for every geyser.  Mirrors EntityConfigManager.Awake() lines 84-88.
+        var multiEntityConfigType = typeof(IMultiEntityConfig);
+        var multiTypes = typeof(EntityConfigManager).Assembly.GetTypes()
+            .Where(t => multiEntityConfigType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+            .ToList();
+        foreach (var type in multiTypes) {
+            try {
+                var config = (IMultiEntityConfig)Activator.CreateInstance(type);
+                EntityConfigManager.Instance.RegisterEntities(config);
+                registered++;
+            } catch (Exception ex) {
+                failed++;
+                if (failed <= 3) {
+                    var inner = ex.InnerException;
+                    Console.WriteLine($"[WorldBuilder] MultiEntity FAIL [{type.Name}]: {ex.GetType().Name}: {ex.Message}");
+                    Console.WriteLine($"  Stack: {(inner ?? ex).StackTrace?.Split('\n')[0]}");
+                }
+            }
+        }
+
+        Console.WriteLine($"[WorldBuilder] Registered {registered}/{types.Count + multiTypes.Count} entities ({failed} failed), prefabs: {Assets.PrefabsByTag?.Count ?? 0}");
     }
 
     /// <summary>
@@ -1397,6 +1420,25 @@ public class WorldBuilder {
                 if (prefabOccupy?._UnrotatedOccupiedCellsOffsets?.Length > 0) {
                     (ew, eh) = ComputeSizeFromOffsets(prefabOccupy._UnrotatedOccupiedCellsOffsets);
                     Console.WriteLine($"[EntitySize] {id} → {ew}×{eh} (OccupyArea on registered prefab, cells={prefabOccupy._UnrotatedOccupiedCellsOffsets.Length})");
+                }
+            }
+
+            // 6. GeyserConfigurator — explicit fallback for geyser entities.
+            // Geysers use EntityTemplates.CreatePlacedEntity and have GeyserConfigurator added
+            // via AddOrGet in both GeyserConfig and GeyserGenericConfig.CreateGeyser().
+            // GeyserGeneric_* prefabs are registered in Assets by the IMultiEntityConfig pass in
+            // RegisterEntities(); if the prefab is still missing here, log a clear warning.
+            if (ew == 1 && eh == 1) {
+                var gc = go.GetComponent<GeyserConfigurator>();
+                if (gc != null) {
+                    var prefab = Assets.TryGetPrefab(new Tag(id));
+                    var gcOccupy = prefab?.GetComponent<OccupyArea>();
+                    if (gcOccupy?._UnrotatedOccupiedCellsOffsets?.Length > 0) {
+                        (ew, eh) = ComputeSizeFromOffsets(gcOccupy._UnrotatedOccupiedCellsOffsets);
+                        Console.WriteLine($"[EntitySize] {id} → {ew}×{eh} (GeyserConfigurator fallback, prefab OccupyArea)");
+                    } else {
+                        Console.WriteLine($"[EntitySize] {id} WARNING: GeyserConfigurator present but prefab not in Assets — defaulting to 1×1");
+                    }
                 }
             }
 
