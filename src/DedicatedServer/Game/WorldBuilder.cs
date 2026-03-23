@@ -296,6 +296,18 @@ public class WorldBuilder {
             Console.WriteLine($"[WorldBuilder] MinionGroupProber.Instance={MinionGroupProber.Get() != null}");
         }
 
+        // [GEYSER-DLC] Step A: diagnose DlcManager state vs save DLC state.
+        // GeyserGenericConfig.prefabInitFn filters by Game.IsCorrectDlcActiveForCurrentSave
+        // (save header), but CreatePrefabs used DlcManager.IsCorrectDlcSubscribed (Steam).
+        // Mismatch → list2 smaller than configs → KRandom index out of range → 12 GOs survive.
+        {
+            var activeDlcs = DlcManager.GetActiveDLCIds();
+            var saveDlcIds = SaveLoader.Instance?.GameInfo.dlcIds;
+            Console.WriteLine($"[GEYSER-DLC] IsExpansion1Active={DlcManager.IsExpansion1Active()}");
+            Console.WriteLine($"[GEYSER-DLC] active DLCs={string.Join(",", activeDlcs)}");
+            Console.WriteLine($"[GEYSER-DLC] save dlcIds={string.Join(",", saveDlcIds ?? new System.Collections.Generic.List<string>())}");
+        }
+
         Console.WriteLine("[WorldBuilder] Spawning entities...");
         SpawnEntities(cluster);
 
