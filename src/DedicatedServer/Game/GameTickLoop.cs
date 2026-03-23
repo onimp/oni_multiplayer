@@ -650,58 +650,48 @@ public class GameTickLoop {
         );
 
     /// <summary>
-    /// Removes ChoreProviders backed by destroyed GameObjects from every live consumer's
-    /// providers list, before AdvanceOneSimSubTick drives brain scheduling.
+    /// Removes dead brains and stale ChoreProviders before AdvanceOneSimSubTick.
     ///
-    /// ROOT CAUSE (tick-16 crash):
-    ///   The global ChoreProvider registry retains stale entries for transient GOs destroyed
-    ///   after world load (e.g. spawn helpers). ChoreConsumer.FindNextChore iterates ALL
-    ///   registered providers → CollectChores → ClusterUtil.GetMyParentWorldId(go) →
-    ///   Grid.PosToCell(go) → TransformExtensions.GetPosition(go.transform) →
-    ///   NPE because transform is null on a destroyed GO.
+    /// Iterates BrainScheduler's internal BrainGroup lists directly — the same lists
+    /// that BrainScheduler.RenderEveryTick() walks — so there is no divergence between
+    /// what we purge and what BrainScheduler actually ticks.
     ///
-    /// FIX: walk Components.ChoreConsumers.Items (same collection BrainScheduler uses)
-    ///   and remove any provider whose GO or transform is null before the tick runs.
-    ///   Pure C# — no Harmony, no virtual dispatch on KMonoBehaviour subclasses.
+    /// Components.Brains.Items is a separate tracking list that may be out of sync with
+    /// BrainScheduler's internal brainGroups; brains present only in the scheduler but
+    /// absent from Components.Brains would never be purged if we iterated that list.
+    ///
+    /// Per brain:
+    ///   • null brain or null GO → RemoveBrain from group (stale slot)
+    ///   • null transform → RemoveBrain from group (destroyed GO)
+    ///   • stale consumerState.gameObject → re-point to live GO
+    ///   • dead entries in consumer.providers → RemoveAll with null-transform guard
     /// </summary>
     private static void PurgeDeadChoreProviders() {
-        foreach (var brain in Components.Brains.Items) {
-            if (brain == null || brain.gameObject == null) continue;
+        var scheduler = global::Game.BrainScheduler;
+        if (scheduler == null) return;
 
-            // Brain GO itself destroyed — remove from BrainScheduler's internal BrainGroups.
-            // Components.Brains.Remove only updates the Components tracker; BrainScheduler keeps
-            // its own List<Brain> inside each BrainGroup that must be updated via RemoveBrain().
-            if (brain.transform == null) {
-                var sched = global::Game.BrainScheduler;
-                if (sched != null) {
-                    var groups = Traverse.Create(sched).Field("brainGroups")
-                        .GetValue<List<BrainScheduler.BrainGroup>>();
-                    if (groups != null)
-                        foreach (var g in groups)
-                            g.RemoveBrain(brain); // public method; also fixes nextUpdateBrain index
-                }
-                continue;
+        foreach (var group in scheduler.debugGetBrainGroups()) {
+            var brains = Traverse.Create(group).Field("brains").GetValue<List<Brain>>();
+            if (brains == null) continue;
+
+            foreach (var brain in brains.ToList()) {
+                if (brain == null || brain.gameObject == null) { group.RemoveBrain(brain); continue; }
+                if (brain.transform == null)                   { group.RemoveBrain(brain); continue; }
+
+                var consumer = brain.GetComponent<ChoreConsumer>();
+                if (consumer == null) continue;
+
+                // Re-point stale consumerState.gameObject so GetMyParentWorldId doesn't NPE.
+                var state = Traverse.Create(consumer).Field("consumerState")
+                    .GetValue<ChoreConsumerState>();
+                if (state != null && (state.gameObject == null || state.gameObject.transform == null))
+                    state.gameObject = consumer.gameObject;
+
+                // Remove dead providers before CollectChores iterates them.
+                var providers = Traverse.Create(consumer).Field("providers")
+                    .GetValue<List<ChoreProvider>>();
+                providers?.RemoveAll(p => p == null || p.gameObject == null || p.transform == null);
             }
-
-            var consumer = brain.GetComponent<ChoreConsumer>();
-            if (consumer == null) continue;
-
-            // Re-point stale consumerState.gameObject → live GO so CollectChores →
-            // GetMyParentWorldId doesn't NPE on a destroyed-GO reference.
-            var consumerState = Traverse.Create(consumer).Field("consumerState")
-                .GetValue<ChoreConsumerState>();
-            if (consumerState != null && consumerState.gameObject != consumer.gameObject)
-                consumerState.gameObject = consumer.gameObject;
-
-            // Remove dead providers (null GO or null transform) from this consumer's list.
-            // Without this, CollectChores iterates providers → GetMyParentWorldId(provider.go)
-            // → Grid.PosToCell(null transform) → NPE at tick ~200.
-            // NOTE: BrainGroup.RemoveBrain was removed from this path (it triggered OnCleanUp
-            // → RemoveProvider → choreWorldMap modification mid-CollectChores → InvalidOperationException).
-            // RemoveAll is safe here because it runs BEFORE AdvanceOneSimSubTick.
-            var providers = Traverse.Create(consumer).Field("providers")
-                .GetValue<List<ChoreProvider>>();
-            providers?.RemoveAll(p => p == null || p.gameObject == null || p.transform == null);
         }
     }
 
