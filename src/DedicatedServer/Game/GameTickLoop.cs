@@ -155,6 +155,7 @@ public class GameTickLoop {
         if (_tickCount == 1) {
             DiagGridElements();
             DiagStamina(1);  // verify AmountInstance.BatchUpdate is registered
+            DiagDeltaAttribute(1);  // check deltaAttribute modifier count per dupe
         }
 
         // Tick-level SMC list diagnostic: log listHash+count+item0 for each dupe at ticks
@@ -374,6 +375,25 @@ public class GameTickLoop {
                 $"stamina={stamina?.value:F3}/{stamina?.GetMax():F1} delta={stamina?.GetDelta():F4} " +
                 $"stamina_F6={stamina?.value.ToString("F6")}/{stamina?.GetMax().ToString("F6")} " +
                 $"calories={calories?.value:F0}/{calories?.GetMax():F0}");
+        }
+    }
+
+    /// <summary>
+    /// Logs stamina AmountInstance hash, deltaAttribute total value, and modifier count per dupe.
+    /// delta=0 + modifierCount=0 → StaminaMonitor never wired its delta modifier (SM startup failed).
+    /// delta=0 + modifierCount>0 → modifiers present but sum to zero (trait or attribute issue).
+    /// Different hashes → each dupe has own AmountInstance (Activate() called per-dupe correctly).
+    /// Same hash across dupes → shared instance from prefab clone (Activate() not re-called).
+    /// </summary>
+    private static void DiagDeltaAttribute(int tick) {
+        foreach (var identity in Components.LiveMinionIdentities.Items) {
+            if (identity == null) continue;
+            var go = identity.gameObject;
+            var staminaInst = Db.Get().Amounts.Stamina.Lookup(go);
+            Console.WriteLine($"[DeltaDiag tick={tick}] {go.name} " +
+                $"staminaInst.hash={staminaInst?.GetHashCode()} " +
+                $"delta={staminaInst?.deltaAttribute?.GetTotalValue():F4} " +
+                $"modifierCount={staminaInst?.deltaAttribute?.Modifiers.Count}");
         }
     }
 
