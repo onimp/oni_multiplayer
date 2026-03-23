@@ -449,6 +449,17 @@ public class WorldBuilder {
             saveGame.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
             saveGame.OnPrefabInit(); // sets SaveGame.Instance + creates ColonyRationMonitor
             if (SaveGame.Instance == null) SaveGame.Instance = saveGame; // fallback if OnPrefabInit crashed before Instance = this
+
+            // GameplayEventManager lives on the SaveGame GO in the real game.
+            // StandardWorker.CompleteWork() calls GameplayEventManager.Instance.Trigger(UseBuilding, ...)
+            // which NPEs if Instance is null. OnPrefabInit: sets Instance=this, caches Notifier (null OK).
+            // OnSpawn: RestoreEvents() iterates activeEvents (empty) → no-op. Completely safe headless.
+            if (GameplayEventManager.Instance == null) {
+                var gem = saveGameGo.AddOrGet<GameplayEventManager>();
+                gem.InitializeComponent();
+                gem.Spawn();
+                Console.WriteLine("[WorldBuilder] GameplayEventManager.Instance initialized");
+            }
         }
         SaveGame.Instance.AutoSaveCycleInterval = 0;
         Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
