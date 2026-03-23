@@ -105,6 +105,16 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     return () => clearInterval(id);
   }, []);
 
+  // Tooltip wheel: block zoom when scrolling inside tooltip.
+  // Must use {passive: false} — React's onWheel is passive by default in modern browsers.
+  useEffect(() => {
+    const el = tooltipRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => { e.stopPropagation(); e.preventDefault(); };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
+
   // ESC key: unpin tooltip.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -295,7 +305,6 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       />
       <div
         ref={tooltipRef}
-        onWheel={(e) => { e.stopPropagation(); e.preventDefault(); }}
         style={{
           display: 'none',
           position: 'absolute',

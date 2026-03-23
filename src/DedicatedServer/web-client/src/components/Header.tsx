@@ -2,10 +2,11 @@ import type { GameState } from '../api/types';
 
 interface Props {
   connected: boolean;
+  retryIn: number | null;
   gameState: GameState | null;
 }
 
-export function Header({ connected, gameState }: Props) {
+export function Header({ connected, retryIn, gameState }: Props) {
   const cycleProgress = gameState?.cycleTime != null ? gameState.cycleTime / 600 : null;
 
   return (
@@ -13,7 +14,9 @@ export function Header({ connected, gameState }: Props) {
       <h1>ONI World Visualizer</h1>
       <div className="status">
         <span className={connected ? 'status-connected' : 'status-disconnected'}>
-          {connected ? 'Connected' : 'Disconnected'}
+          {connected
+            ? 'Connected'
+            : retryIn != null ? `Disconnected — retry in ${retryIn}s` : 'Disconnected'}
         </span>
         {gameState && (
           <span className="game-info">
