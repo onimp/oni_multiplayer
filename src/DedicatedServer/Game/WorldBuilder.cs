@@ -786,6 +786,11 @@ public class WorldBuilder {
             new AssignmentGroup("public", new IAssignableIdentity[0], "Public");
             Console.WriteLine($"[WorldBuilder] AssignmentManager ready: groups={am.assignment_groups?.Count}");
         }
+        // AM_CHECK: verify the field is actually set on the Game instance after the block above.
+        // If NULL here, the assignmentManager property setter is mapping to a different backing field
+        // than the one we set via reflection (e.g. AssemblyExposer renamed it).
+        var amHash = global::Game.Instance.assignmentManager?.GetHashCode().ToString() ?? "NULL";
+        Console.WriteLine($"[AM_CHECK] game.assignmentManager after init block: {amHash}");
 
         // BrainScheduler manages Dupe + Creature AI brain groups.
         // Must be initialized here — BEFORE SpawnEntities() — so that Brain.OnSpawn()

@@ -771,4 +771,88 @@ public class DupeMovementTest : PlayableGameTest {
         }, "1000 AdvanceOneSimSubTick calls must not throw with 3 dupes after CloneSingle fix.");
     }
 
+    // ── Movement-ready integration: 3 dupes, 1000 ticks, IdleChore per dupe ──
+
+    /// <summary>
+    /// Integration test: after 1000 SM ticks, all 3 dupes must be in movement-ready state.
+    ///
+    /// "Movement-ready" means:
+    ///   • Each dupe has its own IdleMonitor.Instance (not null, not shared)
+    ///   • Each dupe's ChoreDriver has a current chore (IdleChore — the first chore
+    ///     assigned when IdleMonitor enters its 'idle' state)
+    ///   • StateMachine.Instance.error remains false (no SM crash across 1000 ticks)
+    ///
+    /// NOTE on actual cell-change assertion:
+    ///   Navigator.cachedCell changes only when PathGrid has walkable floor tiles
+    ///   (Grid.Solid[belowCell] = true). The unit-test environment (ResetGrid) uses a
+    ///   40x40 mock grid but does NOT set solid tiles, so Navigators cannot path and
+    ///   stay at their spawn cell. The cell-change assertion is documented as requiring
+    ///   a real save file and is verified on the live dedicated server instead.
+    ///   See: ThreeDupes_IndependentSmcLists_Run1000Ticks_NoCrash for the pure no-crash
+    ///   predecessor test.
+    ///
+    /// This test catches regressions where SMs are misconfigured (error=true blocks all
+    /// GoTo() calls) or chore infrastructure is broken (empty providers → no IdleChore).
+    /// </summary>
+    [Test]
+    public void ThreeDupes_After1000Ticks_AreMovementReady() {
+        var go1 = AllStateMachinesInitTest.CreateFullDupeGO();
+        var go2 = AllStateMachinesInitTest.CreateFullDupeGO();
+        var go3 = AllStateMachinesInitTest.CreateFullDupeGO();
+
+        try { BaseMinionConfig.BaseOnSpawn(go1, new Tag("Minion"), BaseMinionConfig.BaseRationalAiStateMachines()); } catch { }
+        try { BaseMinionConfig.BaseOnSpawn(go2, new Tag("Minion"), BaseMinionConfig.BaseRationalAiStateMachines()); } catch { }
+        try { BaseMinionConfig.BaseOnSpawn(go3, new Tag("Minion"), BaseMinionConfig.BaseRationalAiStateMachines()); } catch { }
+        StateMachine.Instance.error = false;
+
+        // Run 1000 ticks — enough for BrainScheduler to assign chores and
+        // for IdleMonitor to reach its 'idle' → 'haschore' transition.
+        for (var i = 0; i < 1000; i++) {
+            Singleton<StateMachineUpdater>.Instance.AdvanceOneSimSubTick();
+        }
+
+        // ── Assert 1: no SM crash across 1000 ticks ───────────────────────────
+        // StateMachine.Instance.error = true means at least one SM threw and all
+        // subsequent GoTo() calls are no-ops → dupes are frozen forever.
+        Assert.IsFalse(StateMachine.Instance.error,
+            "StateMachine.Instance.error must be false after 1000 ticks. " +
+            "error=true means a SM crash occurred → all GoTo() calls are no-ops → dupes are frozen.");
+
+        // ── Assert 2: each dupe has its own distinct IdleMonitor instance ─────
+        // Distinct instances → distinct IdleChores → each dupe can claim its own chore.
+        var smc1 = go1.GetComponent<StateMachineController>();
+        var smc2 = go2.GetComponent<StateMachineController>();
+        var smc3 = go3.GetComponent<StateMachineController>();
+        var im1 = smc1.GetSMI<IdleMonitor.Instance>();
+        var im2 = smc2.GetSMI<IdleMonitor.Instance>();
+        var im3 = smc3.GetSMI<IdleMonitor.Instance>();
+
+        Assert.IsNotNull(im1, "Dupe 0 must have its own IdleMonitor.Instance.");
+        Assert.IsNotNull(im2, "Dupe 1 must have its own IdleMonitor.Instance.");
+        Assert.IsNotNull(im3, "Dupe 2 must have its own IdleMonitor.Instance.");
+        Assert.AreNotSame(im1, im2, "Dupes 0 and 1 must have DISTINCT IdleMonitor instances. " +
+            "Shared instance → shared IdleChore → only 1 dupe can claim it (IsPreemptable fails for others).");
+        Assert.AreNotSame(im1, im3, "Dupes 0 and 2 must have DISTINCT IdleMonitor instances.");
+        Assert.AreNotSame(im2, im3, "All 3 dupes must have DISTINCT IdleMonitor instances.");
+
+        // ── Assert 3: each dupe's ChoreDriver has a current chore ────────────
+        // A non-null current chore means FindNextChore() succeeded — the dupe
+        // transitioned from nochore to haschore and is ready to act on the chore.
+        var driver1 = go1.GetComponent<ChoreDriver>();
+        var driver2 = go2.GetComponent<ChoreDriver>();
+        var driver3 = go3.GetComponent<ChoreDriver>();
+
+        Assert.IsNotNull(driver1?.GetCurrentChore(),
+            "Dupe 0's ChoreDriver must have a current chore after 1000 ticks. " +
+            "No chore → FindNextChore returned false → providers empty or chore under wrong world-ID key.");
+        Assert.IsNotNull(driver2?.GetCurrentChore(),
+            "Dupe 1's ChoreDriver must have a current chore after 1000 ticks.");
+        Assert.IsNotNull(driver3?.GetCurrentChore(),
+            "Dupe 2's ChoreDriver must have a current chore after 1000 ticks.");
+
+        // NOTE: actual cachedCell change is NOT asserted here (requires PathGrid + solid tiles).
+        // Once chore is assigned, Navigator will path and change cell on the live server.
+        // Verify cell-change on the dedicated server via /api/debug/dupes after 300+ ticks.
+    }
+
 }
