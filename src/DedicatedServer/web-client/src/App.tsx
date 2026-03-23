@@ -29,6 +29,7 @@ export default function App() {
   const [overlay, setOverlay] = useState<OverlayMode>('element');
   const [showEntities, setShowEntities] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(16);
 
@@ -55,7 +56,8 @@ export default function App() {
         case 'pan-right':   canvasActionsRef.current?.panRight();  break;
         case 'pan-up':      canvasActionsRef.current?.panUp();     break;
         case 'pan-down':    canvasActionsRef.current?.panDown();   break;
-        case 'toggle-grid': setShowGrid(g => !g);                  break;
+        case 'toggle-grid':    setShowGrid(g => !g);               break;
+        case 'toggle-minimap': setShowMinimap(m => !m);           break;
         case 'show-help':   setShowHelp(true);                     break;
         case 'close-help':  setShowHelp(false);                    break;
       }
@@ -183,6 +185,7 @@ export default function App() {
             pinnedEntity={pinnedEntity}
             onEntityUnpinned={handleEntityUnpinned}
             actionsRef={canvasActionsRef}
+            showMinimap={showMinimap}
           />
         </div>
         <Sidebar

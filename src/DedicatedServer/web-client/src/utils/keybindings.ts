@@ -39,7 +39,8 @@ export const KEYBINDINGS: readonly KeyBinding[] = [
   { keys: ['ArrowUp',    'w'],     action: 'pan-up',      label: '↑ / W',  description: 'Pan up' },
   { keys: ['ArrowDown',  's'],     action: 'pan-down',    label: '↓ / S',  description: 'Pan down' },
   // ── View ─────────────────────────────────────────────────────────────────
-  { keys: ['g'],                   action: 'toggle-grid', label: 'G',      description: 'Toggle grid lines' },
+  { keys: ['g'],                   action: 'toggle-grid',    label: 'G',      description: 'Toggle grid lines' },
+  { keys: ['m'],                   action: 'toggle-minimap', label: 'M',      description: 'Toggle minimap' },
   // ── Help ─────────────────────────────────────────────────────────────────
   { keys: ['h', '?'],              action: 'show-help',   label: 'H / ?',  description: 'Show keyboard shortcuts' },
   { keys: ['Escape'],              action: 'close-help',  label: 'Esc',    description: 'Close help / Unpin tooltip' },

@@ -3,6 +3,7 @@ import type { WorldData, EntitiesResponse, OverlayMode, EntityData } from '../ap
 import type { CellInfo } from '../renderer/WorldRenderer';
 import { WorldRenderer } from '../renderer/WorldRenderer';
 import { miniBar } from '../utils/miniBar';
+import { MINIMAP_W, MINIMAP_H, minimapOrigin, isInsideMinimap, minimapClickToWorld, worldCenterToOffset } from '../utils/minimap';
 import { shouldRefreshHover } from '../utils/hoverRefresh';
 
 /** Pan step in canvas pixels per keypress. */
@@ -75,11 +76,13 @@ interface Props {
   onEntityUnpinned?: () => void;
   /** Populated by WorldCanvas so App.tsx can drive zoom/pan via keyboard shortcuts. */
   actionsRef?: React.MutableRefObject<CanvasActions | null>;
+  /** Show minimap overlay in bottom-right corner. */
+  showMinimap?: boolean;
 }
 
 export function WorldCanvas({
   world, entities, overlay, showEntities, showGrid, serverUps,
-  onCellHover, pinnedEntity, onEntityUnpinned, actionsRef,
+  onCellHover, pinnedEntity, onEntityUnpinned, actionsRef, showMinimap = true,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -112,6 +115,7 @@ export function WorldCanvas({
   const showEntitiesRef = useRef(showEntities);
   const showGridRef = useRef(showGrid);
   const serverUpsRef = useRef<number | undefined>(serverUps);
+  const showMinimapRef = useRef(showMinimap);
 
   // Keep refs in sync with latest props every render.
   worldRef.current = world;
@@ -120,6 +124,7 @@ export function WorldCanvas({
   showEntitiesRef.current = showEntities;
   showGridRef.current = showGrid;
   serverUpsRef.current = serverUps;
+  showMinimapRef.current = showMinimap;
   sidebarPinnedEntityRef.current = pinnedEntity ?? null;
   onEntityUnpinnedRef.current    = onEntityUnpinned;
 
@@ -198,6 +203,7 @@ export function WorldCanvas({
         });
         renderCountRef.current++;
         r.renderUpsOverlay(serverUpsRef.current, clientUpsRef.current);
+        if (showMinimapRef.current) r.renderMinimap(w, entitiesRef.current);
 
         // Refresh pinned tooltip with latest entity data from entitiesRef (kept live by App fast poll).
         // Runs at 60fps — cost is O(n entities) hit-test, negligible for <1K entities.
@@ -297,6 +303,24 @@ export function WorldCanvas({
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 0) {
+      const canvas = canvasRef.current;
+      const r = rendererRef.current;
+      const w = worldRef.current;
+      if (canvas && r && w && showMinimapRef.current) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        if (isInsideMinimap(mx, my, canvas.width, canvas.height)) {
+          // Click-to-pan: convert minimap click → world centre → canvas offset
+          const { x: mmOx, y: mmOy } = minimapOrigin(canvas.width, canvas.height);
+          const mmX = mx - mmOx;
+          const mmY = my - mmOy;
+          const { worldX, worldY } = minimapClickToWorld(mmX, mmY, w.width, w.height, MINIMAP_W, MINIMAP_H);
+          const { offsetX, offsetY } = worldCenterToOffset(worldX, worldY, canvas.width, canvas.height, w.height, r.currentCellSize);
+          r.setOffset(offsetX, offsetY);
+          return; // intercept — don't start a drag
+        }
+      }
       isDragging.current = true;
       hasDragged.current = false;
       lastMouse.current = { x: e.clientX, y: e.clientY };
