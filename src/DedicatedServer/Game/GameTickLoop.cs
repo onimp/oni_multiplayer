@@ -663,13 +663,25 @@ public class GameTickLoop {
     ///   Pure C# — no Harmony, no virtual dispatch on KMonoBehaviour subclasses.
     /// </summary>
     private static void PurgeDeadChoreProviders() {
-        foreach (var brain in Components.Brains.Items) {
+        foreach (var brain in Components.Brains.Items.ToList()) {
             if (brain == null) continue;
+            // Brain GO itself destroyed — remove from scheduler so it never ticks again.
+            if (brain.gameObject == null || brain.transform == null) {
+                Components.Brains.Remove(brain);
+                continue;
+            }
             var consumer = brain.GetComponent<ChoreConsumer>();
             if (consumer == null) continue;
+            // Re-point a stale consumerState.gameObject (can occur if the state was created
+            // from a transient GO during save-load and the original GO was since destroyed).
+            // consumerState.gameObject is read by CollectChores → GetMyParentWorldId → NPE.
+            var consumerState = Traverse.Create(consumer).Field("consumerState").GetValue<ChoreConsumerState>();
+            if (consumerState != null && (consumerState.gameObject == null || consumerState.gameObject.transform == null))
+                consumerState.gameObject = consumer.gameObject;
+            // Remove providers backed by destroyed GOs.
             var providers = Traverse.Create(consumer).Field("providers").GetValue<List<ChoreProvider>>();
-            if (providers == null) continue;
-            providers.RemoveAll(p => p == null || p.gameObject == null || p.transform == null);
+            if (providers != null)
+                providers.RemoveAll(p => p == null || p.gameObject == null || p.transform == null);
         }
     }
 
