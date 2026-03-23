@@ -303,7 +303,8 @@ public static class MinionPrefab {
         smi is SpeechMonitor.Instance         // mouth anim + audio; SetMouthId NPEs (personality=0x0)
      || smi is SleepChoreMonitor.Instance     // UpdateBed → AutoAssignSlot → Game.assignmentManager NPE
      || smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
-     || smi is RationMonitor.Instance;        // EventTransitionData.Register NPEs on SaveGame.Instance=null at SM startup
+     || smi is RationMonitor.Instance         // EventTransitionData.Register NPEs on SaveGame.Instance=null at SM startup
+     || smi is DeathMonitor.Instance;         // die.Enter b__9_5: Messenger.Instance+KFMOD null in headless; death is not meaningful in dedicated server
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.
