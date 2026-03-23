@@ -345,6 +345,7 @@ public static class MinionPrefab {
         smi is SpeechMonitor.Instance         // mouth anim + audio; SetMouthId NPEs (personality=0x0)
      || smi is SleepChoreMonitor.Instance     // UpdateBed → AutoAssignSlot → Game.assignmentManager NPE
      || smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
+     || smi is CalorieMonitor.Instance        // AddThought(Starving) NPE — ThoughtGraph not running headless
      || smi is RationMonitor.Instance         // EventTransitionData.Register NPEs on SaveGame.Instance=null at SM startup
      || smi is ThoughtGraph.Instance          // thought-bubble UI; displayingthought.talking NPEs at tick ~2703 (UI absent headless)
      || smi is CreatureThoughtGraph.Instance  // same crash pattern, creature variant
