@@ -537,6 +537,12 @@ public static class UnityRuntime {
         // Dupe GOs are identified by MinionBrain (vs CreatureBrain for critters).
         var isDupeGo = components.Any(c => c is MinionBrain);
         if (isDupeGo) {
+            // Diagnostic: check if providers list is shared across dupe clones.
+            // Same hash for all 3 dupes = CloneSingle shallow-copied the reference (reset not working).
+            // Different hashes = each dupe has own list.
+            var consumer = go.GetComponent<ChoreConsumer>();
+            if (consumer != null)
+                Console.WriteLine($"[Phase0.5b] dupe={go.name} providers.Count={consumer.providers?.Count} hash={consumer.providers?.GetHashCode()}");
             foreach (var comp in components) {
                 if (comp is MinionModifiers) {
                     try { ((KMonoBehaviour) comp).InitializeComponent(); }
