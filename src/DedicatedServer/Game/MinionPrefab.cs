@@ -320,7 +320,8 @@ public static class MinionPrefab {
      || smi is RationMonitor.Instance         // EventTransitionData.Register NPEs on SaveGame.Instance=null at SM startup
      || smi is ThoughtGraph.Instance          // thought-bubble UI; displayingthought.talking NPEs at tick ~2703 (UI absent headless)
      || smi is CreatureThoughtGraph.Instance  // same crash pattern, creature variant
-     || smi is BreathMonitor.Instance;        // calls AddThought (thought-bubble UI) — headless-unsafe
+     || smi is BreathMonitor.Instance          // calls AddThought (thought-bubble UI) — headless-unsafe
+     || smi is StaminaMonitor.Instance;       // AddThought(Sleepy) NPE — same pattern as BreathMonitor
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.

@@ -663,25 +663,34 @@ public class GameTickLoop {
     ///   Pure C# — no Harmony, no virtual dispatch on KMonoBehaviour subclasses.
     /// </summary>
     private static void PurgeDeadChoreProviders() {
-        foreach (var brain in Components.Brains.Items.ToList()) {
-            if (brain == null) continue;
-            // Brain GO itself destroyed — remove from scheduler so it never ticks again.
-            if (brain.gameObject == null || brain.transform == null) {
-                Components.Brains.Remove(brain);
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null || brain.gameObject == null) continue;
+
+            // Brain GO itself destroyed — remove from BrainScheduler's internal BrainGroups.
+            // Components.Brains.Remove only updates the Components tracker; BrainScheduler keeps
+            // its own List<Brain> inside each BrainGroup that must be updated via RemoveBrain().
+            if (brain.transform == null) {
+                var sched = global::Game.BrainScheduler;
+                if (sched != null) {
+                    var groups = Traverse.Create(sched).Field("brainGroups")
+                        .GetValue<List<BrainScheduler.BrainGroup>>();
+                    if (groups != null)
+                        foreach (var g in groups)
+                            g.RemoveBrain(brain); // public method; also fixes nextUpdateBrain index
+                }
                 continue;
             }
+
+            // Re-point stale consumerState.gameObject → live GO so CollectChores →
+            // GetMyParentWorldId doesn't NPE on a destroyed-GO reference.
+            // NOTE: do NOT touch providers list — RemoveAll causes chore self-cancel which
+            // modifies choreWorldMap mid-CollectChores foreach → InvalidOperationException.
             var consumer = brain.GetComponent<ChoreConsumer>();
             if (consumer == null) continue;
-            // Re-point a stale consumerState.gameObject (can occur if the state was created
-            // from a transient GO during save-load and the original GO was since destroyed).
-            // consumerState.gameObject is read by CollectChores → GetMyParentWorldId → NPE.
-            var consumerState = Traverse.Create(consumer).Field("consumerState").GetValue<ChoreConsumerState>();
-            if (consumerState != null && (consumerState.gameObject == null || consumerState.gameObject.transform == null))
+            var consumerState = Traverse.Create(consumer).Field("consumerState")
+                .GetValue<ChoreConsumerState>();
+            if (consumerState != null && consumerState.gameObject != consumer.gameObject)
                 consumerState.gameObject = consumer.gameObject;
-            // Remove providers backed by destroyed GOs.
-            var providers = Traverse.Create(consumer).Field("providers").GetValue<List<ChoreProvider>>();
-            if (providers != null)
-                providers.RemoveAll(p => p == null || p.gameObject == null || p.transform == null);
         }
     }
 
