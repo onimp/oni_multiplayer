@@ -19,7 +19,24 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   const isDragging = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
 
-  // Client UPS tracking: count renders per second
+  // Refs holding latest data so the rAF loop always reads fresh values
+  // without needing to restart the loop when props change.
+  const worldRef = useRef<WorldData | null>(null);
+  const entitiesRef = useRef<EntitiesResponse | null>(null);
+  const overlayRef = useRef<OverlayMode>(overlay);
+  const showEntitiesRef = useRef(showEntities);
+  const showGridRef = useRef(showGrid);
+  const serverUpsRef = useRef<number | undefined>(serverUps);
+
+  // Keep refs in sync with latest props every render.
+  worldRef.current = world;
+  entitiesRef.current = entities;
+  overlayRef.current = overlay;
+  showEntitiesRef.current = showEntities;
+  showGridRef.current = showGrid;
+  serverUpsRef.current = serverUps;
+
+  // Client UPS tracking: count rAF renders per second.
   const renderCountRef = useRef(0);
   const clientUpsRef = useRef(0);
   useEffect(() => {
@@ -30,50 +47,51 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     return () => clearInterval(id);
   }, []);
 
-  // Initialize renderer
+  // Initialize renderer + start rAF loop.
   useEffect(() => {
     if (!canvasRef.current) return;
     rendererRef.current = new WorldRenderer(canvasRef.current);
+
+    let rafId: number;
+    function loop() {
+      const r = rendererRef.current;
+      const w = worldRef.current;
+      if (r && w) {
+        r.render(w, entitiesRef.current, {
+          overlay: overlayRef.current,
+          showEntities: showEntitiesRef.current,
+          showGrid: showGridRef.current,
+        });
+        renderCountRef.current++;
+        r.renderUpsOverlay(serverUpsRef.current, clientUpsRef.current);
+      }
+      rafId = requestAnimationFrame(loop);
+    }
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
-  // Resize canvas
+  // Resize canvas on parent resize.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const resizeObserver = new ResizeObserver(() => {
       const parent = canvas.parentElement;
       if (!parent) return;
       canvas.width = parent.clientWidth;
       canvas.height = parent.clientHeight;
-      if (rendererRef.current && world) {
-        rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
-        rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
-      }
     });
-
     resizeObserver.observe(canvas.parentElement!);
     return () => resizeObserver.disconnect();
-  }, [world, entities, overlay, showEntities, showGrid]);
-
-  // Render when data changes
-  useEffect(() => {
-    if (!rendererRef.current || !world) return;
-    rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
-    renderCountRef.current++;
-    rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
-  }, [world, entities, overlay, showEntities, showGrid, serverUps]);
+  }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    if (!rendererRef.current || !world) return;
+    if (!rendererRef.current || !worldRef.current) return;
     const rect = canvasRef.current!.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    rendererRef.current.zoom(e.deltaY > 0 ? -1 : 1, mouseX, mouseY);
-    rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
-    rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
-  }, [world, entities, overlay, showEntities, showGrid, serverUps]);
+    rendererRef.current.zoom(e.deltaY > 0 ? -1 : 1, e.clientX - rect.left, e.clientY - rect.top);
+    // rAF loop will redraw on next frame — no manual render() call needed.
+  }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 0) {
@@ -83,23 +101,23 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!rendererRef.current || !world) return;
+    if (!rendererRef.current || !worldRef.current) return;
 
     if (isDragging.current) {
       const dx = e.clientX - lastMouse.current.x;
       const dy = e.clientY - lastMouse.current.y;
       lastMouse.current = { x: e.clientX, y: e.clientY };
       rendererRef.current.pan(dx, dy);
-      rendererRef.current.render(world, entities, { overlay, showEntities, showGrid });
-      rendererRef.current.renderUpsOverlay(serverUps, clientUpsRef.current);
+      // rAF loop redraws on next frame.
     } else {
       const rect = canvasRef.current!.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      const info = rendererRef.current.getCellAt(mouseX, mouseY, world, entities);
+      const info = rendererRef.current.getCellAt(
+        e.clientX - rect.left, e.clientY - rect.top,
+        worldRef.current, entitiesRef.current
+      );
       onCellHover(info);
     }
-  }, [world, entities, overlay, showEntities, showGrid, serverUps, onCellHover]);
+  }, [onCellHover]);
 
   const handleMouseUp = useCallback(() => {
     isDragging.current = false;
