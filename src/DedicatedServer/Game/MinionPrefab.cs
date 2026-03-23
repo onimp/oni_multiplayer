@@ -215,6 +215,10 @@ public static class MinionPrefab {
             }
         }
 
+        // Purge null entries left by failed SM ctors or headless-unsafe removals.
+        // StateMachineController.GetSMI<T>() iterates stateMachines — a null entry NPEs.
+        smc.stateMachines.RemoveAll(s => s == null);
+
         // ── Step 11: IdleMonitor readout ─────────────────────────────────────
         S(id, "11-IdleMonitor-check", () => {
             var im = smc.GetSMI<IdleMonitor.Instance>();
