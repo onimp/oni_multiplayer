@@ -322,12 +322,16 @@ public class WorldBuilder {
             Console.WriteLine("[WorldBuilder] SaveGame.Instance null — creating headless stub");
             var saveGameGo = new GameObject("SaveGame_headless");
             UnityEngine.Object.DontDestroyOnLoad(saveGameGo);
-            // StateMachineController must be on the same GO before InitializeComponent() runs so that
+            // StateMachineController must be on the same GO before OnPrefabInit() runs so that
             // SaveGame.OnPrefabInit → new ColonyRationMonitor.Instance(this).StartSM() can call
             // master.GetComponent<StateMachineController>().AddStateMachineInstance() without NPE.
             saveGameGo.AddComponent<StateMachineController>();
             var saveGame = saveGameGo.AddComponent<SaveGame>();
-            saveGame.InitializeComponent(); // OnPrefabInit → sets Instance + KObject.obj (for Subscribe) + creates ColonyRationMonitor
+            // Set obj directly — same pattern as game.obj at line ~549.
+            // InitializeComponent() gates the lastObj update on Application.isPlaying && lastGameObject != go,
+            // which is fragile and left saveGame.obj null => ColonyRationMonitor.Subscribe() NPE.
+            saveGame.obj = KObjectManager.Instance.GetOrCreateObject(saveGameGo);
+            saveGame.OnPrefabInit(); // sets SaveGame.Instance + creates ColonyRationMonitor
             if (SaveGame.Instance == null) SaveGame.Instance = saveGame; // fallback if OnPrefabInit crashed before Instance = this
         }
         SaveGame.Instance.AutoSaveCycleInterval = 0;
