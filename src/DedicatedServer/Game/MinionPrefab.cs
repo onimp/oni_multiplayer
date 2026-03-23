@@ -204,6 +204,14 @@ public static class MinionPrefab {
                 }
 
                 smInst.StartSM();
+                // Guard against SMs that set the static error flag without throwing.
+                // GoTo() short-circuits when error=true → IdleMonitor.StartSM() → GoTo(idle)
+                // returns immediately → currentState=null → IsRunning()=false → no IdleChore.
+                // Resetting here ensures every subsequent SM starts with a clean error state.
+                if (StateMachine.Instance.error) {
+                    Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType}: WARNING set Instance.error=True, resetting");
+                    StateMachine.Instance.error = false;
+                }
                 Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType}: OK");
             } catch (Exception ex) {
                 Console.WriteLine($"[SETUP go={id}] 10-SM[{idx}]={smType} FAIL: {ex.GetType().Name}: {ex.Message}");
