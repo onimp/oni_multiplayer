@@ -527,6 +527,26 @@ public static class UnityRuntime {
             }
         }
 
+        // Phase 0.5b: Pre-init MinionModifiers for dupe GOs.
+        // KPrefabID.OnPrefabInit fires BasePrefabInit delegate (registered via prefabInitFn)
+        // which calls Db.Get().Amounts.ImmuneLevel.Lookup(go) — needs Modifiers.amounts
+        // populated first. MinionModifiers.OnPrefabInit() creates amounts, attributes,
+        // sicknesses. If KPrefabID precedes MinionModifiers in component order, BasePrefabInit
+        // NPEs at [0x001c] → entire OnPrefabInit crashes → stamina/calories stay 0 → all
+        // downstream dupe state (personalities, AmountInstance deltas) is broken.
+        // Dupe GOs are identified by MinionBrain (vs CreatureBrain for critters).
+        var isDupeGo = components.Any(c => c is MinionBrain);
+        if (isDupeGo) {
+            foreach (var comp in components) {
+                if (comp is MinionModifiers) {
+                    try { ((KMonoBehaviour) comp).InitializeComponent(); }
+                    catch (Exception ex) {
+                        Console.WriteLine($"[Lifecycle] MinionModifiers pre-init failed: {ex.GetBaseException().Message}");
+                    }
+                }
+            }
+        }
+
         // Phase 1: Awake (InitializeComponent → OnPrefabInit)
         var snapshot = components.ToList(); // snapshot — components may be added during Awake
         foreach (var comp in snapshot) {
