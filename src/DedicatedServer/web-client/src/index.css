@@ -97,6 +97,44 @@ header h1 {
   min-width: 30px;
 }
 
+/* Stats bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  background: #0f1e3a;
+  border-bottom: 1px solid #0f3460;
+  font-size: 12px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #888;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.stats-item {
+  color: #888;
+}
+
+.stats-item strong {
+  color: #c8c8c8;
+  font-weight: 600;
+}
+
+.stats-item.stats-error {
+  color: #e94560;
+}
+
+.stats-item.stats-error strong {
+  color: #e94560;
+}
+
+.stats-sep {
+  color: #2a4070;
+  user-select: none;
+}
+
 /* Main layout */
 .main {
   display: flex;

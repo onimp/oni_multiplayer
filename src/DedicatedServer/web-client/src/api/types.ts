@@ -47,6 +47,8 @@ export interface GameState {
   cycleTime?: number;
   /** True when cycle progress ≥ 87.5% (night lasts ~75s out of 600s). */
   isNight?: boolean;
+  /** Number of errors captured during server boot / game load. Optional — absent on older backends. */
+  bootErrorCount?: number;
 }
 
 export type OverlayMode = 'element' | 'temperature' | 'mass';

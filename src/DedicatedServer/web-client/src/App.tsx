@@ -7,6 +7,7 @@ import { Header } from './components/Header';
 import { WorldCanvas } from './components/WorldCanvas';
 import { Sidebar } from './components/Sidebar';
 import { ConnectionOverlay } from './components/ConnectionOverlay';
+import { StatsBar } from './components/StatsBar';
 import { deriveConnectionStatus } from './utils/connectionState';
 import './index.css';
 
@@ -113,6 +114,7 @@ export default function App() {
   return (
     <div className="app">
       <Header connected={connected} retryIn={retryIn} gameState={gameState} />
+      <StatsBar gameState={gameState} />
       <div className="main">
         <div className="canvas-container">
           <ConnectionOverlay status={connStatus} onReconnect={refresh} />
