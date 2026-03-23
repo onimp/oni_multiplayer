@@ -33,7 +33,7 @@ export function Sidebar({
     <aside className="sidebar">
       <section>
         <h3>Display</h3>
-        {(['element', 'temperature', 'mass'] as OverlayMode[]).map(mode => (
+        {(['element', 'temperature', 'mass', 'gas'] as OverlayMode[]).map(mode => (
           <label key={mode}>
             <input
               type="radio"

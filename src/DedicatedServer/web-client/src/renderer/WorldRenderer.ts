@@ -1,6 +1,7 @@
 import type { EntityData, OverlayMode, WorldData, EntitiesResponse } from '../api/types';
-import { getElementColor, getElementName, ENTITY_COLORS } from './constants';
+import { getElementColor, getElementName, getElementState, ENTITY_COLORS } from './constants';
 import { temperatureToColor } from '../utils/tempColor';
+import { gasOverlayColor, GAS_BACKGROUND } from '../utils/gasOverlay';
 import { buildingToRect, BUILDING_LABEL_MIN_CELL_SIZE } from '../utils/buildingRenderer';
 import type { BuildingRect } from '../utils/buildingRenderer';
 
@@ -170,6 +171,12 @@ export class WorldRenderer {
         const ratio = Math.min(1, logMass / 3.5);
         const b = Math.round(40 + ratio * 200);
         return `rgb(${b},${Math.round(b * 0.7)},${Math.round(b * 0.4)})`;
+      }
+
+      case 'gas': {
+        // Only Gas-state cells get a color; solids, liquids, vacuum → dark background.
+        if (getElementState(elementId) !== 'Gas') return GAS_BACKGROUND;
+        return gasOverlayColor(getElementName(elementId), mass);
       }
 
       default:

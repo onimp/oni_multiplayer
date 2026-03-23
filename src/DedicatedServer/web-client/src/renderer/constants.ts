@@ -1,8 +1,9 @@
 import type { ElementInfo } from '../api/types';
 
 // Dynamic element data — populated from /api/elements
-let elementColors: Record<number, string> = {};
-let elementNames: Record<number, string> = {};
+let elementColors:  Record<number, string> = {};
+let elementNames:   Record<number, string> = {};
+let elementStates:  Record<number, string> = {};   // 'Gas'|'Liquid'|'Solid'|'Vacuum'
 let elementsLoaded = false;
 
 // Known ONI element colors (common elements)
@@ -107,9 +108,11 @@ function generateColorForState(state: string, index: number): string {
 
 export function loadElements(elements: ElementInfo[]) {
   elementColors = {};
-  elementNames = {};
+  elementNames  = {};
+  elementStates = {};
   for (const elem of elements) {
-    elementNames[elem.id] = elem.name;
+    elementNames[elem.id]  = elem.name;
+    elementStates[elem.id] = elem.state;
     elementColors[elem.id] = KNOWN_ELEMENT_COLORS[elem.name] ?? generateColorForState(elem.state, elem.id);
   }
   elementsLoaded = true;
@@ -121,6 +124,11 @@ export function getElementColor(id: number): string {
 
 export function getElementName(id: number): string {
   return elementNames[id] ?? `Unknown (${id})`;
+}
+
+/** Returns the aggregate state of an element: 'Gas', 'Liquid', 'Solid', or 'Vacuum'. */
+export function getElementState(id: number): string {
+  return elementStates[id] ?? 'Solid';
 }
 
 export function areElementsLoaded(): boolean {
