@@ -514,6 +514,29 @@ public class WorldBuilder {
             InitDbField(ref db.ScheduleGroups, () => new ScheduleGroups(root), "ScheduleGroups");
             InitDbField(ref db.RoomTypes, () => new RoomTypes(root), "RoomTypes");
             InitDbField(ref db.Diseases, () => new Diseases(root, statsOnly: true), "Diseases");
+            // WORKAROUND: statsOnly=true skips Amount/cureSpeedBase creation (Disease ctor lines 123-139).
+            // Replicate data-only portion of Disease ctor lines 128-138 — omit visual overlayColourName
+            // (line 125: Assets.instance.DiseaseVisualization crash in headless). Without this,
+            // MinionModifiers.OnPrefabInit iterates Diseases and calls AddAmount(disease.amount) where
+            // disease.amount == null (statsOnly=true) → NPE for every dupe spawn.
+            if (db.Diseases != null) {
+                foreach (var disease in db.Diseases.resources) {
+                    if (disease.amount != null) continue; // already initialized (non-statsOnly path)
+                    var dId = disease.Id;
+                    var attrMin = new Klei.AI.Attribute(dId + "Min", "Minimum" + dId, "", "", 0f, Klei.AI.Attribute.Display.Normal, is_trainable: false);
+                    var attrMax = new Klei.AI.Attribute(dId + "Max", "Maximum" + dId, "", "", 10000000f, Klei.AI.Attribute.Display.Normal, is_trainable: false);
+                    disease.amountDeltaAttribute = new Klei.AI.Attribute(dId + "Delta", dId, "", "", 0f, Klei.AI.Attribute.Display.Normal, is_trainable: false);
+                    disease.amount = new Amount(dId, dId + " " + STRINGS.DUPLICANTS.DISEASES.GERMS, dId + " " + STRINGS.DUPLICANTS.DISEASES.GERMS, attrMin, attrMax, disease.amountDeltaAttribute, show_max: false, Units.Flat, 0.01f, show_in_ui: true);
+                    Db.Get().Attributes.Add(attrMin);
+                    Db.Get().Attributes.Add(attrMax);
+                    Db.Get().Attributes.Add(disease.amountDeltaAttribute);
+                    disease.cureSpeedBase = new Klei.AI.Attribute(dId + "CureSpeed", is_trainable: false, Klei.AI.Attribute.Display.Normal, is_profession: false);
+                    disease.cureSpeedBase.BaseValue = 1f;
+                    disease.cureSpeedBase.SetFormatter(new ToPercentAttributeFormatter(1f));
+                    Db.Get().Attributes.Add(disease.cureSpeedBase);
+                }
+                Console.WriteLine($"[WorldBuilder] Disease amounts post-initialized for {db.Diseases.Count} diseases");
+            }
             InitDbField(ref db.Sicknesses, () => new Database.Sicknesses(root), "Sicknesses");
             InitDbField(ref db.AssignableSlots, () => new AssignableSlots(), "AssignableSlots");
             InitDbField(ref db.SkillPerks, () => new SkillPerks(root), "SkillPerks");
