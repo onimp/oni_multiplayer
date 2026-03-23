@@ -306,6 +306,21 @@ public class WorldBuilder {
             Console.WriteLine("[WorldBuilder] CellChangeMonitor initialized");
         }
 
+        // DietManager: KMonoBehaviour singleton that maps creature prefab tag → Diet.
+        // DietManager.OnPrefabInit calls CollectSaveDiets(null) which iterates Assets.Prefabs
+        // (already populated by RegisterEntities() above) and stores Tag → Diet entries.
+        // MUST be initialized AFTER RegisterEntities() and BEFORE SpawnEntities():
+        //   • CreatureCalorieMonitor.Stomach ctor: DietManager.Instance.GetPrefabDiet(owner) → NPE
+        //   • SolidConsumerMonitor.Instance ctor: DietManager.Instance.GetPrefabDiet(gameObject) → NPE
+        // Without this, both SMs were skipped (CreaturePrefab step 6c, MinionPrefab.IsHeadlessUnsafeSM).
+        // DietManager.OnSpawn subscribes to DiscoveredResources — not called here (headless, not needed).
+        if (DietManager.Instance == null) {
+            var dietManagerGo = new GameObject("DietManager");
+            var dm = dietManagerGo.AddComponent<DietManager>();
+            dm.InitializeComponent(); // OnPrefabInit: CollectSaveDiets → diets populated, Instance = this
+            Console.WriteLine($"[WorldBuilder] DietManager.Instance={DietManager.Instance != null}");
+        }
+
         // [GEYSER-DLC] Step A: diagnose DlcManager state vs save DLC state.
         // GeyserGenericConfig.prefabInitFn filters by Game.IsCorrectDlcActiveForCurrentSave
         // (save header), but CreatePrefabs used DlcManager.IsCorrectDlcSubscribed (Steam).

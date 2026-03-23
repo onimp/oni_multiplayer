@@ -273,16 +273,10 @@ public static class CreaturePrefab {
             foreach (var def in smc.cmpdef.defs) {
                 if (def is CritterEmoteMonitor.Def || def is CreatureThoughtGraph.Def)
                     continue;  // headless-unsafe — NameDisplayScreen NPE in ctor/StartSM
-                // CreatureCalorieMonitor and SolidConsumerMonitor both call
-                // DietManager.Instance.GetPrefabDiet() inside their Instance constructors
-                // (via Stomach(owner,...) for CalorieMonitor; directly for SolidConsumer).
-                // DietManager is a KMonoBehaviour singleton not initialized in headless
-                // → Instance=null → ctor throws → partial instance with metabolism=null
-                // left in smc.stateMachines → if StartSM ever fires, UpdateMetabolism-
-                // CalorieModifier ticks and NPEs at [0x00014] on smi.metabolism.GetTotalValue().
-                // Root cause of crash introduced by 6a6df02. Skip; requires DietManager.
-                if (def is CreatureCalorieMonitor.Def || def is SolidConsumerMonitor.Def)
-                    continue;
+                // CreatureCalorieMonitor and SolidConsumerMonitor: DietManager.Instance is now
+                // initialized in WorldBuilder before SpawnEntities (see DietManager block, commit
+                // that removed this skip). Both Instance ctors call GetPrefabDiet(gameObject) →
+                // DietManager.Instance != null → safe. No skip needed.
                 // smiType must be declared outside try so the catch block can use it to
                 // purge any partial instance the base ctor inserted before the body threw.
                 Type smiType = null;
