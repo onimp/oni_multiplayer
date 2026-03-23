@@ -170,6 +170,23 @@ public static class MinionPrefab {
             }
         });
 
+        // ── Step 9c: Personality ID ───────────────────────────────────────────
+        // SpeechMonitor.CreateMouth → SetMouthId → Db.Get().Personalities.Get(personalityResourceId)
+        // In a fresh headless world (not loaded from save), personalityResourceId defaults to
+        // HashedString.Invalid → Personalities.Get(Invalid) returns null → null.speech_mouth → NPE.
+        // Fix: assign the first available personality if the field is unset.
+        // This is pure data init — no Harmony, no reimplementation.
+        S(id, "9c-PersonalityId", () => {
+            var identity = go.GetComponent<MinionIdentity>();
+            if (identity != null && identity.personalityResourceId == HashedString.Invalid) {
+                var personalities = Db.Get().Personalities.resources;
+                if (personalities?.Count > 0) {
+                    identity.personalityResourceId = personalities[0].Id;
+                    Console.WriteLine($"[SETUP go={id}] 9c: personalityResourceId was invalid — assigned {personalities[0].Id}");
+                }
+            }
+        });
+
         // ── Step 10: All sub-SMs individually (52 total) ─────────────────────
         // Each factory creates a SM instance (ctor → smc.AddStateMachineInstance → list)
         // then StartSM fires it. Log each one by type name + result.
@@ -348,17 +365,18 @@ public static class MinionPrefab {
     /// These are removed from smc.stateMachines before StartSM is called.
     /// </summary>
     private static bool IsHeadlessUnsafeSM(StateMachine.Instance smi) =>
-        smi is SpeechMonitor.Instance         // mouth anim + audio; SetMouthId NPEs (personality=0x0)
-     || smi is SleepChoreMonitor.Instance     // UpdateBed → AutoAssignSlot → Game.assignmentManager NPE
+        smi is SleepChoreMonitor.Instance     // UpdateBed → AutoAssignSlot → needs further investigation
      || smi is CreatureCalorieMonitor.Instance // requires DietManager (not initialized in headless)
-     || smi is CalorieMonitor.Instance        // AddThought(Starving) NPE — ThoughtGraph not running headless
-     || smi is RationMonitor.Instance         // EventTransitionData.Register NPEs on SaveGame.Instance=null at SM startup
-     || smi is ThoughtGraph.Instance          // thought-bubble UI; displayingthought.talking NPEs at tick ~2703 (UI absent headless)
-     || smi is CreatureThoughtGraph.Instance  // same crash pattern, creature variant
-     || smi is BreathMonitor.Instance         // calls AddThought (thought-bubble UI) — headless-unsafe
-     || smi is StaminaMonitor.Instance        // AddThought(Sleepy) NPE — same pattern as BreathMonitor
+     || smi is CreatureThoughtGraph.Instance  // creature thought-bubble UI — same pattern as ThoughtGraph
+     || smi is BreathMonitor.Instance         // calls AddThought — safe once ThoughtGraph runs, left for later
+     || smi is StaminaMonitor.Instance        // AddThought(Sleepy) — safe once ThoughtGraph runs, left for later
      || smi is RadiationMonitor.Instance;     // DLC radiation monitor — silently sets GameTags.Dying in headless
                                               // → IdleMonitor.StartSM() enters stopped → no IdleChore for Bionic dupes
+    // Removed from skip list (now safe):
+    // SpeechMonitor.Instance   — SetMouthId NPE fixed: step 9c ensures personalityResourceId is valid
+    // ThoughtGraph.Instance    — safe: NameDisplayScreen stubbed, SpeechMonitor live (BeginTalking no longer NPEs)
+    // CalorieMonitor.Instance  — safe: ThoughtGraph running → GetSMI<ThoughtGraph.Instance>() returns live instance
+    // RationMonitor.Instance   — safe: SaveGame+ColonyRationMonitor initialized before SpawnStarterMinions
 
     /// <summary>
     /// Creates a fresh MinionAssignablesProxy GO and wires it to the identity.

@@ -312,6 +312,35 @@ public class WorldBuilder {
         global::Game.Instance.accumulators ??= new Accumulators();
         global::Game.Instance.plantElementAbsorbers ??= new PlantElementAbsorbers();
 
+        // SaveGame stub must exist BEFORE SpawnStarterMinions so that:
+        //   1. RationMonitor.InitializeStates registers EventTransitions on SaveGame.Instance
+        //      via GetSaveGame() — null at SM startup causes EventTransitionData NPE.
+        //   2. ColonyRationMonitor.Instance can be started so AreThereAnyEdibles() works.
+        //   3. GameClock.AddTime NPE at cycle boundary (~tick 2714) is prevented
+        //      (AutoSaveCycleInterval=0 disables autosave).
+        if (SaveGame.Instance == null) {
+            Console.WriteLine("[WorldBuilder] SaveGame.Instance null — creating headless stub");
+            var saveGameGo = new GameObject("SaveGame_headless");
+            UnityEngine.Object.DontDestroyOnLoad(saveGameGo);
+            // StateMachineController must be on the same GO so ColonyRationMonitor.StartSM()
+            // can register via master.GetComponent<StateMachineController>().AddStateMachineInstance().
+            saveGameGo.AddComponent<StateMachineController>();
+            SaveGame.Instance = saveGameGo.AddComponent<SaveGame>();
+        }
+        SaveGame.Instance.AutoSaveCycleInterval = 0;
+        Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
+
+        // ColonyRationMonitor tracks edible availability colony-wide.
+        // RationMonitor.AreThereAnyEdibles() calls SaveGame.Instance.GetSMI<ColonyRationMonitor.Instance>().
+        // Without this, AreThereAnyEdibles always returns false → dupes stuck in noediblesavailable
+        // → EatChore never created even when food is present.
+        // ColonyRationMonitor iterates Components.Edibles only — no UI, no missing singletons.
+        if (SaveGame.Instance.GetSMI<ColonyRationMonitor.Instance>() == null) {
+            var crmSmi = new ColonyRationMonitor.Instance(SaveGame.Instance);
+            crmSmi.StartSM();
+            Console.WriteLine("[WorldBuilder] ColonyRationMonitor started on SaveGame stub");
+        }
+
         // Spawn starter duplicants at the actual colony location.
         // Must run AFTER SpawnEntities so Telepad/PrintingPod is already in the world
         // (FindColonySpawnCell can then locate it via FindObjectsOfType).
@@ -390,20 +419,6 @@ public class WorldBuilder {
             Console.WriteLine($"[WorldBuilder] AsyncPathProber workers restarted (MaxLinksPerCell={Pathfinding.Instance?.MaxLinksPerCell()})");
         }
 
-        // Prevent GameClock.AddTime NPE at cycle boundary (~tick 2714).
-        // GameClock.AddTime line 102: SaveGame.Instance.AutoSaveCycleInterval > 0 → autosave fires.
-        // In headless, SaveGame may not be initialized → Instance is null → fatal NPE.
-        // Even when Instance exists, AutoSaveCycleInterval defaults to 1 → DoAutoSave() →
-        // OniMetrics.LogEvent / SaveLoader.GetActiveSaveFilePath → more NPEs.
-        // FIX: ensure Instance exists (create a stub if missing), then force interval = 0.
-        if (SaveGame.Instance == null) {
-            Console.WriteLine("[WorldBuilder] SaveGame.Instance null — creating headless stub");
-            var saveGameGo = new GameObject("SaveGame_headless");
-            UnityEngine.Object.DontDestroyOnLoad(saveGameGo);
-            SaveGame.Instance = saveGameGo.AddComponent<SaveGame>();
-        }
-        SaveGame.Instance.AutoSaveCycleInterval = 0;
-        Console.WriteLine("[WorldBuilder] AutoSaveCycleInterval set to 0 (headless: no autosave)");
 
         IsLoaded = true;
         TickLoop = new GameTickLoop(TickSimulation);
