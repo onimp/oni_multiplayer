@@ -552,6 +552,14 @@ public static class UnityRuntime {
             var consumer = go.GetComponent<ChoreConsumer>();
             if (consumer != null) consumer.providers = new List<ChoreProvider>();
 
+            // Fix C: reset Traits.TraitList before OnPrefabInit.
+            // MemberwiseClone (CloneSingle) shallow-copies reference fields — all 3 dupe clones
+            // share the same List<Trait> object. After dupe 0 populates TraitList in OnPrefabInit,
+            // HasTrait() returns true for dupes 1+2 → trait.AddTo(attributes) is skipped →
+            // StaminaDelta modifier never added → deltaAttribute.GetTotalValue()=0 forever.
+            var traits = go.GetComponent<Traits>();
+            if (traits != null) traits.TraitList = new List<Trait>();
+
             // Fix B: assign personality before Phase 2 (OnSpawn) fires.
             // MinionIdentity.OnSpawn() reads personalityResourceId. TriggerLifecycle Phase 2
             // fires here, before MinionPrefab.Setup() step 6a runs. Fresh-spawn dupes carry
