@@ -84,8 +84,13 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
     if (!canvasRef.current) return;
     rendererRef.current = new WorldRenderer(canvasRef.current);
 
+    const TARGET_MS = 1000 / 60; // 16.666ms — cap render rate to 60fps
+    let lastFrameTime = 0;
     let rafId: number;
-    function loop() {
+    function loop(now: number) {
+      rafId = requestAnimationFrame(loop);
+      if (now - lastFrameTime < TARGET_MS) return; // skip frame if too soon
+      lastFrameTime = now;
       const r = rendererRef.current;
       const w = worldRef.current;
       if (r && w) {
@@ -97,7 +102,6 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
         renderCountRef.current++;
         r.renderUpsOverlay(serverUpsRef.current, clientUpsRef.current);
       }
-      rafId = requestAnimationFrame(loop);
     }
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
