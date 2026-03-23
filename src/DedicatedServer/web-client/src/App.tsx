@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { WorldData, EntitiesResponse, GameState, OverlayMode } from './api/types';
+import type { WorldData, EntitiesResponse, EntityData, GameState, OverlayMode } from './api/types';
 import { fetchAll, fetchElements, fetchEntities, fetchGameState, fetchWorld } from './api/client';
 import { loadElements, areElementsLoaded } from './renderer/constants';
 import type { CellInfo } from './renderer/WorldRenderer';
@@ -28,6 +28,22 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(16);
+
+  // Sidebar entity pin: name of the entity selected in EntityListPanel.
+  // Passed down to WorldCanvas so the tooltip tracks the entity on the canvas.
+  const [pinnedEntityName, setPinnedEntityName] = useState<string | null>(null);
+  // Keep the full EntityData so WorldCanvas can render the tooltip without a separate lookup.
+  const [pinnedEntity, setPinnedEntity] = useState<EntityData | null>(null);
+
+  const handlePinEntity = useCallback((entity: EntityData | null) => {
+    setPinnedEntityName(entity?.name ?? null);
+    setPinnedEntity(entity);
+  }, []);
+
+  const handleEntityUnpinned = useCallback(() => {
+    setPinnedEntityName(null);
+    setPinnedEntity(null);
+  }, []);
 
   // Initial full load (world + entities + state + elements)
   const refresh = useCallback(async () => {
@@ -128,6 +144,8 @@ export default function App() {
             showGrid={showGrid}
             serverUps={gameState?.serverUps}
             onCellHover={setCellInfo}
+            pinnedEntity={pinnedEntity}
+            onEntityUnpinned={handleEntityUnpinned}
           />
         </div>
         <Sidebar
@@ -139,12 +157,14 @@ export default function App() {
           showGrid={showGrid}
           autoRefresh={autoRefresh}
           refreshInterval={refreshInterval}
+          pinnedEntityName={pinnedEntityName}
           onOverlayChange={setOverlay}
           onShowEntitiesChange={setShowEntities}
           onShowGridChange={setShowGrid}
           onAutoRefreshChange={setAutoRefresh}
           onRefreshIntervalChange={setRefreshInterval}
           onRefreshNow={refresh}
+          onPinEntity={handlePinEntity}
         />
       </div>
     </div>

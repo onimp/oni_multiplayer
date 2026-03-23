@@ -249,6 +249,144 @@ header h1 {
   font-size: 11px;
 }
 
+/* ── Entity list panel (collapsible, in sidebar) ─────────────────────────── */
+
+.entity-list-panel {
+  /* No extra margin — sidebar gap handles spacing */
+}
+
+.entity-list-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #0f3460;
+  color: #e94560;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-align: left;
+  /* override the sidebar button margin/width rules */
+  margin-top: 0;
+}
+
+.entity-list-toggle:hover {
+  background: none;
+  color: #ff6b80;
+}
+
+.entity-list-toggle-arrow {
+  font-size: 9px;
+  line-height: 1;
+  color: #888;
+}
+
+.entity-list-toggle-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #888;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.entity-list-body {
+  margin-top: 6px;
+}
+
+.entity-list-controls {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.entity-list-controls select {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  color: #c0c0c0;
+  font-size: 11px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.entity-list-controls select:focus {
+  outline: 1px solid #e94560;
+  border-color: #e94560;
+}
+
+.entity-list-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+/* Thin scrollbar for the entity list */
+.entity-list-scroll::-webkit-scrollbar { width: 4px; }
+.entity-list-scroll::-webkit-scrollbar-track { background: transparent; }
+.entity-list-scroll::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 2px; }
+
+.entity-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.35);
+  line-height: 1.5;
+}
+
+.entity-row:hover {
+  background: rgba(15, 52, 96, 0.5);
+}
+
+.entity-row--pinned {
+  background: rgba(233, 69, 96, 0.12);
+  border-bottom-color: rgba(233, 69, 96, 0.3);
+}
+
+.entity-row--pinned:hover {
+  background: rgba(233, 69, 96, 0.2);
+}
+
+.entity-row-icon {
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.entity-row-name {
+  color: #4ecca3;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.entity-row--pinned .entity-row-name {
+  color: #ff8fa3;
+}
+
+.entity-row-chore {
+  color: #777;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 72px;
+  min-width: 0;
+}
+
 /* ── Connection overlay ───────────────────────────────────────────────────── */
 @keyframes conn-spin {
   to { transform: rotate(360deg); }

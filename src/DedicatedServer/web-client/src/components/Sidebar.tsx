@@ -1,5 +1,6 @@
-import type { EntitiesResponse, GameState, OverlayMode } from '../api/types';
+import type { EntitiesResponse, EntityData, GameState, OverlayMode } from '../api/types';
 import type { CellInfo } from '../renderer/WorldRenderer';
+import { EntityListPanel } from './EntityListPanel';
 
 interface Props {
   gameState: GameState | null;
@@ -10,19 +11,23 @@ interface Props {
   showGrid: boolean;
   autoRefresh: boolean;
   refreshInterval: number;
+  pinnedEntityName: string | null;
   onOverlayChange: (mode: OverlayMode) => void;
   onShowEntitiesChange: (show: boolean) => void;
   onShowGridChange: (show: boolean) => void;
   onAutoRefreshChange: (auto: boolean) => void;
   onRefreshIntervalChange: (ms: number) => void;
   onRefreshNow: () => void;
+  onPinEntity: (entity: EntityData | null) => void;
 }
 
 export function Sidebar({
   gameState, entities, cellInfo,
   overlay, showEntities, showGrid, autoRefresh, refreshInterval,
+  pinnedEntityName,
   onOverlayChange, onShowEntitiesChange, onShowGridChange,
   onAutoRefreshChange, onRefreshIntervalChange, onRefreshNow,
+  onPinEntity,
 }: Props) {
   return (
     <aside className="sidebar">
@@ -87,19 +92,11 @@ export function Sidebar({
         )}
       </section>
 
-      <section>
-        <h3>Entities</h3>
-        <div className="entity-list">
-          {entities?.entities.map((e, i) => (
-            <div key={i} className="entity-item">
-              <span className="entity-name">{e.name}</span>
-              <span className="entity-type">[{e.type}]</span>
-              <span className="entity-state">{e.state}</span>
-              <div className="entity-pos">({e.x}, {e.y})</div>
-            </div>
-          )) ?? <span className="muted">Loading...</span>}
-        </div>
-      </section>
+      <EntityListPanel
+        entities={entities?.entities ?? []}
+        pinnedEntityName={pinnedEntityName}
+        onPinEntity={onPinEntity}
+      />
 
       {gameState && (
         <section>

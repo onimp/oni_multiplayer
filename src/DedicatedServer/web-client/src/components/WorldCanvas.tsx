@@ -5,6 +5,7 @@ import { WorldRenderer } from '../renderer/WorldRenderer';
 import { miniBar } from '../utils/miniBar';
 import { shouldRefreshHover } from '../utils/hoverRefresh';
 
+
 /** Returns ALL entities whose cell footprint covers (mouseX, mouseY) in canvas pixels. */
 function getEntitiesAt(
   mouseX: number, mouseY: number,
@@ -54,9 +55,16 @@ interface Props {
   showGrid: boolean;
   serverUps: number | undefined;
   onCellHover: (info: CellInfo | null) => void;
+  /** Entity pinned from the sidebar list — tooltip follows this entity on the canvas. */
+  pinnedEntity?: EntityData | null;
+  /** Called when a sidebar-pinned entity disappears from the entity list. */
+  onEntityUnpinned?: () => void;
 }
 
-export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, serverUps, onCellHover }: Props) {
+export function WorldCanvas({
+  world, entities, overlay, showEntities, showGrid, serverUps,
+  onCellHover, pinnedEntity, onEntityUnpinned,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<WorldRenderer | null>(null);
@@ -74,6 +82,12 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   const hoverPosRef   = useRef<{ mouseX: number; mouseY: number } | null>(null);
   const isHoveringRef = useRef(false);
 
+  // Sidebar-driven pin: entity selected from the EntityListPanel.
+  // The rAF loop computes canvas coords from entity world coords each frame so
+  // the tooltip follows the entity as it moves (or hides it if it disappears).
+  const sidebarPinnedEntityRef = useRef<EntityData | null>(null);
+  const onEntityUnpinnedRef    = useRef<(() => void) | undefined>(undefined);
+
   // Refs holding latest data so the rAF loop always reads fresh values
   // without needing to restart the loop when props change.
   const worldRef = useRef<WorldData | null>(null);
@@ -90,6 +104,8 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   showEntitiesRef.current = showEntities;
   showGridRef.current = showGrid;
   serverUpsRef.current = serverUps;
+  sidebarPinnedEntityRef.current = pinnedEntity ?? null;
+  onEntityUnpinnedRef.current    = onEntityUnpinned;
 
   // Client UPS tracking: count rAF renders per second.
   const renderCountRef = useRef(0);
@@ -115,9 +131,13 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
   // ESC key: unpin tooltip.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isPinnedRef.current) {
+      if (e.key === 'Escape' && (isPinnedRef.current || sidebarPinnedEntityRef.current)) {
         isPinnedRef.current = false;
         pinnedPosRef.current = null;
+        if (sidebarPinnedEntityRef.current) {
+          sidebarPinnedEntityRef.current = null;
+          onEntityUnpinnedRef.current?.();
+        }
         const tt = tooltipRef.current;
         if (tt) { tt.style.display = 'none'; tt.style.outline = ''; }
       }
@@ -168,10 +188,35 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
           }
         }
 
+        // Sidebar-driven pin: find entity by name in live data, compute canvas position,
+        // render tooltip there each frame so it tracks the entity as it moves.
+        const sbEntity = sidebarPinnedEntityRef.current;
+        if (sbEntity && !isPinnedRef.current) {
+          const ent = entitiesRef.current?.entities.find(e => e.name === sbEntity.name) ?? null;
+          const tt  = tooltipRef.current;
+          if (ent && ent.w && ent.h) {
+            const cs  = r.currentCellSize;
+            const ttX = r.currentOffsetX + (ent.x + ent.w / 2) * cs;
+            const ttY = r.currentOffsetY + (w.height - ent.y - ent.h) * cs - 8;
+            if (tt) {
+              tt.innerHTML = tooltipHtml([ent], true);
+              tt.style.left    = `${ttX + 14}px`;
+              tt.style.top     = `${Math.max(4, ttY)}px`;
+              tt.style.display = 'block';
+              tt.style.outline = '1px solid rgba(255,255,255,0.4)';
+            }
+          } else {
+            // Entity disappeared from list — auto-unpin without re-triggering the prop.
+            sidebarPinnedEntityRef.current = null;
+            onEntityUnpinnedRef.current?.();
+            if (tt) { tt.style.display = 'none'; tt.style.outline = ''; }
+          }
+        }
+
         // Refresh hover tooltip on every frame — fixes stale data when server pushes new
         // entity state (e.g. updated stamina/chore) while the cursor is stationary.
         // Only runs when hovering and not pinned (pinned has its own path above).
-        if (shouldRefreshHover({ isPinned: isPinnedRef.current, isHovering: isHoveringRef.current })
+        if (shouldRefreshHover({ isPinned: isPinnedRef.current || !!sidebarPinnedEntityRef.current, isHovering: isHoveringRef.current })
             && hoverPosRef.current) {
           const tt = tooltipRef.current;
           if (tt) {
@@ -283,7 +328,11 @@ export function WorldCanvas({ world, entities, overlay, showEntities, showGrid, 
       const hits = getEntitiesAt(mouseX, mouseY, worldRef.current, entitiesRef.current, rendererRef.current);
       const tt = tooltipRef.current;
       if (hits.length > 0) {
-        // Pin tooltip at click position.
+        // Pin tooltip at click position; clear any sidebar pin (mutually exclusive).
+        if (sidebarPinnedEntityRef.current) {
+          sidebarPinnedEntityRef.current = null;
+          onEntityUnpinnedRef.current?.();
+        }
         isPinnedRef.current = true;
         pinnedPosRef.current = { mouseX, mouseY };
         if (tt) {
