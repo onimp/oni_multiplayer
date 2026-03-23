@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using HarmonyLib;
 using UnityEngine;
 
 namespace DedicatedServer.Game;
@@ -103,6 +104,10 @@ public class GameTickLoop {
                 // Without this, tile changes from the sim never propagate to the nav graph.
                 Pathfinding.Instance?.UpdateNavGrids();
             }
+            // Remove ChoreProviders backed by destroyed GOs before brain scheduling.
+            // Destroyed GOs have transform=null; CollectChores → GetMyParentWorldId →
+            // Grid.PosToCell → TransformExtensions.GetPosition(null) → NPE at tick ~16.
+            PurgeDeadChoreProviders();
             // Advances all SIM_EVERY_TICK / SIM_33ms / SIM_200ms / SIM_1000ms / SIM_4000ms buckets.
             // No try/catch: BreathMonitor NPE root cause is fixed (WorldContainer.AlertManager
             // is properly initialized in WorldBuilder via smc.CreateSMIS()/StartSMIS()).
@@ -641,6 +646,32 @@ public class GameTickLoop {
             name.Contains("ToggleAnims") ||   // AddAnimOverrides / RemoveAnimOverrides
             name == "ClearWalk"               // smi.animController.Play("idle_default")
         );
+
+    /// <summary>
+    /// Removes ChoreProviders backed by destroyed GameObjects from every live consumer's
+    /// providers list, before AdvanceOneSimSubTick drives brain scheduling.
+    ///
+    /// ROOT CAUSE (tick-16 crash):
+    ///   The global ChoreProvider registry retains stale entries for transient GOs destroyed
+    ///   after world load (e.g. spawn helpers). ChoreConsumer.FindNextChore iterates ALL
+    ///   registered providers → CollectChores → ClusterUtil.GetMyParentWorldId(go) →
+    ///   Grid.PosToCell(go) → TransformExtensions.GetPosition(go.transform) →
+    ///   NPE because transform is null on a destroyed GO.
+    ///
+    /// FIX: walk Components.ChoreConsumers.Items (same collection BrainScheduler uses)
+    ///   and remove any provider whose GO or transform is null before the tick runs.
+    ///   Pure C# — no Harmony, no virtual dispatch on KMonoBehaviour subclasses.
+    /// </summary>
+    private static void PurgeDeadChoreProviders() {
+        foreach (var brain in Components.Brains.Items) {
+            if (brain == null) continue;
+            var consumer = brain.GetComponent<ChoreConsumer>();
+            if (consumer == null) continue;
+            var providers = Traverse.Create(consumer).Field("providers").GetValue<List<ChoreProvider>>();
+            if (providers == null) continue;
+            providers.RemoveAll(p => p == null || p.gameObject == null || p.transform == null);
+        }
+    }
 
     /// <summary>
     /// Runtime diagnostic at tick=200: logs per-dupe brain/IdleMonitor/providers state,
