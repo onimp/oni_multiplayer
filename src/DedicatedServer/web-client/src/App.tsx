@@ -206,11 +206,17 @@ export default function App() {
         fetching = true;
         Promise.all([fetchEntities(), fetchGameState()])
           .then(([ent, st]) => {
-            setEntities(ent); setGameState(st); setConnected(true);
+            // setConnected is idempotent — React bails out when already true (no re-render).
+            setConnected(true);
             backoffRef.current = 0;
             clearCountdown();
-            // Buffer only unique game ticks (skip duplicate ticks from fast polls).
+            // Only update React state when the game tick advances.
+            // Fast polls at 16ms may return the same tick many times (e.g. the game
+            // runs at 3–20 ticks/sec but we poll at 60Hz).  Calling setEntities on
+            // every poll triggers full React reconciliation 60×/sec for no benefit.
             if (ent.tick !== getLatestTick(tickBufferRef.current)?.tick) {
+              setEntities(ent);
+              setGameState(st);
               pushTick(tickBufferRef.current, { tick: ent.tick, entities: ent, gameState: st });
               setBufferTicks(getAllTicks(tickBufferRef.current));
             }

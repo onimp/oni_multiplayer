@@ -8,7 +8,7 @@
  * - Track auto-scrolls to the newest entry when in live mode.
  */
 
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { TickSnapshot } from '../utils/tickBuffer';
 
 interface Props {
@@ -20,7 +20,7 @@ interface Props {
   onLive: () => void;
 }
 
-export function TimelineScrubber({ ticks, selectedTick, onSelect, onLive }: Props) {
+function TimelineScrubberInner({ ticks, selectedTick, onSelect, onLive }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll track to the right (newest entry) when in live mode.
@@ -74,3 +74,17 @@ export function TimelineScrubber({ ticks, selectedTick, onSelect, onLive }: Prop
     </div>
   );
 }
+
+/**
+ * Memoized export: only re-renders when tick count, last tick value, or
+ * selectedTick changes.  Avoids reconciling 200 dot elements on every
+ * parent re-render when the timeline buffer hasn't actually changed.
+ */
+export const TimelineScrubber = memo(TimelineScrubberInner, (prev, next) => {
+  if (prev.selectedTick !== next.selectedTick) return false;  // re-render
+  if (prev.ticks.length !== next.ticks.length) return false;  // new dot added
+  // Same length: check if newest tick changed (circular buffer shifted)
+  const prevLast = prev.ticks[prev.ticks.length - 1]?.tick;
+  const nextLast = next.ticks[next.ticks.length - 1]?.tick;
+  return prevLast === nextLast;  // true = skip re-render, false = re-render
+});
