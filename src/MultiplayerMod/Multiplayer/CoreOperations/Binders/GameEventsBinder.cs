@@ -9,6 +9,7 @@ using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.Multiplayer.Compatibility;
 using MultiplayerMod.Multiplayer.Commands.Alerts;
 using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
@@ -101,7 +102,8 @@ public class GameEventsBinder {
 
         UserMenuScreenEvents.PriorityChanged += (target, priority) => client.Send(new ChangePriority(target, priority));
 
-        MeterScreenEvents.RedAlertToggling += enabled => client.Send(new ChangeRedAlertState(enabled));
+        MeterScreenEvents.RedAlertToggling += (enabled, worldId) =>
+            client.Send(new ChangeRedAlertState(enabled, worldId));
     }
 
     private void BindTools() {
@@ -148,8 +150,20 @@ public class GameEventsBinder {
     }
 
     private void BindMechanics() {
-        ObjectEvents.ComponentMethodCalled += args => client.Send(new CallMethod(args));
-        ObjectEvents.StateMachineMethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.ComponentMethodCalled += args => {
+            if (DlcMultiplayerSafety.ShouldBlockObjectSync(args.Method)) {
+                log.Warning($"Blocked unsafe DLC object sync for {args.Method.DeclaringType?.Name}.{args.Method.Name}");
+                return;
+            }
+            client.Send(new CallMethod(args));
+        };
+        ObjectEvents.StateMachineMethodCalled += args => {
+            if (DlcMultiplayerSafety.ShouldBlockObjectSync(args.Method)) {
+                log.Warning($"Blocked unsafe DLC state-machine sync for {args.Method.DeclaringType?.Name}.{args.Method.Name}");
+                return;
+            }
+            client.Send(new CallMethod(args));
+        };
         TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
         TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
     }

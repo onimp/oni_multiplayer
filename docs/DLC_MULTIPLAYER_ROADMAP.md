@@ -1,18 +1,18 @@
-# DLC Multiplayer Maintenance Roadmap
+# DLC Multiplayer PR Roadmap
 
-This fork line tracks work needed to keep Oni Multiplayer maintainable while adding DLC-compatible multiplayer support and improving the player experience.
+This branch tracks work needed to make Oni Multiplayer reviewable upstream while adding DLC-compatible multiplayer support and improving the player experience.
 
-## Fork baseline
+## PR baseline
 
-- Fork: <https://github.com/JiangNanGenius/oni_multiplayer>
 - Upstream: <https://github.com/onimp/oni_multiplayer>
-- Maintenance branch: `dlc-multiplayer-maintenance`
-- Starting point: upstream `main` at `c0626280fb8a3d725a6960375b0356a1f23a642b`
+- Working branch: `dlc-multiplayer-maintenance`
+- Base branch: upstream `main-ai`
+- Personal fork policy: temporary PR carrier only, not a long-lived distribution line.
 
 ## Current evidence
 
-- The project README says the mod is currently tested in Vanilla only and not DLC.
-- `src/MultiplayerMod/MultiplayerMod.csproj` currently generates `mod_info.yaml` with deprecated `supportedContent: VANILLA_ID`.
+- The project README now labels DLC support as preview and requires runtime smoke testing before calling it stable.
+- `src/MultiplayerMod/MultiplayerMod.csproj` now targets current Klei metadata without a default root-level `supportedContent` restriction.
 - Klei's current `mod_info.yaml` guidance uses optional `requiredDlcIds` and `forbiddenDlcIds` for DLC restrictions; `supportedContent` is deprecated as of U55 / March 2025 and should only be used for archived builds targeting older game versions.
 - The current hard-sync model sends a full save to clients through `WorldManager.Sync()`, then reloads it client-side.
 - The current debug drift snapshot hashes global grid arrays and chore/state-machine state, so DLC multi-world and cluster systems need special attention.
@@ -30,7 +30,7 @@ This fork line tracks work needed to keep Oni Multiplayer maintainable while add
 
 ### 1. Build and packaging
 
-- Add current `mod_info.yaml` build properties for `minimumSupportedBuild`, `version`, `APIVersion`, and optional DLC restrictions.
+- Keep current `mod_info.yaml` build properties for `minimumSupportedBuild`, `version`, `APIVersion`, and optional DLC restrictions.
 - Keep legacy `supportedContent` available only for archived builds targeting older ONI versions.
 - Do not publish DLC compatibility metadata until the DLC smoke matrix passes.
 - Update release packaging to make the generated `mod_info.yaml` visible and easy to audit.
@@ -54,6 +54,7 @@ This fork line tracks work needed to keep Oni Multiplayer maintainable while add
 
 - Validate cloud and local save paths with DLC saves.
 - Measure full-save payload size and fragmentation behavior for larger DLC colonies.
+- Transfer full saves as bounded chunks with size and checksum validation.
 - Add clearer status messages for pause, save capture, transfer, load, and resume phases.
 - Add a manual "request resync" path that is safe for non-host players to trigger through the host.
 
@@ -74,7 +75,8 @@ This fork line tracks work needed to keep Oni Multiplayer maintainable while add
 
 ## First implementation candidates
 
-1. Add a non-invasive compatibility report that reads game build, DLC/content mode, and generated mod version.
-2. Add supported-content build plumbing but keep the default at `VANILLA_ID`.
-3. Add DLC smoke-test notes and log parsing scripts for Harmony failures.
-4. Extend debug snapshots with world IDs before modifying gameplay sync behavior.
+1. Add a non-invasive compatibility fingerprint that reads game build, DLC/content mode, active save DLC IDs, mod list, and generated mod version.
+2. Generate current Klei `mod_info.yaml` metadata without default DLC restrictions.
+3. Transfer full saves in chunks so DLC colonies are not limited by one large command payload.
+4. Add DLC smoke-test notes and log parsing scripts for Harmony failures.
+5. Extend debug snapshots with world IDs before modifying gameplay sync behavior.

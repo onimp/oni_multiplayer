@@ -30,6 +30,7 @@ public class WorldManager {
     private readonly UnityTaskScheduler scheduler;
     private readonly ExecutionLevelManager executionLevelManager;
     private readonly List<IWorldStateManager> worldStateManagers;
+    private readonly WorldSaveTransferManager worldSaveTransferManager;
 
     public WorldManager(
         IMultiplayerServer server,
@@ -37,7 +38,8 @@ public class WorldManager {
         EventDispatcher events,
         UnityTaskScheduler scheduler,
         ExecutionLevelManager executionLevelManager,
-        List<IWorldStateManager> worldStateManagers
+        List<IWorldStateManager> worldStateManagers,
+        WorldSaveTransferManager worldSaveTransferManager
     ) {
         this.server = server;
         this.multiplayer = multiplayer;
@@ -45,6 +47,7 @@ public class WorldManager {
         this.scheduler = scheduler;
         this.executionLevelManager = executionLevelManager;
         this.worldStateManagers = worldStateManagers;
+        this.worldSaveTransferManager = worldSaveTransferManager;
     }
 
     public void Sync() {
@@ -61,7 +64,7 @@ public class WorldManager {
 
         var world = new WorldSave(WorldName, GetWorldSave(), new WorldState());
         worldStateManagers.ForEach(it => it.SaveState(world.State));
-        server.Send(new LoadWorld(world));
+        worldSaveTransferManager.CreateCommands(world).ForEach(server.Send);
         events.Subscribe<PlayersReadyEvent>(
             (_, subscription) => {
                 if (resume)

@@ -30,8 +30,7 @@
         <RepositoryType>git</RepositoryType>
     </PropertyGroup>
     <PropertyGroup>
-        <OniSupportedContent>VANILLA_ID</OniSupportedContent>
-        <OniMinimumSupportedBuild>21518087</OniMinimumSupportedBuild>
+        <OniMinimumSupportedBuild>737790</OniMinimumSupportedBuild>
         <OniApiVersion>2</OniApiVersion>
     </PropertyGroup>
     <ItemGroup>
