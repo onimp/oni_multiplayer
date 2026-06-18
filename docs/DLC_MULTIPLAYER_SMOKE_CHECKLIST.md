@@ -26,6 +26,9 @@ Use this checklist before describing the branch as playable with DLC.
 ## DLC Risk Areas
 
 - Open starmap and rocket screens during multiplayer and confirm the mod does not crash.
-- Trigger rocket launch-related UI and confirm unsafe calls are blocked rather than serialized.
+- Trigger rocket launch-related UI and confirm unsafe calls show a `DLC multiplayer preview` notification and are blocked rather than serialized.
 - Toggle red alert while focused on a secondary world and confirm the target world is preserved or safely falls back.
+- Move between asteroids and confirm remote player cursor labels indicate when another player is on a different world.
+- Build, dig, mop, copy settings, stamp, and move-to-location on a secondary asteroid; confirm commands either apply to the intended world or are skipped with a clear log/notification.
+- Change a RailGun launch mass on a secondary asteroid and confirm a null or cross-world target does not crash.
 - Watch `Player.log` for Harmony patch failures, serialization exceptions, or checksum errors.

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using MultiplayerMod.Core.Logging;
 using static MultiplayerMod.Platform.Steam.Network.Configuration;
 
@@ -116,8 +114,7 @@ public class NetworkMessageProcessor {
                 offset += chunk.Length;
             }
 
-            using var stream = new MemoryStream(buffer, 0, totalSize);
-            return (NetworkMessage) new BinaryFormatter().Deserialize(stream);
+            return (NetworkMessage) NetworkSerializer.Deserialize(buffer, totalSize);
         }
     }
 

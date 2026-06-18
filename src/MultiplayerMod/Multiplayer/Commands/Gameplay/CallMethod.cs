@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Reflection;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Mechanics.Objects;
+using MultiplayerMod.Multiplayer.Compatibility;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
 
@@ -8,6 +10,8 @@ namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
 [Serializable]
 public class CallMethod : MultiplayerCommand {
+
+    private static readonly Logger log = LoggerFactory.GetLogger(typeof(CallMethod));
 
     private readonly Reference target;
     private readonly Type declaringType;
@@ -34,11 +38,24 @@ public class CallMethod : MultiplayerCommand {
             BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance |
             BindingFlags.DeclaredOnly
         );
-        var obj = target.Resolve();
-        if (obj != null)
-            method?.Invoke(obj, ArgumentUtils.UnWrapObjects(args));
+        try {
+            var obj = target.Resolve();
+            if (obj != null)
+                method?.Invoke(obj, ArgumentUtils.UnWrapObjects(args));
+        } catch (Exception e) when (IsRecoverableExecutionFailure(e)) {
+            var message = $"Skipped received multiplayer method {declaringType.Name}.{methodName}: {e.GetBaseException().Message}";
+            log.Warning(message);
+            DlcMultiplayerSafety.NotifyUnsupported(message);
+        }
     }
 
     public override string ToString() => $"{base.ToString()} (Type = {declaringType.FullName}, Method = {methodName})";
+
+    private static bool IsRecoverableExecutionFailure(Exception e) =>
+        e is ObjectNotFoundException
+            or TargetInvocationException
+            or TargetParameterCountException
+            or ArgumentException
+            or InvalidOperationException;
 
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using HarmonyLib;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.ModRuntime.Context;
 
 namespace MultiplayerMod.Game.UI.Tools.Events;
@@ -20,7 +21,8 @@ public static class UtilityBuildEvents {
             __instance.def.PrefabID,
             __instance.selectedElements.ToArray(),
             __instance.path,
-            GameState.BuildToolPriority
+            GameState.BuildToolPriority,
+            WorldIdentity.GetCellsWorldId(__instance.path.Select(it => it.cell))
         )
     );
 

@@ -4,6 +4,7 @@ using System.Linq;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Unity;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Players.Events;
 using TMPro;
 using UnityEngine;
@@ -38,6 +39,7 @@ public class CursorComponent : MultiplayerKMonoBehaviour {
     private string? playerName;
     private string? screenName;
     private Type? screenType;
+    private int? worldId;
 
     protected override void OnSpawn() {
         camera = GameScreenManager.Instance.GetCamera(GameScreenManager.UIRenderTarget.ScreenSpaceCamera);
@@ -100,6 +102,7 @@ public class CursorComponent : MultiplayerKMonoBehaviour {
 
         screenName = args.ScreenName;
         screenType = args.ScreenType;
+        worldId = args.WorldId;
         worldCursor.Trace(args.Position);
         screenCursor.Trace(args.PositionWithinScreen);
     }
@@ -107,22 +110,29 @@ public class CursorComponent : MultiplayerKMonoBehaviour {
     private void Update() {
         var screenStack = KScreenManager.Instance.screenStack;
         var playerScreen = screenStack.FirstOrDefault(screen => screen.GetType() == screenType);
+        var currentWorldId = WorldIdentity.ActiveWorldId;
+        var inDifferentWorld = worldId.HasValue && currentWorldId.HasValue && worldId != currentWorldId;
 
         // If we see a screen where other player is - show cursor within that screen.
         var showScreenOrWorldCursor = screenCursor.CurrentPosition != null && (playerScreen?.isActive ?? false);
-        if (showScreenOrWorldCursor && ENABLE_CURSORS_RELATIVE_TO_GUI) {
+        if (inDifferentWorld && !showScreenOrWorldCursor) {
+            cursorImage.enabled = false;
+        } else if (showScreenOrWorldCursor && ENABLE_CURSORS_RELATIVE_TO_GUI) {
+            cursorImage.enabled = true;
             if (screenCursor.CurrentPosition != null)
                 transform.position = ScreenToWorld(playerScreen!, screenCursor.CurrentPosition.Value);
         } else {
+            cursorImage.enabled = true;
             if (worldCursor.CurrentPosition != null)
                 transform.position = camera.WorldToScreenPoint(worldCursor.CurrentPosition.Value);
         }
 
         var screenUnderCursor = FindScreenUnderCursor(transform.position);
         var showScreenName = screenUnderCursor?.GetType() != screenType;
+        var worldSuffix = inDifferentWorld ? $" (world {worldId})" : "";
 
-        cursorText.text = playerName + (showScreenName ? $" ({screenName ?? "World"})" : "");
-        cursorImage.color = cursorText.color = showScreenName ? new Color(1, 1, 1, 0.5f) : Color.white;
+        cursorText.text = playerName + worldSuffix + (showScreenName && !inDifferentWorld ? $" ({screenName ?? "World"})" : "");
+        cursorImage.color = cursorText.color = showScreenName || inDifferentWorld ? new Color(1, 1, 1, 0.5f) : Color.white;
     }
 
     private KScreen? FindScreenUnderCursor(Vector2 cursor) {

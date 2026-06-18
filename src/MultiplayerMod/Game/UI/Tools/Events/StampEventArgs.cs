@@ -6,5 +6,6 @@ namespace MultiplayerMod.Game.UI.Tools.Events;
 [Serializable]
 public record StampEventArgs(
     TemplateContainer Template,
-    Vector2 Location
+    Vector2 Location,
+    int? WorldId = null
 );

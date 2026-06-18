@@ -11,5 +11,6 @@ public record BuildEventArgs(
     Orientation Orientation,
     Tag[] Materials,
     string FacadeId,
-    PrioritySetting Priority
+    PrioritySetting Priority,
+    int? WorldId = null
 );

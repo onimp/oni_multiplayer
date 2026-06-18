@@ -2,6 +2,7 @@
 using System.Linq;
 using HarmonyLib;
 using JetBrains.Annotations;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.ModRuntime.Context;
 using UnityEngine;
 
@@ -25,7 +26,8 @@ public static class InterfaceToolEvents {
                 new Vector2(cursor_pos.x, cursor_pos.y),
                 WorldToScreen(kScreen, cursor_pos),
                 GetScreenName(kScreen),
-                kScreen?.GetType()
+                kScreen?.GetType(),
+                WorldIdentity.GetCursorWorldId(cursor_pos)
             )
         );
     }
@@ -54,6 +56,7 @@ public static class InterfaceToolEvents {
         Vector2 Position,
         Vector2? PositionWithinScreen,
         string? ScreenName,
-        Type? ScreenType
+        Type? ScreenType,
+        int? WorldId = null
     );
 }

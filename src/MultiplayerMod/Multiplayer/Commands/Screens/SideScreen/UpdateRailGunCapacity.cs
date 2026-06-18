@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using static MultiplayerMod.Game.UI.SideScreens.RailGunSideScreenEvents;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.SideScreen;
@@ -13,8 +13,14 @@ public class UpdateRailGunCapacity : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var railGun = args.Target.Resolve();
-        railGun.launchMass = args.LaunchMass;
+        WorldCommandScope.Execute(
+            args.WorldId,
+            nameof(UpdateRailGunCapacity),
+            () => {
+                var railGun = args.Target.Resolve();
+                railGun.launchMass = args.LaunchMass;
+            }
+        );
     }
 
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.ModRuntime.Context;
 using UnityEngine;
 
@@ -101,7 +102,8 @@ public static class DragToolEvents {
                     FilteredDragTool filtered => GetActiveParameters(filtered.currentFilterTargets),
                     HarvestTool harvest => GetActiveParameters(harvest.options),
                     _ => null
-                }
+                },
+                WorldIdentity.GetCellsWorldId(selection)
             );
 
             DragComplete?.Invoke(instance, args);

@@ -1,6 +1,6 @@
 using System;
-using System.Reflection;
 using MultiplayerMod.Game.Extension;
+using MultiplayerMod.Game.World;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Objects.Reference;
@@ -22,11 +22,11 @@ public class GridReference : GameObjectReference {
         var extension = gameObject.GetComponent<GameObjectExtension>();
         Cell = Grid.PosToCell(gameObject);
         Layer = extension != null ? extension.GridLayer : 0;
-        WorldId = ResolveWorldId(Cell);
+        WorldId = WorldIdentity.GetCellWorldId(Cell);
     }
 
     protected override GameObject? ResolveGameObject() {
-        if (WorldId.HasValue && ResolveWorldId(Cell) is { } currentWorldId && currentWorldId != WorldId)
+        if (WorldId.HasValue && WorldIdentity.GetCellWorldId(Cell) is { } currentWorldId && currentWorldId != WorldId)
             return null;
         return Grid.Objects[Cell, Layer];
     }
@@ -47,16 +47,5 @@ public class GridReference : GameObjectReference {
     }
 
     public override int GetHashCode() => Cell * 397 ^ Layer;
-
-    private static int? ResolveWorldId(int cell) {
-        const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-        var gridType = typeof(Grid);
-        var value = gridType.GetField("WorldIdx", flags)?.GetValue(null)
-                    ?? gridType.GetProperty("WorldIdx", flags)?.GetValue(null);
-        return value switch {
-            int[] worldIdx when cell >= 0 && cell < worldIdx.Length => worldIdx[cell],
-            _ => null
-        };
-    }
 
 }

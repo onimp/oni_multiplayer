@@ -10,5 +10,6 @@ public record DragCompleteEventArgs(
     Vector3 CursorDown,
     Vector3 CursorUp,
     PrioritySetting Priority,
-    string[]? Parameters
+    string[]? Parameters,
+    int? WorldId = null
 );

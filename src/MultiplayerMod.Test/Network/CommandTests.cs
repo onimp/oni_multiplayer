@@ -82,6 +82,11 @@ public class CommandTests {
         Assert.NotNull(message);
     }
 
+    [Test]
+    public void CorruptNetworkMessageIsRejectedWithNetworkException() {
+        Assert.Throws<NetworkPlatformException>(() => NetworkSerializer.Deserialize(new byte[] { 1, 2, 3 }, 3));
+    }
+
     private static byte[] Copy(INetworkMessageHandle handle) {
         var data = new byte[checked((int) handle.Size)];
         Marshal.Copy(handle.Pointer, data, 0, (int) handle.Size);

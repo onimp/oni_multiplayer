@@ -15,6 +15,10 @@ This branch tracks work needed to make Oni Multiplayer reviewable upstream while
 - `src/MultiplayerMod/MultiplayerMod.csproj` now targets current Klei metadata without a default root-level `supportedContent` restriction.
 - Klei's current `mod_info.yaml` guidance uses optional `requiredDlcIds` and `forbiddenDlcIds` for DLC restrictions; `supportedContent` is deprecated as of U55 / March 2025 and should only be used for archived builds targeting older game versions.
 - The current hard-sync model sends a full save to clients through `WorldManager.Sync()`, then reloads it client-side.
+- Full save sync now has an indexed chunk transfer path with total-size and SHA-256 validation for large DLC saves.
+- Grid/tool/player cursor commands now carry nullable world identity where it can be inferred, and received commands skip unsafe cross-world execution when the target world cannot be activated.
+- Rocket, starmap, cluster-map, spacecraft, and rocket-cargo object calls are treated as DLC preview risk areas and are blocked with user-visible notifications instead of being blindly serialized.
+- Network fragment reassembly now uses explicit fragment indexes and the same BinaryFormatter surrogate selector as normal command deserialization.
 - The current debug drift snapshot hashes global grid arrays and chore/state-machine state, so DLC multi-world and cluster systems need special attention.
 - Detailed research notes are tracked in [DLC Multiplayer Research Notes](DLC_MULTIPLAYER_RESEARCH.md).
 
@@ -76,9 +80,8 @@ This branch tracks work needed to make Oni Multiplayer reviewable upstream while
 
 ## First implementation candidates
 
-1. Add a non-invasive compatibility fingerprint that reads game build, DLC/content mode, active save DLC IDs, mod list, and generated mod version.
-2. Generate current Klei `mod_info.yaml` metadata without default DLC restrictions.
-3. Transfer full saves in chunks so DLC colonies are not limited by one large command payload.
-4. Show client-side save transfer progress while large DLC saves are received and verified.
-5. Add DLC smoke-test notes and log parsing scripts for Harmony failures.
-6. Extend debug snapshots with world IDs before modifying gameplay sync behavior.
+1. Run the smoke checklist on two local DLC clients and attach `Player.log` excerpts to the PR.
+2. Replace preview rocket/starmap blocks with targeted command serializers once runtime logs identify safe method/state boundaries.
+3. Add a manual host-authoritative resync button for recoverable DLC desyncs.
+4. Extend debug snapshots with per-world and cluster identifiers before broadening rocket/starmap synchronization.
+5. Add a runtime compatibility report to the multiplayer diagnostics overlay.

@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+using System;
+using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Debug;
@@ -152,20 +153,34 @@ public class GameEventsBinder {
     private void BindMechanics() {
         ObjectEvents.ComponentMethodCalled += args => {
             if (DlcMultiplayerSafety.ShouldBlockObjectSync(args.Method)) {
-                log.Warning($"Blocked unsafe DLC object sync for {args.Method.DeclaringType?.Name}.{args.Method.Name}");
+                var message = DlcMultiplayerSafety.GetBlockMessage(args.Method);
+                log.Warning(message);
+                DlcMultiplayerSafety.NotifyUnsupported(message);
                 return;
             }
-            client.Send(new CallMethod(args));
+            TrySendObjectCall(args.Method, () => new CallMethod(args));
         };
         ObjectEvents.StateMachineMethodCalled += args => {
             if (DlcMultiplayerSafety.ShouldBlockObjectSync(args.Method)) {
-                log.Warning($"Blocked unsafe DLC state-machine sync for {args.Method.DeclaringType?.Name}.{args.Method.Name}");
+                var message = DlcMultiplayerSafety.GetBlockMessage(args.Method);
+                log.Warning(message);
+                DlcMultiplayerSafety.NotifyUnsupported(message);
                 return;
             }
-            client.Send(new CallMethod(args));
+            TrySendObjectCall(args.Method, () => new CallMethod(args));
         };
         TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
         TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
+    }
+
+    private void TrySendObjectCall(System.Reflection.MethodBase method, Func<CallMethod> commandFactory) {
+        try {
+            client.Send(commandFactory());
+        } catch (Exception e) {
+            var message = $"Skipped multiplayer sync for {method.DeclaringType?.Name}.{method.Name}: {e.Message}";
+            log.Warning(message);
+            DlcMultiplayerSafety.NotifyUnsupported(message);
+        }
     }
 
     private void BindSideScreens() {

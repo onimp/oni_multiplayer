@@ -15,12 +15,18 @@ public class Modify : MultiplayerCommand {
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     public override void Execute(MultiplayerCommandContext context) {
-        var tool = new DebugTool {
-            type = arguments.Type
-        };
-        GameContext.Override(
-            arguments.ToolContext,
-            () => { arguments.DragEventArgs.Cells.ForEach(it => tool.OnDragTool(it, 0)); }
+        WorldCommandScope.Execute(
+            arguments.DragEventArgs.WorldId,
+            nameof(Modify),
+            () => {
+                var tool = new DebugTool {
+                    type = arguments.Type
+                };
+                GameContext.Override(
+                    arguments.ToolContext,
+                    () => { arguments.DragEventArgs.Cells.ForEach(it => tool.OnDragTool(it, 0)); }
+                );
+            }
         );
     }
 
