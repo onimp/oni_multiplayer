@@ -18,9 +18,15 @@ public abstract class AbstractDragToolCommand<T> : MultiplayerCommand where T : 
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     public override void Execute(MultiplayerCommandContext context) {
-        var tool = new T();
-        InitializeTool(tool);
-        GameContext.Override(CreateContext(), () => InvokeTool(tool));
+        WorldCommandScope.Execute(
+            Arguments.WorldId,
+            typeof(T).Name,
+            () => {
+                var tool = new T();
+                InitializeTool(tool);
+                GameContext.Override(CreateContext(), () => InvokeTool(tool));
+            }
+        );
     }
 
     protected virtual IGameContext CreateContext() => new PrioritySettingsContext(Arguments.Priority);

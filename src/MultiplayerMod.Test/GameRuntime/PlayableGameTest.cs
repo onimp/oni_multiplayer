@@ -26,6 +26,15 @@ namespace MultiplayerMod.Test.GameRuntime;
 
 public abstract class PlayableGameTest {
 
+    // Minimal personality CSV for the test environment.
+    // Provides a valid Personality entry so Db.Get().Personalities has data,
+    // avoiding NullReferenceException in MinionIdentity.OnSpawn and downstream lookups.
+    private const string TestPersonalitiesCsv =
+        "Name,Gender,PersonalityType,StressTrait,JoyTrait,StickerType,CongenitalTrait," +
+        "HeadShape,Mouth,Neck,Eyes,Hair,Body,Belt,Cuff,Foot,Hand,Pelvis,Leg,Arm_Skin,Leg_Skin," +
+        "ValidStarter,Grave,Model,SpeechMouth,RequiredDlcId\n" +
+        "TestDupe,Male,Sweet,UglyCrier,BalloonArtist,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,testdupe,Minion,0,";
+
     protected static Harmony Harmony = null!;
     protected static IDependencyContainer DependencyContainer => Dependencies.Get<IDependencyContainer>();
     protected static EventDispatcher Events => Dependencies.Get<EventDispatcher>();
@@ -33,7 +42,7 @@ public abstract class PlayableGameTest {
     [OneTimeSetUp]
     public static void SetUpGame() {
         Harmony = new Harmony("AbstractGameTest");
-        var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch) });
+        var patches = new HashSet<Type>(new[] { typeof(DbPatch), typeof(AssetsPatch), typeof(ElementLoaderPatch), typeof(SensorsPatch), typeof(ChoreConsumerStatePatch) });
         UnityTestRuntime.Install();
         PatchesSetup.Install(Harmony, patches);
         SetUpUnityAndGame();
@@ -45,7 +54,42 @@ public abstract class PlayableGameTest {
     public static void TearDown() {
         UnityTestRuntime.Uninstall();
         PatchesSetup.Uninstall(Harmony);
+
+        // Game core
         global::Game.Instance = null;
+        Global.Instance = null;
+        KObjectManager.Instance = null;
+
+        // World & navigation
+        World.Instance = null;
+        Pathfinding.Instance = null;
+        NavigationReservations.Instance = null;
+
+        // Singletons from SetUpUnityAndGame
+        DistributionPlatform.sImpl = null;
+        ReportManager.Instance = null;
+        StateMachineDebuggerSettings._Instance = null;
+        MinionGroupProber.Instance = null;
+        GameClock.Instance = null;
+        GlobalChoreProvider.Instance = null;
+        ScheduleManager.Instance = null;
+        NameDisplayScreen.Instance = null;
+        BuildingConfigManager.Instance = null;
+        CustomGameSettings.instance = null;
+        GameComps.InfraredVisualizers = null;
+        GameScreenManager.Instance = null;
+        GameScenePartitioner.instance = null;
+
+        // Assets
+        BundledAssetsLoader.instance = null;
+        BuildingLoader.Instance = null;
+        Assets.ModLoadedKAnims = null;
+        Assets.instance = null;
+
+        // InitGame singletons
+        Singleton<CellChangeMonitor>.DestroyInstance();
+        GameScheduler.Instance = null;
+        ElementLoader.elements = null;
     }
 
     protected static GameObject createGameObject() {
@@ -85,6 +129,7 @@ public abstract class PlayableGameTest {
         PathFinder.Initialize();
         new GameNavGrids(Pathfinding.Instance);
         worldGameObject.AddComponent<NavigationReservations>().Awake();
+        worldGameObject.AddComponent<ScheduleManager>().Awake();
         worldGameObject.AddComponent<NameDisplayScreen>().Awake();
         worldGameObject.AddComponent<BuildingConfigManager>().Awake();
         SetupAssets(worldGameObject);
@@ -108,7 +153,7 @@ public abstract class PlayableGameTest {
         assets.BlockTileDecorInfoAssets = new List<BlockTileDecorInfo>();
         Assets.ModLoadedKAnims = new List<KAnimFile>() { ScriptableObject.CreateInstance<KAnimFile>() };
         assets.elementAudio = new TextAsset("");
-        assets.personalitiesFile = new TextAsset("");
+        assets.personalitiesFile = new TextAsset(TestPersonalitiesCsv);
         Assets.instance = assets;
 
         AsyncLoadManager<IGlobalAsyncLoader>.Run();

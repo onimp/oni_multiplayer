@@ -1,0 +1,87 @@
+# DLC Multiplayer PR Roadmap
+
+This branch tracks work needed to make Oni Multiplayer reviewable upstream while adding DLC-compatible multiplayer support and improving the player experience.
+
+## PR baseline
+
+- Upstream: <https://github.com/onimp/oni_multiplayer>
+- Working branch: `dlc-multiplayer-maintenance`
+- Base branch: upstream `main-ai`
+- Personal fork policy: temporary PR carrier only, not a long-lived distribution line.
+
+## Current evidence
+
+- The project README now labels DLC support as preview and requires runtime smoke testing before calling it stable.
+- `src/MultiplayerMod/MultiplayerMod.csproj` now targets current Klei metadata without a default root-level `supportedContent` restriction.
+- Klei's current `mod_info.yaml` guidance uses optional `requiredDlcIds` and `forbiddenDlcIds` for DLC restrictions; `supportedContent` is deprecated as of U55 / March 2025 and should only be used for archived builds targeting older game versions.
+- The current hard-sync model sends a full save to clients through `WorldManager.Sync()`, then reloads it client-side.
+- Full save sync now has an indexed chunk transfer path with total-size and SHA-256 validation for large DLC saves.
+- Grid/tool/player cursor commands now carry nullable world identity where it can be inferred, and received commands skip unsafe cross-world execution when the target world cannot be activated.
+- Rocket, starmap, cluster-map, spacecraft, and rocket-cargo object calls are treated as DLC preview risk areas and are blocked with user-visible notifications instead of being blindly serialized.
+- Network fragment reassembly now uses explicit fragment indexes and the same BinaryFormatter surrogate selector as normal command deserialization.
+- The current debug drift snapshot hashes global grid arrays and chore/state-machine state, so DLC multi-world and cluster systems need special attention.
+- Detailed research notes are tracked in [DLC Multiplayer Research Notes](DLC_MULTIPLAYER_RESEARCH.md).
+
+## Maintenance principles
+
+1. Keep Vanilla working while DLC support is added.
+2. Prefer runtime capability checks over unconditional DLC assumptions.
+3. Keep the host authoritative for commands, save sync, and resync decisions.
+4. Treat DLC support as a compatibility matrix, not a manifest-only change.
+5. Improve UX around lobby readiness, version mismatches, resync progress, and recoverable desyncs before calling the fork playable.
+
+## Workstreams
+
+### 1. Build and packaging
+
+- Keep current `mod_info.yaml` build properties for `minimumSupportedBuild`, `version`, `APIVersion`, and optional DLC restrictions.
+- Keep legacy `supportedContent` available only for archived builds targeting older ONI versions.
+- Do not publish DLC compatibility metadata until the DLC smoke matrix passes.
+- Update release packaging to make the generated `mod_info.yaml` visible and easy to audit.
+- Document local `Directory.Build.props.user` overrides for custom Steam library paths.
+
+### 2. DLC startup compatibility
+
+- Launch with Spaced Out! enabled and collect Harmony patch failures from `Player.log`.
+- Audit patches that touch world loading, colony diagnostics, research, schedules, priorities, side screens, and tools.
+- Wrap optional or moved DLC targets with existing compatibility helpers where possible.
+- Add a small runtime compatibility report to the multiplayer diagnostics overlay.
+
+### 3. Multi-world and cluster synchronization
+
+- Audit every command that assumes `ClusterManager.Instance.activeWorld` or a single active asteroid.
+- Include world identity in commands that operate on grid cells, buildings, chores, diagnostics, and overlays.
+- Extend debug snapshots toward per-world/cluster drift reporting instead of one global error count.
+- Verify hard sync preserves rockets, asteroids, space POIs, teleporter state, and world focus.
+
+### 4. Save/load and resync reliability
+
+- Validate cloud and local save paths with DLC saves.
+- Measure full-save payload size and fragmentation behavior for larger DLC colonies.
+- Transfer full saves as bounded chunks with size and checksum validation.
+- Reassemble low-level network fragments by explicit fragment index so large DLC payloads tolerate out-of-order delivery.
+- Add clearer status messages for pause, save capture, transfer, load, and resume phases.
+- Add a manual "request resync" path that is safe for non-host players to trigger through the host.
+
+### 5. DLC gameplay command coverage
+
+- Re-test existing synced UI and tool commands under DLC.
+- Add or repair commands for DLC-specific screens and interactions, especially rockets, starmap, teleporters, radbolts, and multi-asteroid colony controls.
+- Keep command serialization deterministic and version-tolerant.
+- Add targeted tests for any new command arguments or surrogate serializers.
+
+### 6. Multiplayer experience upgrades
+
+- Show host/client game build, DLC mode, mod version, and ready state in the lobby/wait UI.
+- Detect incompatible mod or game versions before loading a save.
+- Improve cursor labels for players on different screens or worlds.
+- Add better disconnect, reconnect, and resync messaging.
+- Track latency/packet loss enough to explain whether lag is network, save transfer, or simulation drift.
+
+## First implementation candidates
+
+1. Run the smoke checklist on two local DLC clients and attach `Player.log` excerpts to the PR.
+2. Replace preview rocket/starmap blocks with targeted command serializers once runtime logs identify safe method/state boundaries.
+3. Add a manual host-authoritative resync button for recoverable DLC desyncs.
+4. Extend debug snapshots with per-world and cluster identifiers before broadening rocket/starmap synchronization.
+5. Add a runtime compatibility report to the multiplayer diagnostics overlay.

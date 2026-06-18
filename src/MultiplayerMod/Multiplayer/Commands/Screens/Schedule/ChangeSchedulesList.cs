@@ -4,6 +4,7 @@ using System.Linq;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
+using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands.Screens.Schedule;
 
@@ -63,6 +64,7 @@ public class ChangeSchedulesList : MultiplayerCommand {
                     1,
                     a.Name,
                     a.description,
+                    a.uiColor,
                     a.notificationTooltip,
                     a.allowedTypes,
                     a.alarm

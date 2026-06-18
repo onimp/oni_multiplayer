@@ -16,15 +16,21 @@ public abstract class AbstractBuildUtilityCommand<T> : MultiplayerCommand where 
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     public override void Execute(MultiplayerCommandContext context) {
-        var definition = Assets.GetBuildingDef(Arguments.PrefabId);
-        var tool = new T {
-            def = definition,
-            conduitMgr = definition.BuildingComplete.GetComponent<IHaveUtilityNetworkMgr>().GetNetworkManager(),
-            selectedElements = Arguments.Materials,
-            path = Arguments.Path
-        };
+        WorldCommandScope.Execute(
+            Arguments.WorldId,
+            typeof(T).Name,
+            () => {
+                var definition = Assets.GetBuildingDef(Arguments.PrefabId);
+                var tool = new T {
+                    def = definition,
+                    conduitMgr = definition.BuildingComplete.GetComponent<IHaveUtilityNetworkMgr>().GetNetworkManager(),
+                    selectedElements = Arguments.Materials,
+                    path = Arguments.Path
+                };
 
-        GameContext.Override(new PrioritySettingsContext(Arguments.Priority), () => tool.BuildPath());
+                GameContext.Override(new PrioritySettingsContext(Arguments.Priority), () => tool.BuildPath());
+            }
+        );
     }
 
 }

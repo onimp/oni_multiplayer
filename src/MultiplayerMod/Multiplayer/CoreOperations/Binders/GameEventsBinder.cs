@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+using System;
+using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Debug;
@@ -9,6 +10,7 @@ using MultiplayerMod.Game.UI.Overlay;
 using MultiplayerMod.Game.UI.Screens.Events;
 using MultiplayerMod.Game.UI.SideScreens;
 using MultiplayerMod.Game.UI.Tools.Events;
+using MultiplayerMod.Multiplayer.Compatibility;
 using MultiplayerMod.Multiplayer.Commands.Alerts;
 using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
@@ -101,7 +103,8 @@ public class GameEventsBinder {
 
         UserMenuScreenEvents.PriorityChanged += (target, priority) => client.Send(new ChangePriority(target, priority));
 
-        MeterScreenEvents.RedAlertToggling += enabled => client.Send(new ChangeRedAlertState(enabled));
+        MeterScreenEvents.RedAlertToggling += (enabled, worldId) =>
+            client.Send(new ChangeRedAlertState(enabled, worldId));
     }
 
     private void BindTools() {
@@ -148,10 +151,36 @@ public class GameEventsBinder {
     }
 
     private void BindMechanics() {
-        ObjectEvents.ComponentMethodCalled += args => client.Send(new CallMethod(args));
-        ObjectEvents.StateMachineMethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.ComponentMethodCalled += args => {
+            if (DlcMultiplayerSafety.ShouldBlockObjectSync(args.Method)) {
+                var message = DlcMultiplayerSafety.GetBlockMessage(args.Method);
+                log.Warning(message);
+                DlcMultiplayerSafety.NotifyUnsupported(message);
+                return;
+            }
+            TrySendObjectCall(args.Method, () => new CallMethod(args));
+        };
+        ObjectEvents.StateMachineMethodCalled += args => {
+            if (DlcMultiplayerSafety.ShouldBlockObjectSync(args.Method)) {
+                var message = DlcMultiplayerSafety.GetBlockMessage(args.Method);
+                log.Warning(message);
+                DlcMultiplayerSafety.NotifyUnsupported(message);
+                return;
+            }
+            TrySendObjectCall(args.Method, () => new CallMethod(args));
+        };
         TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
         TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
+    }
+
+    private void TrySendObjectCall(System.Reflection.MethodBase method, Func<CallMethod> commandFactory) {
+        try {
+            client.Send(commandFactory());
+        } catch (Exception e) {
+            var message = $"Skipped multiplayer sync for {method.DeclaringType?.Name}.{method.Name}: {e.Message}";
+            log.Warning(message);
+            DlcMultiplayerSafety.NotifyUnsupported(message);
+        }
     }
 
     private void BindSideScreens() {

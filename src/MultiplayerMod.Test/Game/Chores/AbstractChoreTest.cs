@@ -12,6 +12,8 @@ using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Test.Environment.Patches;
 using MultiplayerMod.Test.GameRuntime;
 using MultiplayerMod.Test.GameRuntime.Patches;
+using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.ModRuntime.StaticCompatibility;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -35,6 +37,11 @@ public class AbstractChoreTest : PlayableGameTest {
     private static FetchOrder2 fetchOrder2 = null!;
     private static TestMonoBehaviour testMonoBehaviour = null!;
     private static Db db = null!;
+
+    [OneTimeSetUp]
+    public void InjectDependencies() {
+        Dependencies.Get<IDependencyInjector>().Inject(typeof(ChoreExtensions));
+    }
 
     [SetUp]
     public void AbstractSetUp() {
@@ -117,11 +124,10 @@ public class AbstractChoreTest : PlayableGameTest {
         targetGameObject.AddComponent<Effects>();
         targetGameObject.AddComponent<Modifiers>().Awake();
         targetGameObject.GetComponent<Modifiers>().attributes.Add(Db.Get().Attributes.CarryAmount);
-        targetGameObject.AddComponent<PathProber>();
         targetGameObject.AddComponent<Facing>();
         targetGameObject.AddComponent<KSelectable>();
         targetGameObject.AddComponent<ConsumableConsumer>().forbiddenTagSet = new HashSet<Tag>();
-        targetGameObject.AddComponent<Worker>();
+        targetGameObject.AddComponent<StandardWorker>();
 
         Assets.PrefabsByTag[(Tag) TargetLocator.ID] = targetGameObject.GetComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) MinionAssignablesProxyConfig.ID] =
@@ -131,21 +137,22 @@ public class AbstractChoreTest : PlayableGameTest {
         locatorGameObject.AddComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) ApproachableLocator.ID] = locatorGameObject.GetComponent<KPrefabID>();
         var navigator = targetGameObject.AddComponent<Navigator>();
-        navigator.NavGridName = MinionConfig.MINION_NAV_GRID_NAME;
+        navigator.NavGridName = TUNING.DUPLICANTSTATS.STANDARD.BaseStats.NAV_GRID_NAME;
         navigator.CurrentNavType = NavType.Floor;
         navigator.Awake();
         navigator.Start();
         navigator.SetAbilities(new MinionPathFinderAbilities(navigator));
         minion.GetComponent<Navigator>().NavGrid.NavTable.SetValid(19, NavType.Floor, true);
 
-        targetGameObject.AddComponent<MinionIdentity>().Awake();
-        targetGameObject.GetComponent<MinionIdentity>().Start();
-        var ownables = targetGameObject.GetComponent<MinionIdentity>().assignableProxy.Get().FindOrAdd<Ownables>();
+        var minionIdentity = targetGameObject.AddComponent<MinionIdentity>();
+        minionIdentity.personalityResourceId = (HashedString) "TESTDUPE";
+        minionIdentity.Awake();
+        minionIdentity.Start();
+        var ownables = minionIdentity.assignableProxy.Get().FindOrAdd<Ownables>();
         ownables.slots.Add(new OwnableSlotInstance(ownables, (OwnableSlot) Db.Get().AssignableSlots.MessStation));
         targetGameObject.AddComponent<OxygenBreather>();
         targetGameObject.AddComponent<MinionBrain>().Awake();
         targetGameObject.AddComponent<SkillPerkMissingComplainer>();
-
         var sensors = targetGameObject.AddComponent<Sensors>();
         sensors.Add(new SafeCellSensor(sensors));
         sensors.Add(new IdleCellSensor(sensors));

@@ -8,5 +8,6 @@ public record UtilityBuildEventArgs(
     string PrefabId,
     Tag[] Materials,
     List<BaseUtilityBuildTool.PathNode> Path,
-    PrioritySetting Priority
+    PrioritySetting Priority,
+    int? WorldId = null
 );

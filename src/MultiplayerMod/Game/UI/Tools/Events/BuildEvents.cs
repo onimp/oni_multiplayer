@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.ModRuntime.Context;
 using Object = UnityEngine.Object;
 
@@ -88,7 +89,8 @@ public static class BuildEvents {
                 tool.buildingOrientation,
                 tool.selectedElements.ToArray(),
                 tool.facadeID,
-                GameState.BuildToolPriority
+                GameState.BuildToolPriority,
+                WorldIdentity.GetCellWorldId(cell)
             )
         );
     }

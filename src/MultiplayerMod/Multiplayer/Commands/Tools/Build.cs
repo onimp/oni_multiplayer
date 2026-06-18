@@ -18,9 +18,15 @@ public class Build : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        var definition = Assets.GetBuildingDef(arguments.PrefabId);
-        var cbcPosition = Grid.CellToPosCBC(arguments.Cell, Grid.SceneLayer.Building);
-        GameContext.Override(new DisableBuildingValidation(), () => Execute(definition, cbcPosition));
+        WorldCommandScope.Execute(
+            arguments.WorldId,
+            nameof(Build),
+            () => {
+                var definition = Assets.GetBuildingDef(arguments.PrefabId);
+                var cbcPosition = Grid.CellToPosCBC(arguments.Cell, Grid.SceneLayer.Building);
+                GameContext.Override(new DisableBuildingValidation(), () => Execute(definition, cbcPosition));
+            }
+        );
     }
 
     private void Execute(BuildingDef definition, Vector3 cbcPosition) {

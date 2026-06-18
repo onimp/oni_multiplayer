@@ -46,7 +46,7 @@
     <Target Name="GenerateModInfo" AfterTargets="Build">
         <Message Text="Generating mod_info.yaml"/>
         <ItemGroup>
-            <ModInfoYaml Include="supportedContent: $(OniSupportedContent)"/>
+            <ModInfoYaml Include="supportedContent: $(OniSupportedContent)" Condition="'$(OniSupportedContent)' != ''"/>
             <ModInfoYaml Include="minimumSupportedBuild: $(OniMinimumSupportedBuild)"/>
             <ModInfoYaml Include="version: $(BuildVersion)"/>
             <ModInfoYaml Include="APIVersion: $(OniApiVersion)"/>

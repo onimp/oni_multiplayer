@@ -5,6 +5,7 @@ using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer;
+using MultiplayerMod.Multiplayer.Compatibility;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Multiplayer.Commands.Registry;
 using MultiplayerMod.Multiplayer.CoreOperations;
@@ -46,6 +47,9 @@ public static class MultiplayerTools {
             .AddType<MultiplayerCommandController>()
             .AddType<MultiplayerJoinRequestController>()
             .AddType<PlayersManagementController>()
+            .AddType<CompatibilityFingerprintProvider>()
+            .AddType<CompatibilityValidator>()
+            .AddType<WorldSaveTransferManager>()
             .AddType<SpeedControlScreenContext>()
             .AddType<MultiplayerCommandRegistry>()
             .AddType<Recorders>()

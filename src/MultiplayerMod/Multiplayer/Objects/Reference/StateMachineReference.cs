@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.ModRuntime;
 
@@ -24,9 +25,18 @@ public class ChoreStateMachineReference(Chore chore) : TypedReference<StateMachi
     [InjectDependency]
     private static MultiplayerObjects objects = null!;
 
+    private static readonly MethodInfo getSmiMethod = typeof(StandardChoreBase).GetMethod(
+        "GetSMI",
+        BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance,
+        null,
+        Type.EmptyTypes,
+        null
+    )!;
+
     private MultiplayerId id = objects.Get(chore)!.Id;
 
-    public override StateMachine.Instance Resolve() => objects.Get<Chore>(id)!.GetSMI();
+    public override StateMachine.Instance Resolve() =>
+        (StateMachine.Instance) getSmiMethod.Invoke(objects.Get<Chore>(id)!, null)!;
 
     public StateMachine.Instance Get() => Resolve();
 

@@ -16,13 +16,19 @@ public class Stamp : MultiplayerCommand {
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation
     public override void Execute(MultiplayerCommandContext context) {
-        var tool = new StampTool {
-            stampTemplate = arguments.Template,
-            ready = true,
-            selectAffected = false,
-            deactivateOnStamp = false
-        };
-        GameContext.Override(new StampCompletionOverride(), () => tool.Stamp(arguments.Location));
+        WorldCommandScope.Execute(
+            arguments.WorldId,
+            nameof(Stamp),
+            () => {
+                var tool = new StampTool {
+                    stampTemplate = arguments.Template,
+                    ready = true,
+                    selectAffected = false,
+                    deactivateOnStamp = false
+                };
+                GameContext.Override(new StampCompletionOverride(), () => tool.Stamp(arguments.Location));
+            }
+        );
     }
 
 }

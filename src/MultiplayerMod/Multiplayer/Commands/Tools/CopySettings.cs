@@ -18,7 +18,11 @@ public class CopySettings : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        GameContext.Override(new DisablePopUpEffects(), DoExecute);
+        WorldCommandScope.Execute(
+            arguments.DragEvent.WorldId,
+            nameof(CopySettings),
+            () => GameContext.Override(new DisablePopUpEffects(), DoExecute)
+        );
     }
 
     // ReSharper disable once Unity.IncorrectMonoBehaviourInstantiation

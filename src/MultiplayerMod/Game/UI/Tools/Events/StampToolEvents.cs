@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 using MultiplayerMod.Core.Patch;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.ModRuntime.Context;
 using UnityEngine;
 
@@ -36,7 +37,7 @@ public static class StampToolEvents {
 
     [RequireExecutionLevel(ExecutionLevel.Game)]
     private static void OnStamp(StampTool instance, Vector2 location) => Stamp?.Invoke(
-        new StampEventArgs(instance.stampTemplate, location)
+        new StampEventArgs(instance.stampTemplate, location, WorldIdentity.GetCursorWorldId(location))
     );
 
 }

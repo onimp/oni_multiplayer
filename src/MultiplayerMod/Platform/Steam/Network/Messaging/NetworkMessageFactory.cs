@@ -15,8 +15,8 @@ public class NetworkMessageFactory {
             yield break;
         }
 
-        var fragmentsCount = (int) message.Size / MaxFragmentDataSize + 1;
-        var header = new NetworkMessageFragmentsHeader(fragmentsCount);
+        var fragmentsCount = ((int) message.Size + MaxFragmentDataSize - 1) / MaxFragmentDataSize;
+        var header = new NetworkMessageFragmentsHeader(fragmentsCount, (int) message.Size);
         var serializedHeader = NetworkSerializer.Serialize(header);
         yield return serializedHeader;
 
@@ -25,7 +25,7 @@ public class NetworkMessageFactory {
             var bufferSize = Math.Min(Math.Max((int) message.Size - offset, 0), MaxFragmentDataSize);
             var data = new byte[bufferSize];
             Buffer.BlockCopy(message.GetBuffer(), offset, data, 0, bufferSize);
-            using var serialized = NetworkSerializer.Serialize(new NetworkMessageFragment(header.MessageId, data));
+            using var serialized = NetworkSerializer.Serialize(new NetworkMessageFragment(header.MessageId, i, data));
             yield return serialized;
         }
     }

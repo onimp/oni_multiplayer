@@ -18,7 +18,7 @@ public static class Configuration {
     public static readonly int MaxFragmentDataSize = GetFragmentDataSize();
 
     private static int GetFragmentDataSize() {
-        using var serialized = NetworkSerializer.Serialize(new NetworkMessageFragment(0, Array.Empty<byte>()));
+        using var serialized = NetworkSerializer.Serialize(new NetworkMessageFragment(0, 0, Array.Empty<byte>()));
         return MaxMessageSize - (int) serialized.Size;
     }
 

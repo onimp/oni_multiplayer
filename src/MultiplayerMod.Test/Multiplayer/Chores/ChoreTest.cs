@@ -152,11 +152,10 @@ public abstract class ChoreTest : PlayableGameTest {
         targetGameObject.AddComponent<Effects>();
         targetGameObject.AddComponent<Modifiers>().Awake();
         targetGameObject.GetComponent<Modifiers>().attributes.Add(Db.Get().Attributes.CarryAmount);
-        targetGameObject.AddComponent<PathProber>();
         targetGameObject.AddComponent<Facing>();
         targetGameObject.AddComponent<KSelectable>();
         targetGameObject.AddComponent<ConsumableConsumer>().forbiddenTagSet = [];
-        targetGameObject.AddComponent<Worker>();
+        targetGameObject.AddComponent<StandardWorker>();
         targetGameObject.AddComponent<Storage>();
 
         Assets.PrefabsByTag[(Tag) TargetLocator.ID] = targetGameObject.GetComponent<KPrefabID>();
@@ -167,21 +166,22 @@ public abstract class ChoreTest : PlayableGameTest {
         locatorGameObject.AddComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) ApproachableLocator.ID] = locatorGameObject.GetComponent<KPrefabID>();
         var navigator = targetGameObject.AddComponent<Navigator>();
-        navigator.NavGridName = MinionConfig.MINION_NAV_GRID_NAME;
+        navigator.NavGridName = TUNING.DUPLICANTSTATS.STANDARD.BaseStats.NAV_GRID_NAME;
         navigator.CurrentNavType = NavType.Floor;
         navigator.Awake();
         navigator.Start();
         navigator.SetAbilities(new MinionPathFinderAbilities(navigator));
         minion.GetComponent<Navigator>().NavGrid.NavTable.SetValid(19, NavType.Floor, true);
 
-        targetGameObject.AddComponent<MinionIdentity>().Awake();
-        targetGameObject.GetComponent<MinionIdentity>().Start();
-        var ownables = targetGameObject.GetComponent<MinionIdentity>().assignableProxy.Get().FindOrAdd<Ownables>();
+        var minionIdentity = targetGameObject.AddComponent<MinionIdentity>();
+        minionIdentity.personalityResourceId = (HashedString) "TESTDUPE";
+        minionIdentity.Awake();
+        minionIdentity.Start();
+        var ownables = minionIdentity.assignableProxy.Get().FindOrAdd<Ownables>();
         ownables.slots.Add(new OwnableSlotInstance(ownables, (OwnableSlot) Db.Get().AssignableSlots.MessStation));
         targetGameObject.AddComponent<OxygenBreather>();
         targetGameObject.AddComponent<MinionBrain>().Awake();
         targetGameObject.AddComponent<SkillPerkMissingComplainer>();
-
         var sensors = targetGameObject.AddComponent<Sensors>();
         sensors.Add(new SafeCellSensor(sensors));
         sensors.Add(new IdleCellSensor(sensors));

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Linq;
 using MultiplayerMod.Core.Logging;
 using static MultiplayerMod.Platform.Steam.Network.Configuration;
 
@@ -26,7 +25,7 @@ public class NetworkMessageProcessor {
             index = new ConcurrentDictionary<int, FragmentsBuffer>();
             fragments[clientId] = index;
         }
-        var buffer = new FragmentsBuffer(header.FragmentsCount);
+        var buffer = new FragmentsBuffer(header.FragmentsCount, header.TotalSize);
         buffer.Timeout += () => {
             log.Warning($"Fragments buffer timed out (message id: {header.MessageId})");
             index.TryRemove(header.MessageId, out _);
@@ -59,9 +58,12 @@ public class NetworkMessageProcessor {
     private class FragmentsBuffer {
         private const int watchdogIntervalMs = 5000;
 
-        private int index;
         private readonly int count;
+        private readonly int totalSize;
+        private readonly byte[]?[] chunks;
         private readonly byte[] buffer;
+        private int receivedCount;
+        private int receivedSize;
 
         public event System.Action? Timeout;
 
@@ -70,24 +72,49 @@ public class NetworkMessageProcessor {
             AutoReset = false
         };
 
-        public FragmentsBuffer(int count) {
+        public FragmentsBuffer(int count, int totalSize) {
+            if (count <= 0 || totalSize < 0)
+                throw new NetworkPlatformException("Invalid fragmentation header.");
+
             this.count = count;
-            buffer = new byte[count * MaxFragmentDataSize];
+            this.totalSize = totalSize;
+            chunks = new byte[]?[count];
+            buffer = new byte[totalSize];
             watchdog.Elapsed += (_, _) => Timeout?.Invoke();
         }
 
         public NetworkMessage? Append(NetworkMessageFragment fragment) {
-            if (index >= count)
-                throw new NetworkPlatformException("Invalid fragmentation: more fragments than expected.");
+            if (fragment.FragmentIndex < 0 || fragment.FragmentIndex >= count)
+                throw new NetworkPlatformException("Invalid fragmentation: fragment index is outside the expected range.");
+
+            var existing = chunks[fragment.FragmentIndex];
+            if (existing != null) {
+                if (!existing.SequenceEqual(fragment.Data))
+                    throw new NetworkPlatformException("Invalid fragmentation: duplicate fragment has different data.");
+                return null;
+            }
 
             watchdog.Interval = watchdogIntervalMs;
-            Buffer.BlockCopy(fragment.Data, 0, buffer, index * MaxFragmentDataSize, fragment.Data.Length);
-            if (++index != count)
+            chunks[fragment.FragmentIndex] = fragment.Data;
+            receivedCount++;
+            receivedSize += fragment.Data.Length;
+            if (receivedCount != count)
                 return null;
 
             watchdog.Enabled = false;
-            using var stream = new MemoryStream(buffer);
-            return (NetworkMessage) new BinaryFormatter().Deserialize(stream);
+            if (receivedSize != totalSize)
+                throw new NetworkPlatformException($"Invalid fragmentation: expected {totalSize} bytes, received {receivedSize} bytes.");
+
+            var offset = 0;
+            for (var i = 0; i < chunks.Length; i++) {
+                var chunk = chunks[i];
+                if (chunk == null)
+                    throw new NetworkPlatformException($"Invalid fragmentation: fragment {i} is missing.");
+                Buffer.BlockCopy(chunk, 0, buffer, offset, chunk.Length);
+                offset += chunk.Length;
+            }
+
+            return (NetworkMessage) NetworkSerializer.Deserialize(buffer, totalSize);
         }
     }
 

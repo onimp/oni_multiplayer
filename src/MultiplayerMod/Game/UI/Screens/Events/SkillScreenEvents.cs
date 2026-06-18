@@ -17,11 +17,11 @@ public static class SkillScreenEvents {
         [HarmonyPatch(nameof(SkillsScreen.OnHatDropEntryClick))]
         [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
-        private static void OnHatDropEntryClick(SkillsScreen __instance, IListableOption skill) {
+        private static void OnHatDropEntryClick(SkillsScreen __instance, IListableOption skill, object data) {
             __instance.GetMinionIdentity(__instance.currentlySelectedMinion, out var minionIdentity, out _);
             SetHat?.Invoke(
                 minionIdentity,
-                (skill as SkillListable)?.skillHat
+                skill?.GetProperName()
             );
         }
 
@@ -35,9 +35,9 @@ public static class SkillScreenEvents {
         [HarmonyPatch(nameof(SkillMinionWidget.OnHatDropEntryClick))]
         [RequireExecutionLevel(ExecutionLevel.Game)]
         // ReSharper disable once UnusedMember.Local
-        private static void OnHatDropEntryClick(SkillMinionWidget __instance, IListableOption skill) {
+        private static void OnHatDropEntryClick(SkillMinionWidget __instance, IListableOption hatOption, object data) {
             __instance.skillsScreen.GetMinionIdentity(__instance.assignableIdentity, out var minionIdentity, out _);
-            SetHat?.Invoke(minionIdentity, (skill as SkillListable)?.skillHat);
+            SetHat?.Invoke(minionIdentity, hatOption?.GetProperName());
         }
 
     }

@@ -1,6 +1,6 @@
 <Project>
 
-    <Target Name="ExposeAssemblies" BeforeTargets="PreBuildEvent">
+    <Target Name="ExposeAssemblies" BeforeTargets="PreBuildEvent" Condition="'$(SkipAssemblyExposure)' != 'true'">
         <ItemGroup>
             <ExposeAssemblies Include="$(ManagedPath)\Assembly-CSharp*.dll"/>
             <ExposureRules Include="Private and internal targets to public">
@@ -42,7 +42,7 @@
         <ExposeAssembly SourceAssemblies="@(ExposeAssemblies)" Rules="@(ExposureRules)" OutputDirectory="$(ExposedLibrariesPath)"/>
     </Target>
 
-    <Target Name="ExposeUnityAssemblies" BeforeTargets="PreBuildEvent">
+    <Target Name="ExposeUnityAssemblies" BeforeTargets="PreBuildEvent" Condition="'$(SkipAssemblyExposure)' != 'true'">
         <ItemGroup>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.CoreModule.dll"/>
             <UnityAssemblies Include="$(ManagedPath)\UnityEngine.UI.dll"/>
@@ -70,7 +70,7 @@
         <ExposeAssembly SourceAssemblies="@(UnityAssemblies)" Rules="@(UnityExposureRules)" OutputDirectory="$(ExposedLibrariesPath)"/>
     </Target>
 
-    <Target Name="ExposeHarmonyAssembly" BeforeTargets="PreBuildEvent">
+    <Target Name="ExposeHarmonyAssembly" BeforeTargets="PreBuildEvent" Condition="'$(SkipAssemblyExposure)' != 'true'">
         <ItemGroup>
             <HarmonyAssembly Include="$(ManagedPath)\0Harmony.dll"/>
             <HarmonyExposureRules Include="Private and internal targets to public">

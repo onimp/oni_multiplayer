@@ -2,6 +2,12 @@
 
 This is a mod which adds multiplayer support to Oxygen not included game.
 
+## DLC compatibility PR preview
+
+This branch is a preview pull request for DLC-compatible multiplayer work. It keeps the upstream mod identity and focuses
+on current ONI metadata, pre-load compatibility checks, large save transfer reliability, and first-pass multi-world
+safety. See [DLC Multiplayer Roadmap](docs/DLC_MULTIPLAYER_ROADMAP.md) for the current plan.
+
 ## Current stage and status
 
 Status: In development
@@ -9,7 +15,7 @@ Stage: Early WIP and proof of concept
 
 Working functionality:
 
-- Currently tested in Vanilla only (NO DLC)
+- DLC preview support is in progress; runtime smoke testing is still required before calling DLC stable.
 - Main menu UI
   - Join/Load/Create MP game
 - Steam overlay support

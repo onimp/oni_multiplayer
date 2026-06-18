@@ -6,10 +6,12 @@ namespace MultiplayerMod.Platform.Steam.Network.Messaging;
 public class NetworkMessageFragment : INetworkMessage {
 
     public int MessageId { get; }
+    public int FragmentIndex { get; }
     public byte[] Data { get; }
 
-    public NetworkMessageFragment(int messageId, byte[] data) {
+    public NetworkMessageFragment(int messageId, int fragmentIndex, byte[] data) {
         MessageId = messageId;
+        FragmentIndex = fragmentIndex;
         Data = data;
     }
 

@@ -6,6 +6,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.Multiplayer.Compatibility;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
 using MultiplayerMod.Multiplayer.CoreOperations.PlayersManagement.Commands;
 using MultiplayerMod.Multiplayer.Players;
@@ -27,6 +28,8 @@ public class PlayersManagementController {
     private readonly WorldManager worldManager;
     private readonly MultiplayerGame multiplayer;
     private readonly UnityTaskScheduler scheduler;
+    private readonly CompatibilityFingerprintProvider compatibilityProvider;
+    private readonly CompatibilityValidator compatibilityValidator;
 
     private readonly IPlayerProfileProvider profileProvider;
 
@@ -39,7 +42,9 @@ public class PlayersManagementController {
         IPlayerProfileProvider profileProvider,
         WorldManager worldManager,
         MultiplayerGame multiplayer,
-        UnityTaskScheduler scheduler
+        UnityTaskScheduler scheduler,
+        CompatibilityFingerprintProvider compatibilityProvider,
+        CompatibilityValidator compatibilityValidator
     ) {
         this.server = server;
         this.client = client;
@@ -48,6 +53,8 @@ public class PlayersManagementController {
         this.multiplayer = multiplayer;
         this.scheduler = scheduler;
         this.profileProvider = profileProvider;
+        this.compatibilityProvider = compatibilityProvider;
+        this.compatibilityValidator = compatibilityValidator;
 
         server.ClientDisconnected += OnClientDisconnected;
         events.Subscribe<ClientInitializationRequestEvent>(OnClientInitializationRequested);
@@ -70,7 +77,7 @@ public class PlayersManagementController {
 
     private void OnClientStateChanged(MultiplayerClientState state) {
         if (state == MultiplayerClientState.Connected)
-            client.Send(new InitializeClientCommand(profileProvider.GetPlayerProfile()));
+            client.Send(new InitializeClientCommand(profileProvider.GetPlayerProfile(), compatibilityProvider.Create()));
         if (state == MultiplayerClientState.Error) {
             events.Dispatch(new StopMultiplayerEvent(multiplayer));
             events.Dispatch(new ConnectionLostEvent());
@@ -100,8 +107,10 @@ public class PlayersManagementController {
     }
 
     private void OnClientDisconnected(IMultiplayerClientId clientId) {
-        if (!identities.TryGetValue(clientId, out var playerId))
-            throw new PlayersManagementException($"No associated player found for client {clientId}");
+        if (!identities.TryGetValue(clientId, out var playerId)) {
+            log.Debug($"Uninitialized client {clientId} disconnected");
+            return;
+        }
 
         var player = multiplayer.Players[playerId];
         server.SendAll(new RemovePlayerCommand(player.Id));
@@ -110,6 +119,13 @@ public class PlayersManagementController {
     }
 
     private void OnClientInitializationRequested(ClientInitializationRequestEvent @event) {
+        var compatibility = compatibilityValidator.Validate(compatibilityProvider.Create(), @event.Compatibility);
+        if (!compatibility.Compatible) {
+            log.Warning($"Rejected client {@event.ClientId}: {compatibility.ToUserMessage()}");
+            server.Send(@event.ClientId, new RejectClientCommand(compatibility.ToUserMessage()));
+            return;
+        }
+
         var host = @event.ClientId.Equals(client.Id);
         var role = host ? PlayerRole.Host : PlayerRole.Client;
         var player = new MultiplayerPlayer(role, @event.Profile);

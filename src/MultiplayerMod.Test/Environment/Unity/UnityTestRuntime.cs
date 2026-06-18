@@ -44,6 +44,8 @@ public static class UnityTestRuntime {
     };
 
     public static void RegisterGameObject(GameObject gameObject) {
+        if (GetGameObjectCompanionSafe(gameObject) != null)
+            return;
         SetCompanion(
             gameObject,
             new GameObjectCompanion(
