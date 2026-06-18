@@ -2,6 +2,11 @@
 
 This is a mod which adds multiplayer support to Oxygen not included game.
 
+## Fork maintenance line
+
+This fork is preparing a DLC-compatible maintenance line for multiplayer work. See
+[DLC Multiplayer Maintenance Roadmap](docs/DLC_MULTIPLAYER_ROADMAP.md) for the current plan.
+
 ## Current stage and status
 
 Status: In development
