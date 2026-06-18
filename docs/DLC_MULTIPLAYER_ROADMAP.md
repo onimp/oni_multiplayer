@@ -12,10 +12,11 @@ This fork line tracks work needed to keep Oni Multiplayer maintainable while add
 ## Current evidence
 
 - The project README says the mod is currently tested in Vanilla only and not DLC.
-- `src/MultiplayerMod/MultiplayerMod.csproj` currently generates `mod_info.yaml` with `supportedContent: VANILLA_ID`.
-- Klei's `mod_info.yaml` guidance defines `EXPANSION1_ID` for Spaced Out! and allows dual support with `VANILLA_ID,EXPANSION1_ID`.
+- `src/MultiplayerMod/MultiplayerMod.csproj` currently generates `mod_info.yaml` with deprecated `supportedContent: VANILLA_ID`.
+- Klei's current `mod_info.yaml` guidance uses optional `requiredDlcIds` and `forbiddenDlcIds` for DLC restrictions; `supportedContent` is deprecated as of U55 / March 2025 and should only be used for archived builds targeting older game versions.
 - The current hard-sync model sends a full save to clients through `WorldManager.Sync()`, then reloads it client-side.
 - The current debug drift snapshot hashes global grid arrays and chore/state-machine state, so DLC multi-world and cluster systems need special attention.
+- Detailed research notes are tracked in [DLC Multiplayer Research Notes](DLC_MULTIPLAYER_RESEARCH.md).
 
 ## Maintenance principles
 
@@ -29,8 +30,9 @@ This fork line tracks work needed to keep Oni Multiplayer maintainable while add
 
 ### 1. Build and packaging
 
-- Add an explicit supported-content build property so local builds can target Vanilla, DLC, or both.
-- Do not publish `VANILLA_ID,EXPANSION1_ID` until the DLC smoke matrix passes.
+- Add current `mod_info.yaml` build properties for `minimumSupportedBuild`, `version`, `APIVersion`, and optional DLC restrictions.
+- Keep legacy `supportedContent` available only for archived builds targeting older ONI versions.
+- Do not publish DLC compatibility metadata until the DLC smoke matrix passes.
 - Update release packaging to make the generated `mod_info.yaml` visible and easy to audit.
 - Document local `Directory.Build.props.user` overrides for custom Steam library paths.
 
