@@ -1,5 +1,6 @@
 using System;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.UI.Overlays;
 
 namespace MultiplayerMod.Multiplayer.World.Commands;
 
@@ -18,7 +19,12 @@ public class WorldSaveTransferChunk : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
-        context.Dependencies.Get<WorldSaveTransferManager>().Append(transferId, chunkIndex, data);
+        var manager = context.Dependencies.Get<WorldSaveTransferManager>();
+        manager.Append(transferId, chunkIndex, data);
+        var progress = manager.GetProgress(transferId);
+        MultiplayerStatusOverlay.Text =
+            $"Receiving world save {progress.Name}...\n" +
+            $"{progress.ReceivedChunks}/{progress.TotalChunks} chunks ({progress.Percent:0.0}%)";
     }
 
 }

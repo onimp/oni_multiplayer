@@ -20,6 +20,7 @@ Use this checklist before describing the branch as playable with DLC.
 - Start with a new vanilla colony and verify hard sync loads on the client.
 - Start with a Spaced Out colony with multiple worlds and verify hard sync loads on the client.
 - Test a large colony save over 10 MiB and verify transfer completes without hanging.
+- Confirm the client overlay shows save receive progress and then a verification/loading phase.
 - Interrupt a client during transfer and confirm the host remains usable.
 
 ## DLC Risk Areas

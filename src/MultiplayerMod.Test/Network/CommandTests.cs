@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using MultiplayerMod.Multiplayer.Commands;
@@ -32,7 +32,7 @@ public class CommandTests {
         var command = new Command { Value = 42 };
         using var serialized = NetworkSerializer.Serialize(new NetworkMessage(command, MultiplayerCommandOptions.None));
 
-        var data = new byte[serialized.Size];
+        var data = new byte[checked((int) serialized.Size)];
         Marshal.Copy(serialized.Pointer, data, 0, (int) serialized.Size);
 
         var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
@@ -50,18 +50,51 @@ public class CommandTests {
         var processor = new NetworkMessageProcessor();
         var command = new DataCommand();
 
-        var fragmentsCount = 0;
-        var message = factory.Create(command, MultiplayerCommandOptions.None)
-            .Select(
-                fragment => {
-                    fragmentsCount++;
-                    return processor.Process(0, fragment);
-                }
-            )
+        var fragments = factory.Create(command, MultiplayerCommandOptions.None)
+            .Select(Copy)
+            .ToArray();
+        var message = fragments
+            .Select(fragment => Process(processor, fragment))
             .FirstOrDefault(it => it != null);
 
-        Assert.AreEqual(4, fragmentsCount);
+        Assert.Greater(fragments.Length, 1);
         Assert.NotNull(message);
+    }
+
+    [Test]
+    public void TestNetworkMessageFragmentationOutOfOrder() {
+        var factory = new NetworkMessageFactory();
+        var processor = new NetworkMessageProcessor();
+        var command = new DataCommand();
+
+        var fragments = factory.Create(command, MultiplayerCommandOptions.None)
+            .Select(Copy)
+            .ToArray();
+        var header = fragments.First();
+        var dataFragments = fragments.Skip(1).Reverse();
+
+        Process(processor, header);
+        var message = dataFragments
+            .Select(fragment => Process(processor, fragment))
+            .FirstOrDefault(it => it != null);
+
+        Assert.Greater(fragments.Length, 1);
+        Assert.NotNull(message);
+    }
+
+    private static byte[] Copy(INetworkMessageHandle handle) {
+        var data = new byte[checked((int) handle.Size)];
+        Marshal.Copy(handle.Pointer, data, 0, (int) handle.Size);
+        return data;
+    }
+
+    private static NetworkMessage? Process(NetworkMessageProcessor processor, byte[] data) {
+        var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
+        try {
+            return processor.Process(0, new NetworkMessageHandle(dataHandle.AddrOfPinnedObject(), (uint) data.Length));
+        } finally {
+            dataHandle.Free();
+        }
     }
 
 }

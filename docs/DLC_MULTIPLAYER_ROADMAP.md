@@ -55,6 +55,7 @@ This branch tracks work needed to make Oni Multiplayer reviewable upstream while
 - Validate cloud and local save paths with DLC saves.
 - Measure full-save payload size and fragmentation behavior for larger DLC colonies.
 - Transfer full saves as bounded chunks with size and checksum validation.
+- Reassemble low-level network fragments by explicit fragment index so large DLC payloads tolerate out-of-order delivery.
 - Add clearer status messages for pause, save capture, transfer, load, and resume phases.
 - Add a manual "request resync" path that is safe for non-host players to trigger through the host.
 
@@ -78,5 +79,6 @@ This branch tracks work needed to make Oni Multiplayer reviewable upstream while
 1. Add a non-invasive compatibility fingerprint that reads game build, DLC/content mode, active save DLC IDs, mod list, and generated mod version.
 2. Generate current Klei `mod_info.yaml` metadata without default DLC restrictions.
 3. Transfer full saves in chunks so DLC colonies are not limited by one large command payload.
-4. Add DLC smoke-test notes and log parsing scripts for Harmony failures.
-5. Extend debug snapshots with world IDs before modifying gameplay sync behavior.
+4. Show client-side save transfer progress while large DLC saves are received and verified.
+5. Add DLC smoke-test notes and log parsing scripts for Harmony failures.
+6. Extend debug snapshots with world IDs before modifying gameplay sync behavior.

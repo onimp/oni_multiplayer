@@ -1,5 +1,6 @@
 using System;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.UI.Overlays;
 
 namespace MultiplayerMod.Multiplayer.World.Commands;
 
@@ -14,6 +15,7 @@ public class WorldSaveTransferComplete : MultiplayerCommand {
     }
 
     public override void Execute(MultiplayerCommandContext context) {
+        MultiplayerStatusOverlay.Text = "Verifying world save...";
         var world = context.Dependencies.Get<WorldSaveTransferManager>().Complete(transferId);
         context.Dependencies.Get<WorldManager>().RequestWorldLoad(world);
     }

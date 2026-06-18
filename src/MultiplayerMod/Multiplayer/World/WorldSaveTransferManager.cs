@@ -69,6 +69,13 @@ public class WorldSaveTransferManager {
         transfer.Append(chunkIndex, data);
     }
 
+    public WorldSaveTransferProgress GetProgress(Guid transferId) {
+        if (!incoming.TryGetValue(transferId, out var transfer))
+            throw new WorldSaveTransferException($"World save transfer {transferId} was not started.");
+
+        return transfer.GetProgress();
+    }
+
     public WorldSave Complete(Guid transferId) {
         if (!incoming.TryGetValue(transferId, out var transfer))
             throw new WorldSaveTransferException($"World save transfer {transferId} was not started.");
@@ -95,6 +102,7 @@ public class WorldSaveTransferManager {
         private readonly string sha256;
         private readonly byte[]?[] chunks;
         private int receivedChunks;
+        private long receivedBytes;
 
         public IncomingTransfer(
             string name,
@@ -110,7 +118,7 @@ public class WorldSaveTransferManager {
             this.chunkSize = chunkSize;
             this.chunkCount = chunkCount;
             this.sha256 = sha256;
-            chunks = new byte[chunkCount][];
+            chunks = new byte[]?[chunkCount];
         }
 
         public void Append(int chunkIndex, byte[] data) {
@@ -128,7 +136,11 @@ public class WorldSaveTransferManager {
 
             chunks[chunkIndex] = data;
             receivedChunks++;
+            receivedBytes += data.Length;
         }
+
+        public WorldSaveTransferProgress GetProgress() =>
+            new(name, receivedBytes, totalBytes, receivedChunks, chunkCount);
 
         public WorldSave Complete() {
             if (receivedChunks != chunkCount)

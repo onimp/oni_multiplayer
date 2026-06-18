@@ -56,6 +56,23 @@ public class WorldSaveTransferManagerTests {
     }
 
     [Test]
+    public void ReportsTransferProgress() {
+        var source = CreateWorldSave(WorldSaveTransferManager.ChunkSize + 1);
+        var id = Guid.NewGuid();
+        var chunks = Split(source.Data).ToArray();
+        var manager = StartTransfer(id, source, chunks.Length);
+
+        manager.Append(id, 0, chunks[0]);
+
+        var progress = manager.GetProgress(id);
+        Assert.AreEqual(source.Name, progress.Name);
+        Assert.AreEqual(1, progress.ReceivedChunks);
+        Assert.AreEqual(chunks.Length, progress.TotalChunks);
+        Assert.AreEqual(chunks[0].Length, progress.ReceivedBytes);
+        Assert.AreEqual(source.Data.LongLength, progress.TotalBytes);
+    }
+
+    [Test]
     public void MissingChunkIsRejected() {
         var source = CreateWorldSave(WorldSaveTransferManager.ChunkSize + 1);
         var id = Guid.NewGuid();

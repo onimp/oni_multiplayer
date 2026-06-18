@@ -1,5 +1,6 @@
 using System;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.UI.Overlays;
 using MultiplayerMod.Multiplayer.World.Data;
 
 namespace MultiplayerMod.Multiplayer.World.Commands;
@@ -37,6 +38,12 @@ public class WorldSaveTransferStart : MultiplayerCommand {
     public override void Execute(MultiplayerCommandContext context) {
         context.Dependencies.Get<WorldSaveTransferManager>()
             .Start(transferId, name, state, totalBytes, chunkSize, chunkCount, sha256);
+        MultiplayerStatusOverlay.Show($"Receiving world save {name}...\n0/{chunkCount} chunks, {FormatBytes(totalBytes)} total");
+    }
+
+    private static string FormatBytes(long bytes) {
+        var mib = bytes / 1024.0 / 1024.0;
+        return $"{mib:0.0} MiB";
     }
 
 }
