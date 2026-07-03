@@ -95,7 +95,7 @@ public class ChoresPatcher {
 
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void OnChoreCreated(Chore chore, object[] arguments) {
-        var serializable = chore.GetSMI().stateMachine.serializable;
+        var serializable = ((StandardChoreBase) chore).GetSMI().stateMachine.serializable;
         var id = chore.Register(persistent: serializable == StateMachine.SerializeType.Never);
         events.Dispatch(new ChoreCreatedEvent(chore, id, chore.GetType(), arguments));
     }

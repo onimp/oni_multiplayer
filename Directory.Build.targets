@@ -33,8 +33,8 @@
                 <TargetRule>Method</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </ExposureRules>
-            <ExposureRules Include="Chore::GetSMI">
-                <PatternRule>Chore::GetSMI</PatternRule>
+            <ExposureRules Include="StandardChoreBase::GetSMI">
+                <PatternRule>StandardChoreBase::GetSMI</PatternRule>
                 <TargetRule>Method</TargetRule>
                 <VisibilityRule>Public</VisibilityRule>
             </ExposureRules>

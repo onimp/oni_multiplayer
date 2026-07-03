@@ -26,7 +26,7 @@ public class ChoreStateMachineReference(Chore chore) : TypedReference<StateMachi
 
     private MultiplayerId id = objects.Get(chore)!.Id;
 
-    public override StateMachine.Instance Resolve() => objects.Get<Chore>(id)!.GetSMI();
+    public override StateMachine.Instance Resolve() => ((StandardChoreBase) objects.Get<Chore>(id)!).GetSMI();
 
     public StateMachine.Instance Get() => Resolve();
 

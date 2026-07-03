@@ -21,7 +21,7 @@ public class Notifications {
         screen.AddPlainText("Connection has been lost. Further play can not be synced");
         screen.AddOption(
             "OK",
-            _ => PauseScreen.Instance.OnQuitConfirm()
+            _ => PauseScreen.Instance.OnQuitConfirm(true)
         );
     }
 }

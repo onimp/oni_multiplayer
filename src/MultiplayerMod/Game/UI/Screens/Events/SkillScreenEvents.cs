@@ -21,7 +21,7 @@ public static class SkillScreenEvents {
             __instance.GetMinionIdentity(__instance.currentlySelectedMinion, out var minionIdentity, out _);
             SetHat?.Invoke(
                 minionIdentity,
-                (skill as SkillListable)?.skillHat
+                (skill as HatListable)?.hat
             );
         }
 
@@ -37,7 +37,7 @@ public static class SkillScreenEvents {
         // ReSharper disable once UnusedMember.Local
         private static void OnHatDropEntryClick(SkillMinionWidget __instance, IListableOption skill) {
             __instance.skillsScreen.GetMinionIdentity(__instance.assignableIdentity, out var minionIdentity, out _);
-            SetHat?.Invoke(minionIdentity, (skill as SkillListable)?.skillHat);
+            SetHat?.Invoke(minionIdentity, (skill as HatListable)?.hat);
         }
 
     }

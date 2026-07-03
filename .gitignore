@@ -3,6 +3,8 @@
 /packages
 src/Assembly-CSharp-firstpass
 src/Assembly-CSharp
+# Decompiled game source (dnSpy/ILSpy export) — reference only, never commit (copyright)
+/Assembly-Csharp
 src/*/bin/
 src/*/obj/
 /lib

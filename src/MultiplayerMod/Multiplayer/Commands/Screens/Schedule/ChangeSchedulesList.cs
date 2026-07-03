@@ -63,6 +63,7 @@ public class ChangeSchedulesList : MultiplayerCommand {
                     1,
                     a.Name,
                     a.description,
+                    a.uiColor,
                     a.notificationTooltip,
                     a.allowedTypes,
                     a.alarm

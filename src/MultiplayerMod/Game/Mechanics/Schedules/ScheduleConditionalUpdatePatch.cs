@@ -6,7 +6,7 @@ namespace MultiplayerMod.Game.Mechanics.Schedules;
 public static class ScheduleConditionalUpdatePatch {
 
     [HarmonyPrefix]
-    [HarmonyPatch(nameof(Schedule.SetGroup))]
+    [HarmonyPatch(nameof(Schedule.SetBlockGroup))]
     private static bool SetGroupPrefix(Schedule __instance, int idx, ScheduleGroup group) {
         if (idx < 0 || idx >= __instance.blocks.Count)
             return false;

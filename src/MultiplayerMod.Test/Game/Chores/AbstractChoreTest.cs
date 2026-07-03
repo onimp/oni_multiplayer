@@ -117,11 +117,10 @@ public class AbstractChoreTest : PlayableGameTest {
         targetGameObject.AddComponent<Effects>();
         targetGameObject.AddComponent<Modifiers>().Awake();
         targetGameObject.GetComponent<Modifiers>().attributes.Add(Db.Get().Attributes.CarryAmount);
-        targetGameObject.AddComponent<PathProber>();
         targetGameObject.AddComponent<Facing>();
         targetGameObject.AddComponent<KSelectable>();
         targetGameObject.AddComponent<ConsumableConsumer>().forbiddenTagSet = new HashSet<Tag>();
-        targetGameObject.AddComponent<Worker>();
+        targetGameObject.AddComponent<StandardWorker>();
 
         Assets.PrefabsByTag[(Tag) TargetLocator.ID] = targetGameObject.GetComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) MinionAssignablesProxyConfig.ID] =
@@ -131,7 +130,7 @@ public class AbstractChoreTest : PlayableGameTest {
         locatorGameObject.AddComponent<KPrefabID>();
         Assets.PrefabsByTag[(Tag) ApproachableLocator.ID] = locatorGameObject.GetComponent<KPrefabID>();
         var navigator = targetGameObject.AddComponent<Navigator>();
-        navigator.NavGridName = MinionConfig.MINION_NAV_GRID_NAME;
+        navigator.NavGridName = TUNING.DUPLICANTSTATS.STANDARD.BaseStats.NAV_GRID_NAME;
         navigator.CurrentNavType = NavType.Floor;
         navigator.Awake();
         navigator.Start();
@@ -147,6 +146,7 @@ public class AbstractChoreTest : PlayableGameTest {
         targetGameObject.AddComponent<SkillPerkMissingComplainer>();
 
         var sensors = targetGameObject.AddComponent<Sensors>();
+        sensors.Add(new PathProberSensor(sensors));
         sensors.Add(new SafeCellSensor(sensors));
         sensors.Add(new IdleCellSensor(sensors));
         sensors.Add(new MingleCellSensor(sensors));
