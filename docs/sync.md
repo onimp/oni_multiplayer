@@ -24,10 +24,23 @@ _Last updated: 2026-07-03._
 | Manual force save + sync | ✅ | Dev tools → Multiplayer/Controls: host-only button runs the end-of-day save + hard-sync on demand (`DevToolMultiplayerControls`). |
 | World divergence metric | ✅ | `WorldDebugSnapshotComparator` hashes grid buffers every 30 s → the "N errors" diagnostic. |
 
-> **Latency caveat:** all commands share one reliable, in-order Steam stream, so bulk traffic (sim
-> stream, save transfer) head-of-line-blocks latency-sensitive gameplay. The sim stream is kept
-> deliberately light (~11 KB/s) to avoid this. Tight-sync-without-lag needs a lower-priority network
-> lane for bulk traffic — not yet done.
+> **Priority lanes:** traffic is split across three Steam priority lanes (`NetworkLane`) so bulk data
+> can no longer head-of-line-block gameplay:
+> - **Gameplay** (lane 0, highest, reliable) — movement, pause, chores, tool orders, config. Default
+>   for every command.
+> - **Sim** (lane 1, low, **unreliable**) — `SyncSimCells`; idempotent + re-sent, so dropped packets
+>   self-heal. Chunks are kept to a single message (must not fragment).
+> - **Bulk** (lane 2, lowest, reliable) — save transfer (`LoadWorld`) + `SyncWorldDebugSnapshot`.
+>
+> Lanes are set via `ConfigureConnectionLanes`; sends go through `SteamNetworkingMessageSender`
+> (`AllocateMessage` + flat `SendMessages`). If lanes can't be configured — **or if any individual
+> native lane send reports failure** — the transport falls back to `SendMessageToConnection` but still
+> applies each lane's reliability flag (so unreliable-sim keeps working; only cross-lane prioritisation
+> is lost). The sender checks the `SendMessages` result and only reports success when Steam actually
+> queued the message, so a broken native path degrades gracefully instead of silently dropping gameplay
+> commands (which would show up as teleporting duplicants). Look for a one-time
+> `Priority-lane send failed …` / `ConfigureConnectionLanes failed …` warning in the log to tell whether
+> lanes are actually active.
 
 ## Duplicants (chores)
 
@@ -57,7 +70,7 @@ Rather than reproduce the whole labor+materials economy deterministically, the h
 
 | Buffer | Status | Notes |
 |---|---|---|
-| Element / Temperature / Mass / Disease | 🟡 | `SimStateSynchronizer` streams host `Grid` buffers in round-robin chunks; client applies `SimMessages.ModifyCell`. First cut, untested — the fix for gas/oxygen desync. |
+| Element / Temperature / Mass / Disease | 🟡 | `SimStateSynchronizer` streams host `Grid` buffers in round-robin chunks (full map ~16 s) on the unreliable Sim lane; client applies `SimMessages.ModifyCell`. **Fluid cells only** — `SyncSimCells` skips any cell where the incoming or current element is solid, so it can never add/remove terrain (that's owned by Dig/Construction sync). Prevents a stale sim chunk on the slow lane from re-solidifying a just-dug cell. The fix for gas/oxygen desync. |
 | Liquid/gas flow | 🟡 | Follows from the above (element+mass per cell). |
 
 ## Player tools / building interaction

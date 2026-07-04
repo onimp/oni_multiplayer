@@ -1,4 +1,5 @@
 using System;
+using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 
@@ -11,7 +12,11 @@ namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
 // One chunk = a contiguous cell range [startCell, startCell + Length). The host round-robins chunks so
 // the whole map is refreshed over several sends; individual cells keep simulating locally between
 // refreshes, which is acceptable because drift is gradual.
+// Rides the low-priority, unreliable Sim lane: these overwrites are idempotent and re-sent every sweep,
+// so a dropped packet self-heals next sweep and never head-of-line-blocks gameplay. SimStateSynchronizer
+// sizes chunks to stay within a single network message (unreliable must not fragment).
 [Serializable]
+[MultiplayerCommand(Lane = NetworkLane.Sim)]
 public class SyncSimCells : MultiplayerCommand {
 
     private readonly int startCell;
@@ -41,6 +46,17 @@ public class SyncSimCells : MultiplayerCommand {
         for (var i = 0; i < elementIdx.Length; i++) {
             var cell = startCell + i;
             if (!Grid.IsValidCell(cell))
+                continue;
+
+            // The sim sync owns only the FLUID simulation (gas / liquid / vacuum). Terrain structure is
+            // owned authoritatively by DigSynchronizer (removal) and ConstructionSynchronizer (creation),
+            // which ride the reliable Gameplay lane. If we let ModifyCell touch solid cells here it would
+            // race those: a stale chunk (captured before a dig) arrives on the low-priority unreliable Sim
+            // lane after SyncDugCell and re-solidifies the just-dug cell (block flicker, trapped dupes,
+            // and a diverged client nav grid → teleporting). So skip a cell whenever the incoming element
+            // is solid (would recreate terrain) or the client cell is currently solid (would clear it).
+            var incoming = ElementLoader.elements[elementIdx[i]];
+            if (incoming.IsSolid || Grid.Solid[cell])
                 continue;
 
             // ReplaceType.Replace fully overwrites the cell contents (element, temperature, mass,

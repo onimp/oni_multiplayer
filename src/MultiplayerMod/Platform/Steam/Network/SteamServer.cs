@@ -57,6 +57,8 @@ public class SteamServer : IMultiplayerServer {
     private HSteamListenSocket listenSocket;
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
+    private SteamNetworkingMessageSender sender = null!;
+    private readonly HashSet<HSteamNetConnection> lanedConnections = new();
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
     private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback = null!;
 
@@ -173,6 +175,7 @@ public class SteamServer : IMultiplayerServer {
 
         listenSocket = SteamGameServerNetworkingSockets.CreateListenSocketP2P(0, networkConfig.Length, networkConfig);
         pollGroup = SteamGameServerNetworkingSockets.CreatePollGroup();
+        sender = SteamNetworkingMessageSender.ForServer();
 
         SetState(MultiplayerServerState.Starting);
     }
@@ -234,16 +237,25 @@ public class SteamServer : IMultiplayerServer {
         MultiplayerCommandOptions options,
         IEnumerable<HSteamNetConnection> connections
     ) {
+        var lane = commands.GetCommandConfiguration(command.GetType()).Lane;
+        var flags = Configuration.SendFlags(lane);
         var sequence = messageFactory.Create(command, options);
-        sequence.ForEach(handle => connections.ForEach(connection => Send(handle, connection)));
+        sequence.ForEach(handle => connections.ForEach(connection => Send(handle, connection, flags, lane)));
     }
 
-    private void Send(INetworkMessageHandle handle, HSteamNetConnection connection) {
+    private void Send(INetworkMessageHandle handle, HSteamNetConnection connection, int flags, NetworkLane lane) {
+        // Lane-aware send when the connection's lanes are configured; otherwise (or if the native lane
+        // send fails) fall back to the flat API - still honours the reliability flag, only cross-lane
+        // prioritisation is lost. sender.Send only returns false when nothing was queued, so this cannot
+        // duplicate a message.
+        if (sender.Available && lanedConnections.Contains(connection) && sender.Send(handle, connection, flags, lane))
+            return;
+
         var result = SteamGameServerNetworkingSockets.SendMessageToConnection(
             connection,
             handle.Pointer,
             handle.Size,
-            k_nSteamNetworkingSend_Reliable,
+            flags,
             out _
         );
         if (result != k_EResultOK)
@@ -286,11 +298,14 @@ public class SteamServer : IMultiplayerServer {
         }
         SteamGameServerNetworkingSockets.SetConnectionPollGroup(connection, pollGroup);
         clients[new SteamMultiplayerClientId(clientSteamId)] = connection;
+        if (Configuration.ConfigureServerLanes(connection))
+            lanedConnections.Add(connection);
         log.Debug($"Connection accepted from {clientSteamId}");
         return true;
     }
 
     private void CloseConnection(HSteamNetConnection connection, CSteamID clientSteamId) {
+        lanedConnections.Remove(connection);
         ClientDisconnected?.Invoke(new SteamMultiplayerClientId(clientSteamId));
         SteamGameServerNetworkingSockets.CloseConnection(
             connection,

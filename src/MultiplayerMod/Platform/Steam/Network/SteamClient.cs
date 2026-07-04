@@ -6,6 +6,7 @@ using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer.Commands;
+using MultiplayerMod.Multiplayer.Commands.Registry;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network.Components;
 using MultiplayerMod.Platform.Steam.Network.Messaging;
@@ -26,20 +27,24 @@ public class SteamClient : IMultiplayerClient {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
     private readonly SteamLobby lobby;
+    private readonly MultiplayerCommandRegistry commands;
 
     private readonly Lazy<IMultiplayerClientId> playerContainer =
         new(() => new SteamMultiplayerClientId(SteamUser.GetSteamID()));
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
+    private SteamNetworkingMessageSender sender = null!;
+    private bool lanesConfigured;
 
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
 
     private GameObject gameObject = null!;
 
-    public SteamClient(SteamLobby lobby) {
+    public SteamClient(SteamLobby lobby, MultiplayerCommandRegistry commands) {
         this.lobby = lobby;
+        this.commands = commands;
     }
 
     public void Connect(IMultiplayerEndpoint endpoint) {
@@ -87,21 +92,29 @@ public class SteamClient : IMultiplayerClient {
         if (State != MultiplayerClientState.Connected)
             throw new NetworkPlatformException("Client not connected");
 
-        messageFactory.Create(command, options).ForEach(
-            handle => {
-                var result = SteamNetworkingSockets.SendMessageToConnection(
-                    connection,
-                    handle.Pointer,
-                    handle.Size,
-                    k_nSteamNetworkingSend_Reliable,
-                    out var messageOut
-                );
-                if (result != EResult.k_EResultOK || messageOut == 0) {
-                    log.Error($"Failed to send {command}: {result}");
-                    SetState(MultiplayerClientState.Error);
-                }
-            }
+        var lane = commands.GetCommandConfiguration(command.GetType()).Lane;
+        var flags = Configuration.SendFlags(lane);
+        messageFactory.Create(command, options).ForEach(handle => Send(handle, flags, lane));
+    }
+
+    private void Send(INetworkMessageHandle handle, int flags, NetworkLane lane) {
+        // Lane-aware send when lanes are configured; otherwise (or if the native lane send fails) fall
+        // back to the flat API - still honours the reliability flag, only cross-lane prioritisation is
+        // lost. sender.Send only returns false when nothing was queued, so this cannot duplicate a message.
+        if (sender.Available && lanesConfigured && sender.Send(handle, connection, flags, lane))
+            return;
+
+        var result = SteamNetworkingSockets.SendMessageToConnection(
+            connection,
+            handle.Pointer,
+            handle.Size,
+            flags,
+            out var messageOut
         );
+        if (result != EResult.k_EResultOK || messageOut == 0) {
+            log.Error($"Failed to send message: {result}");
+            SetState(MultiplayerClientState.Error);
+        }
     }
 
     private void SetState(MultiplayerClientState status) {
@@ -119,6 +132,9 @@ public class SteamClient : IMultiplayerClient {
         log.Debug($"Lobby game server is {serverId}");
         var identity = GetNetworkingIdentity(serverId);
         connection = SteamNetworkingSockets.ConnectP2P(ref identity, 0, networkConfig.Length, networkConfig);
+
+        sender = SteamNetworkingMessageSender.ForClient();
+        lanesConfigured = Configuration.ConfigureClientLanes(connection);
 
         log.Debug($"P2P Connect to {serverId}");
 
