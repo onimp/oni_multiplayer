@@ -56,11 +56,15 @@ public class ChoresPatcher {
 
         log.Info($"{supportedTypes.Count} chore types patched:\n\t{string.Join("\n\t", supportedTypes.Select(it => it.GetSignature()))}");
 
-        harmony.CreateProcessor(typeof(Chore).GetConstructors()[0])
+        // U57 inserted an abstract `Chore` facade above the old concrete base; the real constructor
+        // and Cleanup body now live on StandardChoreBase, which every chore still passes through.
+        // typeof(Chore).GetConstructors() is now empty (abstract, no public ctor) and Chore.Cleanup
+        // is abstract, so both patches must target StandardChoreBase instead.
+        harmony.CreateProcessor(typeof(StandardChoreBase).GetConstructors()[0])
             .AddPostfix(SymbolExtensions.GetMethodInfo(() => AddMultiplayerPreconditions(null!)))
             .Patch();
 
-        harmony.CreateProcessor(typeof(Chore).GetMethod(nameof(Chore.Cleanup)))
+        harmony.CreateProcessor(typeof(StandardChoreBase).GetMethod(nameof(StandardChoreBase.Cleanup)))
             .AddPostfix(SymbolExtensions.GetMethodInfo(() => ChoreCleanup(null!)))
             .Patch();
     }
@@ -72,7 +76,17 @@ public class ChoresPatcher {
         __instance.AddPrecondition(MultiplayerDriverChores.IsMultiplayerChore);
     }
 
-    public bool Supported(Chore chore) => supportedTypes.Contains(chore.GetType());
+    public bool Supported(Chore chore) => supportedTypes.Contains(chore.GetType()) || IsWorkChore(chore.GetType());
+
+    // WorkChore<WorkableType> backs almost all duplicant labor (dig / build / sweep / deliver / ...).
+    // It's an open generic we cannot list or patch per-instantiation: on Mono all reference-type
+    // WorkChore<T> share one native code body, so Harmony-patching a single closed WorkChore<T>
+    // corrupts the generic type parameter for every other WorkChore<T> (observed as "X does not have
+    // component WorkerOilRefiller" spam). Instead we recognize it structurally here and replicate it
+    // lazily from a recipe at driver-assignment time (see ChoreDriverSynchronization) — the client
+    // rebuilds it via reflection Invoke, which is safe (only *patching* the generic ctor is unsafe).
+    public static bool IsWorkChore(Type choreType) =>
+        choreType.IsGenericType && choreType.GetGenericTypeDefinition() == typeof(WorkChore<>);
 
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void ChoreConstructorPostfix(Chore __instance, object[] __args) {

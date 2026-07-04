@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MultiplayerMod.Multiplayer.Objects;
 using Object = UnityEngine.Object;
 
 namespace MultiplayerMod.Multiplayer.World.Debug;
@@ -21,7 +22,8 @@ public record WorldDebugSnapshot(
     int[] AccumulatedFlowValuesHashes,
     Dictionary<string, string[]> StateMachineStates,
     int[] ChoreProvidersHashes,
-    Dictionary<int, int[]>[] ChoreProvidersChoresHashes
+    Dictionary<int, int[]>[] ChoreProvidersChoresHashes,
+    DuplicantSnapshot[] Duplicants
 ) {
 
     public const int MaxBatchesCount = 128;
@@ -59,8 +61,32 @@ public record WorldDebugSnapshot(
                     pair => pair.Key,
                     pair => pair.Value.Select(Hash).ToArray()
                 )
-            ).ToArray()
+            ).ToArray(),
+            CreateDuplicantSnapshots()
         );
+    }
+
+    public static DuplicantSnapshot[] CreateDuplicantSnapshots() {
+        return global::Components.LiveMinionIdentities.Items
+            .Where(identity => identity != null)
+            .Select(identity => {
+                var gameObject = identity.gameObject;
+                var chore = gameObject.GetComponent<ChoreDriver>()?.GetCurrentChore();
+                var navigator = gameObject.GetComponent<Navigator>();
+                return new DuplicantSnapshot(
+                    gameObject.GetComponent<MultiplayerInstance>()?.Id,
+                    gameObject.GetProperName(),
+                    Grid.PosToCell(gameObject),
+                    chore == null ? "-" : chore.GetType().Name,
+                    chore is StandardChoreBase standardChore
+                        ? standardChore.GetSMI()?.GetCurrentState()?.name ?? ""
+                        : "",
+                    navigator != null && navigator.targetLocator != null
+                        ? Grid.PosToCell(navigator.targetLocator)
+                        : Grid.InvalidCell
+                );
+            })
+            .ToArray();
     }
 
     private static int Hash(Chore chore) {
@@ -94,3 +120,16 @@ public record WorldDebugSnapshot(
         return ((h1 << 5) + h1) ^ h2;
     }
 }
+
+// Per-duplicant debug record used by the duplicant sync inspector (DevToolDuplicantSync).
+// Keyed by MultiplayerId so host and client rows can be joined; the remaining fields are the
+// observable state that tends to drift (position, current chore, chore state, nav target).
+[Serializable]
+public record DuplicantSnapshot(
+    MultiplayerId? Id,
+    string Name,
+    int Cell,
+    string ChoreType,
+    string ChoreState,
+    int NavTargetCell
+);

@@ -24,6 +24,8 @@ public class DevToolsConfigurer {
 
     private void OnRuntimeReady(RuntimeReadyEvent @event) {
         DevToolManager.Instance.RegisterDevTool<DevToolMultiplayerObjects>("Multiplayer/Objects");
+        DevToolManager.Instance.RegisterDevTool<DevToolDuplicantSync>("Multiplayer/Duplicant Sync");
+        DevToolManager.Instance.RegisterDevTool<DevToolMultiplayerControls>("Multiplayer/Controls");
     }
 
 }

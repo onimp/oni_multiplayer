@@ -83,10 +83,7 @@ public class PatchTargetResolver {
     }
 
     private MethodBase? GetMethod(Type type, string methodName, Type? interfaceType) {
-        var methodInfo = type.GetMethod(
-            methodName,
-            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
-        );
+        var methodInfo = GetMethodSafe(type, methodName);
         if (methodInfo != null)
             return methodInfo;
 
@@ -94,11 +91,33 @@ public class PatchTargetResolver {
             return null;
 
         // Some overrides names prefixed by interface e.g. Clinic#ISliderControl.SetSliderValue
-        methodInfo = type.GetMethod(
-            interfaceType.Name + "." + methodName,
-            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
-        );
-        return methodInfo;
+        return GetMethodSafe(type, interfaceType.Name + "." + methodName);
+    }
+
+    private const BindingFlags MethodBindingFlags =
+        BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+
+    private MethodBase? GetMethodSafe(Type type, string methodName) {
+        try {
+            return type.GetMethod(methodName, MethodBindingFlags);
+        } catch (AmbiguousMatchException) {
+            // A game update introduced overloads (or base/derived hiding) for this name, so the
+            // signature-less GetMethod can no longer pick one. Prefer the method declared closest to
+            // `type`, then the simplest overload, and log the choice so the ambiguity stays visible.
+            var candidates = type.GetMethods(MethodBindingFlags)
+                .Where(method => method.Name == methodName)
+                .OrderByDescending(method => method.DeclaringType == type)
+                .ThenBy(method => method.GetParameters().Length)
+                .ToList();
+            if (candidates.Count == 0)
+                return null;
+
+            var chosen = candidates[0];
+            log.Warning(
+                $"Ambiguous method {type}.{methodName} ({candidates.Count} matches); patching {chosen}"
+            );
+            return chosen;
+        }
     }
 
     private MethodBase? GetSetter(Type type, string propertyName, Type? interfaceType) {

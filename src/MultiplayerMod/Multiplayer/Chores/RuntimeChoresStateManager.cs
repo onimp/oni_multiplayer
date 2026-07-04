@@ -24,6 +24,8 @@ public class RuntimeChoresStateManager : IWorldStateManager {
     private readonly MultiplayerDriverChores driverChores;
     private readonly Dictionary<Chore, ChoreCreatedEvent> events = new();
 
+    private readonly Core.Logging.Logger log = Core.Logging.LoggerFactory.GetLogger<RuntimeChoresStateManager>();
+
     public RuntimeChoresStateManager(EventDispatcher events, MultiplayerObjects objects, MultiplayerDriverChores driver) {
         this.objects = objects;
         driverChores = driver;
@@ -34,11 +36,14 @@ public class RuntimeChoresStateManager : IWorldStateManager {
     public void SaveState(WorldState worldState) {
         var state = new ChoresState(worldState);
 
-        state.Chores = events.Values.Select(it => new ChoreState {
-            id = it.Id,
-            type = it.Type,
-            arguments = ArgumentUtils.WrapObjects(ChoreArgumentsWrapper.Wrap(it.Type, it.Arguments))
-        }).ToArray();
+        // Serialize each chore/driver defensively: a single chore whose argument references a
+        // destroyed or never-registered object would otherwise throw and abort the whole world sync,
+        // leaving joining clients stuck on the loading screen. Skip the offending entry and log it.
+        state.Chores = events.Values
+            .Select(TrySerializeChore)
+            .Where(it => it != null)
+            .Select(it => it!.Value)
+            .ToArray();
 
         state.Drivers = Object.FindObjectsOfType<ChoreDriver>()
             .Where(it => {
@@ -49,12 +54,36 @@ public class RuntimeChoresStateManager : IWorldStateManager {
                 var multiplayerObject = objects.Get(chore);
                 return multiplayerObject != null && multiplayerObject.Persistent;
             })
-            .Select(it => new ChoreDriverState {
+            .Select(TrySerializeDriver)
+            .Where(it => it != null)
+            .Select(it => it!.Value)
+            .ToArray();
+    }
+
+    private ChoreState? TrySerializeChore(ChoreCreatedEvent it) {
+        try {
+            return new ChoreState {
+                id = it.Id,
+                type = it.Type,
+                arguments = ArgumentUtils.WrapObjects(ChoreArgumentsWrapper.Wrap(it.Type, it.Arguments))
+            };
+        } catch (Exception exception) {
+            log.Warning($"Skipping chore {it.Type} from world sync: {exception.Message}");
+            return null;
+        }
+    }
+
+    private ChoreDriverState? TrySerializeDriver(ChoreDriver it) {
+        try {
+            return new ChoreDriverState {
                 driverReference = it.GetReference(),
                 consumerReference = it.context.consumerState.consumer.GetReference(),
                 choreReference = new ChoreReference(it.GetCurrentChore())
-            })
-            .ToArray();
+            };
+        } catch (Exception exception) {
+            log.Warning($"Skipping chore driver from world sync: {exception.Message}");
+            return null;
+        }
     }
 
     public void LoadState(WorldState worldState) {

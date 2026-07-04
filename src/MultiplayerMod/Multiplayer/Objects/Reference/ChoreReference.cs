@@ -14,6 +14,8 @@ public class ChoreReference(Chore chore) : TypedReference<Chore> {
 
     private MultiplayerId id = chore.MultiplayerId();
 
-    public override Chore Resolve() => objects.Get<Chore>(id)!;
+    // Throw ObjectNotFoundException (handled + skipped by CommandExceptionHandler) rather than handing
+    // back null for a chore that was already cleaned up on the client, which would NRE downstream.
+    public override Chore Resolve() => objects.Get<Chore>(id) ?? throw new ObjectNotFoundException(this);
 
 }

@@ -3,6 +3,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Multiplayer.Components;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
+using MultiplayerMod.Multiplayer.World;
 using MultiplayerMod.Multiplayer.World.Debug;
 using UnityEngine;
 
@@ -21,6 +22,7 @@ public class MultiplayerGameObjectsSpawner {
 #if DEBUG
             typeof(WorldDebugSnapshotRunner),
 #endif
+            typeof(SimStateSynchronizer),
             typeof(CursorManager),
             typeof(MultiplayerPlayerNotifier)
         };

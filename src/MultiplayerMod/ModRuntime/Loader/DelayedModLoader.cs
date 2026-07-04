@@ -62,7 +62,20 @@ public class DelayedModLoader {
         .NotNull()
         .Where(it => it.containerAttributes != null)
         .OrderByDescending(it => it.containerAttributes.priority)
-        .ForEach(it => it.Patch());
+        .ForEach(TryPatch);
+
+    // A single failing patch used to throw straight out of PrioritizedPatch, aborting OnLoad before
+    // InjectStatic ran and leaving every [RequireExecutionLevel] method to NRE on a null manager.
+    // During dev we instead log the failure loudly and continue, so one launch surfaces the full set
+    // of broken patches (e.g. game-version signature drift) instead of one per game restart.
+    private void TryPatch(PatchClassProcessor processor) {
+        try {
+            processor.Patch();
+        } catch (Exception exception) {
+            log.Error($"Patch failed and was SKIPPED (feature disabled): {exception.Message}");
+            log.Trace(() => exception.ToString());
+        }
+    }
 
     private PatchClassProcessor? TryCreateClassProcessor(Type type) {
         var optional = type.GetCustomAttribute<HarmonyOptionalAttribute>() != null;

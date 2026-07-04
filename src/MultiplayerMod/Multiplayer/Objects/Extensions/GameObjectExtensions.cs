@@ -8,9 +8,12 @@ public static class GameObjectExtensions {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static GameObjectReference GetReference(this GameObject gameObject) {
-        var multiplayerId = gameObject.GetComponent<MultiplayerInstance>().Id;
-        if (multiplayerId != null)
-            return new MultiplayerIdReference(multiplayerId);
+        // A never-registered or destroyed object has no MultiplayerInstance; guard the null component
+        // instead of NRE-ing on .Id (which used to abort world sync and hang joiners) and fall back to
+        // the grid reference the id-less path already uses.
+        var instance = gameObject.GetComponent<MultiplayerInstance>();
+        if (instance != null && instance.Id != null)
+            return new MultiplayerIdReference(instance.Id);
 
         return new GridReference(gameObject);
     }

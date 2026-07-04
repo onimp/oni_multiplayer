@@ -12,7 +12,22 @@ public class WorldDebugSnapshotRunner : MultiplayerKMonoBehaviour, IRenderEveryT
 
     private const float checkPeriod = 30.0f;
     private float lastTime;
-    public static WorldDebugSnapshot? LastServerInfo { private get; set; }
+
+    private static WorldDebugSnapshot? lastServerInfo;
+
+    public static WorldDebugSnapshot? LastServerInfo {
+        private get => lastServerInfo;
+        set {
+            lastServerInfo = value;
+            if (value != null)
+                LastHostSnapshot = value;
+        }
+    }
+
+    // Persistent copy of the most recent host snapshot for the duplicant sync inspector.
+    // Unlike LastServerInfo (which is nulled after each aggregate comparison), this is kept so the
+    // DevTool always has the latest host state to diff local duplicants against.
+    public static WorldDebugSnapshot? LastHostSnapshot { get; private set; }
 
     [InjectDependency]
     private readonly EventDispatcher eventDispatcher = null!;

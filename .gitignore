@@ -8,3 +8,5 @@ src/Assembly-CSharp
 src/*/bin/
 src/*/obj/
 /lib
+.vs/*
+debug_logs/*
