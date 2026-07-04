@@ -23,6 +23,7 @@ public class MultiplayerGameObjectsSpawner {
             typeof(WorldDebugSnapshotRunner),
 #endif
             typeof(SimStateSynchronizer),
+            typeof(DuplicantStateSynchronizer),
             typeof(CursorManager),
             typeof(MultiplayerPlayerNotifier)
         };
