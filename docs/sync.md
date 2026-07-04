@@ -7,7 +7,7 @@ replay the host's actions as commands. A **daily hard-sync** (full `.sav` transf
 
 Legend: ✅ done · 🟡 partial / in progress · 🔴 not synced (known gap) · ⚪ out of scope
 
-_Last updated: 2026-07-03._
+_Last updated: 2026-07-04._
 
 ---
 
@@ -55,16 +55,34 @@ _Last updated: 2026-07-03._
 | Generic work (`WorkChore<T>`: dig/build/sweep/deliver/mop/harvest/operate/research/cook…) | 🟡 | Recognized structurally (`ChoresPatcher.IsWorkChore`), assigned to same dupe, position-synced via `WorkChoreSynchronizer`. **Work timing not gated** — each side runs the labor independently. |
 | Eat / Sleep / Recreation / Mingle | 🔴 | No synchronizer; drift hidden by hard-sync. |
 
+## Duplicant internal state (host-authoritative streaming)
+
+Axis B — the numbers/flags each machine simulates independently on the dupe. Streamed host→client and
+stomped each ~1 s tick by `DuplicantStateSynchronizer` + `SyncDuplicantState` (reliable Gameplay lane,
+all live dupes per tick, resolved by `MinionIdentity` `ComponentReference`).
+
+| State | Status | Notes |
+|---|---|---|
+| Sicknesses / diseases (food poisoning, slimelung…) + cure % | 🟡 | First cut (2026-07-04, builds, not live-tested). `Infect`/`Cure`/`SetPercentCured` diff, guarded by `Database.Sicknesses.IsValidID`. |
+| Effects (buffs/debuffs) + remaining time + immunities | 🟡 | First cut. `Add`/`Remove` + `timeRemaining` diff, `AddImmunity`/`RemoveImmunity`, guarded by `Db.Get().effects.Exists`. |
+| Health / HitPoints + incapacitation | 🟡 | First cut. Raw-set `hitPoints` then `OnHealthChanged(0f)` to recompute state/wounds/bar. |
+| Vitals (Calories / Stress / Stamina / Bladder / Breath) | 🔴 | Deferred — cosmetic on the client (its AI is suppressed); self-heal at hard-sync. |
+
 ## Work results (host-authoritative replication)
 
 Rather than reproduce the whole labor+materials economy deterministically, the host replays the
-**result** of completed work to clients.
+**result** of completed work to clients — either by result-replicating it (dig, building) or, where
+re-running it on the client is harmful (double-produces / fights a stream / NREs), by **suppressing the
+client's side effect** and letting the host stay authoritative (mop, harvest, toilet — Task #2 Phase A).
 
 | Result | Status | Notes |
 |---|---|---|
 | Dig (terrain removal) | ✅ | `DigSynchronizer` patches `WorldDamage.DestroyCell`; client replays via `SyncDugCell`. Idempotent. |
 | Building completion | 🟡 | `ConstructionSynchronizer` on `Constructable.FinishConstruction`; client spawns finished building (`Def.Build`, null storage) + removes ghost via `SyncBuildingComplete`. First cut — see gaps. |
 | Deconstruct | 🟡 | Host patches `Deconstructable.OnCompleteWork`; client removes building at cell via `SyncDeconstruct`. First cut. |
+| Mop (liquid removal + bottle) | ✅ | **Suppressed** on client (`MopSynchronizer` prefixes `Moppable.MopCell` → `false`, Task #2 Phase A). Host consumes the mass + bottles the liquid; the client's liquid removal arrives via the fluid stream and the `Moppable` self-destructs once the streamed cell goes dry. The bottled `SubstanceChunk` is **spawn-replicated** to the client (Phase B: `OnCellMopped` postfix → `SyncSpawnPickupable.LiquidChunk`). |
+| Harvest (crop pickup) | ✅ | **Suppressed** on client (`HarvestSynchronizer` prefixes `Crop.SpawnSomeFruit` → `false`, Task #2 Phase A). Stops double/mismatched food + mutation-roll drift; host spawns the crop and **spawn-replicates** it (Phase B: `SpawnSomeFruit` postfix → `SyncSpawnPickupable.Prefab`). Mutation genetics not replicated (hard-sync backstop). |
+| Toilet flush | 🟡 | **Suppressed** on client (`ToiletFlushSynchronizer` prefixes `Toilet.FlushMultiple` → `false`). Fill level + polluted-dirt output not yet replicated (Phase C). |
 
 ## Core simulation (cells)
 
@@ -85,6 +103,9 @@ Rather than reproduce the whole labor+materials economy deterministically, the h
 
 ## Known gaps / not synced
 
+- 🟡 **Produced pickupables** — the host now spawn-replicates *newly produced* loose pickupables (mop
+  bottle, harvested crop) to clients via `SyncSpawnPickupable` (anonymous, no shared id). This does **not**
+  extend to moving existing items (sweep) or storage — see below.
 - 🔴 **Materials economy** — fetch / deliver / storage contents are **not** synced. Root cause of the
   "3 of 5 ladders": on the client the Constructable's storage is empty, so `OnCompleteWork` bails
   ("uhhh this constructable is about to generate a nan"). The building-completion replication above
@@ -93,8 +114,13 @@ Rather than reproduce the whole labor+materials economy deterministically, the h
   share the host's `MultiplayerId`, so later id-based syncs targeting those specific buildings may not
   resolve. Fine for passive buildings (ladders, tiles); a gap for configurable ones.
 - 🔴 **Research, schedules, per-dupe assignments/priorities, rockets/space.**
-- 🔴 **Chore retry-storm** — construction chores whose target never replicated loop forever
-  (`CreateChore … not found` → `SetDriverChore … not found`). Separate open bug.
+- 🟡 **Chore retry-storm** — construction chores whose target isn't resolvable on the client
+  (`CreateChore … not found` → `SetDriverChore … not found`). **Storm defused (2026-07-04):**
+  `ObjectNotFoundException` is the designed graceful-skip path, so `CommandExceptionHandler` now logs it at
+  Debug and skips the full object-table dump (previously Warning + dump on *every* retry). Host chores are
+  removed from the registry on cleanup (`ChoresPatcher.ChoreCleanup`), so there's no registration leak.
+  Remaining root cause: the target ghost has no shared identity on the client (see below) — the client just
+  can't mirror that specific chore, which is harmless now that work *results* are result-replicated.
 - ⚪ **Critters** — explicitly out of scope for now.
 
 ## Roadmap (rough order)

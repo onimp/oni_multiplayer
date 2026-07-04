@@ -27,17 +27,10 @@ public class ToiletFlushSynchronizer {
         ToiletFlushSynchronizer.manager = manager;
     }
 
-    // Return true to run the original (host / single-player), false to skip it (client). The manual mode
-    // check mirrors DigSynchronizer; a [RequireMultiplayerMode] attribute is avoided here because the
-    // conditional-invocation wrapper's default return for a skipped bool prefix is unsafe (would skip the
-    // original on the host too).
+    // Skip the flush on the client; the host stays the single source of truth. See ReplicationGate for the
+    // bool-prefix semantics (true runs / false skips) and why [RequireMultiplayerMode] is avoided.
     [HarmonyPrefix, UsedImplicitly]
     [HarmonyPatch(nameof(Toilet.FlushMultiple))]
-    private static bool FlushMultiplePrefix() {
-        // FlushMultiple can fire before the DI container has built this component; run normally then.
-        if (multiplayer == null || manager == null)
-            return true;
-        return !(manager.LevelIsActive(ExecutionLevel.Multiplayer) && multiplayer.Mode == MultiplayerMode.Client);
-    }
+    private static bool FlushMultiplePrefix() => !ReplicationGate.IsActiveClient(multiplayer, manager);
 
 }

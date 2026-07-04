@@ -3,7 +3,7 @@
 Living plan for continuing the sync work. Networking (priority lanes) is done; this file tracks the
 gameplay-sync work that comes next. Companion status doc: [docs/sync.md](docs/sync.md).
 
-_Last updated: 2026-07-03._
+_Last updated: 2026-07-04._
 
 ---
 
@@ -58,7 +58,15 @@ proper toilet-fill + output replication into task #2. Duplicant germ gain from t
 
 ---
 
-## Task #1 — Duplicant health / germs / effects sync (DO FIRST)
+## Task #1 — Duplicant health / germs / effects sync ✅ FIRST CUT BUILT (2026-07-04)
+
+**Status:** first cut implemented + compiling; **not yet live-tested** (2-PC). Scope landed = Sicknesses +
+Effects (+immunities) + Health/HitPoints; Vitals deferred (see below). Files:
+[`DuplicantStateSynchronizer`](src/MultiplayerMod/Multiplayer/World/DuplicantStateSynchronizer.cs) (host
+streamer, all live dupes per ~1 s tick) +
+[`SyncDuplicantState`](src/MultiplayerMod/Multiplayer/Commands/Gameplay/SyncDuplicantState.cs) (client
+stomp, reliable Gameplay lane), registered in `MultiplayerGameObjectsSpawner`. Remaining: run the live
+verification below; fold **Vitals** in as a second pass if measured drift warrants it.
 
 **Goal:** stop the most visible mid-game divergence — a dupe that's sick / poisoned / debuffed / dying on
 the host but fine on the client (and vice-versa). This is the "pee sickness and other mid-game things"
@@ -102,6 +110,26 @@ shows the dupe rows in sync. No NREs.
 ---
 
 ## Task #2 — Work-result sync (mopping / sweeping / harvest / production)
+
+> **Phases A + B BUILT (2026-07-04).** _Phase A_ — client double-production suppressed for mop + harvest
+> (toilet already done), mirroring `ToiletFlushSynchronizer`:
+> [`MopSynchronizer`](src/MultiplayerMod/Multiplayer/World/MopSynchronizer.cs) (`Moppable.MopCell` →
+> `false` on client; cuts both the `ConsumeMass` that fights the fluid stream and the bottle spawn) +
+> [`HarvestSynchronizer`](src/MultiplayerMod/Multiplayer/World/HarvestSynchronizer.cs)
+> (`Crop.SpawnSomeFruit` → `false`; stops double/mismatched food + mutation drift). _Phase B_ — host
+> spawn-replicates the produced pickupables via
+> [`SyncSpawnPickupable`](src/MultiplayerMod/Multiplayer/Commands/Gameplay/SyncSpawnPickupable.cs)
+> (reliable Gameplay lane, `LiquidChunk`/`Prefab` kinds, anonymous): the mop bottle (`OnCellMopped`
+> postfix) and the harvested crop (`SpawnSomeFruit` postfix) now appear on the client. Builds; **not yet
+> live-tested** (2-PC). Deferred: crop mutation genetics (hard-sync backstop) and **Phase C** (storage/
+> economy — sweep, toilet fill/output — the high-frequency, gameplay-risky one; its own task). See
+> task-2.md §5/§6.
+
+> **Full design doc: [task-2.md](task-2.md)** (planned 2026-07-04). Read that first — it answers the
+> fluid-sync question (fluids already reconcile via the cell stream; the real blocker is discrete
+> **pickupables**, not liquids/gas), splits the bucket into "cell-based results" (doable now) vs
+> "entity/pickupable results" (needs a spawn-replication primitive), and lists the open design decision.
+> The summary below is retained for context.
 
 **Goal:** the "everyday mid-game" actions — mopping, sweeping, harvesting, and building/deconstruct — land
 their **result** on the client instead of each side running the labor independently (which drifts or NREs).

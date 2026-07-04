@@ -59,7 +59,7 @@ public class WorkChoreSynchronizer {
     private static bool IsSyncedWorkChore(WorkerBase workerBase) {
         if (workerBase == null)
             return false;
-        if (!manager.LevelIsActive(ExecutionLevel.Multiplayer) || multiplayer.Mode != MultiplayerMode.Host)
+        if (!ReplicationGate.IsActiveHost(multiplayer, manager))
             return false;
 
         // Duplicants only for now — critters are out of scope.

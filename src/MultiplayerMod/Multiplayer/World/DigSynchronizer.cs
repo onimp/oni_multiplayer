@@ -33,10 +33,9 @@ public class DigSynchronizer {
     [HarmonyPrefix, UsedImplicitly]
     [HarmonyPatch(nameof(WorldDamage.DestroyCell))]
     private static void DestroyCellPrefix(int cell) {
-        // DestroyCell can fire during world gen/load before the DI container has built this component.
-        if (manager == null || multiplayer == null || server == null)
-            return;
-        if (!manager.LevelIsActive(ExecutionLevel.Multiplayer) || multiplayer.Mode != MultiplayerMode.Host)
+        // DestroyCell can fire during world gen/load before the DI container has built this component; the
+        // gate treats null deps as an inactive session (see ReplicationGate).
+        if (server == null || !ReplicationGate.IsActiveHost(multiplayer, manager))
             return;
         if (Grid.IsValidCell(cell) && Grid.Solid[cell])
             server.Send(new SyncDugCell(cell));
