@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Scheduling;
@@ -24,6 +24,10 @@ public class MultiplayerStatusOverlay {
 
     private LocText textComponent = null!;
     private string text = "";
+
+    // When set, the overlay text is rebuilt from this supplier every frame (see MultiplayerStatusOverlayTicker),
+    // so live content such as the per-player hard-sync timers keeps ticking.
+    private Func<string>? textSupplier;
 
     [InjectDependency, UsedImplicitly]
     private UnityTaskScheduler scheduler = null!;
@@ -53,6 +57,31 @@ public class MultiplayerStatusOverlay {
 
         rect = textComponent.gameObject.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(Screen.width / GetScale(), 0);
+
+        AttachTicker();
+    }
+
+    // The wrapper object survives scene reloads, but ONI's LoadingOverlay GameObject is torn down on a
+    // scene transition and only rebuilt by the scheduler.Run(CreateOverlay) queued in OnPostLoadScene.
+    // If Show() lands in that window (e.g. LoadWorld arriving mid-transition when joining off the main
+    // menu) LoadingOverlay.instance is null, so rebuild the surface before touching it.
+    private void EnsureSurface() {
+        if (LoadingOverlay.instance == null)
+            CreateOverlay();
+        else
+            AttachTicker();
+    }
+
+    // Drive a per-frame refresh from the supplier. The overlay object survives scene reloads but the
+    // underlying LoadingOverlay GameObject is recreated, so (re)attach the ticker whenever we rebuild.
+    private void AttachTicker() {
+        if (textSupplier == null || LoadingOverlay.instance == null)
+            return;
+
+        var host = LoadingOverlay.instance.gameObject;
+        var ticker = host.GetComponent<MultiplayerStatusOverlayTicker>() ?? host.AddComponent<MultiplayerStatusOverlayTicker>();
+        ticker.Supplier = textSupplier;
+        ticker.Apply = value => Text = value;
     }
 
     private void OnResize() => rect.sizeDelta = new Vector2(Screen.width / GetScale(), 0);
@@ -67,7 +96,17 @@ public class MultiplayerStatusOverlay {
 
     public static void Show(string text) {
         overlay ??= new MultiplayerStatusOverlay();
+        overlay.textSupplier = null;
+        overlay.EnsureSurface();
         Text = text;
+    }
+
+    // Show a live overlay whose text is rebuilt every frame from the supplier.
+    public static void Show(Func<string> textSupplier) {
+        overlay ??= new MultiplayerStatusOverlay();
+        overlay.textSupplier = textSupplier;
+        overlay.EnsureSurface();
+        Text = textSupplier();
     }
 
     public static void Close() {

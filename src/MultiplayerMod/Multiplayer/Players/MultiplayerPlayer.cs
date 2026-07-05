@@ -7,6 +7,10 @@ public class MultiplayerPlayer {
 
     public PlayerIdentity Id { get; } = new();
     public PlayerState State { get; set; } = PlayerState.Initializing;
+
+    // Cosmetic hard-sync progress, driven by SetLoadPhaseCommand. Not part of the readiness gate (State).
+    public PlayerLoadPhase LoadPhase { get; set; } = PlayerLoadPhase.None;
+
     public PlayerRole Role { get; }
     public PlayerProfile Profile { get; }
 

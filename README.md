@@ -1,101 +1,133 @@
-# ONI multiplayer mod (WORK IN PROGRESS / PROTOTYPE)
+# ONI Multiplayer Mod
 
-This is a mod which adds multiplayer support to Oxygen not included game.
+**Cooperative multiplayer for _Oxygen Not Included_.** Host a colony, invite friends over Steam, and run
+the same base together — everyone shares control of one asteroid cluster.
 
-## Current stage and status
+> ⚠️ **Prototype / work-in-progress.** This is an actively-developed proof of concept, not a finished mod.
+> Expect rough edges and desync. It is playable co-op, not polished co-op.
 
-Status: In development
-Stage: Early WIP and proof of concept
+> 🔱 **This is a fork.** Built on the original [**zuev93/oni_multiplayer**](https://github.com/zuev93/oni_multiplayer)
+> by [zuev93](https://github.com/zuev93) and contributors. This fork ([macery12/oni_multiplayer](https://github.com/macery12/oni_multiplayer))
+> continues that work — forward-porting it to a current game version and expanding what actually stays in
+> sync during play. See [Credits](#credits).
 
-Working functionality:
+> 🤖 **Developed with Claude Code.** Much of the sync work in this fork was implemented with
+> [Claude Code](https://claude.com/claude-code) as a pair-programmer — mapping the game's internals,
+> designing the host-authoritative sync layers, and writing the synchronizers. Details of what's synced and
+> how live in [docs/sync.md](docs/sync.md).
 
-- Currently tested in Vanilla only (NO DLC)
-- Main menu UI
-  - Join/Load/Create MP game
-- Steam overlay support
-  - Ability to join/invite friends
-- Synced UI elements
-    - Colony settings
-      - Skills (and hats) screen 
-      - Priorities screen
-      - Schedules screen   
-      - Consumables screen
-      - Research tree
-    - Game settings
-        - warp settings
-        - pause
-    - Building dialogs
-        - User menu buttons (such as `Enable` building, `Disable autodisenfect`, `Cancel building`, `Dig`, etc)
-    - Tools (bottom toolbar)
-        - dig/build/mop/harvest/etc and other from bottom toolbar
-- Additional in-game UI
-  - Active players info
-      - Cursors of all players
-  - Additional diagnostic showing amount of synchronization error
-    - Always 0 on the server side
-    - Huge on any client :)
-- Every mornings hard syncs to avoid accumulated errors
-- Hard sync on each server save action
+---
 
-## Game mechanics
+## Game version compatibility
 
-All players play all together and share controls over a single colony. Order given by a player might be overruled by
-another.
-<p>There is no difference between different players, all players are equal.
-It is possible to look and control different asteroids at the same time as well.
+| | |
+|---|---|
+| **Supported game version** | `U57-707956` (Legacy Compatibility branch, released **Jan 16 2026**) |
+| **How to get it** | Steam → _Oxygen Not Included_ → Properties → Betas → select **`legacy_compatibility_version`** |
+| **DLC** | ❌ Not supported yet — **vanilla / base game only** (no Spaced Out!) |
+| **Newer game versions** | ⏳ Support for the latest game version **and DLC** is planned — coming soon |
 
-## Under the hood mechanics idea
+The mod is pinned to one exact build. It will **not** work on the default (latest) Steam branch or with DLC
+enabled yet. Both players must be on the same `legacy_compatibility_version` branch.
 
-Idea is based on the assumption that the game engine will run ~~the same~~ **similar** without any user input even on
-different
-machines.
-<p>So if user input will be the same on different machines - then their separate simulations should run the same.
-<p>To avoid accumulated errors (if any) it is proposed to do periodic (one per game day) hard syncs by loading game save
-files.
-<p>Additional support is required for minions since their logic is separate from the world state their behavior is differnt on different machines.
+---
 
-<p>[Optional] To make smoother experience or if simulations will be running too different it is feasible to do periodic
-small world syncs for smaller areas of different layers (e.g. sync gases within an area 16x16 every 30 seconds).
+## What's synced
 
-## How to install
+The mod is **host-authoritative**: the host runs the "real" game and clients replay the host's actions. A
+**hard-sync every in-game morning** (a full save transfer + reload) corrects any drift that slips through.
 
-### Automatic way (from release 0.2.0-alpha)
-* Be aware that mod will be installed to %USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\MultiplayerMod.
-- Download latest release from https://github.com/zuev93/oni_multiplayer/releases/latest
-- Unzip mod to any folder
-- Double click on install.bat
-    
-### Manual way
-- Download latest release from https://github.com/zuev93/oni_multiplayer/releases/latest
-- Unzip mod to any folder
-- Copy release content (mod.yaml, mod_info.yaml and MultiplayerMod.dll) to %USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\MultiplayerMod (if
-some folders are missing, please create them).
+### ✅ Synced
 
-## How to use
+| Feature | |
+|---|---|
+| Joining via Steam (invite / overlay) | ✅ |
+| All player orders (dig, build, deconstruct, cancel, priority, mop, harvest, sweep, attack…) | ✅ |
+| Bottom-toolbar tools & drag orders | ✅ |
+| Building configuration (doors, valves, filters, automation, fabricator queues, thresholds, sliders…) | ✅ |
+| Colony screens (Skills & Hats, Priorities, Schedules, Consumables, Research tree) | ✅ |
+| Game speed & pause | ✅ |
+| Player cursors & presence overlay | ✅ |
+| Duplicant behavior — idle, move-to-safety, attack, death, pee | ✅ |
+| Duplicant work — start **and** completion timing (jobs finish in lockstep) | ✅ |
+| Digging / terrain removal | ✅ |
+| Building completion & deconstruction | ✅ |
+| Mopping & harvesting (produced items appear on both sides) | ✅ |
+| Duplicant health, sickness, disease & effects (buffs/debuffs) | ✅ |
+| World cell simulation — gas / liquid / temperature / mass | ✅ |
+| Power — battery charge (stored energy) | ✅ |
+| Research — tech unlocks | ✅ |
+| Daily hard-sync safety net | ✅ |
 
-### Host:
+### ❌ Not synced yet
 
-- Host a game either via 'New multiplayer game' or via 'Load multiplayer game'
-- Wait until the game is loaded and overlay is opened automatically
-- Invite friends via Steam overlay
+Most of these are **intentionally deferred** — the daily hard-sync reconciles them once per cycle, so they
+self-correct rather than break the game.
 
-### Player/Friend:
+| Feature | |
+|---|---|
+| Materials economy — storage contents, fetch & deliver | ❌ |
+| Sweep result (debris moved into storage) | ❌ |
+| Toilet fill level & polluted-dirt output | ❌ |
+| Duplicant vitals (calories, stress, stamina, bladder, breath) | ❌ |
+| Eat / Sleep / Recreation / Mingle behavior | ❌ |
+| Research **point** progress & skill XP (the *unlock* is synced, the accrual isn't) | ❌ |
+| Rockets & space | ❌ |
+| Critters | ❌ |
 
-- Run the game first
-- Join invite (from already opened game) or join via Steam overlay
-- Wait until game is loaded
+---
 
-# What is next
-We are trying to keep planned work and known bugs in github issues
-https://github.com/zuev93/oni_multiplayer/milestones
-<p>
-And also we're using a GitHub project for task management
+## Install
 
-https://github.com/users/zuev93/projects/1
+Both players must be on the **`legacy_compatibility_version`** Steam branch (see
+[Game version compatibility](#game-version-compatibility)) with **DLC disabled**.
 
-# Contacts
-If you have any suggestions or questions feel free to create discussion or issue in GitHub or join our discord server https://discord.gg/3TQ97w8Qwq
+The mod installs to `%USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\MultiplayerMod`.
 
-# How to develop
+### Manual
+1. Download the latest release from **https://github.com/macery12/oni_multiplayer/releases/latest**
+2. Unzip anywhere
+3. Copy `mod.yaml`, `mod_info.yaml` and `MultiplayerMod.dll` into
+   `%USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\MultiplayerMod` (create the folders if they
+   don't exist)
 
-For a guide and more info, refer to the [Contributing.md](docs/CONTRIBUTING.md)
+Then enable the mod in-game via the Mods menu.
+
+---
+
+## How to play
+
+### Host
+1. Start a game via **New multiplayer game** or **Load multiplayer game**
+2. Wait for the game to load (the Steam overlay opens automatically)
+3. Invite friends through the Steam overlay
+
+### Joining
+1. Launch the game first
+2. Accept the invite or join via the Steam overlay
+3. Wait for the game to load
+
+---
+
+## Project status & roadmap
+
+- **Now:** playable co-op on the pinned game version, vanilla only. Ongoing work is expanding what stays in
+  sync mid-cycle (so you rely less on the daily hard-sync).
+- **Next:** support for the latest game version and DLC.
+- Living sync status: **[docs/sync.md](docs/sync.md)**.
+
+---
+
+## Credits
+
+- **Original mod:** [zuev93/oni_multiplayer](https://github.com/zuev93/oni_multiplayer) by
+  [zuev93](https://github.com/zuev93) and its contributors — the foundation this fork is built on.
+- **This fork:** [macery12](https://github.com/macery12) — forward-port + expanded sync, developed with
+
+---
+
+## Contributing & contact
+
+- Developer guide: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+- Issues & suggestions: open an issue on [this repo](https://github.com/macery12/oni_multiplayer/issues)
+- Original project's community Discord: https://discord.gg/3TQ97w8Qwq

@@ -72,6 +72,12 @@ public class TestMultiplayerServer : IMultiplayerServer {
 
     public void Send(IMultiplayerCommand command) => Send(command,MultiplayerCommandOptions.SkipHost);
 
+    // In-process test transport delivers synchronously, so there is nothing to flush.
+    public void Flush() { }
+
+    // No real Steam connection in tests, so no live stats.
+    public ConnectionStats? GetConnectionStats() => null;
+
     private void Send(IMultiplayerCommand command, MultiplayerCommandOptions options) {
         var oldRuntime = (TestRuntime) Runtime.Instance;
         try {

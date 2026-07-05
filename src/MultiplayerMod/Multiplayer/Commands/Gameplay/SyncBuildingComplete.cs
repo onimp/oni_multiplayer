@@ -53,9 +53,10 @@ public class SyncBuildingComplete : MultiplayerCommand {
         var ghost = Grid.Objects[cell, (int) definition.ObjectLayer];
         var alreadyComplete = ghost != null && ghost.GetComponent<BuildingComplete>() != null;
 
-        // Utility buildings (wires/pipes) render disconnected unless the finished building's tile
-        // visualizer is seeded with the connection bitmask - exactly what Constructable.FinishConstruction
-        // copies from the under-construction ghost. Capture it before the ghost is deleted.
+        // Utility buildings (wires/pipes) render disconnected AND carry no power/liquid/gas unless the
+        // finished building's tile visualizer is seeded with the connection bitmask - exactly what
+        // Constructable.FinishConstruction copies from the under-construction ghost. Capture it before the
+        // ghost is deleted.
         var ghostVisualizer = ghost != null ? ghost.GetComponent<KAnimGraphTileVisualizer>() : null;
         var hasConnections = ghostVisualizer != null;
         var connections = hasConnections ? ghostVisualizer!.Connections : default;
@@ -72,8 +73,11 @@ public class SyncBuildingComplete : MultiplayerCommand {
 
         if (built != null && hasConnections) {
             var builtVisualizer = built.GetComponent<KAnimGraphTileVisualizer>();
+            // UpdateConnections (not the plain Connections setter) also calls connectionManager.SetConnections,
+            // registering the cell into the electrical/conduit flow network so the building actually conducts -
+            // the bare setter only updates the render field, leaving wires/pipes as isolated dead nodes.
             if (builtVisualizer != null)
-                builtVisualizer.Connections = connections;
+                builtVisualizer.UpdateConnections(connections);
         }
     }
 

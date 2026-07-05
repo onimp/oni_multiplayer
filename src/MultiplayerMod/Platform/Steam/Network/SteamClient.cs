@@ -38,7 +38,8 @@ public class SteamClient : IMultiplayerClient {
     private bool lanesConfigured;
 
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
-    private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
+    private readonly SteamNetworkingConfigValue_t[] networkConfig =
+        { Configuration.SendBufferSize(), Configuration.SendRateMax() };
 
     private GameObject gameObject = null!;
 
@@ -95,6 +96,35 @@ public class SteamClient : IMultiplayerClient {
         var lane = commands.GetCommandConfiguration(command.GetType()).Lane;
         var flags = Configuration.SendFlags(lane);
         messageFactory.Create(command, options).ForEach(handle => Send(handle, flags, lane));
+    }
+
+    public void Flush() {
+        if (State != MultiplayerClientState.Connected)
+            return;
+
+        // Push everything Steam has buffered for this connection (across all lanes) onto the wire now.
+        var result = SteamNetworkingSockets.FlushMessagesOnConnection(connection);
+        if (result != EResult.k_EResultOK)
+            log.Warning($"FlushMessagesOnConnection returned {result}");
+    }
+
+    public ConnectionStats? GetConnectionStats() {
+        if (State != MultiplayerClientState.Connected)
+            return null;
+
+        var status = new SteamNetConnectionRealTimeStatus_t();
+        var lanes = new SteamNetConnectionRealTimeLaneStatus_t(); // unused: nLanes = 0
+        var result = SteamNetworkingSockets.GetConnectionRealTimeStatus(connection, ref status, 0, ref lanes);
+        if (result != EResult.k_EResultOK)
+            return null;
+
+        return new ConnectionStats(
+            status.m_nPing,
+            status.m_flOutBytesPerSec,
+            status.m_flInBytesPerSec,
+            status.m_cbPendingReliable,
+            status.m_flConnectionQualityLocal
+        );
     }
 
     private void Send(INetworkMessageHandle handle, int flags, NetworkLane lane) {

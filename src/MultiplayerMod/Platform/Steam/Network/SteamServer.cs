@@ -59,7 +59,8 @@ public class SteamServer : IMultiplayerServer {
     private readonly NetworkMessageFactory messageFactory = new();
     private SteamNetworkingMessageSender sender = null!;
     private readonly HashSet<HSteamNetConnection> lanedConnections = new();
-    private readonly SteamNetworkingConfigValue_t[] networkConfig = { Configuration.SendBufferSize() };
+    private readonly SteamNetworkingConfigValue_t[] networkConfig =
+        { Configuration.SendBufferSize(), Configuration.SendRateMax() };
     private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback = null!;
 
     private readonly Dictionary<IMultiplayerClientId, HSteamNetConnection> clients = new();
@@ -123,6 +124,45 @@ public class SteamServer : IMultiplayerServer {
     public void SendAll(IMultiplayerCommand command) => Send(command, MultiplayerCommandOptions.None);
 
     public void Send(IMultiplayerCommand command) => Send(command,MultiplayerCommandOptions.SkipHost);
+
+    public void Flush() {
+        if (State != MultiplayerServerState.Started)
+            return;
+
+        // Push everything Steam has buffered for each client connection (across all lanes) onto the wire now.
+        foreach (var connection in clients.Values) {
+            var result = SteamGameServerNetworkingSockets.FlushMessagesOnConnection(connection);
+            if (result != k_EResultOK)
+                log.Warning($"FlushMessagesOnConnection returned {result}");
+        }
+    }
+
+    public ConnectionStats? GetConnectionStats() {
+        if (State != MultiplayerServerState.Started || clients.Count == 0)
+            return null;
+
+        float outRate = 0, inRate = 0, quality = 1f;
+        int ping = 0, pending = 0;
+        var sampled = false;
+        foreach (var connection in clients.Values) {
+            var status = new SteamNetConnectionRealTimeStatus_t();
+            var lanes = new SteamNetConnectionRealTimeLaneStatus_t(); // unused: nLanes = 0
+            var result = SteamGameServerNetworkingSockets.GetConnectionRealTimeStatus(
+                connection, ref status, 0, ref lanes
+            );
+            if (result != k_EResultOK)
+                continue;
+
+            sampled = true;
+            outRate += status.m_flOutBytesPerSec;
+            inRate += status.m_flInBytesPerSec;
+            pending += status.m_cbPendingReliable;
+            ping = Math.Max(ping, status.m_nPing);
+            quality = Math.Min(quality, status.m_flConnectionQualityLocal);
+        }
+
+        return sampled ? new ConnectionStats(ping, outRate, inRate, pending, quality) : null;
+    }
 
     private void Send(IMultiplayerCommand command, MultiplayerCommandOptions options) {
         IEnumerable<KeyValuePair<IMultiplayerClientId, HSteamNetConnection>> recipients = clients;

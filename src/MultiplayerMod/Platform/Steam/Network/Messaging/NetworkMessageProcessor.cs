@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using MultiplayerMod.Core.Logging;
 using static MultiplayerMod.Platform.Steam.Network.Configuration;
 
@@ -12,13 +11,21 @@ public class NetworkMessageProcessor {
     private readonly ConcurrentDictionary<uint, ConcurrentDictionary<int, FragmentsBuffer>> fragments = new();
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<NetworkMessageProcessor>();
 
-    public NetworkMessage? Process(uint clientId, INetworkMessageHandle handle) =>
-        NetworkSerializer.Deserialize(handle) switch {
-            NetworkMessage message => message,
-            NetworkMessageFragmentsHeader header => ProcessFragmentsHeader(clientId, header),
-            NetworkMessageFragment fragment => ProcessMessageFragment(clientId, fragment),
-            _ => null
-        };
+    public NetworkMessage? Process(uint clientId, INetworkMessageHandle handle) {
+        try {
+            return NetworkSerializer.Deserialize(handle) switch {
+                NetworkMessage message => message,
+                NetworkMessageFragmentsHeader header => ProcessFragmentsHeader(clientId, header),
+                NetworkMessageFragment fragment => ProcessMessageFragment(clientId, fragment),
+                _ => null
+            };
+        } catch (Exception e) {
+            // A malformed or disallowed (see NetworkMessageSerializationBinder) message must not tear down
+            // the receive loop — drop just this message. Callers already skip null and release the handle.
+            log.Warning($"Dropping message from client {clientId}: {e.Message}");
+            return null;
+        }
+    }
 
     private NetworkMessage? ProcessFragmentsHeader(uint clientId, NetworkMessageFragmentsHeader header) {
         fragments.TryGetValue(clientId, out var index);
@@ -87,7 +94,10 @@ public class NetworkMessageProcessor {
 
             watchdog.Enabled = false;
             using var stream = new MemoryStream(buffer);
-            return (NetworkMessage) new BinaryFormatter().Deserialize(stream);
+            // Must use the shared formatter so the reassembled payload goes through the same surrogate
+            // selector + type allowlist binder as non-fragmented messages (otherwise fragmentation would
+            // both fail on surrogate types and bypass the RCE mitigation).
+            return (NetworkMessage) NetworkSerializer.CreateFormatter().Deserialize(stream);
         }
     }
 

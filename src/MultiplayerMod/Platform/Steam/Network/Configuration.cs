@@ -12,11 +12,23 @@ public static class Configuration {
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(Configuration));
 
     private const int defaultBufferSize = 10485760; // 10 MiB
+    private const int defaultSendRateMax = 8388608; // 8 MiB/s
 
     public static SteamNetworkingConfigValue_t SendBufferSize(int size = defaultBufferSize) => new() {
         m_eValue = ESteamNetworkingConfigValue.k_ESteamNetworkingConfig_SendBufferSize,
         m_eDataType = ESteamNetworkingConfigDataType.k_ESteamNetworkingConfig_Int32,
         m_val = new SteamNetworkingConfigValue_t.OptionValue { m_int32 = size }
+    };
+
+    // Raise only the upper bound of GameNetworkingSockets' send pacing. Its bandwidth estimator still ramps
+    // up from SendRateMin and backs off on loss, so this never forces traffic onto a bad link — it just
+    // stops a good link (e.g. LAN) from being needlessly ceilinged while the multi-MB hard-sync streams.
+    // (RecvBufferSize would be the more direct knob, but it postdates the Steam SDK ONI ships and isn't in
+    // this Steamworks.NET binding, so it can't be set here.)
+    public static SteamNetworkingConfigValue_t SendRateMax(int bytesPerSec = defaultSendRateMax) => new() {
+        m_eValue = ESteamNetworkingConfigValue.k_ESteamNetworkingConfig_SendRateMax,
+        m_eDataType = ESteamNetworkingConfigDataType.k_ESteamNetworkingConfig_Int32,
+        m_val = new SteamNetworkingConfigValue_t.OptionValue { m_int32 = bytesPerSec }
     };
 
     public const int MaxMessageSize = 524288; // 512 KiB

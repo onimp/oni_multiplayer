@@ -68,6 +68,12 @@ public class TestMultiplayerClient : IMultiplayerClient {
         server.Receive(this, CommandTools.Copy(command), options);
     }
 
+    // In-process test transport delivers synchronously, so there is nothing to flush.
+    public void Flush() { }
+
+    // No real Steam connection in tests, so no live stats.
+    public ConnectionStats? GetConnectionStats() => null;
+
     public void SetState(MultiplayerClientState state) {
         State = state;
         StateChanged?.Invoke(state);

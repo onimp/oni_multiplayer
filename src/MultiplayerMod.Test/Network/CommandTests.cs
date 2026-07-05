@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Network;
 using MultiplayerMod.Platform.Steam.Network;
@@ -62,6 +63,36 @@ public class CommandTests {
 
         Assert.AreEqual(4, fragmentsCount);
         Assert.NotNull(message);
+    }
+
+    [Test]
+    public void BinderAllowsFirstPartyAndProtocolTypes() {
+        Assert.IsTrue(NetworkMessageSerializationBinder.IsAllowedType(typeof(Command)));
+        Assert.IsTrue(NetworkMessageSerializationBinder.IsAllowedType(typeof(NetworkMessage)));
+        Assert.IsTrue(NetworkMessageSerializationBinder.IsAllowedType(typeof(int[])));
+    }
+
+    [Test]
+    public void BinderRejectsDisallowedType() {
+        var dangerous = typeof(System.Diagnostics.Process);
+        Assert.IsFalse(NetworkMessageSerializationBinder.IsAllowedType(dangerous));
+        Assert.Throws<SerializationException>(
+            () => NetworkMessageSerializationBinder.Instance.BindToType(dangerous.Assembly.FullName, dangerous.FullName)
+        );
+    }
+
+    [Test]
+    public void ProcessDropsMalformedMessageInsteadOfThrowing() {
+        // A malformed / disallowed payload must not tear down the receive loop — Process returns null.
+        var processor = new NetworkMessageProcessor();
+        var garbage = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        var handle = GCHandle.Alloc(garbage, GCHandleType.Pinned);
+        try {
+            var message = processor.Process(0, new NetworkMessageHandle(handle.AddrOfPinnedObject(), (uint) garbage.Length));
+            Assert.IsNull(message);
+        } finally {
+            handle.Free();
+        }
     }
 
 }

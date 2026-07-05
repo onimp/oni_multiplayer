@@ -24,6 +24,7 @@ public class MultiplayerGameObjectsSpawner {
 #endif
             typeof(SimStateSynchronizer),
             typeof(DuplicantStateSynchronizer),
+            typeof(PowerSynchronizer),
             typeof(CursorManager),
             typeof(MultiplayerPlayerNotifier)
         };

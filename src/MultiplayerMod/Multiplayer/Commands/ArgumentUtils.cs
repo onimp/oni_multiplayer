@@ -2,14 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using MultiplayerMod.Multiplayer.Objects.Reference;
+using MultiplayerMod.Platform.Steam.Network.Messaging;
 using MultiplayerMod.Platform.Steam.Network.Messaging.Surrogates;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands;
 
 public static class ArgumentUtils {
+
+    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(ArgumentUtils));
 
     public static object?[] WrapObjects(object?[] objects) {
         return objects.Select(WrapObject).ToArray();
@@ -34,7 +38,6 @@ public static class ArgumentUtils {
 
     public static object? UnWrapObject(object? obj) => obj is Reference reference ? reference.Resolve() : obj;
 
-    // TODO: Mitigate RCE
     [Serializable]
     public record DelegateRef(
         Type DelegateType,
@@ -42,6 +45,21 @@ public static class ArgumentUtils {
         MethodInfo MethodInfo
     ) : Reference {
         public object Resolve() {
+            // RCE mitigation: MethodInfo + DelegateType arrive from an untrusted peer, so this is a direct
+            // "invoke arbitrary method" primitive. Only reconstruct a delegate when both the delegate type
+            // and the method's declaring type are trusted (mod / ONI / Unity) — otherwise skip gracefully
+            // via ObjectNotFoundException, the designed command-skip path.
+            var declaringType = MethodInfo.DeclaringType;
+            if (declaringType == null ||
+                !NetworkMessageSerializationBinder.IsAllowedType(declaringType) ||
+                !NetworkMessageSerializationBinder.IsAllowedType(DelegateType)) {
+                log.Warning(
+                    "Refusing to reconstruct delegate onto untrusted method " +
+                    $"'{declaringType?.FullName ?? "<null>"}.{MethodInfo.Name}' " +
+                    $"(delegate type '{DelegateType.FullName}') — possible RCE."
+                );
+                throw new ObjectNotFoundException(this);
+            }
             return Delegate.CreateDelegate(
                 DelegateType,
                 UnWrapObject(Target),
