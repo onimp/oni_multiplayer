@@ -71,9 +71,65 @@ public class DuplicantStateSynchronizer : MultiplayerKMonoBehaviour, IRenderEver
                 entry.CanBeIncapacitated = health.canBeIncapacitated;
             }
 
+            entry.Amounts = ReadAmounts(gameObject);
+            entry.AttributeLevels = ReadAttributeLevels(gameObject);
+
+            var resume = gameObject.GetComponent<MinionResume>();
+            if (resume != null) {
+                entry.HasResume = true;
+                entry.TotalExperienceGained = resume.totalExperienceGained;
+            }
+
+            var element = gameObject.GetComponent<PrimaryElement>();
+            if (element != null) {
+                entry.GermIdx = element.DiseaseIdx;
+                entry.GermCount = element.DiseaseCount;
+            }
+
             list.Add(entry);
         }
         return list.ToArray();
+    }
+
+    // The vitals shown on the dupe panel - each an ISim200ms amount integrated independently per machine.
+    // Cached because the ids never change within a session (Db is fixed on the pinned game version).
+    private static string[]? vitalAmountIds;
+    private static string[] VitalAmountIds => vitalAmountIds ??= new[] {
+        Db.Get().Amounts.Calories.Id,
+        Db.Get().Amounts.Stress.Id,
+        Db.Get().Amounts.Stamina.Id,
+        Db.Get().Amounts.Bladder.Id,
+        Db.Get().Amounts.Breath.Id
+    };
+
+    private static SyncDuplicantState.AmountEntry[] ReadAmounts(UnityEngine.GameObject gameObject) {
+        var modifiers = gameObject.GetComponent<Klei.AI.Modifiers>();
+        if (modifiers?.amounts == null)
+            return System.Array.Empty<SyncDuplicantState.AmountEntry>();
+
+        var result = new List<SyncDuplicantState.AmountEntry>(VitalAmountIds.Length);
+        foreach (var id in VitalAmountIds) {
+            var instance = modifiers.amounts.Get(id);
+            if (instance != null)
+                result.Add(new SyncDuplicantState.AmountEntry { Id = id, Value = instance.value });
+        }
+        return result.ToArray();
+    }
+
+    private static SyncDuplicantState.AttributeLevelEntry[] ReadAttributeLevels(UnityEngine.GameObject gameObject) {
+        var levels = gameObject.GetComponent<Klei.AI.AttributeLevels>();
+        if (levels == null)
+            return System.Array.Empty<SyncDuplicantState.AttributeLevelEntry>();
+
+        var result = new List<SyncDuplicantState.AttributeLevelEntry>();
+        foreach (var level in levels) {
+            result.Add(new SyncDuplicantState.AttributeLevelEntry {
+                Id = level.attribute.Id,
+                Experience = level.experience,
+                Level = level.level
+            });
+        }
+        return result.ToArray();
     }
 
     private static SyncDuplicantState.SicknessEntry[] ReadSicknesses(UnityEngine.GameObject gameObject) {

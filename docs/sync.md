@@ -4,7 +4,7 @@ What is kept in sync between the host and connected clients. The mod is **host-a
 the real game, clients replay the host's actions. A **daily hard-sync** (full save transfer + reload) reloads
 the whole world once per cycle, so anything not synced live is corrected then.
 
-**Game version:** `U57-707956`, vanilla — no DLC. **Last updated:** 2026-07-05.
+**Game version:** `U57-707956`, vanilla — no DLC. **Last updated:** 2026-07-06.
 
 > Plain player-facing summary: [README](../README.md#whats-synced).
 
@@ -26,7 +26,9 @@ the whole world once per cycle, so anything not synced live is corrected then.
   building config (doors, valves, fabricator queues, filters, thresholds, sliders, automation, receptacles),
   side-screen sensors, red alert, immigration, speed/pause.
 - **Duplicant behaviour** — idle/wander, move-to-safety, attack, death, bathroom, eat, sleep, mingle,
-  recreation buildings (arcade, hot tub, espresso, etc.).
+  recreation buildings (arcade, hot tub, espresso, etc.), and social recreation 🧪 (water-cooler
+  socializing, room parties, balloon artist) — host creates + assigns the chore, client's own copy is
+  cancelled; the party locator/work-time and each cooler's chit-chat spot are rebuilt on the client.
 - **Critters** — position, facing, health, current animation.
 - **Dig** — terrain removal.
 - **Research** — order select/cancel.
@@ -42,9 +44,11 @@ the whole world once per cycle, so anything not synced live is corrected then.
   host-gated so both sides finish together.
 - **Mop** 🧪 — liquid removed and the bottle spawned on clients.
 - **Harvest** 🧪 — crop picked and spawned on clients; *mutation genetics* → hard-sync.
-- **Toilet** 🧪 — full flush synced host→client: fill level (meter + full/clean cycle) and polluted-dirt
-  output reproduced on the same toilet; *germs added to the duplicant* → hard-sync (duplicant vitals).
-- **Duplicant state** 🧪 — sickness/disease, effects/buffs, health; *vitals (calories/stress/stamina/etc.)* → hard-sync.
+- **Toilet** 🧪 — full flush synced host→client: fill level (meter + full/clean cycle), polluted-dirt output,
+  and the germs added to the duplicant all reproduced (the dupe germs ride the duplicant germ-load stream).
+- **Duplicant state** 🧪 — sickness/disease, effects/buffs, health, **vitals** (calories / stress / stamina /
+  bladder / breath), **skill & attribute leveling XP**, and **carried germ load** all streamed host→client
+  each ~1 s; *other amounts (body temperature, decor, immune level, toxicity, radiation)* → hard-sync.
 - **Critter lifecycle** 🧪 — lay egg / hatch / grow up / death mirrored host→client under a shared id;
   *byproduct drops (meat/shell)* → hard-sync.
 - **Critter emission** 🧪 — poop that lands in cells (gas/liquid/solid-tile) rides the world-sim cell stream;
@@ -63,10 +67,10 @@ the whole world once per cycle, so anything not synced live is corrected then.
 
 - **Materials economy (outbound)** — items *leaving* storage: drop, storage-to-storage transfer, building
   consumption. Items *entering* storage now sync live — see **Storage intake** under Partially synced.
-- **Duplicant vitals** — calories, stress, stamina, bladder, breath.
-- **Research points** + skill / attribute leveling progress.
+- **Other duplicant amounts** — body temperature, decor, immune level, toxicity, radiation balance.
+- **Research points** accrual (the tech *unlock* is synced live; the point accrual isn't).
 - **Critter wildness / tameness** (ranching progress) and **byproduct drops** (meat / egg shell / raw egg).
-- **Social recreation chores** — water cooler / party / balloon artist.
+- **Balloon items** handed out by the balloon artist (the artist's animation syncs; the balloons are materials).
 - **Loose pickupable identity** — mop bottle, harvested crop, etc. carry no shared id.
 
 ## Not synced

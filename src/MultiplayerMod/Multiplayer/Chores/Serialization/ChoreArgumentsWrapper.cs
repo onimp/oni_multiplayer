@@ -4,6 +4,7 @@ using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Multiplayer.Objects.Extensions;
 using STRINGS;
+using TUNING;
 
 namespace MultiplayerMod.Multiplayer.Chores.Serialization;
 
@@ -19,6 +20,25 @@ public static class ChoreArgumentsWrapper {
         }
         if (choreType == typeof(BansheeChore)) {
             args[2] = null;
+        }
+        if (choreType == typeof(WaterCoolerChore)) {
+            // args: [WaterCooler master, SocialGatheringPointWorkable chat_workable, on_complete, on_begin, on_end].
+            // The chat workable is a runtime child locator of the cooler with no shared id, so ship its socialize
+            // index instead - the client grabs the matching workable off its OWN cooler (Unwrap). Drop the host-side
+            // bookkeeping callbacks (they mutate the host cooler's chore array; the workables outlive the chore).
+            if (args[0] is WaterCooler cooler)
+                args[1] = Array.IndexOf(cooler.workables, args[1]);
+            args[2] = null;
+            args[3] = null;
+            args[4] = null;
+        }
+        if (choreType == typeof(PartyChore)) {
+            // args: [locator master, PartyPointWorkable chat_workable, on_complete, on_begin, on_end]. Master and
+            // workable are the SAME throw-away locator, spawned at a random cell with a random work time and no
+            // shared id. Ship the cell + work time so the client rebuilds an equivalent locator (Unwrap).
+            var locator = ((IStateMachineTarget) args[0]!).gameObject;
+            var workable = (PartyPointWorkable) args[1]!;
+            return [Grid.PosToCell(locator), workable.workTime];
         }
         if (choreType == typeof(FetchAreaChore)) {
             var context = (Chore.Precondition.Context) args[0]!;
@@ -65,6 +85,27 @@ public static class ChoreArgumentsWrapper {
         if (choreType == typeof(SleepChore) && args.Length >= 5 && args[3] is true) {
             if (args[1] is IStateMachineTarget target && target.gameObject != null)
                 args[2] = SleepChore.GetSafeFloorLocator(target.gameObject).gameObject;
+        }
+        if (choreType == typeof(WaterCoolerChore)) {
+            // The cooler (args[0]) resolved via its shared id; swap the shipped socialize index back for the
+            // client's own workable so the chit-chat locator points at a real, local target.
+            var cooler = (WaterCooler) args[0]!;
+            args[1] = cooler.workables[(int) args[1]!];
+        }
+        if (choreType == typeof(PartyChore)) {
+            // Rebuild the throw-away party locator on the client at the host's cell + work time (mirrors the host
+            // spawn in NewYearParty), and give it a client-side on_end that destroys the locator so nothing leaks.
+            var cell = (int) args[0]!;
+            var workTime = (float) args[1]!;
+            var locator = ChoreHelpers.CreateLocator("PartyWorkable", Grid.CellToPosCBC(cell, Grid.SceneLayer.Move));
+            var workable = locator.AddOrGet<PartyPointWorkable>();
+            workable.SetWorkTime(workTime);
+            workable.basePriority = RELAXATION.PRIORITY.SPECIAL_EVENT;
+            workable.faceTargetWhenWorking = true;
+            args = [
+                locator.GetComponent<IStateMachineTarget>(), workable, null, null,
+                (Action<Chore>) (_ => Util.KDestroyGameObject(locator))
+            ];
         }
         if (choreType == typeof(FetchAreaChore)) {
             var choreId = (MultiplayerId) args[0]!;

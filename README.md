@@ -48,12 +48,17 @@ The mod is **host-authoritative**: the host runs the "real" game and clients rep
 | Colony screens (Skills & Hats, Priorities, Schedules, Consumables, Research tree) | ✅ |
 | Game speed & pause | ✅ |
 | Player cursors & presence overlay | ✅ |
-| Duplicant behavior — idle, move-to-safety, attack, death, pee | ✅ |
+| Duplicant behavior — idle, move-to-safety, attack, death, pee, eat, sleep, mingle, recreation, socializing (water cooler / parties / balloon artist) | ✅ |
 | Duplicant work — start **and** completion timing (jobs finish in lockstep) | ✅ |
 | Digging / terrain removal | ✅ |
 | Building completion & deconstruction | ✅ |
 | Mopping & harvesting (produced items appear on both sides) | ✅ |
 | Duplicant health, sickness, disease & effects (buffs/debuffs) | ✅ |
+| Duplicant vitals — calories, stress, stamina, bladder, breath | ✅ |
+| Duplicant skill & attribute leveling XP, plus carried germ load | ✅ |
+| Toilet — full flush (fill level, polluted-dirt output, germs on the dupe) | ✅ |
+| Storage intake — sweep / fetch / deliver into bins | ✅ |
+| Critters — position, lifecycle (lay / hatch / grow / death) & emission | ✅ |
 | World cell simulation — gas / liquid / temperature / mass | ✅ |
 | Power — battery charge (stored energy) | ✅ |
 | Research — tech unlocks | ✅ |
@@ -66,14 +71,11 @@ self-correct rather than break the game.
 
 | Feature | |
 |---|---|
-| Materials economy — storage contents, fetch & deliver | ❌ |
-| Sweep result (debris moved into storage) | ❌ |
-| Toilet fill level & polluted-dirt output | ❌ |
-| Duplicant vitals (calories, stress, stamina, bladder, breath) | ❌ |
-| Eat / Sleep / Recreation / Mingle behavior | ❌ |
-| Research **point** progress & skill XP (the *unlock* is synced, the accrual isn't) | ❌ |
+| Materials economy — items **leaving** storage (drop, transfer, building consumption) | ❌ |
+| Other duplicant amounts — body temperature, decor, immune level, toxicity, radiation | ❌ |
+| Research **point** accrual (the tech *unlock* is synced, the point accrual isn't) | ❌ |
+| Critter ranching progress (wildness / tameness) & byproduct drops (meat / shell) | ❌ |
 | Rockets & space | ❌ |
-| Critters | ❌ |
 
 ---
 
@@ -122,7 +124,7 @@ Then enable the mod in-game via the Mods menu.
 
 - **Original mod:** [zuev93/oni_multiplayer](https://github.com/zuev93/oni_multiplayer) by
   [zuev93](https://github.com/zuev93) and its contributors — the foundation this fork is built on.
-- **This fork:** [macery12](https://github.com/macery12) — forward-port + expanded sync, developed with
+- **This fork:** [macery12](https://github.com/macery12) — forward-port + expanded sync, developed with Claude Code
 
 ---
 
@@ -130,4 +132,4 @@ Then enable the mod in-game via the Mods menu.
 
 - Developer guide: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
 - Issues & suggestions: open an issue on [this repo](https://github.com/macery12/oni_multiplayer/issues)
-- Original project's community Discord: https://discord.gg/3TQ97w8Qwq
+- Original project's community Discord: https://discord.gg/3TQ97w8Qwq (ABANDONED)
