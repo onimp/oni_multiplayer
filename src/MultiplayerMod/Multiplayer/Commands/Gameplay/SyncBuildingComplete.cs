@@ -1,6 +1,7 @@
 using System;
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.UI.Tools.Context;
+using MultiplayerMod.Multiplayer.Objects;
 using UnityEngine;
 
 namespace MultiplayerMod.Multiplayer.Commands.Gameplay;
@@ -24,6 +25,10 @@ public class SyncBuildingComplete : MultiplayerCommand {
     private readonly string? facadeId;
     private readonly float temperature;
     private readonly float timeBuilt;
+    // The host's shared id for the finished building, so the client's spawned copy resolves by the same id
+    // (config/id-based syncs targeting a client-built building now work). Null when the host couldn't resolve
+    // its own finished building; the client then falls back to grid-addressed resolution as before.
+    private readonly MultiplayerId? multiplayerId;
 
     public SyncBuildingComplete(
         int cell,
@@ -32,7 +37,8 @@ public class SyncBuildingComplete : MultiplayerCommand {
         Tag[] materials,
         string? facadeId,
         float temperature,
-        float timeBuilt
+        float timeBuilt,
+        MultiplayerId? multiplayerId
     ) {
         this.cell = cell;
         this.prefabId = prefabId;
@@ -41,6 +47,7 @@ public class SyncBuildingComplete : MultiplayerCommand {
         this.facadeId = facadeId;
         this.temperature = temperature;
         this.timeBuilt = timeBuilt;
+        this.multiplayerId = multiplayerId;
     }
 
     public override void Execute(MultiplayerCommandContext context) {
@@ -61,6 +68,13 @@ public class SyncBuildingComplete : MultiplayerCommand {
         var hasConnections = ghostVisualizer != null;
         var connections = hasConnections ? ghostVisualizer!.Connections : default;
 
+        // Match vanilla Constructable.FinishConstruction: keep the ghost's teardown from running
+        // ClearCell on this cell. ClearCell zeroes the cell's connections AND strips the reciprocal
+        // bits off all four neighbours in the utility network manager - which would wipe out the
+        // connections the completed building registers below (leaving isolated dead wires/pipes).
+        if (ghostVisualizer != null)
+            ghostVisualizer.skipCleanup = true;
+
         RemoveConstructionGhost(ghost);
         if (alreadyComplete)
             return;
@@ -73,12 +87,50 @@ public class SyncBuildingComplete : MultiplayerCommand {
 
         if (built != null && hasConnections) {
             var builtVisualizer = built.GetComponent<KAnimGraphTileVisualizer>();
-            // UpdateConnections (not the plain Connections setter) also calls connectionManager.SetConnections,
-            // registering the cell into the electrical/conduit flow network so the building actually conducts -
-            // the bare setter only updates the render field, leaving wires/pipes as isolated dead nodes.
             if (builtVisualizer != null)
-                builtVisualizer.UpdateConnections(connections);
+                SeedConnections(built, builtVisualizer, connections);
         }
+
+        // Register the client's finished building under the host's id so both machines resolve it as one
+        // object (closes the "client-spawned completions are anonymous" gap for configurable buildings).
+        if (built != null && multiplayerId != null) {
+            var instance = built.GetComponent<MultiplayerInstance>();
+            if (instance != null)
+                instance.Register(multiplayerId);
+        }
+    }
+
+    private static readonly Direction[] neighbourDirections = {
+        Direction.Up, Direction.Down, Direction.Left, Direction.Right
+    };
+
+    // Wire up a freshly-spawned utility building (wire/pipe/tube) the way the game itself does when it
+    // spawns one directly (see the WorldGen/Scenario PlaceUtilityConnection path). Two things matter:
+    //   1. The KBatchedAnimController isn't ready during OnSpawn, so SetConnections + Refresh must run on
+    //      the building's FIRST FRAME - doing it synchronously right after Def.Build leaves the kanim
+    //      showing a disconnected stub (and, because Refresh re-seeds the visual grid, carrying no flow).
+    //   2. Neighbouring wires/pipes that were already complete need their own Refresh so their junction
+    //      art updates to include this new segment - the network rebuild doesn't replay their kanim.
+    // Buildings without an IFirstFrameCallback component (rare for utilities) fall back to applying inline.
+    private static void SeedConnections(GameObject built, KAnimGraphTileVisualizer visualizer, UtilityConnections connections) {
+        void Apply() {
+            // UpdateConnections (not the plain Connections setter) calls connectionManager.SetConnections,
+            // registering the cell into the electrical/conduit flow network and propagating the reciprocal
+            // bits to neighbours so the building actually conducts; Refresh then plays the matching kanim.
+            visualizer.UpdateConnections(connections);
+            visualizer.Refresh();
+            foreach (var direction in neighbourDirections) {
+                var neighbour = visualizer.GetNeighbour(direction);
+                if (neighbour != null)
+                    neighbour.Refresh();
+            }
+        }
+
+        var firstFrame = built.GetComponent<IFirstFrameCallback>();
+        if (firstFrame != null)
+            firstFrame.SetFirstFrameCallback(Apply);
+        else
+            Apply();
     }
 
     // The under-construction ghost is a Constructable occupying the building object layer at this cell.

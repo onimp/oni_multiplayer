@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.Multiplayer.Commands.Gameplay;
+using MultiplayerMod.Multiplayer.Objects;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.World;
@@ -47,6 +48,16 @@ public class ConstructionSynchronizer {
             var facade = __instance.GetComponent<BuildingFacade>();
             var facadeId = facade != null ? facade.CurrentFacade : null;
 
+            // Mint a shared id on the just-finished building (a new grid-addressable object at this cell,
+            // separate from the constructable ghost) so the client can register its copy under the same id.
+            var completed = Grid.Objects[cell, (int) def.ObjectLayer];
+            MultiplayerId? multiplayerId = null;
+            if (completed != null) {
+                var instance = completed.GetComponent<MultiplayerInstance>();
+                if (instance != null)
+                    multiplayerId = instance.Register();
+            }
+
             server.Send(new SyncBuildingComplete(
                 cell,
                 def.PrefabID,
@@ -54,7 +65,8 @@ public class ConstructionSynchronizer {
                 __instance.selectedElementsTags,
                 facadeId,
                 __instance.initialTemperature,
-                GameClock.Instance.GetTime()
+                GameClock.Instance.GetTime(),
+                multiplayerId
             ));
         }
 

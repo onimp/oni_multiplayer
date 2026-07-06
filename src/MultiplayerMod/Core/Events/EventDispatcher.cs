@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using MultiplayerMod.Core.Collections;
 using MultiplayerMod.Core.Extensions;
+using MultiplayerMod.Core.Logging;
 
 namespace MultiplayerMod.Core.Events;
 
 public class EventDispatcher {
+
+    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(EventDispatcher));
 
     private readonly Dictionary<Type, LinkedHashSet<SubscribedAction>> handlers = new();
 
@@ -43,7 +47,21 @@ public class EventDispatcher {
             return;
 
         var actions = new LinkedList<SubscribedAction>(delegates);
-        actions.ForEach(it => it.Action.Method.Invoke(it.Action.Target, new object?[] { @event, it.Subscription }));
+        actions.ForEach(it => Invoke(it, @event));
+    }
+
+    // Isolate each handler: one throwing subscriber must not abort the remaining handlers or unwind into the
+    // caller. This matters most during teardown - GameQuit / StopMultiplayer are dispatched from ONI's
+    // PauseScreen quit postfix, and an escaping exception there corrupts the menu/scene transition (the
+    // "can't rejoin without restarting the game" class of bug). Log and continue instead.
+    private static void Invoke<T>(SubscribedAction action, T @event) where T : IDispatchableEvent {
+        try {
+            action.Action.Method.Invoke(action.Action.Target, new object?[] { @event, action.Subscription });
+        } catch (Exception exception) {
+            // Method.Invoke wraps the real failure in a TargetInvocationException - unwrap it for the log.
+            var actual = (exception as TargetInvocationException)?.InnerException ?? exception;
+            log.Error($"Event handler for {typeof(T).Name} threw and was isolated: {actual}");
+        }
     }
 
     private class SubscribedAction {
@@ -75,6 +93,8 @@ public class EventDispatcher {
 
 public class EventDispatcher<T> where T : IDispatchableEvent {
 
+    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(EventDispatcher<T>));
+
     private readonly LinkedHashSet<Delegate> delegates = new();
 
     public EventSubscription<T> Subscribe(Action<T> action) {
@@ -88,7 +108,18 @@ public class EventDispatcher<T> where T : IDispatchableEvent {
 
     public void Dispatch(T @event) {
         var arguments = new object[] { @event };
-        delegates.ForEach(it => it.Method.Invoke(it.Target, arguments));
+        delegates.ForEach(
+            it => {
+                // Same handler isolation as the untyped EventDispatcher above - a throwing subscriber must
+                // not abort the rest or unwind into the caller.
+                try {
+                    it.Method.Invoke(it.Target, arguments);
+                } catch (Exception exception) {
+                    var actual = (exception as TargetInvocationException)?.InnerException ?? exception;
+                    log.Error($"Event handler for {typeof(T).Name} threw and was isolated: {actual}");
+                }
+            }
+        );
     }
 
 }

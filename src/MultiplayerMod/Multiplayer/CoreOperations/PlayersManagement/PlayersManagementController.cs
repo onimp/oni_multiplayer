@@ -86,7 +86,12 @@ public class PlayersManagementController {
     }
 
     private void OnGameQuit(GameQuitEvent @event) {
-        client.Send(new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving));
+        // Only notify the host we're leaving if the link is still up. client.Send throws when not connected
+        // (host already closed, connection dropped), and that exception would unwind back through ONI's
+        // PauseScreen quit handler and break the menu/scene transition - the "can't rejoin without
+        // restarting the game" bug. The StopMultiplayerEvent below must always run to tear the session down.
+        if (client.State == MultiplayerClientState.Connected)
+            client.Send(new RequestPlayerStateChangeCommand(multiplayer.Players.Current.Id, PlayerState.Leaving));
         events.Dispatch(new StopMultiplayerEvent(multiplayer));
     }
 

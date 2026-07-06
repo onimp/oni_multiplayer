@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -54,27 +55,25 @@ public class WorldManager {
         this.worldStateManagers = worldStateManagers;
     }
 
+    // --- Hard-sync retry watchdog tuning ------------------------------------------------------------
+    private const int maxSyncAttempts = 3;
+    // Below this many pending reliable bytes the uplink counts as "drained" — the save is fully on the wire.
+    private const int syncDrainedThresholdBytes = 96 * 1024;
+    private const double syncWatchdogIntervalMs = 1000;
+    // Consecutive drained ticks (~seconds) with clients still not ready before we call it a stall and re-sync.
+    private const int syncStallDrainedTicks = 2;
+    // Absolute ceiling: if a sync hasn't completed in this long, stop retrying and resume so we never hang.
+    private const double syncHardTimeoutMs = 120000;
+
     public void Sync() {
-        MultiplayerStatusOverlay.Show(
-            new HardSyncStatusView(
-                multiplayer.Players, "Hard-syncing world", () => server.GetConnectionStats(), "Uplink"
-            ).Render
-        );
+        ShowSyncOverlay("Hard-syncing world");
 
         var resume = !SpeedControlScreen.Instance.IsPaused;
         server.SendAll(new PauseGame());
 
         events.Dispatch(new WorldSyncEvent());
 
-        var hostId = multiplayer.Players.Current.Id;
-        multiplayer.Players.ForEach(it => server.SendAll(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
-        server.SendAll(new ChangePlayerStateCommand(hostId, PlayerState.Ready));
-
-        // Seed the clients' progress so their lines show up immediately (they'll refine it as they load).
-        // The host itself is already Ready, so the status view renders it as "Done" regardless of phase.
-        multiplayer.Players
-            .Where(it => !it.Id.Equals(hostId))
-            .ForEach(it => server.SendAll(new SetLoadPhaseCommand(it.Id, PlayerLoadPhase.Transferring)));
+        SendLoadingStates();
 
         server.Send(new NotifyWorldSavePreparing());
 
@@ -91,19 +90,119 @@ public class WorldManager {
             $"Hard-sync host prepare: save={saveWatch.ElapsedMilliseconds}ms " +
             $"({saveData.Length / 1024}KiB), state={stateWatch.ElapsedMilliseconds}ms"
         );
-        server.Send(new LoadWorld(world));
-        // Sync() runs synchronously inside the new-day autosave (WorldSavedEvent); ONI then freezes the
-        // main thread for ONI's timelapse screenshot. Flush now so the save reaches clients before that
-        // freeze, instead of sitting buffered until the host's network tick resumes seconds later.
-        server.Flush();
-        events.Subscribe<PlayersReadyEvent>(
-            (_, subscription) => {
-                if (resume)
-                    server.SendAll(new ResumeGame());
-                MultiplayerStatusOverlay.Close();
-                subscription.Cancel();
-            }
+
+        StartSyncWithRetry(world, resume);
+    }
+
+    private void ShowSyncOverlay(string title) {
+        MultiplayerStatusOverlay.Show(
+            new HardSyncStatusView(
+                multiplayer.Players, title, () => server.GetConnectionStats(), "Uplink"
+            ).Render
         );
+    }
+
+    private void SendLoadingStates() {
+        var hostId = multiplayer.Players.Current.Id;
+        multiplayer.Players.ForEach(it => server.SendAll(new ChangePlayerStateCommand(it.Id, PlayerState.Loading)));
+        server.SendAll(new ChangePlayerStateCommand(hostId, PlayerState.Ready));
+
+        // Seed the clients' progress so their lines show up immediately (they'll refine it as they load).
+        // The host itself is already Ready, so the status view renders it as "Done" regardless of phase.
+        multiplayer.Players
+            .Where(it => !it.Id.Equals(hostId))
+            .ForEach(it => server.SendAll(new SetLoadPhaseCommand(it.Id, PlayerLoadPhase.Transferring)));
+    }
+
+    // Sends the world to every client, then watches for completion. The classic failure is "the uplink
+    // queue drains to 0 but nothing loads": a dropped fragment left a client's reassembly permanently
+    // incomplete, so it never reports Ready and the sync hangs forever. The watchdog detects exactly that
+    // — uplink drained yet clients not Ready for a sustained window — and automatically re-sends the save
+    // (surfacing "attempting hard sync again" to everyone), up to maxSyncAttempts. It gives up and resumes
+    // after a hard timeout so a genuinely broken link can never leave the host frozen on the overlay.
+    private void StartSyncWithRetry(WorldSave world, bool resume) {
+        var attempt = 0;
+        var drainedTicks = 0;
+        var completed = false;
+        var overall = Stopwatch.StartNew();
+        System.Timers.Timer watchdog = null!;
+        EventSubscription readySub = null!;
+
+        void Finish(bool succeeded, string reason) {
+            if (completed)
+                return;
+            completed = true;
+            watchdog.Stop();
+            watchdog.Dispose();
+            readySub.Cancel();
+            MultiplayerStatusOverlay.Close();
+            if (resume && server.State == MultiplayerServerState.Started)
+                server.SendAll(new ResumeGame());
+            log.Info(
+                $"Hard-sync {(succeeded ? "complete" : "aborted")} ({reason}) after " +
+                $"{overall.ElapsedMilliseconds}ms across {attempt} attempt(s)"
+            );
+        }
+
+        void SendWorld() {
+            attempt++;
+            drainedTicks = 0;
+            server.Send(new LoadWorld(world));
+            // Sync() runs synchronously inside the new-day autosave (WorldSavedEvent); ONI then freezes the
+            // main thread for its timelapse screenshot. Flush now so the save reaches clients before that
+            // freeze, instead of sitting buffered until the host's network tick resumes seconds later.
+            server.Flush();
+            var pending = server.GetConnectionStats()?.PendingReliableBytes ?? 0;
+            log.Info(
+                $"Hard-sync attempt {attempt}/{maxSyncAttempts}: LoadWorld queued, uplink backlog {pending / 1024}KiB"
+            );
+        }
+
+        readySub = events.Subscribe<PlayersReadyEvent>(_ => Finish(true, "all players ready"));
+
+        watchdog = new System.Timers.Timer(syncWatchdogIntervalMs) { AutoReset = true, Enabled = true };
+        // Elapsed fires on a threadpool thread; marshal onto the main thread before touching game state.
+        watchdog.Elapsed += (_, _) => scheduler.Run(() => {
+            if (completed)
+                return;
+            try {
+                // Session torn down (host stopped, everyone left) — stop watching.
+                if (server.State != MultiplayerServerState.Started || server.Clients.Count == 0) {
+                    Finish(false, "session ended");
+                    return;
+                }
+                if (multiplayer.Players.Ready) // the PlayersReadyEvent handler will Finish(); nothing to do here
+                    return;
+                if (overall.Elapsed.TotalMilliseconds > syncHardTimeoutMs) {
+                    Finish(false, "hard timeout");
+                    return;
+                }
+
+                var pending = server.GetConnectionStats()?.PendingReliableBytes ?? 0;
+                drainedTicks = pending <= syncDrainedThresholdBytes ? drainedTicks + 1 : 0;
+                if (drainedTicks < syncStallDrainedTicks)
+                    return;
+
+                // Uplink drained but clients still not Ready: the save is fully sent yet a client never
+                // finished loading — a fragment was almost certainly dropped. Re-send the whole save.
+                if (attempt >= maxSyncAttempts) {
+                    Finish(false, "clients not ready after max attempts");
+                    return;
+                }
+                log.Warning(
+                    "Hard-sync stalled (uplink drained, clients not ready); re-syncing " +
+                    $"(attempt {attempt + 1}/{maxSyncAttempts})"
+                );
+                ShowSyncOverlay($"Sync stalled — attempting hard sync again ({attempt + 1}/{maxSyncAttempts})…");
+                SendLoadingStates();
+                SendWorld();
+            } catch (Exception e) {
+                log.Warning($"Hard-sync watchdog error: {e.Message}; stopping watchdog");
+                Finish(false, "watchdog error");
+            }
+        });
+
+        SendWorld();
     }
 
     public void RequestWorldLoad(WorldSave world) {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Multiplayer.Commands;
 using MultiplayerMod.Network;
 using static MultiplayerMod.Platform.Steam.Network.Configuration;
@@ -7,6 +8,8 @@ using static MultiplayerMod.Platform.Steam.Network.Configuration;
 namespace MultiplayerMod.Platform.Steam.Network.Messaging;
 
 public class NetworkMessageFactory {
+
+    private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger<NetworkMessageFactory>();
 
     public IEnumerable<INetworkMessageHandle> Create(IMultiplayerCommand command, MultiplayerCommandOptions options) {
         using var message = NetworkSerializer.Serialize(new NetworkMessage(command, options));
@@ -17,6 +20,10 @@ public class NetworkMessageFactory {
 
         var fragmentsCount = (int) message.Size / MaxFragmentDataSize + 1;
         var header = new NetworkMessageFragmentsHeader(fragmentsCount);
+        log.Info(
+            $"Fragmenting {command.GetType().Name} ({message.Size / 1024}KiB) into {fragmentsCount} fragments " +
+            $"(message id {header.MessageId})"
+        );
         var serializedHeader = NetworkSerializer.Serialize(header);
         yield return serializedHeader;
 

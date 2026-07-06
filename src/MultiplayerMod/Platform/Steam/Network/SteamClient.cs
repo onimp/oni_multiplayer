@@ -38,8 +38,10 @@ public class SteamClient : IMultiplayerClient {
     private bool lanesConfigured;
 
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
-    private readonly SteamNetworkingConfigValue_t[] networkConfig =
-        { Configuration.SendBufferSize(), Configuration.SendRateMax() };
+    private readonly SteamNetworkingConfigValue_t[] networkConfig = {
+        Configuration.SendBufferSize(), Configuration.SendRateMin(), Configuration.SendRateMax(),
+        Configuration.IceEnable()
+    };
 
     private GameObject gameObject = null!;
 
@@ -70,8 +72,11 @@ public class SteamClient : IMultiplayerClient {
     }
 
     public void Disconnect() {
+        // Idempotent: teardown (GameQuit -> StopMultiplayer) can reach here when the link is already gone
+        // (host closed, connection error). Throwing here would propagate out of ONI's PauseScreen quit
+        // handler and corrupt the menu/scene transition, so a later rejoin needs a full app restart.
         if (State == MultiplayerClientState.Disconnected)
-            throw new NetworkPlatformException("Client not connected");
+            return;
 
         UnityObject.Destroy(gameObject);
         lobby.Leave();
@@ -134,6 +139,28 @@ public class SteamClient : IMultiplayerClient {
         if (sender.Available && lanesConfigured && sender.Send(handle, connection, flags, lane))
             return;
 
+        var result = SendRaw(handle, flags);
+        if (result == EResult.k_EResultOK)
+            return;
+
+        // A full send buffer (k_EResultLimitExceeded) is transient — the message is dropped but the
+        // connection is fine. Flush to drain the backlog onto the wire and retry once; do NOT tear the
+        // connection down (SetState(Error) disconnects), which would turn a momentary backpressure spike
+        // into a session kill. Only genuine send failures escalate to Error.
+        if (result == EResult.k_EResultLimitExceeded) {
+            SteamNetworkingSockets.FlushMessagesOnConnection(connection);
+            result = SendRaw(handle, flags);
+            if (result == EResult.k_EResultOK)
+                return;
+            log.Warning($"Send buffer overflow (k_EResultLimitExceeded) persisted after flush+retry; message dropped");
+            return;
+        }
+
+        log.Error($"Failed to send message: {result}");
+        SetState(MultiplayerClientState.Error);
+    }
+
+    private EResult SendRaw(INetworkMessageHandle handle, int flags) {
         var result = SteamNetworkingSockets.SendMessageToConnection(
             connection,
             handle.Pointer,
@@ -141,10 +168,7 @@ public class SteamClient : IMultiplayerClient {
             flags,
             out var messageOut
         );
-        if (result != EResult.k_EResultOK || messageOut == 0) {
-            log.Error($"Failed to send message: {result}");
-            SetState(MultiplayerClientState.Error);
-        }
+        return result == EResult.k_EResultOK && messageOut == 0 ? EResult.k_EResultFail : result;
     }
 
     private void SetState(MultiplayerClientState status) {

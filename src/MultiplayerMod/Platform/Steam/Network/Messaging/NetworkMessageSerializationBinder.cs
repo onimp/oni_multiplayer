@@ -48,7 +48,12 @@ public class NetworkMessageSerializationBinder : SerializationBinder {
         "System.UnitySerializationHolder",
         "System.Reflection.MemberInfoSerializationHolder",
         "System.RuntimeType",
-        "System.Reflection.RuntimeMethodInfo"
+        "System.Reflection.RuntimeMethodInfo",
+        // Abstract element-type record for Type[] payloads (e.g. CallMethod.parameterTypes). Inert
+        // metadata: concrete Type instances already deserialize via System.RuntimeType above, and
+        // System.Type can never be an instantiated node in the graph (it's abstract), so allowing it only
+        // unblocks the array's declared-element-type check — it grants no new concrete-object capability.
+        "System.Type"
     };
 
     // Never allowed, even from an otherwise-allowed assembly (defence in depth).

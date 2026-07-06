@@ -54,6 +54,18 @@ public static class ChoreArgumentsWrapper {
                     notificationList.ReduceMessages(false))
             );
         }
+        // SleepChore ctor[0] args: [ChoreType, IStateMachineTarget target, GameObject bed, bool bedIsLocator,
+        // bool isInterruptable]. Floor / passed-out sleep (bedIsLocator == true) ships a runtime-built locator
+        // GameObject that has no shared MultiplayerId, so the host's reference can't resolve here - it degrades
+        // to whatever occupies the grid cell (usually the sleeping dupe, which has no Sleepable, so
+        // SleepChore.SetAnim NREs and the assignment is skipped -> the client dupe just stands while the host
+        // sleeps). Rebuild an equivalent floor locator on the client's OWN sleeper: GetSafeFloorLocator runs the
+        // same SafeCellSensor query the host used, so it lands on the same cell, and the dupe lies down and plays
+        // the floor sleep animation in place. Bed-backed sleep (bedIsLocator == false) keeps its resolved bed.
+        if (choreType == typeof(SleepChore) && args.Length >= 5 && args[3] is true) {
+            if (args[1] is IStateMachineTarget target && target.gameObject != null)
+                args[2] = SleepChore.GetSafeFloorLocator(target.gameObject).gameObject;
+        }
         if (choreType == typeof(FetchAreaChore)) {
             var choreId = (MultiplayerId) args[0]!;
             var choreConsumer = (ChoreConsumer) args[1]!;

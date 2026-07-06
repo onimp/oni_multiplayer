@@ -59,8 +59,10 @@ public class SteamServer : IMultiplayerServer {
     private readonly NetworkMessageFactory messageFactory = new();
     private SteamNetworkingMessageSender sender = null!;
     private readonly HashSet<HSteamNetConnection> lanedConnections = new();
-    private readonly SteamNetworkingConfigValue_t[] networkConfig =
-        { Configuration.SendBufferSize(), Configuration.SendRateMax() };
+    private readonly SteamNetworkingConfigValue_t[] networkConfig = {
+        Configuration.SendBufferSize(), Configuration.SendRateMin(), Configuration.SendRateMax(),
+        Configuration.IceEnable()
+    };
     private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback = null!;
 
     private readonly Dictionary<IMultiplayerClientId, HSteamNetConnection> clients = new();
@@ -291,16 +293,37 @@ public class SteamServer : IMultiplayerServer {
         if (sender.Available && lanedConnections.Contains(connection) && sender.Send(handle, connection, flags, lane))
             return;
 
-        var result = SteamGameServerNetworkingSockets.SendMessageToConnection(
+        var result = SendRaw(handle, connection, flags);
+        if (result == k_EResultOK)
+            return;
+
+        // A full send buffer (k_EResultLimitExceeded) DROPS the message rather than blocking, which for a
+        // hard-sync fragment stalls the client's reassembly forever. Flush the connection to drain some of
+        // the backlog onto the wire and retry once. This is a best-effort safety net on top of the large
+        // SendBufferSize; the WorldManager hard-sync watchdog re-syncs if a fragment is still lost.
+        if (result == k_EResultLimitExceeded) {
+            SteamGameServerNetworkingSockets.FlushMessagesOnConnection(connection);
+            result = SendRaw(handle, connection, flags);
+            if (result == k_EResultOK)
+                return;
+            log.Error(
+                $"Send buffer overflow (k_EResultLimitExceeded) persisted after flush+retry, message DROPPED " +
+                $"({handle.Size} bytes); a hard-sync fragment may be lost. Increase SendBufferSize."
+            );
+            return;
+        }
+
+        log.Error($"Failed to send message, result: {result}");
+    }
+
+    private EResult SendRaw(INetworkMessageHandle handle, HSteamNetConnection connection, int flags) =>
+        SteamGameServerNetworkingSockets.SendMessageToConnection(
             connection,
             handle.Pointer,
             handle.Size,
             flags,
             out _
         );
-        if (result != k_EResultOK)
-            log.Error($"Failed to send message, result: {result}");
-    }
 
     private void HandleConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t data) {
         var connection = data.m_hConn;

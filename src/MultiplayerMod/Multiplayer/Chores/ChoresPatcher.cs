@@ -103,8 +103,11 @@ public class ChoresPatcher {
 
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
     private static void ChoreCleanup(Chore __instance) {
+        // Capture the shared id BEFORE the index drops the chore, so the host can broadcast which
+        // replicated chore ended (HostEventsBinder -> CompleteChore) and clients end their copy in lockstep.
+        var id = objects.Get(__instance)?.Id;
         objects.RemoveObject(__instance);
-        events.Dispatch(new ChoreCleanupEvent(__instance));
+        events.Dispatch(new ChoreCleanupEvent(__instance, id));
     }
 
     [RequireExecutionLevel(ExecutionLevel.Multiplayer)]

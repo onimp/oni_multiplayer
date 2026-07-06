@@ -35,10 +35,14 @@ public class NetworkMessageProcessor {
         }
         var buffer = new FragmentsBuffer(header.FragmentsCount);
         buffer.Timeout += () => {
-            log.Warning($"Fragments buffer timed out (message id: {header.MessageId})");
+            log.Warning(
+                $"Fragments buffer timed out (message id: {header.MessageId}, " +
+                $"received {buffer.Received}/{buffer.Count} fragments) — a fragment was lost; message discarded"
+            );
             index.TryRemove(header.MessageId, out _);
         };
         index[header.MessageId] = buffer;
+        log.Info($"Receiving fragmented message id {header.MessageId}: expecting {header.FragmentsCount} fragments");
         return null;
     }
 
@@ -57,8 +61,10 @@ public class NetworkMessageProcessor {
         }
 
         var message = buffer.Append(fragment);
-        if (message != null)
+        if (message != null) {
             index.TryRemove(fragment.MessageId, out _);
+            log.Info($"Reassembled fragmented message id {fragment.MessageId} ({buffer.Count} fragments)");
+        }
 
         return message;
     }
@@ -69,6 +75,9 @@ public class NetworkMessageProcessor {
         private int index;
         private readonly int count;
         private readonly byte[] buffer;
+
+        public int Received => index;
+        public int Count => count;
 
         public event System.Action? Timeout;
 

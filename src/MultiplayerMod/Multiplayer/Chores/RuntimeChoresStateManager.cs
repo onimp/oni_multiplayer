@@ -89,22 +89,36 @@ public class RuntimeChoresStateManager : IWorldStateManager {
     public void LoadState(WorldState worldState) {
         var state = new ChoresState(worldState);
 
+        // Load each chore/driver defensively, mirroring SaveState. A single argument that references an
+        // object not present on this client (runtime-spawned under a shared id, destroyed, or not yet
+        // replicated) throws ObjectNotFoundException; without a per-entry guard that one failure aborts the
+        // whole foreach — dropping every remaining chore AND all drivers below — and the chore-completion
+        // fallback synchronizers then spam trying to self-heal the missing state. Skip just the offending
+        // entry and log which reference failed; the fallbacks reconcile the genuine stragglers.
         foreach (var choreState in state.Chores) {
-            var args = ChoreArgumentsWrapper.Unwrap(choreState.type, ArgumentUtils.UnWrapObjects(choreState.arguments));
-            var chore = (Chore) choreState.type.GetConstructors()[0].Invoke(args);
-            chore.Register(choreState.id);
+            try {
+                var args = ChoreArgumentsWrapper.Unwrap(choreState.type, ArgumentUtils.UnWrapObjects(choreState.arguments));
+                var chore = (Chore) choreState.type.GetConstructors()[0].Invoke(args);
+                chore.Register(choreState.id);
+            } catch (Exception exception) {
+                log.Warning($"Skipping chore {choreState.type} on load: {exception.Message}");
+            }
         }
 
         foreach (var choreDriverState in state.Drivers) {
-            var driver = choreDriverState.driverReference.Resolve();
-            var chore = choreDriverState.choreReference.Resolve();
-            var consumer = choreDriverState.consumerReference.Resolve();
-            var choreContext = new Chore.Precondition.Context(
-                chore,
-                new ChoreConsumerState(consumer),
-                is_attempting_override: false
-            );
-            driverChores.Set(driver, ref choreContext);
+            try {
+                var driver = choreDriverState.driverReference.Resolve();
+                var chore = choreDriverState.choreReference.Resolve();
+                var consumer = choreDriverState.consumerReference.Resolve();
+                var choreContext = new Chore.Precondition.Context(
+                    chore,
+                    new ChoreConsumerState(consumer),
+                    is_attempting_override: false
+                );
+                driverChores.Set(driver, ref choreContext);
+            } catch (Exception exception) {
+                log.Warning($"Skipping chore driver on load: {exception.Message}");
+            }
         }
     }
 

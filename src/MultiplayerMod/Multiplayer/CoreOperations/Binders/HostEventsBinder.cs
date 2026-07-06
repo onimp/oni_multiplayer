@@ -19,13 +19,20 @@ public class HostEventsBinder {
     private readonly IMultiplayerServer server;
     private readonly WorldManager worldManager;
     private readonly EventDispatcher events;
+    private readonly MultiplayerGame multiplayer;
 
     private EventSubscriptions subscriptions = null!;
 
-    public HostEventsBinder(IMultiplayerServer server, WorldManager worldManager, EventDispatcher events) {
+    public HostEventsBinder(
+        IMultiplayerServer server,
+        WorldManager worldManager,
+        EventDispatcher events,
+        MultiplayerGame multiplayer
+    ) {
         this.server = server;
         this.worldManager = worldManager;
         this.events = events;
+        this.multiplayer = multiplayer;
 
         Bind();
         BindChores();
@@ -35,6 +42,14 @@ public class HostEventsBinder {
         events.Subscribe<ChoreCreatedEvent>(@event => server.Send(
             new CreateChore(@event.Id, @event.Type, @event.Arguments)
         ));
+
+        // ChoreCleanupEvent fires on both host and client (every chore's Cleanup), so gate to host and to
+        // chores that were actually replicated (Id != null). Tells clients to end their copy in lockstep.
+        events.Subscribe<ChoreCleanupEvent>(@event => {
+            if (multiplayer.Mode != MultiplayerMode.Host || @event.Id == null || server.Clients.Count == 0)
+                return;
+            server.Send(new CompleteChore(@event.Id));
+        });
     }
 
     private void Bind() {

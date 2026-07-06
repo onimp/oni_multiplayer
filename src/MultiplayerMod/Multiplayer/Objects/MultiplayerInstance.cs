@@ -20,7 +20,13 @@ public class MultiplayerInstance : MultiplayerKMonoBehaviour {
     }
 
     public MultiplayerId Register(MultiplayerId? id = null) {
-        multiplayerObject = objects.Register(gameObject, id);
+        // The injected `objects` reference is populated in OnPrefabInit, which Unity only fires once the
+        // GameObject is activated. A host lifecycle spawn can register the object before that happens -
+        // FertilityMonitor.LayEgg KInstantiates the egg inactive and CritterLayEggSynchronizer replicates it
+        // in the same-frame postfix - so ensure injection has run first, otherwise objects.Register NREs.
+        if (objects == null!)
+            EnsureInjected();
+        multiplayerObject = objects!.Register(gameObject, id);
         return multiplayerObject.Id;
     }
 
