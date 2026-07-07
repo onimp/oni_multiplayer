@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: 📖 What's synced (read before filing a desync)
+  - name: What's synced (read before filing a desync)
     url: https://github.com/macery12/oni_multiplayer#whats-synced
     about: Many desyncs are known, intentionally-deferred gaps. Check here first.
-  - name: 🔧 Install / version help
+  - name: Install / version help
     url: https://github.com/macery12/oni_multiplayer#install
     about: Wrong game branch or DLC enabled causes most "it doesn't work" problems.

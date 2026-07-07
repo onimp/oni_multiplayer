@@ -30,6 +30,7 @@ public class DuplicantOwnershipController {
 
     private readonly IMultiplayerServer server;
     private readonly DuplicantOwnershipRegistry registry;
+    private readonly DuplicantOwnershipPersistence persistence;
     private readonly MultiplayerGame multiplayer;
     private readonly UnityTaskScheduler scheduler;
 
@@ -37,15 +38,21 @@ public class DuplicantOwnershipController {
     // Starts at 0 and the ordered player list puts the host first, so an uneven leftover lands on the host.
     private int cursor;
 
+    // Set when a game becomes ready; consumed on the first reconcile so persisted ownership is restored
+    // exactly once, before any round-robin assignment sees the duplicants as unowned.
+    private bool pendingRestore;
+
     public DuplicantOwnershipController(
         IMultiplayerServer server,
         DuplicantOwnershipRegistry registry,
+        DuplicantOwnershipPersistence persistence,
         MultiplayerGame multiplayer,
         UnityTaskScheduler scheduler,
         EventDispatcher events
     ) {
         this.server = server;
         this.registry = registry;
+        this.persistence = persistence;
         this.multiplayer = multiplayer;
         this.scheduler = scheduler;
 
@@ -57,6 +64,8 @@ public class DuplicantOwnershipController {
     private void OnGameReady() {
         if (multiplayer.Mode != MultiplayerMode.Host)
             return;
+
+        pendingRestore = true;
 
         // Watch for later-printed duplicants. Remove-then-add keeps a single subscription even though
         // Components.LiveMinionIdentities is a fresh manager per loaded game.
@@ -71,6 +80,7 @@ public class DuplicantOwnershipController {
 
     private void OnStop() {
         cursor = 0;
+        pendingRestore = false;
         global::Components.LiveMinionIdentities.OnAdd -= OnMinionAdded;
     }
 
@@ -86,7 +96,17 @@ public class DuplicantOwnershipController {
     /// already-owned duplicants are skipped, so it is safe to call repeatedly.
     /// </summary>
     private void ReconcileUnowned() {
-        if (multiplayer.Mode != MultiplayerMode.Host || !registry.Enabled)
+        if (multiplayer.Mode != MultiplayerMode.Host)
+            return;
+
+        // Restore persisted ownership once per loaded game, before anything is treated as unowned. This runs
+        // even when the feature is disabled so re-enabling it later shows the saved assignments.
+        if (pendingRestore) {
+            pendingRestore = false;
+            RestoreFromSave();
+        }
+
+        if (!registry.Enabled)
             return;
 
         var players = OrderedPlayers();
@@ -103,6 +123,31 @@ public class DuplicantOwnershipController {
             Assign(proxyId, owner);
             log.Debug($"Auto-assigned duplicant {identity.name} to {owner}");
         }
+    }
+
+    /// <summary>
+    /// Re-applies ownership saved in the sidecar next to this colony's save file. Stored player NAMES are
+    /// mapped back to the currently-connected players (the host always matches; a reconnected client with the
+    /// same name matches too). Anything unmatched is left unowned and picked up by the round-robin below.
+    /// </summary>
+    private void RestoreFromSave() {
+        var data = persistence.Load();
+        if (data == null)
+            return;
+
+        registry.SetEnabled(data.Enabled);
+
+        var restored = 0;
+        foreach (var entry in data.Owners) {
+            if (registry.GetOwner(entry.ProxyId) != null)
+                continue;
+            var player = multiplayer.Players.FirstOrDefault(it => it.Profile.PlayerName == entry.PlayerName);
+            if (player == null)
+                continue;
+            Assign(entry.ProxyId, player.Id);
+            restored++;
+        }
+        log.Debug($"Restored {restored} persisted duplicant owner(s)");
     }
 
     /// <summary>Host: applies an ownership change authoritatively and broadcasts it to clients.</summary>

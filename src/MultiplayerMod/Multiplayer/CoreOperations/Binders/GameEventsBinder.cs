@@ -1,4 +1,6 @@
-﻿using JetBrains.Annotations;
+﻿using System.Collections.Generic;
+using System.Linq;
+using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Debug;
@@ -24,6 +26,7 @@ using MultiplayerMod.Multiplayer.Commands.Screens.Skill;
 using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.Tools;
+using MultiplayerMod.Multiplayer.Ownership;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
@@ -36,14 +39,37 @@ public class GameEventsBinder {
 
     private readonly IMultiplayerClient client;
     private readonly MultiplayerGame multiplayer;
+    private readonly DuplicantOwnershipRegistry duplicantOwnership;
+    private readonly ChoreOwnershipRegistry choreOwnership;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
-    public GameEventsBinder(IMultiplayerClient client, MultiplayerGame multiplayer) {
+    public GameEventsBinder(
+        IMultiplayerClient client,
+        MultiplayerGame multiplayer,
+        DuplicantOwnershipRegistry duplicantOwnership,
+        ChoreOwnershipRegistry choreOwnership
+    ) {
         this.client = client;
         this.multiplayer = multiplayer;
+        this.duplicantOwnership = duplicantOwnership;
+        this.choreOwnership = choreOwnership;
 
         Bind();
+    }
+
+    // Phase 2 attribution: stamp the player who ordered dig/build work onto its target so owned duplicants
+    // prefer their owner's work. The host tags its own registry directly; a client sends the tag to the host
+    // (embedding its player id, since relayed commands reach the host with a null ClientId). Sent right after
+    // the order command so the targets already exist host-side.
+    private void AttributeWorkCells(List<int> cells) {
+        if (!duplicantOwnership.Enabled || cells.Count == 0)
+            return;
+        var owner = multiplayer.Players.Current.Id;
+        if (multiplayer.Mode == MultiplayerMode.Host)
+            choreOwnership.TagCells(cells, owner);
+        else
+            client.Send(new TagChoreTargets(cells, owner));
     }
 
     private void Bind() {
@@ -108,10 +134,10 @@ public class GameEventsBinder {
         DragToolEvents.DragComplete += (sender, args) => {
             // @formatter:off
             switch (sender) {
-                case DigTool: client.Send(new Dig(args)); break;
+                case DigTool: client.Send(new Dig(args)); AttributeWorkCells(args.Cells); break;
                 case CancelTool: client.Send(new Cancel(args)); break;
-                case DeconstructTool: client.Send(new Deconstruct(args)); break;
-                case PrioritizeTool: client.Send(new Prioritize(args)); break;
+                case DeconstructTool: client.Send(new Deconstruct(args)); AttributeWorkCells(args.Cells); break;
+                case PrioritizeTool: client.Send(new Prioritize(args)); AttributeWorkCells(args.Cells); break;
                 case DisinfectTool: client.Send(new Disinfect(args)); break;
                 case ClearTool: client.Send(new Sweep(args)); break;
                 case AttackTool: client.Send(new Commands.Tools.Attack(args)); break;
@@ -133,7 +159,10 @@ public class GameEventsBinder {
             // @formatter:on
         };
 
-        BuildEvents.Build += args => client.Send(new Build(args));
+        BuildEvents.Build += args => {
+            client.Send(new Build(args));
+            AttributeWorkCells([args.Cell]);
+        };
         CopySettingsEvents.Copy += args => client.Send(new CopySettings(args));
         DebugToolEvents.Modify += args => client.Send(new Modify(args));
         StampToolEvents.Stamp += args => client.Send(new Stamp(args));

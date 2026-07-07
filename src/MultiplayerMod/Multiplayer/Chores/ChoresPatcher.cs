@@ -64,6 +64,10 @@ public class ChoresPatcher {
             .AddPostfix(SymbolExtensions.GetMethodInfo(() => AddMultiplayerPreconditions(null!)))
             .Patch();
 
+        harmony.CreateProcessor(typeof(StandardChoreBase).GetConstructors()[0])
+            .AddPostfix(SymbolExtensions.GetMethodInfo(() => AddOwnershipPrecondition(null!)))
+            .Patch();
+
         harmony.CreateProcessor(typeof(StandardChoreBase).GetMethod(nameof(StandardChoreBase.Cleanup)))
             .AddPostfix(SymbolExtensions.GetMethodInfo(() => ChoreCleanup(null!)))
             .Patch();
@@ -74,6 +78,16 @@ public class ChoresPatcher {
     private static void AddMultiplayerPreconditions(Chore __instance) {
         __instance.AddPrecondition(MultiplayerDriverChores.IsDriverBusy);
         __instance.AddPrecondition(MultiplayerDriverChores.IsMultiplayerChore);
+    }
+
+    // Phase 2: only the host scores chores, so the per-player work-preference precondition is host-only and
+    // scoped to work chores (dig/build/sweep/...). It self-gates when the feature is disabled, so it can be
+    // added unconditionally here and toggled at runtime.
+    [RequireExecutionLevel(ExecutionLevel.Multiplayer)]
+    [RequireMultiplayerMode(MultiplayerMode.Host)]
+    private static void AddOwnershipPrecondition(Chore __instance) {
+        if (IsWorkChore(__instance.GetType()))
+            __instance.AddPrecondition(Ownership.ChoreOwnershipPreconditions.PrefersOwnerChore);
     }
 
     public bool Supported(Chore chore) => supportedTypes.Contains(chore.GetType()) || IsWorkChore(chore.GetType());

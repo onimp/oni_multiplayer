@@ -79,6 +79,22 @@ self-correct rather than break the game.
 
 ---
 
+## Per-player duplicant ownership
+
+Assign each duplicant to a specific player so co-op projects don't collide. An owned duplicant prioritizes
+its owner's dig, build, and deconstruct orders above all other everyday work — so if you and a teammate
+queue separate projects, your dupes gravitate to yours and theirs to theirs instead of everyone piling onto
+one task. Emergencies still come first for everyone: red alert and the `!!` top-priority marker always win
+regardless of ownership. A duplicant that has nothing of its owner's to do will pitch in on a teammate's
+work rather than stand idle.
+
+Manage it from the **MP Owners** tab in the top management bar, or by right-clicking a duplicant. Starters
+are split between players automatically; you can reassign anyone at any time. The host can turn the whole
+feature off, and **if no duplicants are assigned the game behaves exactly like vanilla** — nothing changes
+until you start assigning owners.
+
+---
+
 ## Install
 
 Both players must be on the **`legacy_compatibility_version`** Steam branch (see
