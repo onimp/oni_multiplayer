@@ -1,0 +1,164 @@
+name: 🐛 Bug / Desync report
+description: Report a crash, a desync, or something that isn't staying in sync between players.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report! This mod is a **work-in-progress prototype**, so
+        desync is expected in places — but detailed reports are what make it fixable.
+
+        Before filing, please skim the **[What's synced](https://github.com/macery12/oni_multiplayer#whats-synced)**
+        table. If the thing that desynced is listed under **❌ Not synced yet**, it's a known gap — you don't
+        need to file it (but a 👍 or comment on an existing tracking issue is welcome).
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checks
+      description: Please confirm these before filing — they rule out the most common invalid reports.
+      options:
+        - label: All players were on the **`legacy_compatibility_version`** Steam branch (`U57-707956`).
+          required: true
+        - label: All players had **DLC disabled** (vanilla / base game only — no Spaced Out!).
+          required: true
+        - label: All players were running the **same mod version**.
+          required: true
+        - label: I searched existing issues and this isn't already reported.
+          required: true
+
+  - type: input
+    id: mod-version
+    attributes:
+      label: Mod version / release
+      description: Which release build were you on? (e.g. the release tag, or the date you downloaded it)
+      placeholder: "e.g. v0.x.y  (or 'built from commit f9ceacf')"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Were you the host or a client?
+      description: The single most important detail for a sync bug — behaviour differs by side.
+      options:
+        - Host
+        - Client
+        - Both (I've seen it from both sides)
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: player-count
+    attributes:
+      label: How many players were connected?
+      placeholder: "e.g. 2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-screen
+    attributes:
+      label: Whose screen showed the problem?
+      description: Where the wrong state was visible. Helps localize a desync.
+      options:
+        - Host's screen
+        - Client's screen
+        - Both screens (they disagreed with each other)
+        - Both screens (same wrong thing on both)
+        - N/A — this was a crash
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: >
+        What went wrong? If it's a desync, be specific about **what** got out of sync and **how** the two
+        sides differed (e.g. "storage bin showed 400kg on host but 0kg on client", "dupe was digging on the
+        host but standing idle on the client").
+      placeholder: Describe the bug and, for a desync, exactly how the host and client disagreed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      placeholder: e.g. Both players should see the same storage contents.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: hardsync
+    attributes:
+      label: Did the daily hard-sync fix it?
+      description: >
+        The mod does a full save transfer + reload every in-game morning. If the problem disappeared after
+        that, it was self-correcting drift; if it persisted, it's a harder bug.
+      options:
+        - "It persisted through a hard-sync (permanent)"
+        - "The next morning's hard-sync fixed it (self-corrected)"
+        - "Didn't play long enough to reach a hard-sync"
+        - "Not applicable (crash, or happened during the hard-sync itself)"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does this happen?
+      options:
+        - Every time (reliably reproducible)
+        - Sometimes / intermittently
+        - Happened once
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce (optional)
+      description: If you can reproduce it, list the steps. Even a rough sequence helps a lot.
+      placeholder: |
+        1. Host starts a new multiplayer game
+        2. Client joins via Steam overlay
+        3. Host queues a dig order on ...
+        4. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: player-log
+    attributes:
+      label: Player.log (from BOTH host and client if possible)
+      description: >
+        The log lives at `%USERPROFILE%\AppData\LocalLow\Klei\Oxygen Not Included\Player.log`
+        (paste that path into Explorer's address bar). For a two-machine sync bug, the host log alone is
+        often not enough — please attach **both** sides if you can. Drag the files in, or paste the relevant
+        sections in a code block. Note the rough in-game time the bug happened so it's easy to find.
+      placeholder: Drag Player.log files here, or paste the relevant lines.
+    validations:
+      required: false
+
+  - type: textarea
+    id: crash-log
+    attributes:
+      label: Crash log / stack trace (if it crashed)
+      description: >
+        If the game crashed, paste the crash dialog text or the stack trace from Player.log here. Leave
+        blank if it didn't crash.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else? (screenshots, video, notes)
+      description: Screenshots or a short clip of a desync are extremely helpful. Attach them here.
+    validations:
+      required: false

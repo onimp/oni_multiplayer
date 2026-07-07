@@ -1,0 +1,27 @@
+name: 💡 Feature / sync-gap request
+description: Suggest something to sync, or an improvement to how multiplayer works.
+title: "[Idea]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a look at **[What's synced](https://github.com/macery12/oni_multiplayer#whats-synced)** first —
+        the **❌ Not synced yet** table already tracks many known gaps. If yours is listed there, a 👍 on this
+        issue helps prioritize; if it's new, tell us about it below.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to see?
+      description: Describe the feature, or the thing that should stay in sync but doesn't.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it matter for co-op?
+      description: How does the current behaviour hurt a shared game? What would change for players?
+    validations:
+      required: false

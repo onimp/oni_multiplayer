@@ -48,9 +48,22 @@ public class MultiplayerDriverChores {
         // host EdibleIsNotNull gates the chore before Begin; the client bypasses preconditions, so re-run
         // just that one here and skip the assignment if it fails. The dupe reconciles at the next
         // host-driven eat / hard-sync. (See EatChoreSynchronizer for the rest of the Eat sync contract.)
-        if (context.chore is EatChore && !HasEdible(ref context)) {
-            log.Warning("Skipping EatChore assignment: client duplicant has no edible in reach");
-            return;
+        if (context.chore is EatChore) {
+            if (!HasEdible(ref context)) {
+                log.Warning("Skipping EatChore assignment: client duplicant has no edible in reach");
+                return;
+            }
+
+            // EatChore.Begin sets ediblesource to the client-picked edible, and its fetch state reserves it via
+            // GameStateMachine.ToggleReserve, which Debug.LogError's ("<carry>, <requested>, 0, 0") when that
+            // edible has no UnreservedFetchAmount left - i.e. the client chose a food already fully reserved
+            // (the reservation/materials economy isn't replicated). Pre-check it and skip like the no-edible
+            // case so the dupe reconciles at the next host-driven eat / hard-sync instead of red-error spam +
+            // "eating" 0 units.
+            if (!HasReservableEdible(ref context)) {
+                log.Warning("Skipping EatChore assignment: client's edible has no unreserved amount left");
+                return;
+            }
         }
 
         // SleepChore takes its `bed` GameObject in the constructor, and CreateChore resolves that reference on
@@ -97,6 +110,22 @@ public class MultiplayerDriverChores {
             return EatChore.EdibleIsNotNull.fn(ref context, null);
         } catch (Exception exception) {
             log.Warning($"EatChore edible check threw, treating as unavailable: {exception.Message}");
+            return false;
+        }
+    }
+
+    // Resolve the same edible EatChore.Begin will (the consumer's RationMonitor / ClosestEdibleSensor) and
+    // confirm its Pickupable still has unreserved fetch amount, so a food that's fully reserved elsewhere is a
+    // quiet skip rather than ToggleReserve's logged "carry, requested, 0, 0" error + a 0-unit eat.
+    private static bool HasReservableEdible(ref Chore.Precondition.Context context) {
+        try {
+            var edible = context.consumerState.consumer.GetSMI<RationMonitor.Instance>()?.GetEdible();
+            var pickupable = edible != null && edible.gameObject != null
+                ? edible.gameObject.GetComponent<Pickupable>()
+                : null;
+            return pickupable != null && pickupable.UnreservedFetchAmount > 0f;
+        } catch (Exception exception) {
+            log.Warning($"EatChore reservable-edible check threw, treating as unavailable: {exception.Message}");
             return false;
         }
     }

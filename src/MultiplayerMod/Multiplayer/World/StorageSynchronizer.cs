@@ -48,6 +48,7 @@ public class StorageSynchronizer {
         public MultiplayerId? ItemId;
         public string PrefabTag;
         public int Cell;
+        public bool HidePopups;
     }
 
     // Storage.Store is the universal "an item object entered this storage" seam (fetch/deliver/sweep pickup +
@@ -61,7 +62,7 @@ public class StorageSynchronizer {
     private static class StoragePatch {
 
         [HarmonyPrefix, UsedImplicitly]
-        private static void Prefix(Storage __instance, GameObject go, bool is_deserializing) {
+        private static void Prefix(Storage __instance, GameObject go, bool hide_popups, bool is_deserializing) {
             if (is_deserializing || server == null || !ReplicationGate.IsActiveHost(multiplayer, manager))
                 return;
             if (server.Clients.Count == 0 || __instance == null || go == null)
@@ -82,7 +83,11 @@ public class StorageSynchronizer {
                 Storage = __instance.gameObject.GetReference(),
                 ItemId = itemId,
                 PrefabTag = pickupable.KPrefabID.PrefabTag.ToString(),
-                Cell = Grid.PosToCell(go.transform.GetPosition())
+                Cell = Grid.PosToCell(go.transform.GetPosition()),
+                // Carry the host's own popup decision so the client shows the exact same "Picked up" /
+                // "+Delivered" FX the host does (dupe pickups and deliveries pop; silent internal
+                // transfers - sweeper/conveyor stores that pass hide_popups: true - stay silent).
+                HidePopups = hide_popups
             };
             lock (bufferLock)
                 buffer.Add(record);
@@ -123,7 +128,8 @@ public class StorageSynchronizer {
             entries.Add(new SyncStorageStore.Entry {
                 ItemId = record.ItemId,
                 PrefabTag = record.PrefabTag,
-                Cell = record.Cell
+                Cell = record.Cell,
+                HidePopups = record.HidePopups
             });
         }
 

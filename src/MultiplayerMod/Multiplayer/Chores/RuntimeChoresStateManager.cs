@@ -97,7 +97,7 @@ public class RuntimeChoresStateManager : IWorldStateManager {
         // entry and log which reference failed; the fallbacks reconcile the genuine stragglers.
         foreach (var choreState in state.Chores) {
             try {
-                var args = ChoreArgumentsWrapper.Unwrap(choreState.type, ArgumentUtils.UnWrapObjects(choreState.arguments));
+                var args = ChoreArgumentsWrapper.Reconstruct(choreState.type, choreState.arguments);
                 var chore = (Chore) choreState.type.GetConstructors()[0].Invoke(args);
                 chore.Register(choreState.id);
             } catch (Exception exception) {

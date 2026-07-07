@@ -38,6 +38,20 @@ public static class ArgumentUtils {
 
     public static object? UnWrapObject(object? obj) => obj is Reference reference ? reference.Resolve() : obj;
 
+    // Like UnWrapObjects, but tolerates individual references that don't resolve on this client by
+    // substituting null instead of throwing. Used only for chores that have a graceful per-argument fallback
+    // for a missing reference (e.g. SleepChore's bed -> floor locator): a plain UnWrapObjects lets the first
+    // unresolved reference abort the whole chore before that fallback can run.
+    public static object?[] UnWrapObjectsTolerant(object?[] objects) {
+        return objects.Select(obj => {
+            try {
+                return UnWrapObject(obj);
+            } catch (ObjectNotFoundException) {
+                return null;
+            }
+        }).ToArray();
+    }
+
     [Serializable]
     public record DelegateRef(
         Type DelegateType,

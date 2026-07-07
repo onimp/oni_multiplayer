@@ -22,7 +22,16 @@ public static class ObjectEvents {
             nameof(TreeFilterable.RemoveTagFromFilter)
         )
         .AddMethods(typeof(Storage), nameof(Storage.SetOnlyFetchMarkedItems))
-        .AddMethods(typeof(Door), nameof(Door.QueueStateChange), nameof(Door.OrderUnseal))
+        // Player "disable/enable building" toggle (coal generator etc.). The click (OnMenuToggle) only QUEUES a
+        // Toggleable that fires later based on each machine's own operational state, so replaying the click
+        // desyncs. Instead sync the IsEnabled property SETTER (PatchTargetResolver resolves it to set_IsEnabled)
+        // - it carries the absolute new bool and is the single point where the EnabledFlag actually flips.
+        .AddMethods(typeof(BuildingEnabledButton), nameof(BuildingEnabledButton.IsEnabled))
+        // Door control state (Auto / Open / Locked). QueueStateChange only records requestedState + spawns the
+        // Toggle work chore; the real commit is ApplyRequestedControlState (from OnCompleteWork for a manual
+        // toggle, or the logic-driven path) which sets controlState = requestedState. Without syncing it the
+        // client's door keeps its old state ("forcing open doesn't stick").
+        .AddMethods(typeof(Door), nameof(Door.QueueStateChange), nameof(Door.OrderUnseal), "ApplyRequestedControlState")
         .AddMethods(
             typeof(ComplexFabricator),
             nameof(ComplexFabricator.IncrementRecipeQueueCount),

@@ -35,6 +35,10 @@ public class SyncStorageStore : MultiplayerCommand {
         // The item's cell at capture time (its ground position before the store), used for the first-sight
         // scan when the client hasn't yet tagged its copy with ItemId.
         public int Cell;
+        // The host's own hide_popups flag for this store, replayed verbatim so the client's "Picked up" /
+        // "+Delivered" FX matches the host exactly (fetch pickups and deliveries pop; internal transfers stay
+        // silent). See StorageSynchronizer for capture.
+        public bool HidePopups;
     }
 
     private readonly GameObjectReference storage;
@@ -70,7 +74,8 @@ public class SyncStorageStore : MultiplayerCommand {
             }
 
             // Reuse the game's own Store (with its TryAbsorb stack-merge) so client stacking matches the host.
-            storageComponent.Store(item, hide_popups: true);
+            // Replay the host's hide_popups so the client shows the same pickup/delivery FX the host did.
+            storageComponent.Store(item, hide_popups: entry.HidePopups);
         }
     }
 

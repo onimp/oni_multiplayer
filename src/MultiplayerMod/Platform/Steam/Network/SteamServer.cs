@@ -240,7 +240,25 @@ public class SteamServer : IMultiplayerServer {
     }
 
     private void OnServerStarted() {
-        lobby.GameServerId = SteamGameServer.GetSteamID();
+        // Runs as a main-thread scheduled continuation once the lobby + Steam-servers handshakes both complete.
+        // Between those completing and this executing, the server can have been torn down or superseded: Stop()
+        // / a failed Start() / a rapid restart all call Reset(), which GameServer.Shutdown()s and cancels the
+        // continuation token. If we then call SteamGameServer.GetSteamID() the Steamworks wrapper throws
+        // "Steamworks GameServer is not initialized" - and because this executes inside UnityTaskScheduler.Tick,
+        // an uncaught throw is rethrown as a hard ONI crash. Bail if this start was cancelled or is no longer the
+        // one coming up, and treat a genuinely unavailable GameServer as an errored start instead of crashing.
+        if (callbacksCancellationTokenSource.IsCancellationRequested || State != MultiplayerServerState.Starting) {
+            log.Warning("Server start completed after teardown/cancellation; skipping OnServerStarted");
+            return;
+        }
+
+        try {
+            lobby.GameServerId = SteamGameServer.GetSteamID();
+        } catch (Exception exception) {
+            log.Error($"Server start aborted - GameServer unavailable: {exception.Message}");
+            SetState(MultiplayerServerState.Error);
+            return;
+        }
         SetState(MultiplayerServerState.Started);
     }
 

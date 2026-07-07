@@ -23,6 +23,9 @@ public class DestroyOnPlayerLeave : MultiplayerKMonoBehaviour {
         });
     }
 
-    protected override void OnForcedCleanUp() => subscription.Cancel();
+    // OnForcedCleanUp runs from OnDestroy, which fires even when the component is torn down (app quit /
+    // scene unload) before OnSpawn ran - so subscription can still be null. Guard it: an unconditional
+    // .Cancel() NRE'd out of OnDestroy during shutdown.
+    protected override void OnForcedCleanUp() => subscription?.Cancel();
 
 }

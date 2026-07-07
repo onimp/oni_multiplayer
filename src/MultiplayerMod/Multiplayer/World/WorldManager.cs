@@ -183,6 +183,20 @@ public class WorldManager {
                 if (drainedTicks < syncStallDrainedTicks)
                     return;
 
+                // A client that has advanced to Loading/Reconciling already received and wrote the save and is
+                // now running the ~30s ONI world reload (LoadScreen.DoLoad), during which its network tick is
+                // frozen and it CANNOT report Ready. Drained uplink + "not ready" is *expected* here — it is not
+                // a dropped-fragment stall. Re-sending the whole save now just floods the uplink again while the
+                // client is mid-reload; that is the "hard sync retries too soon" behaviour. Keep waiting (the
+                // hard timeout is the backstop). A genuine stall leaves clients stuck at/below Transferring.
+                var anyClientReloading = multiplayer.Players.Any(
+                    it => it.State != PlayerState.Ready && it.LoadPhase >= PlayerLoadPhase.Loading
+                );
+                if (anyClientReloading) {
+                    drainedTicks = 0;
+                    return;
+                }
+
                 // Uplink drained but clients still not Ready: the save is fully sent yet a client never
                 // finished loading — a fragment was almost certainly dropped. Re-send the whole save.
                 if (attempt >= maxSyncAttempts) {
